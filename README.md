@@ -46,8 +46,9 @@ Flutter, dengan penampil PDF PDFium (`pdfrx`) dan indeks pencarian SQLite FTS5 (
 - Tab **Tanya AI**: belum aktif (tahap berikutnya, butuh internet).
 
 APK dibuat otomatis oleh GitHub Actions (`.github/workflows/android.yml`) di setiap push dan PR;
-unduh dari halaman run, bagian *Artifacts*. Alamat server diambil dari variabel repo `CATALOG_URL`
-dan bisa diganti di aplikasi lewat menu ⋮ > Alamat server.
+unduh dari halaman run, bagian *Artifacts*. Alamat server bawaan adalah bucket R2
+`https://pub-9bc76cec67ff4f14ab5d1b6c10454f29.r2.dev`; variabel repo `CATALOG_URL` bisa menggantinya
+saat build, dan pengguna bisa menggantinya di aplikasi lewat menu ⋮ > Alamat server.
 
 ```bash
 cd app

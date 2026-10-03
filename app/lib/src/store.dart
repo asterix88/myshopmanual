@@ -10,9 +10,12 @@ import 'package:path_provider/path_provider.dart';
 
 import 'models.dart';
 
-/// Server address baked in at build time, e.g.
+/// Server address: the company's R2 bucket, unless a build overrides it with
 /// `flutter build apk --dart-define=CATALOG_URL=https://pub-xxxx.r2.dev`.
-const defaultServerUrl = String.fromEnvironment('CATALOG_URL');
+const _buildServerUrl = String.fromEnvironment('CATALOG_URL');
+const defaultServerUrl = _buildServerUrl == ''
+    ? 'https://pub-9bc76cec67ff4f14ab5d1b6c10454f29.r2.dev'
+    : _buildServerUrl;
 
 class DownloadProgress {
   DownloadProgress(this.total);
