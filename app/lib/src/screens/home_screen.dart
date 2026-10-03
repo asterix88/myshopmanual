@@ -151,10 +151,22 @@ class _OfflineBanner extends StatelessWidget {
         children: [
           const Icon(Icons.cloud_off, size: 18, color: AppColors.muted),
           const SizedBox(width: 10),
-          const Expanded(
-            child: Text(
-              'Mode offline. Manual yang sudah diunduh tetap bisa dibuka.',
-              style: TextStyle(fontSize: 12, color: AppColors.ink),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Mode offline. Manual yang sudah diunduh tetap bisa dibuka.',
+                  style: TextStyle(fontSize: 12, color: AppColors.ink),
+                ),
+                // Why the server could not be reached, so a wrong address or a
+                // blocked network can be told apart from no signal.
+                if (store.lastError != null)
+                  Text(
+                    '${store.lastError}\n${store.serverUrl}',
+                    style: const TextStyle(fontSize: 11, color: AppColors.muted),
+                  ),
+              ],
             ),
           ),
           TextButton(onPressed: store.refresh, child: const Text('Coba lagi')),
