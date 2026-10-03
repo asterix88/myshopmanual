@@ -16,6 +16,13 @@ Output layout (what gets uploaded to Cloudflare R2):
 
 Every file has its own index, so a mechanic can download (and delete) one
 manual at a time and search still works over whatever is on the phone.
+A unit folder may hold an optional unit.json with display info, e.g.
+{"name": "PC210-10M0", "kind": "Excavator"}.
+
+Re-running keeps the previous catalog.json in dist/: units not rebuilt
+(with --only) stay listed, and each file keeps its "updated_at" date until
+its PDF actually changes. The app uses those dates to show what is new.
+
 Scanned PDFs (no text layer) are skipped by default, since they cannot be
 searched; pass --include-scanned to ship them without search.
 """
@@ -123,8 +130,12 @@ def file_entry(path: Path, rel: str) -> dict:
     return {"path": rel, "size": path.stat().st_size, "sha256": sha256_of(path)}
 
 
-def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool) -> dict:
+def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
+               previous: dict, now: str) -> dict:
     unit_id = unit_dir.name
+    meta_path = unit_dir / "unit.json"
+    meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
+    previous_files = {f["id"]: f for f in previous.get("files", [])}
     unit_out = out_dir / "units" / unit_id
     unit_out.mkdir(parents=True, exist_ok=True)
 
@@ -147,6 +158,8 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool) -> dict:
 
         pdf_info = file_entry(target, f"units/{unit_id}/{target.name}")
         index_info = file_entry(index_path, f"units/{unit_id}/{index_path.name}")
+        before = previous_files.get(file_id)
+        unchanged = before is not None and before["pdf"]["sha256"] == pdf_info["sha256"]
         files.append(
             {
                 "id": file_id,
@@ -159,6 +172,7 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool) -> dict:
                 "index": index_info,
                 # What the app shows as the download size for this file.
                 "download_size": pdf_info["size"] + index_info["size"],
+                "updated_at": before["updated_at"] if unchanged else now,
             }
         )
         print(
@@ -168,7 +182,8 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool) -> dict:
 
     return {
         "id": unit_id,
-        "name": unit_id,
+        "name": meta.get("name", unit_id),
+        "kind": meta.get("kind", ""),
         "size": sum(f["download_size"] for f in files),
         "files": files,
         "skipped_scanned": skipped,
@@ -191,20 +206,33 @@ def main() -> int:
         return 1
 
     args.dist.mkdir(parents=True, exist_ok=True)
-    units = []
+    catalog_path = args.dist / "catalog.json"
+    previous = json.loads(catalog_path.read_text()) if catalog_path.exists() else {}
+    previous_units = {u["id"]: u for u in previous.get("units", [])}
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    built = {}
     for unit_dir in unit_dirs:
         print(f"[{unit_dir.name}]")
         started = time.time()
-        units.append(build_unit(unit_dir, args.dist, args.include_scanned))
-        print(f"  done in {time.time() - started:.1f}s, {units[-1]['size'] / 1e6:.1f} MB")
+        unit = build_unit(unit_dir, args.dist, args.include_scanned,
+                          previous_units.get(unit_dir.name, {}), now)
+        built[unit["id"]] = unit
+        print(f"  done in {time.time() - started:.1f}s, {unit['size'] / 1e6:.1f} MB")
+
+    # Units not rebuilt this run stay listed while their source folder exists.
+    existing = {d.name for d in args.source.iterdir() if d.is_dir()}
+    for unit_id, unit in previous_units.items():
+        if unit_id not in built and unit_id in existing:
+            built[unit_id] = unit
 
     catalog = {
         "schema": 1,
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "units": units,
+        "generated_at": now,
+        "units": [built[k] for k in sorted(built)],
     }
-    (args.dist / "catalog.json").write_text(json.dumps(catalog, indent=2))
-    print(f"wrote {args.dist / 'catalog.json'}")
+    catalog_path.write_text(json.dumps(catalog, indent=2))
+    print(f"wrote {catalog_path}")
     return 0
 
 

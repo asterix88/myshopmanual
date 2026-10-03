@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-03T15:58:58+00:00",
+  "units": [
+    {
+      "id": "TEST1",
+      "name": "TEST1-1",
+      "kind": "Excavator",
+      "size": 39966,
+      "files": [
+        {
+          "id": "OMM_Test_Unit",
+          "title": "OMM Test Unit",
+          "type": "omm",
+          "pages": 4,
+          "bookmarks": 5,
+          "searchable": true,
+          "pdf": {
+            "path": "units/TEST1/OMM_Test_Unit.pdf",
+            "size": 3102,
+            "sha256": "dbdb16ad24c56c02cd93ae483db15eea0e0d0ab0ba8677a0dc1d9e3fefab42ac"
+          },
+          "index": {
+            "path": "units/TEST1/OMM_Test_Unit.sqlite",
+            "size": 36864,
+            "sha256": "183b9a2ba1daeed7974c2d0f4a20de416cd8cf4a1aa697a796ca099992b2136b"
+          },
+          "download_size": 39966,
+          "updated_at": "2026-10-03T15:58:58+00:00"
+        }
+      ],
+      "skipped_scanned": []
+    }
+  ]
+}
