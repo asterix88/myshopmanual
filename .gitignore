@@ -2,3 +2,6 @@ dist/
 source/
 __pycache__/
 *.pyc
+
+# Screenshot renders from app/tool/screenshot_test.dart
+app/tool/screenshots/
