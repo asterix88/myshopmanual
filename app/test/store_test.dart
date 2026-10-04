@@ -148,6 +148,15 @@ void main() {
       store.dispose();
     });
 
+    test('an install saved with the old r2.dev address moves to the default', () async {
+      File('${root.path}/state.json')
+        ..createSync(recursive: true)
+        ..writeAsStringSync(jsonEncode({'server': 'https://pub-123.r2.dev'}));
+      final store = await AppStore.open(root: root, client: fixtureServer());
+      expect(store.serverUrl, defaultServerUrl);
+      store.dispose();
+    });
+
     test('a corrupted download is rejected and leaves nothing behind', () async {
       final store = await AppStore.open(
         root: root,

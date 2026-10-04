@@ -10,11 +10,12 @@ import 'package:path_provider/path_provider.dart';
 
 import 'models.dart';
 
-/// Server address: the company's R2 bucket, unless a build overrides it with
+/// Server address: the R2 bucket's custom domain (r2.dev is blocked by some
+/// mobile operators), unless a build overrides it with
 /// `flutter build apk --dart-define=CATALOG_URL=https://pub-xxxx.r2.dev`.
 const _buildServerUrl = String.fromEnvironment('CATALOG_URL');
 const defaultServerUrl = _buildServerUrl == ''
-    ? 'https://pub-9bc76cec67ff4f14ab5d1b6c10454f29.r2.dev'
+    ? 'https://mymanual.my.id'
     : _buildServerUrl;
 
 class DownloadProgress {
@@ -78,7 +79,11 @@ class AppStore extends ChangeNotifier {
     if (await _stateFile.exists()) {
       final json = jsonDecode(await _stateFile.readAsString()) as Map<String, dynamic>;
       final savedUrl = json['server'] as String?;
-      if (savedUrl != null && savedUrl.isNotEmpty) serverUrl = savedUrl;
+      // The old r2.dev address was saved by earlier builds; it is blocked by
+      // some mobile operators, so move those installs to the new default.
+      if (savedUrl != null && savedUrl.isNotEmpty && !savedUrl.contains('.r2.dev')) {
+        serverUrl = savedUrl;
+      }
       local = {
         for (final e in (json['local'] as Map<String, dynamic>? ?? {}).entries)
           e.key: LocalManual.fromJson(e.value as Map<String, dynamic>),
