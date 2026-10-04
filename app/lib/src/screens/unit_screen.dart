@@ -246,7 +246,11 @@ class _FileCard extends StatelessWidget {
             ),
           const SizedBox(height: 10),
           if (progress != null)
-            _DownloadingRow(progress: progress, onCancel: () => store.cancelDownload(file.key))
+            _DownloadingRow(
+              progress: progress,
+              onPause: () => store.pauseDownload(file.key),
+              onCancel: () => store.cancelDownload(file.key),
+            )
           else if (!downloaded)
             Row(
               children: [
@@ -317,9 +321,10 @@ class _FileCard extends StatelessWidget {
 }
 
 class _DownloadingRow extends StatelessWidget {
-  const _DownloadingRow({required this.progress, required this.onCancel});
+  const _DownloadingRow({required this.progress, required this.onPause, required this.onCancel});
 
   final DownloadProgress progress;
+  final VoidCallback onPause;
   final VoidCallback onCancel;
 
   @override
@@ -344,6 +349,7 @@ class _DownloadingRow extends StatelessWidget {
                 ),
               ),
             ),
+            TextButton(onPressed: onPause, child: const Text('Jeda')),
             TextButton(onPressed: onCancel, child: const Text('Batal')),
           ],
         ),
