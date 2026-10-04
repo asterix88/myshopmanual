@@ -1,0 +1,44 @@
+name: Create APK signing key
+
+# Run once (Actions > Create APK signing key > Run workflow). It makes a new
+# signing key and uploads it as a private, one-day artifact "signing-key".
+# Copy the three values in it into repository secrets ANDROID_KEYSTORE_BASE64,
+# ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS, keep a copy somewhere safe,
+# then delete the artifact. Every build after that is signed with this key,
+# so updates install over the previous version.
+on:
+  workflow_dispatch:
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Generate key
+        run: |
+          umask 077
+          mkdir key
+          PASSWORD=$(openssl rand -hex 24)
+          keytool -genkeypair -v -keystore key/release.keystore -storetype PKCS12 \
+            -alias mymanual -keyalg RSA -keysize 4096 -validity 10000 \
+            -storepass "$PASSWORD" -keypass "$PASSWORD" \
+            -dname "CN=MyManual, OU=Track Section, O=MyManual, C=ID" > /dev/null 2>&1
+          {
+            echo "ANDROID_KEY_ALIAS"
+            echo "mymanual"
+            echo
+            echo "ANDROID_KEYSTORE_PASSWORD"
+            echo "$PASSWORD"
+            echo
+            echo "ANDROID_KEYSTORE_BASE64"
+            base64 -w0 key/release.keystore
+            echo
+          } > key/isi-secret.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signing-key
+          path: key/
+          retention-days: 1

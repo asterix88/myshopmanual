@@ -89,42 +89,54 @@ export default {
       ? `Manuals downloaded on this phone (only these can be searched):\n${manuals.join("\n")}`
       : "No manuals are downloaded on this phone, so search_manuals finds nothing. Tell the user to download the manuals they need first.";
 
-    let upstream: Response;
-    try {
-      upstream = await fetch(env.API_URL, {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${env.GROQ_API_KEY}` },
-        body: JSON.stringify({
-          model: env.MODEL,
-          messages: [{ role: "system", content: `${SYSTEM}\n\n${context}` }, ...messages],
-          tools: [SEARCH_TOOL],
-          tool_choice: "auto",
-          temperature: 0.2,
-          max_tokens: 2048,
-        }),
-      });
-    } catch {
-      return json({ error: "upstream", message: "Layanan AI tidak bisa dihubungi. Coba lagi nanti." }, 502);
+    // Free tiers limit tokens per minute per model, so when one model is
+    // full (or retired) the same request goes to the next one in MODEL.
+    const models = env.MODEL.split(",").map((m) => m.trim()).filter(Boolean);
+    let lastStatus = 0;
+    let rateLimited = false;
+    for (const model of models) {
+      let upstream: Response;
+      try {
+        upstream = await fetch(env.API_URL, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${env.GROQ_API_KEY}` },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: "system", content: `${SYSTEM}\n\n${context}` }, ...messages],
+            tools: [SEARCH_TOOL],
+            tool_choice: "auto",
+            temperature: 0.2,
+            max_tokens: 2048,
+            // Less hidden reasoning means fewer tokens against the limit.
+            ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
+          }),
+        });
+      } catch {
+        return json({ error: "upstream", message: "Layanan AI tidak bisa dihubungi. Coba lagi nanti." }, 502);
+      }
+      const data = (await upstream.json().catch(() => null)) as {
+        choices?: { message?: unknown; finish_reason?: string }[];
+        error?: { message?: string; code?: string };
+      } | null;
+      if (upstream.status === 401 || upstream.status === 403) {
+        return json({ error: "server_key", message: "Kunci API di server AI tidak valid. Hubungi admin." }, 502);
+      }
+      const choice = data?.choices?.[0];
+      if (upstream.ok && choice?.message) {
+        return json({ message: choice.message, finish_reason: choice.finish_reason, model });
+      }
+      lastStatus = upstream.status;
+      if (upstream.status === 429 || upstream.status === 413) rateLimited = true;
+      console.log("model failed", model, upstream.status, data?.error?.code, data?.error?.message);
+      // 429 and 413 are rate limits; 404 and 400 can mean a retired model.
+      if (![400, 404, 413, 429, 498, 500, 502, 503].includes(upstream.status)) break;
     }
-
-    const data = (await upstream.json().catch(() => null)) as {
-      choices?: { message?: unknown; finish_reason?: string }[];
-      error?: { message?: string };
-    } | null;
-    if (upstream.status === 429) {
-      return json({ error: "busy", message: "Batas pemakaian AI gratis sedang penuh. Coba lagi sebentar lagi." }, 429);
+    if (rateLimited) {
+      return json({ error: "busy", message: "Batas pemakaian AI gratis sedang penuh. Coba lagi dalam 1 menit." }, 429);
     }
-    if (upstream.status === 401 || upstream.status === 403) {
-      return json({ error: "server_key", message: "Kunci API di server AI tidak valid. Hubungi admin." }, 502);
-    }
-    const choice = data?.choices?.[0];
-    if (!upstream.ok || !choice?.message) {
-      console.log("upstream error", upstream.status, data?.error?.message);
-      return json(
-        { error: "upstream", message: `Layanan AI sedang bermasalah (${upstream.status}). Coba lagi nanti.` },
-        502,
-      );
-    }
-    return json({ message: choice.message, finish_reason: choice.finish_reason });
+    return json(
+      { error: "upstream", message: `Layanan AI sedang bermasalah (${lastStatus}). Coba lagi nanti.` },
+      502,
+    );
   },
 } satisfies ExportedHandler<Env>;
