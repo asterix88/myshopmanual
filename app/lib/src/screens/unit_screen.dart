@@ -201,6 +201,7 @@ class _FileCard extends StatelessWidget {
     final lastPage = store.lastRead?.fileKey == file.key ? store.lastRead!.page : null;
     // Not downloaded: still readable straight from the server while online.
     final canRead = downloaded || (store.online == true && remote != null);
+    final partial = downloaded || progress != null ? 0 : store.partialBytes(file);
 
     return AppCard(
       onTap: canRead ? () => openViewer(context, file, page: lastPage) : null,
@@ -235,6 +236,14 @@ class _FileCard extends StatelessWidget {
               _Field(label: 'Ukuran', value: formatSize(file.downloadSize)),
             ],
           ),
+          if (partial > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Terunduh ${formatSize(partial)} dari ${formatSize(file.downloadSize)}, bisa dilanjutkan',
+                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+            ),
           const SizedBox(height: 10),
           if (progress != null)
             _DownloadingRow(progress: progress, onCancel: () => store.cancelDownload(file.key))
@@ -265,7 +274,7 @@ class _FileCard extends StatelessWidget {
                     onPressed: () => _download(context, store),
                     icon: const Icon(Icons.download, size: 18),
                     label: Text(
-                      'Unduh ${formatSize(file.downloadSize)}',
+                      partial > 0 ? 'Lanjutkan unduhan' : 'Unduh ${formatSize(file.downloadSize)}',
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),

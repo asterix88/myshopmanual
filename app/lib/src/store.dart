@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
@@ -29,6 +30,13 @@ class DownloadProgress {
 }
 
 class DownloadCancelled implements Exception {}
+
+/// The connection dropped mid-download. What arrived is kept, so the next
+/// try continues from there.
+class DownloadInterrupted implements Exception {
+  @override
+  String toString() => 'Koneksi terputus. Ketuk "Lanjutkan unduhan" untuk meneruskan dari posisi terakhir.';
+}
 
 /// Everything the app knows: the server catalog (cached for offline use),
 /// which manuals are on the phone, downloads in progress, and reading state.
@@ -247,16 +255,25 @@ class AppStore extends ChangeNotifier {
       // halfway leaves the old version usable.
       for (final target in targets.values) {
         await File('$target.part').rename(target);
+        await _deleteIfExists(File('$target.part.sha'));
       }
       local[file.key] = LocalManual(file: file, unitName: unitName);
       seenKeys.add(file.key);
       await _save();
-    } catch (e) {
+    } on DownloadCancelled {
+      // Cancelled on purpose: free the space.
       for (final target in targets.values) {
-        final part = File('$target.part');
-        if (await part.exists()) await part.delete();
+        await _deleteIfExists(File('$target.part'));
+        await _deleteIfExists(File('$target.part.sha'));
       }
-      if (e is! DownloadCancelled) rethrow;
+    } on SocketException {
+      throw DownloadInterrupted();
+    } on HandshakeException {
+      throw DownloadInterrupted();
+    } on TimeoutException {
+      throw DownloadInterrupted();
+    } on http.ClientException {
+      throw DownloadInterrupted();
     } finally {
       downloads.remove(file.key);
       notifyListeners();
@@ -268,39 +285,82 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Downloads [remote] to `<target>.part` and checks its sha256.
+  /// Bytes already downloaded for [file] by an interrupted download.
+  int partialBytes(ManualFile file) {
+    var total = 0;
+    for (final (remote, target) in [(file.index, indexPath(file)), (file.pdf, pdfPath(file))]) {
+      final part = File('$target.part');
+      final tag = File('$target.part.sha');
+      if (part.existsSync() && tag.existsSync() && tag.readAsStringSync() == remote.sha256) {
+        total += part.lengthSync();
+      }
+    }
+    return total;
+  }
+
+  /// Downloads [remote] to `<target>.part` and checks its sha256. A `.part`
+  /// left by an interrupted try of the same version (recorded in
+  /// `<target>.part.sha`) is continued with an HTTP Range request.
   Future<void> _fetch(RemoteFile remote, String target, DownloadProgress progress) async {
     await Directory(p.dirname(target)).create(recursive: true);
     final part = File('$target.part');
-    final request = http.Request('GET', _url(remote.path));
-    final response = await _client.send(request).timeout(const Duration(seconds: 30));
-    if (response.statusCode != 200) {
-      throw HttpException('HTTP ${response.statusCode} untuk ${remote.path}');
+    final tag = File('$target.part.sha');
+    var have = 0;
+    if (await part.exists()) {
+      final sameVersion = await tag.exists() && await tag.readAsString() == remote.sha256;
+      have = sameVersion ? await part.length() : 0;
+      if (!sameVersion || have > remote.size) {
+        await part.delete();
+        have = 0;
+      }
     }
-    final sink = part.openWrite();
-    final digestSink = _DigestSink();
-    final hasher = sha256.startChunkedConversion(digestSink);
-    var lastNotify = DateTime.now();
-    try {
-      await for (final chunk in response.stream) {
-        if (progress.cancelled) throw DownloadCancelled();
-        sink.add(chunk);
-        hasher.add(chunk);
-        progress.received += chunk.length;
-        if (DateTime.now().difference(lastNotify) > const Duration(milliseconds: 150)) {
-          lastNotify = DateTime.now();
-          notifyListeners();
+    await tag.writeAsString(remote.sha256);
+    progress.received += have;
+    notifyListeners();
+
+    if (have < remote.size) {
+      final request = http.Request('GET', _url(remote.path));
+      if (have > 0) request.headers['Range'] = 'bytes=$have-';
+      final response = await _client.send(request).timeout(const Duration(seconds: 30));
+      final IOSink sink;
+      if (have > 0 && response.statusCode == 206) {
+        sink = part.openWrite(mode: FileMode.append);
+      } else if (response.statusCode == 200) {
+        // The server sent the whole file: start over.
+        progress.received -= have;
+        sink = part.openWrite();
+      } else {
+        throw HttpException('HTTP ${response.statusCode} untuk ${remote.path}');
+      }
+      var lastNotify = DateTime.now();
+      try {
+        // A dropped connection can stall without an error; treat 30 s of
+        // silence as an interruption.
+        await for (final chunk in response.stream.timeout(const Duration(seconds: 30))) {
+          if (progress.cancelled) throw DownloadCancelled();
+          sink.add(chunk);
+          progress.received += chunk.length;
+          if (DateTime.now().difference(lastNotify) > const Duration(milliseconds: 150)) {
+            lastNotify = DateTime.now();
+            notifyListeners();
+          }
         }
+      } finally {
+        await sink.close().catchError((_) {});
       }
-      await sink.close();
-      hasher.close();
-      if (digestSink.value.toString() != remote.sha256) {
-        throw const FileSystemException('File rusak saat diunduh, coba lagi');
-      }
-    } catch (_) {
-      await sink.close().catchError((_) {});
-      rethrow;
     }
+
+    final path = part.path;
+    final digest = await Isolate.run(() => sha256.bind(File(path).openRead()).first);
+    if (digest.toString() != remote.sha256) {
+      await _deleteIfExists(part);
+      await _deleteIfExists(tag);
+      throw const FileSystemException('File rusak saat diunduh, coba lagi');
+    }
+  }
+
+  static Future<void> _deleteIfExists(File f) async {
+    if (await f.exists()) await f.delete();
   }
 
   Future<void> deleteManuals(Iterable<String> keys) async {
@@ -353,14 +413,4 @@ class AppStore extends ChangeNotifier {
     _client.close();
     super.dispose();
   }
-}
-
-class _DigestSink implements Sink<Digest> {
-  late Digest value;
-
-  @override
-  void add(Digest data) => value = data;
-
-  @override
-  void close() {}
 }

@@ -271,23 +271,15 @@ class _MachineFolders extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            alignment: WrapAlignment.center,
-            children: [
-              for (final machine in machines)
-                SizedBox(
-                  // Two folders side by side on a phone.
-                  width: (MediaQuery.sizeOf(context).width - 32 - 12) / 2,
-                  child: _FolderCard(
-                    machine: machine,
-                    units: [for (final u in units) if (u.machine == machine) u],
-                    store: store,
-                  ),
-                ),
-            ],
-          ),
+          for (final machine in machines)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _FolderCard(
+                machine: machine,
+                units: [for (final u in units) if (u.machine == machine) u],
+                store: store,
+              ),
+            ),
           if (units.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 16),
@@ -322,30 +314,48 @@ class _FolderCard extends StatelessWidget {
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => MachineScreen(machine: machine)),
       ),
-      padding: const EdgeInsets.fromLTRB(12, 18, 12, 16),
-      child: Column(
+      padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+      child: Row(
         children: [
           Badge(
             isLabelVisible: hasUpdate,
             smallSize: 10,
             backgroundColor: const Color(0xFFE8541E),
             child: Container(
-              width: 112,
-              height: 84,
-              decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(16)),
+              width: 104,
+              height: 76,
+              decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(14)),
               alignment: Alignment.center,
-              child: MachineIcon(machine, width: 92),
+              child: MachineIcon(machine, width: 86),
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            machine.label,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.navy, letterSpacing: 0.5),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  machine.label,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.navy,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  units.isEmpty ? 'belum ada model' : '${units.length} model unit',
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+                if (hasUpdate)
+                  const Text(
+                    'Ada update manual',
+                    style: TextStyle(fontSize: 12, color: Color(0xFFC2410C), fontWeight: FontWeight.w600),
+                  ),
+              ],
+            ),
           ),
-          Text(
-            units.isEmpty ? 'belum ada model' : '${units.length} model unit',
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
-          ),
+          const Icon(Icons.chevron_right, color: Color(0xFF9AA0A6)),
         ],
       ),
     );
