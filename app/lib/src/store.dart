@@ -172,9 +172,17 @@ class AppStore extends ChangeNotifier {
       lastError = null;
     } catch (e) {
       online = false;
-      lastError = e is TimeoutException ? 'Tidak ada sinyal' : '$e';
+      lastError = _friendlyError(e);
+      debugPrint('catalog refresh failed: $e');
     }
     notifyListeners();
+  }
+
+  /// A short reason a mechanic can act on, instead of the raw exception.
+  static String _friendlyError(Object e) {
+    if (e is TimeoutException) return 'Sinyal lemah, server tidak menjawab.';
+    if (e is SocketException || e is http.ClientException) return 'Tidak ada koneksi internet.';
+    return 'Server sedang bermasalah.';
   }
 
   /// Changes on the server since the user last looked (only meaningful once
