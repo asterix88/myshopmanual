@@ -5,3 +5,6 @@ __pycache__/
 
 # Screenshot renders from app/tool/screenshot_test.dart
 app/tool/screenshots/
+
+# Local R2 keys for update.bat
+r2-keys.bat

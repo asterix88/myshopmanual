@@ -28,7 +28,9 @@ class ViewerScreen extends StatefulWidget {
 
 class _ViewerScreenState extends State<ViewerScreen> {
   final _controller = PdfViewerController();
-  late final PdfTextSearcher _searcher = PdfTextSearcher(_controller)..addListener(_onSearchChanged);
+  /// pdfrx only allows a searcher once the document is loaded, so it is
+  /// created in [_onViewerReady].
+  PdfTextSearcher? _searcher;
   final _searchField = TextEditingController();
   final _searchFocus = FocusNode();
 
@@ -67,7 +69,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   @override
   void dispose() {
-    _searcher.dispose();
+    _searcher?.dispose();
     _searchField.dispose();
     _searchFocus.dispose();
     super.dispose();
@@ -87,6 +89,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   void _onViewerReady(PdfDocument document, PdfViewerController controller) {
+    _searcher ??= PdfTextSearcher(_controller)..addListener(_onSearchChanged);
     setState(() => _pageCount = document.pages.length);
     document.loadOutline().then((outline) {
       if (!mounted) return;
@@ -101,7 +104,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
     if (query.isNotEmpty) {
       // Opened from "Cari": stay on the page from the search result, but
       // highlight every match so next/previous work right away.
-      _searcher.startTextSearch(query, goToFirstMatch: widget.initialPage == null, searchImmediately: true);
+      _searcher!.startTextSearch(query, goToFirstMatch: widget.initialPage == null, searchImmediately: true);
     }
   }
 
@@ -133,7 +136,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
       _searchFocus.requestFocus();
     } else {
       _searchField.clear();
-      _searcher.resetTextSearch();
+      _searcher?.resetTextSearch();
     }
   }
 
@@ -217,7 +220,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
         margin: 8,
         onViewerReady: _onViewerReady,
         onPageChanged: _onPageChanged,
-        pagePaintCallbacks: [_searcher.pageTextMatchPaintCallback],
+        pagePaintCallbacks: [
+          (canvas, pageRect, page) => _searcher?.pageTextMatchPaintCallback(canvas, pageRect, page),
+        ],
         loadingBannerBuilder: (context, bytesDownloaded, totalBytes) => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -240,15 +245,17 @@ class _ViewerScreenState extends State<ViewerScreen> {
       );
 
   PreferredSizeWidget _searchBar() {
-    final matches = _searcher.matches.length;
-    final current = _searcher.currentIndex;
-    final status = _searcher.isSearching
-        ? (matches == 0 ? 'mencari…' : '${(current ?? 0) + 1}/$matches+')
-        : _searchField.text.trim().isEmpty
-            ? ''
-            : matches == 0
-                ? 'tidak ada'
-                : '${(current ?? 0) + 1}/$matches';
+    final searcher = _searcher;
+    final matches = searcher?.matches.length ?? 0;
+    final current = searcher?.currentIndex;
+    final String status;
+    if (searcher == null || _searchField.text.trim().isEmpty) {
+      status = '';
+    } else if (searcher.isSearching) {
+      status = matches == 0 ? 'mencari…' : '${(current ?? 0) + 1}/$matches+';
+    } else {
+      status = matches == 0 ? 'tidak ada' : '${(current ?? 0) + 1}/$matches';
+    }
     return PreferredSize(
       preferredSize: const Size.fromHeight(56),
       child: Padding(
@@ -260,8 +267,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 controller: _searchField,
                 focusNode: _searchFocus,
                 textInputAction: TextInputAction.search,
-                onChanged: (text) => _searcher.startTextSearch(text.trim()),
-                onSubmitted: (text) => _searcher.startTextSearch(text.trim(), searchImmediately: true),
+                onChanged: (text) => _searcher?.startTextSearch(text.trim()),
+                onSubmitted: (text) => _searcher?.startTextSearch(text.trim(), searchImmediately: true),
                 style: const TextStyle(fontSize: 14),
                 decoration: InputDecoration(
                   isDense: true,
@@ -277,12 +284,12 @@ class _ViewerScreenState extends State<ViewerScreen> {
             ),
             IconButton(
               tooltip: 'Hasil sebelumnya',
-              onPressed: matches == 0 ? null : _searcher.goToPrevMatch,
+              onPressed: matches == 0 ? null : searcher!.goToPrevMatch,
               icon: const Icon(Icons.keyboard_arrow_up),
             ),
             IconButton(
               tooltip: 'Hasil berikutnya',
-              onPressed: matches == 0 ? null : _searcher.goToNextMatch,
+              onPressed: matches == 0 ? null : searcher!.goToNextMatch,
               icon: const Icon(Icons.keyboard_arrow_down),
             ),
           ],
