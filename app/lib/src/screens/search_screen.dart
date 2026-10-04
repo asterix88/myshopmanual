@@ -60,7 +60,6 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final result = _result;
-    final notDownloaded = store.catalog.files.where((f) => !store.isDownloaded(f.key)).length;
 
     return Scaffold(
       body: SafeArea(
@@ -160,16 +159,6 @@ class _SearchScreenState extends State<SearchScreen> {
               )
             else
               ..._resultSlivers(result),
-            if (notDownloaded > 0 && store.local.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-                  child: Text(
-                    '$notDownloaded manual belum diunduh, jadi tidak ikut dicari.',
-                    style: const TextStyle(fontSize: 12, color: AppColors.muted),
-                  ),
-                ),
-              ),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
