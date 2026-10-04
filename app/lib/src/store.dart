@@ -26,6 +26,9 @@ class DownloadProgress {
   int received = 0;
   bool cancelled = false;
 
+  /// Stopped with "Jeda": what arrived is kept so the download can resume.
+  bool paused = false;
+
   double get fraction => total == 0 ? 0 : (received / total).clamp(0, 1);
 }
 
@@ -261,10 +264,12 @@ class AppStore extends ChangeNotifier {
       seenKeys.add(file.key);
       await _save();
     } on DownloadCancelled {
-      // Cancelled on purpose: free the space.
-      for (final target in targets.values) {
-        await _deleteIfExists(File('$target.part'));
-        await _deleteIfExists(File('$target.part.sha'));
+      // Cancelled on purpose: free the space. Paused keeps the parts.
+      if (!progress.paused) {
+        for (final target in targets.values) {
+          await _deleteIfExists(File('$target.part'));
+          await _deleteIfExists(File('$target.part.sha'));
+        }
       }
     } on SocketException {
       throw DownloadInterrupted();
@@ -278,6 +283,16 @@ class AppStore extends ChangeNotifier {
       downloads.remove(file.key);
       notifyListeners();
     }
+  }
+
+  /// Stops a download but keeps what arrived, to continue later.
+  void pauseDownload(String key) {
+    final progress = downloads[key];
+    if (progress == null) return;
+    progress
+      ..paused = true
+      ..cancelled = true;
+    notifyListeners();
   }
 
   void cancelDownload(String key) {
