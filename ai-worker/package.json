@@ -1,0 +1,17 @@
+{
+  "name": "mymanual-ai",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261004.1",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.147.0"
+  }
+}

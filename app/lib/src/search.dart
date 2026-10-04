@@ -123,3 +123,56 @@ List<TocEntry> loadToc(String indexPath) {
     return const [];
   }
 }
+
+/// One page handed to the AI as a source, with its full text.
+typedef PageText = ({String fileKey, int page, double rank, String? section, String text});
+
+/// Turns the AI's English keywords into an FTS5 query where any word may
+/// match; bm25 ranks pages that match more of them first.
+String toFtsAnyQuery(String text) {
+  final words = text
+      .toLowerCase()
+      .split(RegExp(r'[^a-z0-9]+'))
+      .where((w) => w.length > 1)
+      .toSet();
+  return words.map((w) => '"$w"').join(' OR ');
+}
+
+const _pageTextSql = '''
+SELECT page, bm25(pages) AS rank, text,
+       (SELECT title FROM toc WHERE toc.page <= pages.page
+        ORDER BY toc.page DESC, toc.seq DESC LIMIT 1) AS section
+FROM pages
+WHERE pages MATCH ?
+ORDER BY rank
+LIMIT ?
+''';
+
+/// The best matching pages across [indexes] ({fileKey: path}), with text.
+List<PageText> searchPageTextsSync(Map<String, String> indexes, String keywords, {int limit = 6}) {
+  final query = toFtsAnyQuery(keywords);
+  if (query.isEmpty) return const [];
+  final pages = <PageText>[];
+  for (final entry in indexes.entries) {
+    try {
+      final db = sqlite3.open(entry.value, mode: OpenMode.readOnly);
+      try {
+        for (final row in db.select(_pageTextSql, [query, limit])) {
+          pages.add((
+            fileKey: entry.key,
+            page: row['page'] as int,
+            rank: (row['rank'] as num).toDouble(),
+            section: row['section'] as String?,
+            text: (row['text'] as String).replaceAll(RegExp(r'[ \t]+'), ' ').trim(),
+          ));
+        }
+      } finally {
+        db.close();
+      }
+    } on SqliteException {
+      // Skip an unreadable index rather than failing the whole search.
+    }
+  }
+  pages.sort((a, b) => a.rank.compareTo(b.rank));
+  return pages.take(limit).toList();
+}

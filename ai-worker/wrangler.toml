@@ -1,0 +1,17 @@
+# Cloudflare Worker behind the app's "Tanya AI" tab. It holds the Anthropic
+# API key so the key never ships inside the APK. Deploy with deploy-ai.bat.
+name = "mymanual-ai"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Served on its own subdomain: workers.dev, like r2.dev, may be blocked by
+# mobile operators.
+routes = [{ pattern = "ai.mymanual.my.id", custom_domain = true }]
+
+[vars]
+MODEL = "claude-opus-5-5"
+
+# Secrets (set once with `npx wrangler secret put NAME`, never in this file):
+#   ANTHROPIC_API_KEY  key from console.anthropic.com
+#   APP_TOKEN          optional; when set, the app must send it (GitHub secret AI_TOKEN)

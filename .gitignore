@@ -8,3 +8,8 @@ app/tool/screenshots/
 
 # Local R2 keys for update.bat
 r2-keys.bat
+
+# AI worker dependencies and Wrangler state
+ai-worker/node_modules/
+ai-worker/.wrangler/
+ai-worker/.dev.vars

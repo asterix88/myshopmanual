@@ -50,7 +50,7 @@ jobs:
 
       # The server address comes from the repository variable CATALOG_URL
       # (Settings > Secrets and variables > Actions > Variables).
-      - run: flutter build apk --release --split-per-abi --dart-define=CATALOG_URL=${{ vars.CATALOG_URL }}
+      - run: flutter build apk --release --split-per-abi --dart-define=CATALOG_URL=${{ vars.CATALOG_URL }} --dart-define=AI_TOKEN=${{ secrets.AI_TOKEN }}
 
       - uses: actions/upload-artifact@v4
         with:

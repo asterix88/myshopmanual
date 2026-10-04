@@ -44,6 +44,23 @@ python tools/upload_r2.py dist             # unggah file yang berubah, catalog.j
 2. Taruh PDF di `source\<UNIT>\`, lalu klik dua kali `update.bat`. Script membuat paket lalu
    mengunggah yang berubah saja. Untuk satu unit saja: `update.bat --only PC210`.
 
+## Server AI (`ai-worker/`)
+
+Tab **Tanya AI** memakai Claude lewat Cloudflare Worker kecil di `ai.mymanual.my.id`, supaya kunci API
+tidak ikut di dalam APK. Pencarian halaman tetap berjalan di HP, pada manual yang sudah diunduh; Worker
+hanya meneruskan percakapan ke Claude dan mengembalikan jawabannya, lengkap dengan nomor halaman sumber.
+
+Pasang sekali dari PC Windows (butuh Node.js dari nodejs.org):
+
+1. Buat kunci API di console.anthropic.com (isi saldo dulu di Billing).
+2. Buka Command Prompt di folder repo, lalu jalankan `deploy-ai.bat kunci`.
+   Login Cloudflare terbuka di browser, lalu tempel kunci API saat diminta.
+3. Buka https://ai.mymanual.my.id di browser; harus tampil `{"ok":true}`.
+
+Setelah itu cukup `deploy-ai.bat` (tanpa `kunci`) kalau kode Worker berubah. Model diatur di
+`ai-worker/wrangler.toml` (`MODEL`). Opsional: secret `APP_TOKEN` di Worker plus secret `AI_TOKEN` di
+GitHub supaya hanya aplikasi ini yang bisa memakai server AI.
+
 ## Aplikasi Android (`app/`)
 
 Flutter, dengan penampil PDF PDFium (`pdfrx`) dan indeks pencarian SQLite FTS5 (`sqlite3`).
