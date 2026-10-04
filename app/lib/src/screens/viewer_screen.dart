@@ -238,6 +238,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
         backgroundColor: const Color(0xFFE4E6EA),
         margin: 8,
         layoutPages: _fixedSlotLayout,
+        // A fold-out page is drawn at about half its size to fit its slot, so
+        // allow twice pdfrx's default zoom to keep its diagrams just as sharp.
+        sizeDelegateProvider: const PdfViewerSizeDelegateProviderLegacy(maxScale: 16),
         // Read online, measuring all pages up front would fetch most of the
         // file before the first page shows, so measure pages as they scroll in.
         behaviorControlParams: PdfViewerBehaviorControlParams(loadPageDimensionsOnDemand: _online),
