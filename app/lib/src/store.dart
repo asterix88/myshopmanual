@@ -221,6 +221,16 @@ class AppStore extends ChangeNotifier {
 
   LocalManual? localManual(String key) => local[key];
 
+  /// Where a manual's PDF lives on the server, for reading it without
+  /// downloading.
+  Uri pdfUri(ManualFile f) => _url(f.pdf.path);
+
+  /// The manual for [key]: the downloaded copy if there is one, else the
+  /// server's entry.
+  ManualFile? fileByKey(String key) => local[key]?.file ?? catalog.file(key);
+
+  String unitNameOf(ManualFile f) => local[f.key]?.unitName ?? unitById(f.unitId)?.name ?? f.unitId;
+
   int get usedBytes => local.values.fold(0, (sum, m) => sum + m.file.downloadSize);
 
   Future<void> download(ManualFile file, {required String unitName}) async {

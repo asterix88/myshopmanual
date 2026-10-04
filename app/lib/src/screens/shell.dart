@@ -33,17 +33,54 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _tab,
+      body: Stack(
         children: [
-          HomeScreen(onOpenSearch: () => setState(() => _tab = 1)),
-          const SearchScreen(),
-          const ChatScreen(),
+          for (final (i, page) in [
+            HomeScreen(onOpenSearch: () => setState(() => _tab = 1)),
+            const SearchScreen(),
+            const ChatScreen(),
+          ].indexed)
+            _TabPage(active: i == _tab, child: page),
         ],
       ),
       bottomNavigationBar: _NavBar(
         current: _tab,
         onSelect: (i) => setState(() => _tab = i),
+      ),
+    );
+  }
+}
+
+/// Keeps every tab alive (scroll position, typed search) and cross-fades
+/// between them with a short rise, instead of swapping instantly.
+class _TabPage extends StatelessWidget {
+  const _TabPage({required this.active, required this.child});
+
+  final bool active;
+  final Widget child;
+
+  static const _duration = Duration(milliseconds: 220);
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      ignoring: !active,
+      child: ExcludeSemantics(
+        excluding: !active,
+        child: TickerMode(
+          enabled: active,
+          child: AnimatedOpacity(
+            opacity: active ? 1 : 0,
+            duration: _duration,
+            curve: Curves.easeOut,
+            child: AnimatedSlide(
+              offset: active ? Offset.zero : const Offset(0, 0.015),
+              duration: _duration,
+              curve: Curves.easeOutCubic,
+              child: child,
+            ),
+          ),
+        ),
       ),
     );
   }

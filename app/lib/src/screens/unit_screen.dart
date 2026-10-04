@@ -199,9 +199,11 @@ class _FileCard extends StatelessWidget {
         remote.pdf.sha256 != store.localManual(file.key)!.file.pdf.sha256;
     final withdrawn = downloaded && remote == null;
     final lastPage = store.lastRead?.fileKey == file.key ? store.lastRead!.page : null;
+    // Not downloaded: still readable straight from the server while online.
+    final canRead = downloaded || (store.online == true && remote != null);
 
     return AppCard(
-      onTap: downloaded ? () => openViewer(context, file, page: lastPage) : null,
+      onTap: canRead ? () => openViewer(context, file, page: lastPage) : null,
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -237,16 +239,38 @@ class _FileCard extends StatelessWidget {
           if (progress != null)
             _DownloadingRow(progress: progress, onCancel: () => store.cancelDownload(file.key))
           else if (!downloaded)
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(44),
-                side: const BorderSide(color: AppColors.navy, width: 1.5),
-                foregroundColor: AppColors.navy,
-                shape: const StadiumBorder(),
-              ),
-              onPressed: () => _download(context, store),
-              icon: const Icon(Icons.download, size: 18),
-              label: Text('Unduh ${formatSize(file.downloadSize)}', style: const TextStyle(fontWeight: FontWeight.w600)),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(44),
+                      backgroundColor: AppColors.navy,
+                      shape: const StadiumBorder(),
+                    ),
+                    onPressed: canRead ? () => openViewer(context, file, page: lastPage) : null,
+                    icon: const Icon(Icons.menu_book_outlined, size: 18),
+                    label: const Text('Baca online', style: TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(44),
+                      side: const BorderSide(color: AppColors.navy, width: 1.5),
+                      foregroundColor: AppColors.navy,
+                      shape: const StadiumBorder(),
+                    ),
+                    onPressed: () => _download(context, store),
+                    icon: const Icon(Icons.download, size: 18),
+                    label: Text(
+                      'Unduh ${formatSize(file.downloadSize)}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
             )
           else
             Row(

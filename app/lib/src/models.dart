@@ -105,6 +105,31 @@ class Unit {
   final List<ManualFile> files;
 
   int get totalSize => files.fold(0, (sum, f) => sum + f.downloadSize);
+
+  Machine get machine => Machine.of(this);
+}
+
+/// The kind of machine a unit is, shown as a folder on the home screen.
+enum Machine {
+  excavator('EXCAVATOR'),
+  bulldozer('BULLDOZER'),
+  other('LAINNYA');
+
+  const Machine(this.label);
+
+  final String label;
+
+  /// Uses the unit's `kind` from unit.json when set, otherwise guesses from
+  /// the model code: PC, CAT, ZX, EX are excavators; D85, D155 are dozers.
+  static Machine of(Unit unit) {
+    final kind = unit.kind.toLowerCase();
+    if (kind.contains('excavator')) return Machine.excavator;
+    if (kind.contains('dozer')) return Machine.bulldozer;
+    final code = unit.id.toUpperCase();
+    if (RegExp(r'^(PC|CAT|ZX|EX)').hasMatch(code)) return Machine.excavator;
+    if (RegExp(r'^D\d').hasMatch(code)) return Machine.bulldozer;
+    return Machine.other;
+  }
 }
 
 class Catalog {

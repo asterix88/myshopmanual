@@ -5,7 +5,8 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import 'shell.dart';
-import 'unit_screen.dart';
+import '../widgets/machine_icon.dart';
+import 'machine_screen.dart';
 import 'updates_screen.dart';
 import 'viewer_screen.dart';
 
@@ -17,7 +18,6 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    final units = store.units;
     final updateCount = store.updates.length;
     return Scaffold(
       appBar: AppBar(
@@ -73,38 +73,17 @@ class HomeScreen extends StatelessWidget {
       ),
       body: RefreshIndicator(
         onRefresh: store.refresh,
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: 24),
-          children: [
-            if (store.online == false) _OfflineBanner(store: store),
-            if (store.lastRead != null) _ContinueReading(lastRead: store.lastRead!),
-            Container(
-              margin: const EdgeInsets.only(top: 10),
-              color: AppColors.surface,
-              padding: const EdgeInsets.fromLTRB(12, 14, 12, 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SectionLabel(
-                    'Model unit',
-                    trailing: Text(
-                      '${formatSize(store.usedBytes)} di HP',
-                      style: const TextStyle(fontSize: 12, color: AppColors.muted),
-                    ),
-                  ),
-                  if (units.isEmpty)
-                    EmptyState(
-                      icon: Icons.folder_off_outlined,
-                      title: store.online == null ? 'Memuat daftar unit…' : 'Belum ada daftar unit',
-                      message: store.online == false
-                          ? 'Sambungkan HP ke internet sekali untuk mengambil daftar manual.'
-                          : null,
-                    )
-                  else
-                    for (final (i, unit) in units.indexed)
-                      _UnitRow(unit: unit, store: store, showDivider: i > 0),
-                ],
-              ),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverList.list(children: [
+              if (store.online == false) _OfflineBanner(store: store),
+              if (store.lastRead != null) _ContinueReading(lastRead: store.lastRead!),
+            ]),
+            // The machine folders sit in the middle of whatever space is left.
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(child: _MachineFolders(store: store)),
             ),
           ],
         ),
@@ -184,9 +163,11 @@ class _ContinueReading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    final manual = store.localManual(lastRead.fileKey);
-    if (manual == null) return const SizedBox.shrink();
-    final file = manual.file;
+    final file = store.fileByKey(lastRead.fileKey);
+    // A manual read online can only be continued while online.
+    if (file == null || (store.localManual(file.key) == null && store.online != true)) {
+      return const SizedBox.shrink();
+    }
     final progress = file.pages == 0 ? 0.0 : lastRead.page / file.pages;
     return Container(
       margin: const EdgeInsets.only(top: 10),
@@ -261,75 +242,112 @@ class _ContinueReading extends StatelessWidget {
   }
 }
 
-class _UnitRow extends StatelessWidget {
-  const _UnitRow({required this.unit, required this.store, required this.showDivider});
+/// The home screen's folders: EXCAVATOR and BULLDOZER, plus LAINNYA when a
+/// unit fits neither.
+class _MachineFolders extends StatelessWidget {
+  const _MachineFolders({required this.store});
 
-  final Unit unit;
   final AppStore store;
-  final bool showDivider;
 
   @override
   Widget build(BuildContext context) {
-    final files = store.filesOf(unit);
-    final onPhone = files.where((f) => store.isDownloaded(f.key)).length;
-    final keys = {for (final f in files) f.key};
-    final hasUpdate = store.updates.any((u) => keys.contains(u.file.key));
-    final subtitle = hasUpdate
-        ? 'Ada update manual'
-        : [
-            if (unit.kind.isNotEmpty) unit.kind,
-            onPhone == 0 ? 'belum ada file di HP' : '$onPhone dari ${files.length} file di HP',
-          ].join(' · ');
-    return Column(
-      children: [
-        if (showDivider) const Divider(indent: 72),
-        InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => UnitScreen(unitId: unit.id)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(12)),
-                  alignment: Alignment.center,
-                  child: Text(
-                    _shortCode(unit),
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.orangeText),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(unit.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: hasUpdate ? const Color(0xFFC2410C) : AppColors.muted,
-                          fontWeight: hasUpdate ? FontWeight.w600 : FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right, color: Color(0xFF9AA0A6)),
-              ],
+    final units = store.units;
+    final machines = [
+      Machine.excavator,
+      Machine.bulldozer,
+      if (units.any((u) => u.machine == Machine.other)) Machine.other,
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SectionLabel(
+            'Jenis alat',
+            trailing: Text(
+              '${formatSize(store.usedBytes)} di HP',
+              style: const TextStyle(fontSize: 12, color: AppColors.muted),
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final machine in machines)
+                SizedBox(
+                  // Two folders side by side on a phone.
+                  width: (MediaQuery.sizeOf(context).width - 32 - 12) / 2,
+                  child: _FolderCard(
+                    machine: machine,
+                    units: [for (final u in units) if (u.machine == machine) u],
+                    store: store,
+                  ),
+                ),
+            ],
+          ),
+          if (units.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(
+                store.online == null
+                    ? 'Memuat daftar unit…'
+                    : store.online == false
+                        ? 'Sambungkan HP ke internet sekali untuk mengambil daftar manual.'
+                        : 'Belum ada manual di server.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+              ),
+            ),
+        ],
+      ),
     );
   }
+}
 
-  static String _shortCode(Unit unit) {
-    final code = unit.id.split(RegExp(r'[-_ ]')).first.toUpperCase();
-    return code.length > 5 ? code.substring(0, 5) : code;
+class _FolderCard extends StatelessWidget {
+  const _FolderCard({required this.machine, required this.units, required this.store});
+
+  final Machine machine;
+  final List<Unit> units;
+  final AppStore store;
+
+  @override
+  Widget build(BuildContext context) {
+    final keys = {for (final u in units) for (final f in store.filesOf(u)) f.key};
+    final hasUpdate = store.updates.any((u) => keys.contains(u.file.key));
+    return AppCard(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => MachineScreen(machine: machine)),
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 18, 12, 16),
+      child: Column(
+        children: [
+          Badge(
+            isLabelVisible: hasUpdate,
+            smallSize: 10,
+            backgroundColor: const Color(0xFFE8541E),
+            child: Container(
+              width: 112,
+              height: 84,
+              decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(16)),
+              alignment: Alignment.center,
+              child: MachineIcon(machine, width: 92),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            machine.label,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.navy, letterSpacing: 0.5),
+          ),
+          Text(
+            units.isEmpty ? 'belum ada model' : '${units.length} model unit',
+            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+        ],
+      ),
+    );
   }
 }

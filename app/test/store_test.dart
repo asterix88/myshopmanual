@@ -49,6 +49,25 @@ void main() {
     });
   });
 
+  group('machine folders', () {
+    Unit unit(String id, [String kind = '']) => Unit(id: id, name: id, kind: kind, files: const []);
+
+    test('model codes sort into excavator and bulldozer', () {
+      for (final id in ['PC2000-11', 'PC1250-11', 'CAT395', 'PC500-10', 'PC210']) {
+        expect(unit(id).machine, Machine.excavator, reason: id);
+      }
+      for (final id in ['D375', 'D155', 'D85']) {
+        expect(unit(id).machine, Machine.bulldozer, reason: id);
+      }
+      expect(unit('GD825').machine, Machine.other);
+    });
+
+    test('kind from unit.json wins over the model code', () {
+      expect(unit('CATD9', 'Bulldozer').machine, Machine.bulldozer);
+      expect(unit('X1', 'Excavator').machine, Machine.excavator);
+    });
+  });
+
   group('updates', () {
     final catalog = Catalog.fromJson(fixtureCatalog());
     final file = catalog.files.single;

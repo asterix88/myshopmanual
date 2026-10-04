@@ -53,6 +53,10 @@ ThemeData buildTheme() {
     ),
     dividerTheme: const DividerThemeData(color: AppColors.divider, thickness: 1, space: 1),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+    // Smoother opening of folders and manuals than the default zoom.
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {TargetPlatform.android: FadeForwardsPageTransitionsBuilder()},
+    ),
     textTheme: base.textTheme.apply(bodyColor: AppColors.ink, displayColor: AppColors.ink),
   );
 }
