@@ -44,6 +44,28 @@ python tools/upload_r2.py dist             # unggah file yang berubah, catalog.j
 2. Taruh PDF di `source\<UNIT>\`, lalu klik dua kali `update.bat`. Script membuat paket lalu
    mengunggah yang berubah saja. Untuk satu unit saja: `update.bat --only PC210`.
 
+## Server AI (`ai-worker/`)
+
+Tab **Tanya AI** memakai AI Groq (tier gratis) lewat Cloudflare Worker kecil di `ai.mymanual.my.id`,
+supaya kunci API tidak ikut di dalam APK. Pencarian halaman tetap berjalan di HP, pada manual yang sudah
+diunduh; Worker hanya meneruskan percakapan ke AI dan mengembalikan jawabannya, lengkap dengan nomor
+halaman sumber. Tier gratis punya batas permintaan per menit dan per hari; kalau penuh, aplikasi
+menampilkan pesan untuk mencoba lagi nanti.
+
+Server ini di-deploy otomatis oleh GitHub Actions (`.github/workflows/ai-worker.yml`) setiap folder
+`ai-worker/` berubah di `main`; tidak ada yang perlu dipasang di PC. Siapkan sekali di GitHub, menu
+Settings > Secrets and variables > Actions > New repository secret:
+
+- `GROQ_API_KEY`: dari console.groq.com > API Keys (gratis, cukup login).
+- `CLOUDFLARE_API_TOKEN`: dari Cloudflare, My Profile > API Tokens > Create Token > template
+  "Edit Cloudflare Workers", tambahkan izin Zone > DNS > Edit untuk zona `mymanual.my.id`.
+- `CLOUDFLARE_ACCOUNT_ID`: ID akun di halaman Workers & Pages Cloudflare (kolom kanan).
+
+Lalu di tab Actions jalankan "Deploy AI server" (Run workflow). Setelah selesai,
+https://ai.mymanual.my.id harus menampilkan `{"ok":true,...}`. Model dan alamat API diatur di
+`ai-worker/wrangler.toml` (`MODEL`, `API_URL`); API lain yang kompatibel dengan format OpenAI (misalnya
+Gemini atau OpenRouter) juga bisa dipakai dengan mengganti keduanya dan kuncinya.
+
 ## Aplikasi Android (`app/`)
 
 Flutter, dengan penampil PDF PDFium (`pdfrx`) dan indeks pencarian SQLite FTS5 (`sqlite3`).

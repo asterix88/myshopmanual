@@ -1,0 +1,24 @@
+# Cloudflare Worker behind the app's "Tanya AI" tab. It holds the Groq
+# API key so the key never ships inside the APK. GitHub Actions deploys it
+# (.github/workflows/ai-worker.yml) whenever this folder changes on main.
+name = "mymanual-ai"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Served on its own subdomain: workers.dev, like r2.dev, may be blocked by
+# mobile operators.
+routes = [{ pattern = "ai.mymanual.my.id", custom_domain = true }]
+
+[vars]
+# Any OpenAI-compatible chat API with tool calling works; Groq's free tier
+# is the default. Change MODEL to another Groq model that supports tool use
+# (console.groq.com/docs/models) if this one is retired or rate limited.
+API_URL = "https://api.groq.com/openai/v1/chat/completions"
+MODEL = "openai/gpt-oss-120b"
+
+# Secrets, never in this file:
+#   GROQ_API_KEY  key from console.groq.com, uploaded by the workflow from
+#                 the GitHub secret of the same name
+#   APP_TOKEN     optional; when set (npx wrangler secret put APP_TOKEN), the
+#                 app must send it, so also set the GitHub secret AI_TOKEN

@@ -6,7 +6,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mymanual/main.dart';
+import 'package:mymanual/src/screens/chat_screen.dart';
+import 'package:mymanual/src/screens/shell.dart';
+import 'package:mymanual/src/theme.dart';
 import 'package:mymanual/src/store.dart';
 
 import '../test/store_test.dart' show fixtureServer;
@@ -64,7 +71,7 @@ void main() {
 
     await tester.tap(find.text('Cari').last);
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'hydraulic oil filter');
+    await tester.enterText(find.byType(TextField).first, 'hydraulic oil filter');
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 800)));
     await tester.pump(const Duration(milliseconds: 300));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 800)));
@@ -84,5 +91,60 @@ void main() {
     await tester.tap(find.text('TEST1-1'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/6_unit_online.png'));
+  });
+
+  testWidgets('chat answer', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.75;
+    late AppStore store;
+    await tester.runAsync(() async {
+      await loadFonts();
+      final root = Directory.systemTemp.createTempSync('shots');
+      store = await AppStore.open(root: root, client: fixtureServer());
+      await store.setServerUrl('https://example.test');
+      await store.download(store.catalog.files.single, unitName: 'TEST1-1');
+    });
+    var round = 0;
+    final worker = MockClient((_) async {
+      round++;
+      final reply = round == 1
+          ? {
+              'message': {
+                'role': 'assistant',
+                'content': null,
+                'tool_calls': [
+                  {
+                    'id': 'c1',
+                    'type': 'function',
+                    'function': {
+                      'name': 'search_manuals',
+                      'arguments': jsonEncode({'query': 'hydraulic oil filter clogging', 'unit': ''}),
+                    },
+                  },
+                ],
+              },
+            }
+          : {
+              'message': {
+                'role': 'assistant',
+                'content': 'Lampu hydraulic oil filter clogging menandakan filter oli hidrolik tersumbat [S1].\n\n'
+                    'Langkah:\n1. Matikan engine.\n2. Ganti element hydraulic oil filter [S2].',
+              },
+            };
+      return http.Response(jsonEncode(reply), 200);
+    });
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(theme: buildTheme(), home: ChatScreen(client: worker)),
+    ));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Lampu filter oli hidrolik menyala, apa yang harus dilakukan?');
+    await tester.tap(find.byTooltip('Kirim'));
+    for (var i = 0; i < 5; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/7_chat_answer.png'));
   });
 }
