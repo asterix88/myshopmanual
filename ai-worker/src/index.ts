@@ -16,7 +16,9 @@ Answer only from the manual pages that search_manuals returns. The manuals are i
 
 Write the answer in Bahasa Indonesia, keeping technical terms, part names and values exactly as the manual writes them. Give values with their units and conditions. Keep it short and practical: steps as a numbered list when there is a procedure, safety warnings from the manual first when they apply. Use plain text: no Markdown headings or tables; "- " for bullet points is fine, and **double stars** may mark a key value or warning in bold.
 
-Cite every fact with the source id of the page it comes from, in square brackets right after the sentence, like [S3]. Use only ids that appear in the search results.`;
+Cite every fact with the source id of the page it comes from, in square brackets right after the sentence, like [S3]. Use only ids that appear in the search results.
+
+The app can show a page itself as a picture under the answer. When seeing a page would help the mechanic (a component drawing or location, an exploded view or parts figure, a hydraulic or electrical diagram, a connector pin layout, an adjustment illustration), add [Gambar S3] on its own line at the end, using that page's source id. Show at most 3 pictures, only pages whose text shows they carry such a figure (figure numbers, callout numbers, "location", "diagram", parts lists), and none when text alone answers the question.`;
 
 const SEARCH_TOOL = {
   type: "function",
