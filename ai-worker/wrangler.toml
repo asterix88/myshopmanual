@@ -1,4 +1,4 @@
-# Cloudflare Worker behind the app's "Tanya AI" tab. It holds the Anthropic
+# Cloudflare Worker behind the app's "Tanya AI" tab. It holds the Groq
 # API key so the key never ships inside the APK. GitHub Actions deploys it
 # (.github/workflows/ai-worker.yml) whenever this folder changes on main.
 name = "mymanual-ai"
@@ -11,12 +11,14 @@ compatibility_flags = ["nodejs_compat"]
 routes = [{ pattern = "ai.mymanual.my.id", custom_domain = true }]
 
 [vars]
-# claude-sonnet-5-5 balances accuracy and cost; claude-opus-5-5 is the most
-# thorough, claude-haiku-4-5 the cheapest.
-MODEL = "claude-sonnet-5-5"
+# Any OpenAI-compatible chat API with tool calling works; Groq's free tier
+# is the default. Change MODEL to another Groq model that supports tool use
+# (console.groq.com/docs/models) if this one is retired or rate limited.
+API_URL = "https://api.groq.com/openai/v1/chat/completions"
+MODEL = "openai/gpt-oss-120b"
 
 # Secrets, never in this file:
-#   ANTHROPIC_API_KEY  key from console.anthropic.com, uploaded by the workflow
-#                      from the GitHub secret of the same name
-#   APP_TOKEN          optional; when set (npx wrangler secret put APP_TOKEN), the
-#                      app must send it, so also set the GitHub secret AI_TOKEN
+#   GROQ_API_KEY  key from console.groq.com, uploaded by the workflow from
+#                 the GitHub secret of the same name
+#   APP_TOKEN     optional; when set (npx wrangler secret put APP_TOKEN), the
+#                 app must send it, so also set the GitHub secret AI_TOKEN

@@ -26,22 +26,28 @@ void main() {
       requests.add(body);
       final Map<String, dynamic> reply = requests.length == 1
           ? {
-              'stop_reason': 'tool_use',
-              'content': [
-                {'type': 'thinking', 'thinking': '', 'signature': 'sig'},
-                {
-                  'type': 'tool_use',
-                  'id': 'toolu_1',
-                  'name': 'search_manuals',
-                  'input': {'query': 'hydraulic oil filter clogging lamp', 'unit': 'TEST1'},
-                },
-              ],
+              'finish_reason': 'tool_calls',
+              'message': {
+                'role': 'assistant',
+                'content': null,
+                'tool_calls': [
+                  {
+                    'id': 'call_1',
+                    'type': 'function',
+                    'function': {
+                      'name': 'search_manuals',
+                      'arguments': jsonEncode({'query': 'hydraulic oil filter clogging lamp', 'unit': 'TEST1'}),
+                    },
+                  },
+                ],
+              },
             }
           : {
-              'stop_reason': 'end_turn',
-              'content': [
-                {'type': 'text', 'text': 'Lampu menyala karena **filter** tersumbat [S1]. Ganti elemen [S2] [S9].'},
-              ],
+              'finish_reason': 'stop',
+              'message': {
+                'role': 'assistant',
+                'content': 'Lampu menyala karena **filter** tersumbat [S1]. Ganti elemen [S2] [S9].',
+              },
             };
       return http.Response(jsonEncode(reply), 200, headers: {'content-type': 'application/json'});
     });
@@ -51,12 +57,12 @@ void main() {
     final answer = await chat.ask('Lampu filter oli hidrolik menyala?', onStatus: statuses.add);
 
     expect(requests.first['manuals'], ['TEST1-1: OMM Test Unit (OMM)']);
-    // Second request: question, the AI's turn kept as sent, then the pages found.
+    // Second request: question, the AI's tool call, then the pages found.
     final messages = (requests[1]['messages'] as List).cast<Map<String, dynamic>>();
-    expect(messages.map((m) => m['role']), ['user', 'assistant', 'user']);
-    expect((messages[1]['content'] as List).first['signature'], 'sig');
-    final result = (messages[2]['content'] as List).single as Map<String, dynamic>;
-    expect(result['tool_use_id'], 'toolu_1');
+    expect(messages.map((m) => m['role']), ['user', 'assistant', 'tool']);
+    expect(((messages[1]['tool_calls'] as List).single as Map)['id'], 'call_1');
+    final result = messages[2];
+    expect(result['tool_call_id'], 'call_1');
     expect(result['content'], contains('[S1] TEST1-1 · OMM Test Unit · page 2'));
     expect(result['content'], contains('HYDRAULIC OIL FILTER CLOGGING CAUTION LAMP'));
     expect(statuses, contains('Mencari di manual: hydraulic oil filter clogging lamp'));

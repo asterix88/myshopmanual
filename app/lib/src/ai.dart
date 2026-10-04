@@ -7,7 +7,7 @@ import 'models.dart';
 import 'search.dart';
 import 'store.dart';
 
-/// Address of the Worker in ai-worker/, which holds the Anthropic API key.
+/// Address of the Worker in ai-worker/, which holds the AI provider's API key.
 /// Override with `flutter build apk --dart-define=AI_URL=...`.
 const _buildAiUrl = String.fromEnvironment('AI_URL');
 const aiUrl = _buildAiUrl == '' ? 'https://ai.mymanual.my.id' : _buildAiUrl;
@@ -48,9 +48,9 @@ class AiException implements Exception {
   String toString() => message;
 }
 
-/// A conversation with the AI. The Worker is stateless: the full history,
-/// including the AI's tool calls and the pages found, is kept here and sent
-/// on every request. History is only ever appended to.
+/// A conversation with the AI. The Worker is stateless: the full history, in
+/// the OpenAI-style chat format, including the AI's tool calls and the pages
+/// found, is kept here and sent on every request.
 class AiChat {
   AiChat({required this.store, required this.client, Uri? endpoint})
       : _endpoint = endpoint ?? Uri.parse('$aiUrl/chat');
@@ -76,29 +76,31 @@ class AiChat {
     for (var round = 0; round < maxRounds; round++) {
       onStatus?.call(round == 0 ? 'Memahami pertanyaan…' : 'Menyusun jawaban…');
       final response = await _post({'messages': _messages, 'manuals': manuals});
-      final content = (response['content'] as List).cast<Map<String, dynamic>>();
-      _messages.add({'role': 'assistant', 'content': content});
+      final message = (response['message'] as Map).cast<String, dynamic>();
+      final toolCalls = (message['tool_calls'] as List? ?? const []).cast<Map<String, dynamic>>();
+      _messages.add({
+        'role': 'assistant',
+        'content': message['content'],
+        if (toolCalls.isNotEmpty) 'tool_calls': toolCalls,
+      });
 
-      final stopReason = response['stop_reason'] as String?;
-      if (stopReason == 'tool_use') {
-        final results = <Map<String, dynamic>>[];
-        for (final block in content.where((b) => b['type'] == 'tool_use')) {
-          final input = (block['input'] as Map).cast<String, dynamic>();
-          final query = (input['query'] as String? ?? '').trim();
-          onStatus?.call('Mencari di manual: $query');
-          results.add({
-            'type': 'tool_result',
-            'tool_use_id': block['id'],
-            'content': await _search(query, (input['unit'] as String? ?? '').trim()),
-          });
+      if (toolCalls.isEmpty) return _answer(message['content'] as String? ?? '');
+      for (final call in toolCalls) {
+        final function = (call['function'] as Map).cast<String, dynamic>();
+        Map<String, dynamic> args;
+        try {
+          args = (jsonDecode(function['arguments'] as String? ?? '{}') as Map).cast<String, dynamic>();
+        } on FormatException {
+          args = const {};
         }
-        _messages.add({'role': 'user', 'content': results});
-        continue;
+        final query = (args['query'] as String? ?? '').trim();
+        onStatus?.call('Mencari di manual: $query');
+        _messages.add({
+          'role': 'tool',
+          'tool_call_id': call['id'],
+          'content': await _search(query, (args['unit'] as String? ?? '').trim()),
+        });
       }
-      if (stopReason == 'refusal') {
-        return ChatEntry.assistant('Maaf, pertanyaan ini tidak bisa dijawab oleh AI.', failed: true);
-      }
-      return _answer(content);
     }
     return ChatEntry.assistant(
       'AI belum menemukan jawabannya di manual yang terunduh. Coba tanyakan dengan lebih spesifik.',
@@ -147,7 +149,7 @@ class AiChat {
                   _normalize(e.key.split('/').first).contains(wanted))
                 e.key: e.value,
           };
-    final pages = await Isolate.run(() => searchPageTextsSync(indexes.isEmpty ? all : indexes, query));
+    final pages = await Isolate.run(() => searchPageTextsSync(indexes.isEmpty ? all : indexes, query, limit: 5));
     if (pages.isEmpty) return 'No matching pages for "$query".';
 
     final out = StringBuffer();
@@ -155,7 +157,8 @@ class AiChat {
       final manual = store.localManual(p.fileKey)!;
       final id = _sources.length + 1;
       _sources[id] = AiSource(id: id, file: manual.file, unitName: manual.unitName, page: p.page);
-      final text = p.text.length > 3000 ? '${p.text.substring(0, 3000)}…' : p.text;
+      // Kept short: free tiers limit tokens per minute.
+      final text = p.text.length > 1800 ? '${p.text.substring(0, 1800)}…' : p.text;
       out
         ..writeln('[S$id] ${manual.unitName} · ${manual.file.title} · page ${p.page}'
             '${p.section == null ? '' : ' · section: ${p.section}'}')
@@ -165,8 +168,8 @@ class AiChat {
     return out.toString();
   }
 
-  ChatEntry _answer(List<Map<String, dynamic>> content) {
-    final raw = content.where((b) => b['type'] == 'text').map((b) => b['text'] as String).join('\n').trim();
+  ChatEntry _answer(String content) {
+    final raw = content.trim();
     final cited = <AiSource>[];
     final text = raw.replaceAll('**', '').replaceAllMapped(RegExp(r'(\s*)\[S(\d+)\]'), (m) {
       final source = _sources[int.parse(m[2]!)];

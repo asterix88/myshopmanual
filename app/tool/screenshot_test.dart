@@ -109,25 +109,27 @@ void main() {
       round++;
       final reply = round == 1
           ? {
-              'stop_reason': 'tool_use',
-              'content': [
-                {
-                  'type': 'tool_use',
-                  'id': 't1',
-                  'name': 'search_manuals',
-                  'input': {'query': 'hydraulic oil filter clogging', 'unit': ''},
-                },
-              ],
+              'message': {
+                'role': 'assistant',
+                'content': null,
+                'tool_calls': [
+                  {
+                    'id': 'c1',
+                    'type': 'function',
+                    'function': {
+                      'name': 'search_manuals',
+                      'arguments': jsonEncode({'query': 'hydraulic oil filter clogging', 'unit': ''}),
+                    },
+                  },
+                ],
+              },
             }
           : {
-              'stop_reason': 'end_turn',
-              'content': [
-                {
-                  'type': 'text',
-                  'text': 'Lampu hydraulic oil filter clogging menandakan filter oli hidrolik tersumbat [S1].\n\n'
-                      'Langkah:\n1. Matikan engine.\n2. Ganti element hydraulic oil filter [S2].',
-                },
-              ],
+              'message': {
+                'role': 'assistant',
+                'content': 'Lampu hydraulic oil filter clogging menandakan filter oli hidrolik tersumbat [S1].\n\n'
+                    'Langkah:\n1. Matikan engine.\n2. Ganti element hydraulic oil filter [S2].',
+              },
             };
       return http.Response(jsonEncode(reply), 200);
     });
