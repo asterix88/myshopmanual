@@ -43,6 +43,9 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/1_home.png'));
 
+    await tester.tap(find.text('EXCAVATOR'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/1b_excavator.png'));
     await tester.tap(find.text('TEST1-1'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/2_unit.png'));
@@ -53,6 +56,8 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/3_edit.png'));
     await tester.tap(find.byTooltip('Selesai edit'));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
     await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -69,5 +74,15 @@ void main() {
     await tester.tap(find.text('Tanya AI').last);
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/5_chat.png'));
+
+    // A manual not on the phone: read online or download.
+    await tester.runAsync(() => store.deleteManuals([store.catalog.files.single.key]));
+    await tester.tap(find.text('Unit').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('EXCAVATOR'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('TEST1-1'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/6_unit_online.png'));
   });
 }

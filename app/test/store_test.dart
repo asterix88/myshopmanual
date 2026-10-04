@@ -49,6 +49,25 @@ void main() {
     });
   });
 
+  group('machine folders', () {
+    Unit unit(String id, [String kind = '']) => Unit(id: id, name: id, kind: kind, files: const []);
+
+    test('model codes sort into excavator and bulldozer', () {
+      for (final id in ['PC2000-11', 'PC1250-11', 'CAT395', 'PC500-10', 'PC210']) {
+        expect(unit(id).machine, Machine.excavator, reason: id);
+      }
+      for (final id in ['D375', 'D155', 'D85']) {
+        expect(unit(id).machine, Machine.bulldozer, reason: id);
+      }
+      expect(unit('GD825').machine, Machine.other);
+    });
+
+    test('kind from unit.json wins over the model code', () {
+      expect(unit('CATD9', 'Bulldozer').machine, Machine.bulldozer);
+      expect(unit('X1', 'Excavator').machine, Machine.excavator);
+    });
+  });
+
   group('updates', () {
     final catalog = Catalog.fromJson(fixtureCatalog());
     final file = catalog.files.single;
@@ -157,7 +176,7 @@ void main() {
       store.dispose();
     });
 
-    test('a corrupted download is rejected and leaves nothing behind', () async {
+    test('a corrupted download is rejected and the bad file removed', () async {
       final store = await AppStore.open(
         root: root,
         client: fixtureServer(corrupt: {'units/TEST1/OMM_Test_Unit.pdf'}),
@@ -167,7 +186,47 @@ void main() {
       await expectLater(store.download(file, unitName: 'TEST1-1'), throwsA(isA<FileSystemException>()));
       expect(store.isDownloaded(file.key), isFalse);
       expect(File('${store.pdfPath(file)}.part').existsSync(), isFalse);
-      expect(File('${store.indexPath(file)}.part').existsSync(), isFalse);
+      // The index arrived intact and is kept for the next try.
+      expect(store.partialBytes(file), file.index.size);
+      store.dispose();
+    });
+
+    test('an interrupted download continues where it stopped', () async {
+      final pdfPath = 'units/TEST1/OMM_Test_Unit.pdf';
+      final pdfBytes = File('${fixtures.path}/$pdfPath').readAsBytesSync();
+      final ranges = <String?>[];
+      var dropConnection = true;
+      final client = MockClient.streaming((request, _) async {
+        final path = request.url.path.replaceFirst(RegExp(r'^/'), '');
+        if (path != pdfPath) {
+          return fixtureServer().send(http.Request(request.method, request.url));
+        }
+        ranges.add(request.headers['Range']);
+        if (dropConnection) {
+          // Send half the PDF, then lose the connection.
+          Stream<List<int>> body() async* {
+            yield pdfBytes.sublist(0, pdfBytes.length ~/ 2);
+            throw const SocketException('Network is unreachable');
+          }
+          return http.StreamedResponse(body(), 200);
+        }
+        final from = int.parse(RegExp(r'bytes=(\d+)-').firstMatch(request.headers['Range']!)!.group(1)!);
+        return http.StreamedResponse(Stream.value(pdfBytes.sublist(from)), 206);
+      });
+      final store = await AppStore.open(root: root, client: client);
+      await store.setServerUrl('https://example.test');
+      final file = store.catalog.files.single;
+
+      await expectLater(store.download(file, unitName: 'TEST1-1'), throwsA(isA<DownloadInterrupted>()));
+      expect(store.isDownloaded(file.key), isFalse);
+      expect(store.partialBytes(file), greaterThanOrEqualTo(pdfBytes.length ~/ 2));
+
+      dropConnection = false;
+      await store.download(file, unitName: 'TEST1-1');
+      expect(ranges.last, 'bytes=${pdfBytes.length ~/ 2}-');
+      expect(store.isDownloaded(file.key), isTrue);
+      expect(File(store.pdfPath(file)).readAsBytesSync(), pdfBytes);
+      expect(store.partialBytes(file), 0);
       store.dispose();
     });
 

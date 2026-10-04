@@ -7,7 +7,8 @@ import '../theme.dart';
 import '../widgets/common.dart';
 import 'shell.dart';
 
-/// Opens a downloaded manual, optionally at [page] and with [query] highlighted.
+/// Opens a manual, optionally at [page] and with [query] highlighted. A
+/// downloaded manual opens from the phone; any other is read from the server.
 Future<void> openViewer(BuildContext context, ManualFile file, {int? page, String? query}) {
   return Navigator.of(context).push(MaterialPageRoute(
     builder: (_) => ViewerScreen(fileKey: file.key, initialPage: page, initialQuery: query),
@@ -37,6 +38,11 @@ class _ViewerScreenState extends State<ViewerScreen> {
   List<TocEntry> _toc = const [];
   List<PdfOutlineNode> _outline = const [];
 
+  /// Chosen once when the screen opens, so a download finishing while
+  /// reading does not reload the document.
+  ManualFile? _file;
+  bool _online = false;
+
   @override
   void initState() {
     super.initState();
@@ -51,10 +57,12 @@ class _ViewerScreenState extends State<ViewerScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_toc.isEmpty) {
-      final manual = StoreScope.read(context).localManual(widget.fileKey);
-      if (manual != null) _toc = loadToc(StoreScope.read(context).indexPath(manual.file));
-    }
+    if (_file != null) return;
+    final store = StoreScope.read(context);
+    final manual = store.localManual(widget.fileKey);
+    _file = manual?.file ?? store.catalog.file(widget.fileKey);
+    _online = manual == null;
+    if (manual != null) _toc = loadToc(store.indexPath(manual.file));
   }
 
   @override
@@ -81,7 +89,13 @@ class _ViewerScreenState extends State<ViewerScreen> {
   void _onViewerReady(PdfDocument document, PdfViewerController controller) {
     setState(() => _pageCount = document.pages.length);
     document.loadOutline().then((outline) {
-      if (mounted) setState(() => _outline = outline);
+      if (!mounted) return;
+      setState(() {
+        _outline = outline;
+        // Read online there is no search index, so name sections from the
+        // PDF's own bookmarks instead.
+        if (_toc.isEmpty) _toc = _tocFromOutline(outline);
+      });
     });
     final query = _searchField.text.trim();
     if (query.isNotEmpty) {
@@ -89,6 +103,22 @@ class _ViewerScreenState extends State<ViewerScreen> {
       // highlight every match so next/previous work right away.
       _searcher.startTextSearch(query, goToFirstMatch: widget.initialPage == null, searchImmediately: true);
     }
+  }
+
+  static List<TocEntry> _tocFromOutline(List<PdfOutlineNode> outline) {
+    final entries = <TocEntry>[];
+    void walk(List<PdfOutlineNode> nodes, int level) {
+      for (final node in nodes) {
+        final page = node.dest?.pageNumber;
+        if (page != null) entries.add((level: level, title: node.title.trim(), page: page));
+        walk(node.children, level + 1);
+      }
+    }
+
+    walk(outline, 1);
+    // Sections are looked up in page order.
+    entries.sort((a, b) => a.page.compareTo(b.page));
+    return entries;
   }
 
   void _onPageChanged(int? page) {
@@ -110,14 +140,13 @@ class _ViewerScreenState extends State<ViewerScreen> {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    final manual = store.localManual(widget.fileKey);
-    if (manual == null) {
+    final file = _file;
+    if (file == null) {
       return Scaffold(
         appBar: AppBar(),
-        body: const EmptyState(icon: Icons.picture_as_pdf_outlined, title: 'File ini belum ada di HP'),
+        body: const EmptyState(icon: Icons.picture_as_pdf_outlined, title: 'File ini tidak ditemukan'),
       );
     }
-    final file = manual.file;
     final bookmarked = store.isBookmarked(file.key, _page);
     final section = _sectionFor(_page);
 
@@ -129,7 +158,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
           children: [
             Text(file.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15)),
             Text(
-              '${manual.unitName} · ${file.type.label}',
+              [store.unitNameOf(file), file.type.label, if (_online) 'online'].join(' · '),
               style: const TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
             ),
           ],
@@ -154,20 +183,23 @@ class _ViewerScreenState extends State<ViewerScreen> {
         ],
         bottom: _searching ? _searchBar() : null,
       ),
-      body: PdfViewer.file(
-        store.pdfPath(file),
-        controller: _controller,
-        initialPageNumber: widget.initialPage ?? 1,
-        params: PdfViewerParams(
-          backgroundColor: const Color(0xFFE4E6EA),
-          margin: 8,
-          onViewerReady: _onViewerReady,
-          onPageChanged: _onPageChanged,
-          pagePaintCallbacks: [_searcher.pageTextMatchPaintCallback],
-          loadingBannerBuilder: (context, bytesDownloaded, totalBytes) =>
-              const Center(child: CircularProgressIndicator()),
-        ),
-      ),
+      body: _online
+          ? PdfViewer.uri(
+              store.pdfUri(file),
+              // Fetch only the parts of the PDF being viewed, so a 130 MB
+              // manual opens in seconds instead of downloading in full.
+              preferRangeAccess: true,
+              timeout: const Duration(seconds: 30),
+              controller: _controller,
+              initialPageNumber: widget.initialPage ?? 1,
+              params: _viewerParams,
+            )
+          : PdfViewer.file(
+              store.pdfPath(file),
+              controller: _controller,
+              initialPageNumber: widget.initialPage ?? 1,
+              params: _viewerParams,
+            ),
       bottomNavigationBar: _pageCount == 0
           ? null
           : _PageBar(
@@ -178,6 +210,34 @@ class _ViewerScreenState extends State<ViewerScreen> {
             ),
     );
   }
+
+  /// Built once: the viewer re-lays out whenever its params change.
+  late final PdfViewerParams _viewerParams = PdfViewerParams(
+        backgroundColor: const Color(0xFFE4E6EA),
+        margin: 8,
+        onViewerReady: _onViewerReady,
+        onPageChanged: _onPageChanged,
+        pagePaintCallbacks: [_searcher.pageTextMatchPaintCallback],
+        loadingBannerBuilder: (context, bytesDownloaded, totalBytes) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              if (_online) ...[
+                const SizedBox(height: 14),
+                const Text('Membuka dari server…', style: TextStyle(fontSize: 13, color: AppColors.muted)),
+              ],
+            ],
+          ),
+        ),
+        errorBannerBuilder: (context, error, stackTrace, documentRef) => EmptyState(
+          icon: _online ? Icons.cloud_off : Icons.error_outline,
+          title: _online ? 'Gagal membuka file secara online' : 'File tidak bisa dibuka',
+          message: _online
+              ? 'Periksa sinyal, atau unduh file ini supaya bisa dibuka tanpa internet.'
+              : 'Coba hapus lalu unduh ulang file ini.',
+        ),
+      );
 
   PreferredSizeWidget _searchBar() {
     final matches = _searcher.matches.length;

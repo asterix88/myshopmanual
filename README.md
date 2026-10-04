@@ -23,6 +23,8 @@ python tools/search.py dist/units/PC210/index.sqlite "track tension"
 ```
 
 Folder unit boleh berisi `unit.json`, misalnya `{"name": "PC210-10M0", "kind": "Excavator"}`.
+`kind` menentukan folder di beranda (Excavator atau Bulldozer). Kalau kosong, aplikasi menebak dari
+kode model: PC, CAT, ZX, EX masuk EXCAVATOR; D85, D155, D375 masuk BULLDOZER; selain itu LAINNYA.
 Menjalankan ulang script mempertahankan `catalog.json` lama: tanggal `updated_at` tiap file
 hanya berubah kalau PDF-nya berubah, dan dari situ aplikasi tahu ada manual baru atau versi baru.
 
