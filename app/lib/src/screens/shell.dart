@@ -67,18 +67,17 @@ class _TabPage extends StatelessWidget {
       ignoring: !active,
       child: ExcludeSemantics(
         excluding: !active,
-        child: TickerMode(
-          enabled: active,
-          child: AnimatedOpacity(
-            opacity: active ? 1 : 0,
+        child: AnimatedOpacity(
+          opacity: active ? 1 : 0,
+          duration: _duration,
+          curve: Curves.easeOut,
+          child: AnimatedSlide(
+            offset: active ? Offset.zero : const Offset(0, 0.015),
             duration: _duration,
-            curve: Curves.easeOut,
-            child: AnimatedSlide(
-              offset: active ? Offset.zero : const Offset(0, 0.015),
-              duration: _duration,
-              curve: Curves.easeOutCubic,
-              child: child,
-            ),
+            curve: Curves.easeOutCubic,
+            // Only the page's own animations pause; the fade above must keep
+            // running, or a tab being left stays drawn over the new one.
+            child: TickerMode(enabled: active, child: child),
           ),
         ),
       ),

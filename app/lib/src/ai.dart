@@ -63,7 +63,7 @@ class AiChat {
   final Map<int, AiSource> _sources = {};
 
   /// Requests per question: each search the AI asks for costs one round.
-  static const maxRounds = 6;
+  static const maxRounds = 4;
 
   /// Asks [question]; [onStatus] reports what is happening while it works.
   Future<ChatEntry> ask(String question, {void Function(String status)? onStatus}) async {
@@ -149,7 +149,7 @@ class AiChat {
                   _normalize(e.key.split('/').first).contains(wanted))
                 e.key: e.value,
           };
-    final pages = await Isolate.run(() => searchPageTextsSync(indexes.isEmpty ? all : indexes, query, limit: 5));
+    final pages = await Isolate.run(() => searchPageTextsSync(indexes.isEmpty ? all : indexes, query, limit: 4));
     if (pages.isEmpty) return 'No matching pages for "$query".';
 
     final out = StringBuffer();
@@ -158,7 +158,7 @@ class AiChat {
       final id = _sources.length + 1;
       _sources[id] = AiSource(id: id, file: manual.file, unitName: manual.unitName, page: p.page);
       // Kept short: free tiers limit tokens per minute.
-      final text = p.text.length > 1800 ? '${p.text.substring(0, 1800)}…' : p.text;
+      final text = p.text.length > 1200 ? '${p.text.substring(0, 1200)}…' : p.text;
       out
         ..writeln('[S$id] ${manual.unitName} · ${manual.file.title} · page ${p.page}'
             '${p.section == null ? '' : ' · section: ${p.section}'}')

@@ -89,3 +89,17 @@ flutter test tool/screenshot_test.dart --update-goldens   # render screenshot ke
 
 Catatan lisensi: PyMuPDF berlisensi AGPL. Ini aman untuk script internal di PC admin
 karena script tidak ikut didistribusikan di dalam aplikasi.
+
+## Kunci tanda tangan APK
+
+Android hanya mau memasang update di atas aplikasi lama kalau keduanya ditandatangani dengan kunci yang
+sama. Tanpa kunci tetap, setiap build GitHub memakai kunci acak, jadi update gagal terpasang.
+
+1. Di tab Actions jalankan "Create APK signing key" (Run workflow), lalu unduh artifact `signing-key`.
+2. Buka `isi-secret.txt` di dalamnya dan buat tiga repository secret dengan nama dan isi persis seperti
+   di file itu: `ANDROID_KEY_ALIAS`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEYSTORE_BASE64`.
+3. Simpan salinan file itu di tempat aman (kalau hilang, semua HP harus uninstall lalu install ulang),
+   lalu hapus artifact-nya di GitHub.
+
+Setelah itu semua build memakai kunci ini. Aplikasi yang terpasang dengan kunci lama perlu di-uninstall
+sekali, setelahnya update bisa langsung dipasang di atasnya.
