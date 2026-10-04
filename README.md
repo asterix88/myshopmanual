@@ -37,6 +37,13 @@ python tools/upload_r2.py dist --dry-run   # lihat dulu apa yang berubah
 python tools/upload_r2.py dist             # unggah file yang berubah, catalog.json terakhir
 ```
 
+### Sekali klik di Windows: `update.bat`
+
+1. Salin `r2-keys.example.bat` menjadi `r2-keys.bat`, lalu isi kunci R2 Anda. File ini tidak ikut
+   ke GitHub (ada di `.gitignore`), jadi kunci tetap di PC.
+2. Taruh PDF di `source\<UNIT>\`, lalu klik dua kali `update.bat`. Script membuat paket lalu
+   mengunggah yang berubah saja. Untuk satu unit saja: `update.bat --only PC210`.
+
 ## Aplikasi Android (`app/`)
 
 Flutter, dengan penampil PDF PDFium (`pdfrx`) dan indeks pencarian SQLite FTS5 (`sqlite3`).
