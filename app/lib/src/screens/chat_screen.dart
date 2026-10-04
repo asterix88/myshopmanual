@@ -231,8 +231,11 @@ class _Bubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SelectableText(
-              entry.text,
+            SelectableText.rich(
+              TextSpan(children: [
+                for (final run in boldRuns(entry.text))
+                  TextSpan(text: run.text, style: run.bold ? const TextStyle(fontWeight: FontWeight.w700) : null),
+              ]),
               style: TextStyle(
                 fontSize: 14,
                 height: 1.5,

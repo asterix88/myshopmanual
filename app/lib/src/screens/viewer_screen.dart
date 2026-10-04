@@ -238,9 +238,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
         backgroundColor: const Color(0xFFE4E6EA),
         margin: 8,
         layoutPages: _fixedSlotLayout,
-        // A fold-out page is drawn at about half its size to fit its slot, so
-        // allow twice pdfrx's default zoom to keep its diagrams just as sharp.
-        sizeDelegateProvider: const PdfViewerSizeDelegateProviderLegacy(maxScale: 16),
+        sizeDelegateProvider: const _FixedSlotSizeDelegateProvider(),
         // Read online, measuring all pages up front would fetch most of the
         // file before the first page shows, so measure pages as they scroll in.
         behaviorControlParams: PdfViewerBehaviorControlParams(loadPageDimensionsOnDemand: _online),
@@ -623,6 +621,100 @@ class _BookmarksSheetState extends State<_BookmarksSheet> {
             ),
           ),
       ].expand((w) => [w, const SizedBox(height: 8)]).toList(),
+    );
+  }
+}
+
+/// pdfrx's default sizing, except when only page sizes change.
+///
+/// pdfrx learns real page sizes after opening (offline, all pages in the
+/// background for a while; online, as pages scroll in). Each time it re-runs
+/// the layout and, by default, moves the view to "keep" the old position,
+/// which cancels a bookmark jump still under way and lands somewhere else.
+/// With [_ViewerScreenState._fixedSlotLayout] every page keeps its slot, so the
+/// current position is already right and the view is left alone.
+class _FixedSlotSizeDelegateProvider extends PdfViewerSizeDelegateProvider {
+  const _FixedSlotSizeDelegateProvider();
+
+  // A fold-out page is drawn at about half its size to fit its slot, so
+  // allow twice pdfrx's default zoom to keep its diagrams just as sharp.
+  static const _legacy = PdfViewerSizeDelegateProviderLegacy(maxScale: 16);
+
+  @override
+  PdfViewerSizeDelegate create() => _FixedSlotSizeDelegate(_legacy.create());
+
+  @override
+  bool operator ==(Object other) => other is _FixedSlotSizeDelegateProvider;
+
+  @override
+  int get hashCode => (_FixedSlotSizeDelegateProvider).hashCode;
+}
+
+class _FixedSlotSizeDelegate implements PdfViewerSizeDelegate {
+  _FixedSlotSizeDelegate(this._inner);
+
+  final PdfViewerSizeDelegate _inner;
+
+  @override
+  void init(PdfViewerController controller) => _inner.init(controller);
+
+  @override
+  void dispose() => _inner.dispose();
+
+  @override
+  PdfViewerLayoutMetrics calculateMetrics({
+    required Size viewSize,
+    required PdfPageLayout? layout,
+    required int? pageNumber,
+    required double pageMargin,
+    required EdgeInsets? boundaryMargin,
+  }) => _inner.calculateMetrics(
+    viewSize: viewSize,
+    layout: layout,
+    pageNumber: pageNumber,
+    pageMargin: pageMargin,
+    boundaryMargin: boundaryMargin,
+  );
+
+  @override
+  double get onePassRenderingScaleThreshold => _inner.onePassRenderingScaleThreshold;
+
+  @override
+  void onLayoutInitialized({
+    required PdfViewerLayoutSnapshot state,
+    required int initialPageNumber,
+    required double coverScale,
+    required double? alternativeFitScale,
+    required PdfPageLayout layout,
+    required PdfDocument document,
+  }) => _inner.onLayoutInitialized(
+    state: state,
+    initialPageNumber: initialPageNumber,
+    coverScale: coverScale,
+    alternativeFitScale: alternativeFitScale,
+    layout: layout,
+    document: document,
+  );
+
+  @override
+  void onLayoutUpdate({
+    required PdfViewerLayoutSnapshot oldState,
+    required PdfViewerLayoutSnapshot newState,
+    required double currentZoom,
+    required Rect oldVisibleRect,
+    required int? anchorPageNumber,
+    required bool isLayoutChanged,
+    required bool isViewSizeChanged,
+  }) {
+    if (!isViewSizeChanged) return;
+    _inner.onLayoutUpdate(
+      oldState: oldState,
+      newState: newState,
+      currentZoom: currentZoom,
+      oldVisibleRect: oldVisibleRect,
+      anchorPageNumber: anchorPageNumber,
+      isLayoutChanged: isLayoutChanged,
+      isViewSizeChanged: isViewSizeChanged,
     );
   }
 }

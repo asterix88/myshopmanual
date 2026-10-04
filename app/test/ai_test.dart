@@ -69,7 +69,7 @@ void main() {
 
     // Citations renumbered per answer; an id that was never shown is dropped.
     expect(answer.failed, isFalse);
-    expect(answer.text, 'Lampu menyala karena filter tersumbat [1]. Ganti elemen [2].');
+    expect(answer.text, 'Lampu menyala karena **filter** tersumbat [1]. Ganti elemen [2].');
     expect(answer.sources.map((s) => s.page), [2, 3]);
     store.dispose();
   });
@@ -84,5 +84,15 @@ void main() {
       throwsA(isA<AiException>().having((e) => e.message, 'message', 'AI sedang sibuk. Coba lagi sebentar lagi.')),
     );
     store.dispose();
+  });
+
+  test('stars in an answer become bold runs', () {
+    expect(boldRuns('Ganti **filter oli** dan *seal*, lalu cek 2 * 3 kali.'), [
+      (text: 'Ganti ', bold: false),
+      (text: 'filter oli', bold: true),
+      (text: ' dan ', bold: false),
+      (text: 'seal', bold: true),
+      (text: ', lalu cek 2 * 3 kali.', bold: false),
+    ]);
   });
 }

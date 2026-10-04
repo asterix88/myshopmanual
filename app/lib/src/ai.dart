@@ -171,7 +171,7 @@ class AiChat {
   ChatEntry _answer(String content) {
     final raw = content.trim();
     final cited = <AiSource>[];
-    final text = raw.replaceAll('**', '').replaceAllMapped(RegExp(r'(\s*)\[S(\d+)\]'), (m) {
+    final text = raw.replaceAllMapped(RegExp(r'(\s*)\[S(\d+)\]'), (m) {
       final source = _sources[int.parse(m[2]!)];
       if (source == null) return '';
       if (!cited.contains(source)) cited.add(source);
@@ -182,4 +182,18 @@ class AiChat {
   }
 
   static String _normalize(String s) => s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+}
+
+/// Splits [text] into plain and bold runs: the AI marks emphasis Markdown-style
+/// with `**bold**` or `*bold*`, which the chat shows as bold without the stars.
+List<({String text, bool bold})> boldRuns(String text) {
+  final runs = <({String text, bool bold})>[];
+  var last = 0;
+  for (final m in RegExp(r'\*\*(.+?)\*\*|\*(?=\S)([^*\n]+?)(?<=\S)\*').allMatches(text)) {
+    if (m.start > last) runs.add((text: text.substring(last, m.start), bold: false));
+    runs.add((text: m[1] ?? m[2]!, bold: true));
+    last = m.end;
+  }
+  if (last < text.length) runs.add((text: text.substring(last), bold: false));
+  return runs;
 }
