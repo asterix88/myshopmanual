@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pdfrx/pdfrx.dart';
 
 import '../ai.dart';
 import '../theme.dart';
@@ -242,6 +243,10 @@ class _Bubble extends StatelessWidget {
                 color: entry.failed ? AppColors.danger : AppColors.ink,
               ),
             ),
+            for (final picture in entry.pictures) ...[
+              const SizedBox(height: 12),
+              _PagePicture(source: picture),
+            ],
             if (entry.sources.isNotEmpty) ...[
               const SizedBox(height: 12),
               const Text('Sumber', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted)),
@@ -264,6 +269,62 @@ class _Bubble extends StatelessWidget {
                 ],
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A manual page shown as a picture in an answer, drawn from the downloaded
+/// PDF. Tapping it opens the page in the viewer to zoom in.
+class _PagePicture extends StatelessWidget {
+  const _PagePicture({required this.source});
+
+  final AiSource source;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: Color(0xFFE6E8EB)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => openViewer(context, source.file, page: source.page),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: 260,
+              child: PdfDocumentViewBuilder.file(
+                store.pdfPath(source.file),
+                useProgressiveLoading: true,
+                builder: (context, document) => PdfPageView(document: document, pageNumber: source.page),
+                loadingBuilder: (context) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                errorBuilder: (context, error, stackTrace) => const Center(
+                  child: Text('Gambar tidak bisa dimuat', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                ),
+              ),
+            ),
+            Container(
+              color: AppColors.navySoft,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${source.unitName} · ${source.file.type.label} · hlm ${source.page}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.navy),
+                    ),
+                  ),
+                  const Icon(Icons.zoom_in, size: 16, color: AppColors.navy),
+                ],
+              ),
+            ),
           ],
         ),
       ),

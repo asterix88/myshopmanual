@@ -46,7 +46,7 @@ void main() {
               'finish_reason': 'stop',
               'message': {
                 'role': 'assistant',
-                'content': 'Lampu menyala karena **filter** tersumbat [S1]. Ganti elemen [S2] [S9].',
+                'content': 'Lampu menyala karena **filter** tersumbat [S1]. Ganti elemen [S2] [S9].\n[Gambar S2]\n[Gambar S9]',
               },
             };
       return http.Response(jsonEncode(reply), 200, headers: {'content-type': 'application/json'});
@@ -71,6 +71,8 @@ void main() {
     expect(answer.failed, isFalse);
     expect(answer.text, 'Lampu menyala karena **filter** tersumbat [1]. Ganti elemen [2].');
     expect(answer.sources.map((s) => s.page), [2, 3]);
+    // [Gambar S#] lines become pictures of those pages, not text.
+    expect(answer.pictures.map((s) => s.page), [3]);
     store.dispose();
   });
 

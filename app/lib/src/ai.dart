@@ -30,14 +30,20 @@ class ChatEntry {
   ChatEntry.user(this.text)
       : fromUser = true,
         sources = const [],
+        pictures = const [],
         failed = false;
-  ChatEntry.assistant(this.text, {this.sources = const [], this.failed = false}) : fromUser = false;
+  ChatEntry.assistant(this.text, {this.sources = const [], this.pictures = const [], this.failed = false})
+      : fromUser = false;
 
   final bool fromUser;
   final String text;
 
   /// Pages cited in [text], in order of first citation.
   final List<AiSource> sources;
+
+  /// Pages whose picture (a component drawing, diagram or parts figure) the
+  /// AI chose to show with the answer.
+  final List<AiSource> pictures;
   final bool failed;
 }
 
@@ -169,16 +175,25 @@ class AiChat {
   }
 
   ChatEntry _answer(String content) {
-    final raw = content.trim();
     final cited = <AiSource>[];
+    final pictures = <AiSource>[];
+    // [Gambar S3] asks for page S3 to be shown as a picture under the answer.
+    final raw = content.trim().replaceAllMapped(RegExp(r'[ \t]*\[Gambar\s+S(\d+)\]'), (m) {
+      final source = _sources[int.parse(m[1]!)];
+      if (source != null && !pictures.contains(source) && pictures.length < 3) pictures.add(source);
+      return '';
+    }).trim();
     final text = raw.replaceAllMapped(RegExp(r'(\s*)\[S(\d+)\]'), (m) {
       final source = _sources[int.parse(m[2]!)];
       if (source == null) return '';
       if (!cited.contains(source)) cited.add(source);
       return '${m[1]}[${cited.indexOf(source) + 1}]';
     });
+    for (final source in pictures) {
+      if (!cited.contains(source)) cited.add(source);
+    }
     return ChatEntry.assistant(text.isEmpty ? 'AI tidak memberi jawaban. Coba lagi.' : text,
-        sources: cited, failed: text.isEmpty);
+        sources: cited, pictures: pictures, failed: text.isEmpty);
   }
 
   static String _normalize(String s) => s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
