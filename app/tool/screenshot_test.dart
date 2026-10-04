@@ -104,35 +104,22 @@ void main() {
       await store.setServerUrl('https://example.test');
       await store.download(store.catalog.files.single, unitName: 'TEST1-1');
     });
-    var round = 0;
-    final worker = MockClient((_) async {
-      round++;
-      final reply = round == 1
-          ? {
-              'message': {
-                'role': 'assistant',
-                'content': null,
-                'tool_calls': [
-                  {
-                    'id': 'c1',
-                    'type': 'function',
-                    'function': {
-                      'name': 'search_manuals',
-                      'arguments': jsonEncode({'query': 'hydraulic oil filter clogging', 'unit': ''}),
-                    },
-                  },
-                ],
-              },
-            }
-          : {
-              'message': {
-                'role': 'assistant',
-                'content': 'Lampu hydraulic oil filter clogging menandakan filter oli hidrolik tersumbat [S1].\n\n'
-                    'Langkah:\n1. Matikan engine.\n2. Ganti element hydraulic oil filter [S2].',
-              },
-            };
-      return http.Response(jsonEncode(reply), 200);
-    });
+    final key = store.catalog.files.single.key;
+    final worker = MockClient((_) async => http.Response(
+        jsonEncode({
+          'messages': [
+            {
+              'role': 'assistant',
+              'content': 'Lampu hydraulic oil filter clogging menandakan filter oli hidrolik tersumbat [S1].\n\n'
+                  'Langkah:\n1. Matikan engine.\n2. Ganti element hydraulic oil filter [S2].',
+            },
+          ],
+          'sources': [
+            {'id': 1, 'key': key, 'page': 2},
+            {'id': 2, 'key': key, 'page': 3},
+          ],
+        }),
+        200));
     await tester.pumpWidget(StoreScope(
       store: store,
       child: MaterialApp(theme: buildTheme(), home: ChatScreen(client: worker)),

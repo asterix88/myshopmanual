@@ -47,18 +47,22 @@ python tools/upload_r2.py dist             # unggah file yang berubah, catalog.j
 ## Server AI (`ai-worker/`)
 
 Tab **Tanya AI** memakai AI Groq (tier gratis) lewat Cloudflare Worker kecil di `ai.mymanual.my.id`,
-supaya kunci API tidak ikut di dalam APK. Pencarian halaman tetap berjalan di HP, pada manual yang sudah
-diunduh; Worker hanya meneruskan percakapan ke AI dan mengembalikan jawabannya, lengkap dengan nomor
-halaman sumber. Tier gratis punya batas permintaan per menit dan per hari; kalau penuh, aplikasi
-menampilkan pesan untuk mencoba lagi nanti.
+supaya kunci API tidak ikut di dalam APK. Worker juga yang mencari halaman manual, di database
+Cloudflare D1 berisi teks semua manual, jadi HP tidak perlu mengunduh apa pun untuk bertanya tentang
+manual mana saja. Jawaban dikirim lengkap dengan nomor halaman sumber. Tier gratis punya batas
+permintaan per menit dan per hari; kalau penuh, aplikasi menampilkan pesan untuk mencoba lagi nanti.
 
 Server ini di-deploy otomatis oleh GitHub Actions (`.github/workflows/ai-worker.yml`) setiap folder
-`ai-worker/` berubah di `main`; tidak ada yang perlu dipasang di PC. Siapkan sekali di GitHub, menu
+`ai-worker/` berubah di `main`; tidak ada yang perlu dipasang di PC. Workflow yang sama menyalin teks
+manual dari server (`tools/sync_search.py`, hanya file yang berubah) ke database D1 `mymanual-search`,
+otomatis setiap 3 jam. Supaya manual yang baru di-upload dengan `update.bat` langsung bisa ditanyakan,
+jalankan "Deploy AI server" secara manual di tab Actions. Siapkan sekali di GitHub, menu
 Settings > Secrets and variables > Actions > New repository secret:
 
 - `GROQ_API_KEY`: dari console.groq.com > API Keys (gratis, cukup login).
 - `CLOUDFLARE_API_TOKEN`: dari Cloudflare, My Profile > API Tokens > Create Token > template
-  "Edit Cloudflare Workers", tambahkan izin Zone > DNS > Edit untuk zona `mymanual.my.id`.
+  "Edit Cloudflare Workers", tambahkan izin Zone > DNS > Edit untuk zona `mymanual.my.id` dan
+  Account > D1 > Edit.
 - `CLOUDFLARE_ACCOUNT_ID`: ID akun di halaman Workers & Pages Cloudflare (kolom kanan).
 
 Lalu di tab Actions jalankan "Deploy AI server" (Run workflow). Setelah selesai,

@@ -15,64 +15,90 @@ void main() {
   setUp(() => root = Directory.systemTemp.createTempSync('mymanual'));
   tearDown(() => root.deleteSync(recursive: true));
 
-  test('the AI searches the downloaded manuals and its answer cites the pages', () async {
+  test('the server searches any manual, downloaded or not, and the answer cites its pages', () async {
     final store = await AppStore.open(root: root, client: fixtureServer());
     await store.setServerUrl('https://example.test');
-    await store.download(store.catalog.files.single, unitName: 'TEST1-1');
+    final file = store.catalog.files.single;
 
     final requests = <Map<String, dynamic>>[];
     final worker = MockClient((request) async {
       final body = jsonDecode(request.body) as Map<String, dynamic>;
       requests.add(body);
-      final Map<String, dynamic> reply = requests.length == 1
-          ? {
-              'finish_reason': 'tool_calls',
-              'message': {
-                'role': 'assistant',
-                'content': null,
-                'tool_calls': [
-                  {
-                    'id': 'call_1',
-                    'type': 'function',
-                    'function': {
-                      'name': 'search_manuals',
-                      'arguments': jsonEncode({'query': 'hydraulic oil filter clogging lamp', 'unit': 'TEST1'}),
-                    },
-                  },
-                ],
-              },
-            }
-          : {
-              'finish_reason': 'stop',
-              'message': {
-                'role': 'assistant',
-                'content': 'Lampu menyala karena **filter** tersumbat [S1]. Ganti elemen [S2] [S9].\n[Gambar S2]\n[Gambar S9]',
-              },
-            };
-      return http.Response(jsonEncode(reply), 200, headers: {'content-type': 'application/json'});
+      final start = body['source_start'] as int;
+      return http.Response(
+        jsonEncode({
+          'messages': [
+            {
+              'role': 'assistant',
+              'content': null,
+              'tool_calls': [
+                {
+                  'id': 'call_${requests.length}',
+                  'type': 'function',
+                  'function': {'name': 'search_manuals', 'arguments': '{"query":"hydraulic oil filter","unit":""}'},
+                },
+              ],
+            },
+            {'role': 'tool', 'tool_call_id': 'call_${requests.length}', 'content': '[S$start] ...'},
+            {
+              'role': 'assistant',
+              'content': 'Lampu menyala karena **filter** tersumbat [S$start]. Ganti elemen [S${start + 1}] [S99].'
+                  '\n[Gambar S${start + 1}]',
+            },
+          ],
+          'sources': [
+            {'id': start, 'key': file.key, 'page': 2},
+            {'id': start + 1, 'key': file.key, 'page': 3},
+          ],
+        }),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
     });
 
-    final statuses = <String>[];
     final chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'));
-    final answer = await chat.ask('Lampu filter oli hidrolik menyala?', onStatus: statuses.add);
+    final answer = await chat.ask('Lampu filter oli hidrolik menyala?');
 
-    expect(requests.first['manuals'], ['TEST1-1: OMM Test Unit (OMM)']);
-    // Second request: question, the AI's tool call, then the pages found.
-    final messages = (requests[1]['messages'] as List).cast<Map<String, dynamic>>();
-    expect(messages.map((m) => m['role']), ['user', 'assistant', 'tool']);
-    expect(((messages[1]['tool_calls'] as List).single as Map)['id'], 'call_1');
-    final result = messages[2];
-    expect(result['tool_call_id'], 'call_1');
-    expect(result['content'], contains('[S1] TEST1-1 · OMM Test Unit · page 2'));
-    expect(result['content'], contains('HYDRAULIC OIL FILTER CLOGGING CAUTION LAMP'));
-    expect(statuses, contains('Mencari di manual: hydraulic oil filter clogging lamp'));
-
-    // Citations renumbered per answer; an id that was never shown is dropped.
+    // Nothing is downloaded: the search ran on the server.
+    expect(store.isDownloaded(file.key), isFalse);
+    expect(requests.single['source_start'], 1);
     expect(answer.failed, isFalse);
+    // Citations renumbered per answer; an id that was never returned is dropped.
     expect(answer.text, 'Lampu menyala karena **filter** tersumbat [1]. Ganti elemen [2].');
     expect(answer.sources.map((s) => s.page), [2, 3]);
+    expect(answer.sources.first.unitName, 'TEST1-1');
     // [Gambar S#] lines become pictures of those pages, not text.
     expect(answer.pictures.map((s) => s.page), [3]);
+
+    // The next question sends the whole conversation, ids continuing.
+    await chat.ask('Berapa intervalnya?');
+    expect(requests[1]['source_start'], 3);
+    expect((requests[1]['messages'] as List).map((m) => (m as Map)['role']),
+        ['user', 'assistant', 'tool', 'assistant', 'user']);
+    store.dispose();
+  });
+
+  test('a failed request is not kept in the conversation', () async {
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    var calls = 0;
+    late List<dynamic> sent;
+    final worker = MockClient((request) async {
+      sent = (jsonDecode(request.body) as Map)['messages'] as List;
+      if (calls++ == 0) return http.Response(jsonEncode({'error': 'busy', 'message': 'penuh'}), 429);
+      return http.Response(
+          jsonEncode({
+            'messages': [
+              {'role': 'assistant', 'content': 'Halo.'},
+            ],
+            'sources': [],
+          }),
+          200);
+    });
+    final chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'));
+    await expectLater(chat.ask('halo'), throwsA(isA<AiException>()));
+    final answer = await chat.ask('halo lagi');
+    expect(sent.map((m) => (m as Map)['content']), ['halo lagi']);
+    expect(answer.text, 'Halo.');
     store.dispose();
   });
 

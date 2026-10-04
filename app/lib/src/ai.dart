@@ -1,10 +1,8 @@
 import 'dart:convert';
-import 'dart:isolate';
 
 import 'package:http/http.dart' as http;
 
 import 'models.dart';
-import 'search.dart';
 import 'store.dart';
 
 /// Address of the Worker in ai-worker/, which holds the AI provider's API key.
@@ -68,50 +66,34 @@ class AiChat {
   final List<Map<String, dynamic>> _messages = [];
   final Map<int, AiSource> _sources = {};
 
-  /// Requests per question: each search the AI asks for costs one round.
-  static const maxRounds = 4;
-
-  /// Asks [question]; [onStatus] reports what is happening while it works.
+  /// Asks [question]. The AI server searches the manuals and may take a
+  /// while; [onStatus] says so.
   Future<ChatEntry> ask(String question, {void Function(String status)? onStatus}) async {
     _messages.add({'role': 'user', 'content': question});
-    final manuals = [
-      for (final m in store.local.values)
-        if (m.file.searchable) '${m.unitName}: ${m.file.title} (${m.file.type.label})',
-    ];
-
-    for (var round = 0; round < maxRounds; round++) {
-      onStatus?.call(round == 0 ? 'Memahami pertanyaan…' : 'Menyusun jawaban…');
-      final response = await _post({'messages': _messages, 'manuals': manuals});
-      final message = (response['message'] as Map).cast<String, dynamic>();
-      final toolCalls = (message['tool_calls'] as List? ?? const []).cast<Map<String, dynamic>>();
-      _messages.add({
-        'role': 'assistant',
-        'content': message['content'],
-        if (toolCalls.isNotEmpty) 'tool_calls': toolCalls,
-      });
-
-      if (toolCalls.isEmpty) return _answer(message['content'] as String? ?? '');
-      for (final call in toolCalls) {
-        final function = (call['function'] as Map).cast<String, dynamic>();
-        Map<String, dynamic> args;
-        try {
-          args = (jsonDecode(function['arguments'] as String? ?? '{}') as Map).cast<String, dynamic>();
-        } on FormatException {
-          args = const {};
-        }
-        final query = (args['query'] as String? ?? '').trim();
-        onStatus?.call('Mencari di manual: $query');
-        _messages.add({
-          'role': 'tool',
-          'tool_call_id': call['id'],
-          'content': await _search(query, (args['unit'] as String? ?? '').trim()),
-        });
-      }
+    onStatus?.call('Mencari di manual dan menyusun jawaban…');
+    final Map<String, dynamic> response;
+    try {
+      response = await _post({'messages': _messages, 'source_start': _sources.length + 1});
+    } on AiException {
+      _messages.removeLast();
+      rethrow;
     }
-    return ChatEntry.assistant(
-      'AI belum menemukan jawabannya di manual yang terunduh. Coba tanyakan dengan lebih spesifik.',
-      failed: true,
-    );
+    final added = (response['messages'] as List? ?? const []).cast<Map<String, dynamic>>();
+    _messages.addAll(added);
+    for (final s in (response['sources'] as List? ?? const []).cast<Map<String, dynamic>>()) {
+      final file = store.fileByKey(s['key'] as String? ?? '');
+      final id = s['id'] as int?;
+      if (file == null || id == null) continue;
+      _sources[id] = AiSource(id: id, file: file, unitName: store.unitNameOf(file), page: s['page'] as int);
+    }
+    final last = added.isEmpty ? null : added.last;
+    if (last == null || last['role'] != 'assistant' || (last['tool_calls'] as List?)?.isNotEmpty == true) {
+      return ChatEntry.assistant(
+        'AI belum menemukan jawabannya di manual. Coba tanyakan dengan lebih spesifik.',
+        failed: true,
+      );
+    }
+    return _answer(last['content'] as String? ?? '');
   }
 
   Future<Map<String, dynamic>> _post(Map<String, dynamic> body) async {
@@ -142,38 +124,6 @@ class AiChat {
     return data;
   }
 
-  /// Runs the AI's search on the phone's own indexes and formats the pages,
-  /// each under a source id the answer can cite.
-  Future<String> _search(String query, String unit) async {
-    final all = store.searchableIndexes();
-    final wanted = _normalize(unit);
-    final indexes = wanted.isEmpty
-        ? all
-        : {
-            for (final e in all.entries)
-              if (_normalize(store.unitNameOf(store.localManual(e.key)!.file)).contains(wanted) ||
-                  _normalize(e.key.split('/').first).contains(wanted))
-                e.key: e.value,
-          };
-    final pages = await Isolate.run(() => searchPageTextsSync(indexes.isEmpty ? all : indexes, query, limit: 4));
-    if (pages.isEmpty) return 'No matching pages for "$query".';
-
-    final out = StringBuffer();
-    for (final p in pages) {
-      final manual = store.localManual(p.fileKey)!;
-      final id = _sources.length + 1;
-      _sources[id] = AiSource(id: id, file: manual.file, unitName: manual.unitName, page: p.page);
-      // Kept short: free tiers limit tokens per minute.
-      final text = p.text.length > 1200 ? '${p.text.substring(0, 1200)}…' : p.text;
-      out
-        ..writeln('[S$id] ${manual.unitName} · ${manual.file.title} · page ${p.page}'
-            '${p.section == null ? '' : ' · section: ${p.section}'}')
-        ..writeln(text)
-        ..writeln();
-    }
-    return out.toString();
-  }
-
   ChatEntry _answer(String content) {
     final cited = <AiSource>[];
     final pictures = <AiSource>[];
@@ -196,7 +146,6 @@ class AiChat {
         sources: cited, pictures: pictures, failed: text.isEmpty);
   }
 
-  static String _normalize(String s) => s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 }
 
 /// Splits [text] into plain and bold runs: the AI marks emphasis Markdown-style
