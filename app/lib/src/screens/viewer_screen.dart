@@ -218,6 +218,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
   late final PdfViewerParams _viewerParams = PdfViewerParams(
         backgroundColor: const Color(0xFFE4E6EA),
         margin: 8,
+        layoutPages: _fitWidthLayout,
+        // Read online, measuring all pages up front would fetch most of the
+        // file before the first page shows, so measure pages as they scroll in.
+        behaviorControlParams: PdfViewerBehaviorControlParams(loadPageDimensionsOnDemand: _online),
         onViewerReady: _onViewerReady,
         onPageChanged: _onPageChanged,
         pagePaintCallbacks: [
@@ -243,6 +247,22 @@ class _ViewerScreenState extends State<ViewerScreen> {
               : 'Coba hapus lalu unduh ulang file ini.',
         ),
       );
+
+  /// Every page is scaled to the same width, like "fit width" in other PDF
+  /// readers. With the default layout one wide fold-out page widens the whole
+  /// column, so all pages shrink once it is measured while scrolling.
+  static PdfPageLayout _fitWidthLayout(List<PdfPage> pages, PdfViewerParams params) {
+    const width = 600.0;
+    final margin = params.margin;
+    final rects = <Rect>[];
+    var y = margin;
+    for (final page in pages) {
+      final height = page.width > 0 ? page.height * width / page.width : width * 1.414;
+      rects.add(Rect.fromLTWH(margin, y, width, height));
+      y += height + margin;
+    }
+    return PdfPageLayout(pageLayouts: rects, documentSize: Size(width + margin * 2, y));
+  }
 
   PreferredSizeWidget _searchBar() {
     final searcher = _searcher;
@@ -274,7 +294,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
                   isDense: true,
                   filled: true,
                   fillColor: const Color(0xFFF4F5F7),
-                  hintText: 'Cari kata di file ini',
+                  // Online, only pages already shown have been measured and can be searched.
+                  hintText: _online ? 'Cari di halaman yang sudah dimuat' : 'Cari kata di file ini',
                   prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.muted),
                   suffixText: status,
                   suffixStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
