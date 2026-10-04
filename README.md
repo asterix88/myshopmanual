@@ -50,16 +50,18 @@ Tab **Tanya AI** memakai Claude lewat Cloudflare Worker kecil di `ai.mymanual.my
 tidak ikut di dalam APK. Pencarian halaman tetap berjalan di HP, pada manual yang sudah diunduh; Worker
 hanya meneruskan percakapan ke Claude dan mengembalikan jawabannya, lengkap dengan nomor halaman sumber.
 
-Pasang sekali dari PC Windows (butuh Node.js dari nodejs.org):
+Server ini di-deploy otomatis oleh GitHub Actions (`.github/workflows/ai-worker.yml`) setiap folder
+`ai-worker/` berubah di `main`; tidak ada yang perlu dipasang di PC. Siapkan sekali di GitHub, menu
+Settings > Secrets and variables > Actions > New repository secret:
 
-1. Buat kunci API di console.anthropic.com (isi saldo dulu di Billing).
-2. Buka Command Prompt di folder repo, lalu jalankan `deploy-ai.bat kunci`.
-   Login Cloudflare terbuka di browser, lalu tempel kunci API saat diminta.
-3. Buka https://ai.mymanual.my.id di browser; harus tampil `{"ok":true}`.
+- `ANTHROPIC_API_KEY`: kunci dari console.anthropic.com (isi saldo dulu di Billing).
+- `CLOUDFLARE_API_TOKEN`: dari Cloudflare, My Profile > API Tokens > Create Token > template
+  "Edit Cloudflare Workers", tambahkan izin Zone > DNS > Edit untuk zona `mymanual.my.id`.
+- `CLOUDFLARE_ACCOUNT_ID`: ID akun di halaman Workers & Pages Cloudflare (kolom kanan).
 
-Setelah itu cukup `deploy-ai.bat` (tanpa `kunci`) kalau kode Worker berubah. Model diatur di
-`ai-worker/wrangler.toml` (`MODEL`). Opsional: secret `APP_TOKEN` di Worker plus secret `AI_TOKEN` di
-GitHub supaya hanya aplikasi ini yang bisa memakai server AI.
+Lalu di tab Actions jalankan "Deploy AI server" (Run workflow). Setelah selesai,
+https://ai.mymanual.my.id harus menampilkan `{"ok":true}`. Model diatur di `ai-worker/wrangler.toml`
+(`MODEL`); mengubahnya di `main` langsung men-deploy ulang.
 
 ## Aplikasi Android (`app/`)
 

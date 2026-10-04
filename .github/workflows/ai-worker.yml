@@ -1,0 +1,50 @@
+name: Deploy AI server
+
+# Publishes ai-worker/ to Cloudflare (ai.mymanual.my.id) whenever it changes
+# on main, so nothing has to be installed or run on a PC.
+# Needs repository secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and
+# ANTHROPIC_API_KEY.
+on:
+  push:
+    branches: [main]
+    paths: ['ai-worker/**', '.github/workflows/ai-worker.yml']
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secrets
+        id: check
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN is not set; skipping the AI server deploy."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.ready == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.ready == 'true'
+        with:
+          node-version: 22
+      - run: npm ci
+        if: steps.check.outputs.ready == 'true'
+        working-directory: ai-worker
+      - run: npx tsc --noEmit
+        if: steps.check.outputs.ready == 'true'
+        working-directory: ai-worker
+      - uses: cloudflare/wrangler-action@v3
+        if: steps.check.outputs.ready == 'true'
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: ai-worker
+          wranglerVersion: '4.147.0'
+          secrets: |
+            ANTHROPIC_API_KEY
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
