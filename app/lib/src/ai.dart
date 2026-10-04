@@ -74,9 +74,10 @@ class AiChat {
   /// Asks [question]; [onStatus] reports what is happening while it works.
   Future<ChatEntry> ask(String question, {void Function(String status)? onStatus}) async {
     _messages.add({'role': 'user', 'content': question});
+    // Every manual on the server can be searched; downloaded or not.
     final manuals = [
-      for (final m in store.local.values)
-        if (m.file.searchable) '${m.unitName}: ${m.file.title} (${m.file.type.label})',
+      for (final f in store.catalog.files.followedBy(store.local.values.map((m) => m.file)).toSet())
+        if (f.searchable) '${store.unitNameOf(f)}: ${f.title} (${f.type.label})',
     ];
 
     for (var round = 0; round < maxRounds; round++) {
@@ -100,16 +101,15 @@ class AiChat {
           args = const {};
         }
         final query = (args['query'] as String? ?? '').trim();
-        onStatus?.call('Mencari di manual: $query');
         _messages.add({
           'role': 'tool',
           'tool_call_id': call['id'],
-          'content': await _search(query, (args['unit'] as String? ?? '').trim()),
+          'content': await _search(query, (args['unit'] as String? ?? '').trim(), onStatus: onStatus),
         });
       }
     }
     return ChatEntry.assistant(
-      'AI belum menemukan jawabannya di manual yang terunduh. Coba tanyakan dengan lebih spesifik.',
+      'AI belum menemukan jawabannya di manual. Coba tanyakan dengan lebih spesifik.',
       failed: true,
     );
   }
@@ -144,29 +144,29 @@ class AiChat {
 
   /// Runs the AI's search on the phone's own indexes and formats the pages,
   /// each under a source id the answer can cite.
-  Future<String> _search(String query, String unit) async {
-    final all = store.searchableIndexes();
+  Future<String> _search(String query, String unit, {void Function(String status)? onStatus}) async {
     final wanted = _normalize(unit);
-    final indexes = wanted.isEmpty
-        ? all
-        : {
-            for (final e in all.entries)
-              if (_normalize(store.unitNameOf(store.localManual(e.key)!.file)).contains(wanted) ||
-                  _normalize(e.key.split('/').first).contains(wanted))
-                e.key: e.value,
-          };
-    final pages = await Isolate.run(() => searchPageTextsSync(indexes.isEmpty ? all : indexes, query, limit: 4));
+    bool ofUnit(ManualFile f) =>
+        _normalize(store.unitNameOf(f)).contains(wanted) || _normalize(f.unitId).contains(wanted);
+    var indexes = <String, String>{};
+    if (wanted.isNotEmpty) indexes = await store.aiIndexes(where: ofUnit, onStatus: onStatus);
+    // No unit named, or none matched: search every manual.
+    if (indexes.isEmpty) indexes = await store.aiIndexes(onStatus: onStatus);
+    onStatus?.call('Mencari di manual: $query');
+    final found = indexes;
+    final pages = await Isolate.run(() => searchPageTextsSync(found, query, limit: 4));
     if (pages.isEmpty) return 'No matching pages for "$query".';
 
     final out = StringBuffer();
     for (final p in pages) {
-      final manual = store.localManual(p.fileKey)!;
+      final file = store.fileByKey(p.fileKey)!;
+      final unitName = store.unitNameOf(file);
       final id = _sources.length + 1;
-      _sources[id] = AiSource(id: id, file: manual.file, unitName: manual.unitName, page: p.page);
+      _sources[id] = AiSource(id: id, file: file, unitName: unitName, page: p.page);
       // Kept short: free tiers limit tokens per minute.
       final text = p.text.length > 1200 ? '${p.text.substring(0, 1200)}…' : p.text;
       out
-        ..writeln('[S$id] ${manual.unitName} · ${manual.file.title} · page ${p.page}'
+        ..writeln('[S$id] $unitName · ${file.title} · page ${p.page}'
             '${p.section == null ? '' : ' · section: ${p.section}'}')
         ..writeln(text)
         ..writeln();

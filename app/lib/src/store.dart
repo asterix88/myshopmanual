@@ -421,6 +421,50 @@ class AppStore extends ChangeNotifier {
   }
 
   /// Index files of every downloaded, searchable manual: {fileKey: path}.
+  /// Where the search index of a manual that is not downloaded is kept for
+  /// Tanya AI; the version is in the name so an update fetches it afresh.
+  String cachedIndexPath(ManualFile f) =>
+      p.join(_root.path, 'index-cache', f.unitId, '${f.id}-${f.index.sha256.substring(0, 12)}.sqlite');
+
+  /// Search indexes for Tanya AI over every manual on the server, by file
+  /// key: a downloaded manual uses its own index; for any other only the small
+  /// index is fetched (not the PDF) and kept. [where] narrows the manuals, so
+  /// a question about one unit only fetches that unit's indexes. A manual
+  /// whose index can't be fetched (offline) is left out.
+  Future<Map<String, String>> aiIndexes({
+    bool Function(ManualFile file)? where,
+    void Function(String status)? onStatus,
+  }) async {
+    final result = <String, String>{};
+    for (final file in catalog.files.followedBy(local.values.map((m) => m.file))) {
+      if (!file.searchable || result.containsKey(file.key) || !(where?.call(file) ?? true)) continue;
+      if (isDownloaded(file.key)) {
+        result[file.key] = indexPath(file);
+        continue;
+      }
+      final target = cachedIndexPath(file);
+      if (!File(target).existsSync()) {
+        onStatus?.call('Mengambil indeks ${unitNameOf(file)} · ${file.type.label}…');
+        try {
+          final dir = Directory(p.dirname(target));
+          if (await dir.exists()) {
+            // Older versions of this manual's index.
+            await for (final old in dir.list()) {
+              if (p.basename(old.path).startsWith('${file.id}-')) await old.delete();
+            }
+          }
+          await _fetch(file.index, target, DownloadProgress(file.index.size));
+          await File('$target.part').rename(target);
+          await _deleteIfExists(File('$target.part.sha'));
+        } on Exception {
+          continue;
+        }
+      }
+      result[file.key] = target;
+    }
+    return result;
+  }
+
   Map<String, String> searchableIndexes({DocType? type}) => {
         for (final m in local.values)
           if (m.file.searchable && (type == null || m.file.type == type))
