@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -227,6 +228,52 @@ void main() {
       expect(store.isDownloaded(file.key), isTrue);
       expect(File(store.pdfPath(file)).readAsBytesSync(), pdfBytes);
       expect(store.partialBytes(file), 0);
+      store.dispose();
+    });
+
+    test('a paused download keeps what arrived and resumes from there', () async {
+      final pdfPath = 'units/TEST1/OMM_Test_Unit.pdf';
+      final pdfBytes = File('${fixtures.path}/$pdfPath').readAsBytesSync();
+      final half = pdfBytes.length ~/ 2;
+      final ranges = <String?>[];
+      final gate = Completer<void>();
+      var firstTry = true;
+      final client = MockClient.streaming((request, _) async {
+        final path = request.url.path.replaceFirst(RegExp(r'^/'), '');
+        if (path != pdfPath) {
+          return fixtureServer().send(http.Request(request.method, request.url));
+        }
+        ranges.add(request.headers['Range']);
+        if (firstTry) {
+          firstTry = false;
+          Stream<List<int>> body() async* {
+            yield pdfBytes.sublist(0, half);
+            await gate.future;
+            yield pdfBytes.sublist(half);
+          }
+          return http.StreamedResponse(body(), 200);
+        }
+        final from = int.parse(RegExp(r'bytes=(\d+)-').firstMatch(request.headers['Range']!)!.group(1)!);
+        return http.StreamedResponse(Stream.value(pdfBytes.sublist(from)), 206);
+      });
+      final store = await AppStore.open(root: root, client: client);
+      await store.setServerUrl('https://example.test');
+      final file = store.catalog.files.single;
+
+      final first = store.download(file, unitName: 'TEST1-1');
+      while ((store.downloads[file.key]?.received ?? 0) < file.index.size + half) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      store.pauseDownload(file.key);
+      gate.complete();
+      await first;
+      expect(store.isDownloaded(file.key), isFalse);
+      expect(store.downloads, isEmpty);
+      expect(store.partialBytes(file), file.index.size + half);
+
+      await store.download(file, unitName: 'TEST1-1');
+      expect(ranges.last, 'bytes=$half-');
+      expect(File(store.pdfPath(file)).readAsBytesSync(), pdfBytes);
       store.dispose();
     });
 

@@ -1,8 +1,12 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../models.dart';
 import '../search.dart';
+import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import 'shell.dart';
@@ -37,6 +41,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
   bool _searching = false;
   int _page = 1;
   int _pageCount = 0;
+  Timer? _saveTimer;
+  late AppStore _store;
   List<TocEntry> _toc = const [];
   List<PdfOutlineNode> _outline = const [];
 
@@ -59,8 +65,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _store = StoreScope.read(context);
     if (_file != null) return;
-    final store = StoreScope.read(context);
+    final store = _store;
     final manual = store.localManual(widget.fileKey);
     _file = manual?.file ?? store.catalog.file(widget.fileKey);
     _online = manual == null;
@@ -69,6 +76,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   @override
   void dispose() {
+    if (_saveTimer?.isActive ?? false) {
+      _saveTimer!.cancel();
+      _saveLastRead();
+    }
     _searcher?.dispose();
     _searchField.dispose();
     _searchFocus.dispose();
@@ -127,7 +138,15 @@ class _ViewerScreenState extends State<ViewerScreen> {
   void _onPageChanged(int? page) {
     if (page == null || page == _page) return;
     setState(() => _page = page);
-    StoreScope.read(context).setLastRead(widget.fileKey, page, section: _sectionFor(page));
+    // Saving notifies every screen in the stack, so wait until scrolling
+    // settles instead of saving on each page that flies past.
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 800), _saveLastRead);
+  }
+
+  void _saveLastRead() {
+    _saveTimer = null;
+    _store.setLastRead(widget.fileKey, _page, section: _sectionFor(_page));
   }
 
   void _toggleSearch() {
@@ -218,7 +237,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
   late final PdfViewerParams _viewerParams = PdfViewerParams(
         backgroundColor: const Color(0xFFE4E6EA),
         margin: 8,
-        layoutPages: _fitWidthLayout,
+        layoutPages: _fixedSlotLayout,
+        // A fold-out page is drawn at about half its size to fit its slot, so
+        // allow twice pdfrx's default zoom to keep its diagrams just as sharp.
+        sizeDelegateProvider: const PdfViewerSizeDelegateProviderLegacy(maxScale: 16),
         // Read online, measuring all pages up front would fetch most of the
         // file before the first page shows, so measure pages as they scroll in.
         behaviorControlParams: PdfViewerBehaviorControlParams(loadPageDimensionsOnDemand: _online),
@@ -248,20 +270,27 @@ class _ViewerScreenState extends State<ViewerScreen> {
         ),
       );
 
-  /// Every page is scaled to the same width, like "fit width" in other PDF
-  /// readers. With the default layout one wide fold-out page widens the whole
-  /// column, so all pages shrink once it is measured while scrolling.
-  static PdfPageLayout _fitWidthLayout(List<PdfPage> pages, PdfViewerParams params) {
-    const width = 600.0;
+  /// Every page gets a slot of the same size (A4 portrait at a fixed width)
+  /// and is fitted inside it, centered. Page positions then never depend on
+  /// page sizes, which pdfrx only learns page by page after opening (and,
+  /// online, only as pages scroll in). So nothing shifts or shrinks while
+  /// scrolling, and a bookmark lands on the page it names.
+  static PdfPageLayout _fixedSlotLayout(List<PdfPage> pages, PdfViewerParams params) {
+    const slotWidth = 600.0;
+    const slotHeight = slotWidth * 1.4142;
     final margin = params.margin;
     final rects = <Rect>[];
     var y = margin;
     for (final page in pages) {
-      final height = page.width > 0 ? page.height * width / page.width : width * 1.414;
-      rects.add(Rect.fromLTWH(margin, y, width, height));
-      y += height + margin;
+      final scale = page.width > 0 && page.height > 0
+          ? math.min(slotWidth / page.width, slotHeight / page.height)
+          : 1.0;
+      final width = page.width > 0 ? page.width * scale : slotWidth;
+      final height = page.height > 0 ? page.height * scale : slotHeight;
+      rects.add(Rect.fromLTWH(margin + (slotWidth - width) / 2, y + (slotHeight - height) / 2, width, height));
+      y += slotHeight + margin;
     }
-    return PdfPageLayout(pageLayouts: rects, documentSize: Size(width + margin * 2, y));
+    return PdfPageLayout(pageLayouts: rects, documentSize: Size(slotWidth + margin * 2, y));
   }
 
   PreferredSizeWidget _searchBar() {
@@ -332,7 +361,11 @@ class _ViewerScreenState extends State<ViewerScreen> {
         sectionFor: _sectionFor,
         onGo: (dest, page) {
           Navigator.pop(sheetContext);
-          if (dest != null) {
+          if (dest != null && _online) {
+            // Online, the page may not be measured yet, so a position inside
+            // it would be off; open the page from its top instead.
+            _controller.goToPage(pageNumber: dest.pageNumber);
+          } else if (dest != null) {
             _controller.goToDest(dest);
           } else if (page != null) {
             _controller.goToPage(pageNumber: page);
