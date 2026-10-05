@@ -133,6 +133,13 @@ class AppStore extends ChangeNotifier {
   }
 
   Future<void> _save() async {
+    await _root.create(recursive: true);
+    final tmp = File('${_stateFile.path}.tmp');
+    await tmp.writeAsString(_stateJson());
+    await tmp.rename(_stateFile.path);
+  }
+
+  String _stateJson() {
     final json = {
       'server': serverUrl,
       'local': {for (final e in local.entries) e.key: e.value.toJson()},
@@ -141,10 +148,7 @@ class AppStore extends ChangeNotifier {
       'last_read': lastRead?.toJson(),
       'bookmarks': bookmarks,
     };
-    await _root.create(recursive: true);
-    final tmp = File('${_stateFile.path}.tmp');
-    await tmp.writeAsString(jsonEncode(json));
-    await tmp.rename(_stateFile.path);
+    return jsonEncode(json);
   }
 
   Uri _url(String path) {
@@ -602,8 +606,15 @@ class AppStore extends ChangeNotifier {
   void dispose() {
     if (_saveTimer?.isActive ?? false) {
       _saveTimer!.cancel();
-      // Last write on the way out; nobody is left to report a failure to.
-      _save().catchError((Object e) => debugPrint('saving state failed: $e'));
+      // Last write on the way out, done right away so the next start reads
+      // it; nobody is left to report a failure to.
+      try {
+        _root.createSync(recursive: true);
+        final tmp = File('${_stateFile.path}.tmp')..writeAsStringSync(_stateJson());
+        tmp.renameSync(_stateFile.path);
+      } on FileSystemException catch (e) {
+        debugPrint('saving state failed: $e');
+      }
     }
     _client.close();
     super.dispose();
