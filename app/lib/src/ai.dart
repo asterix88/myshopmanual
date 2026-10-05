@@ -79,10 +79,10 @@ class AiChat {
   final Map<String, ManualFile> _manuals = {};
 
   /// Requests per question: each search or look at a page costs one round.
-  static const maxRounds = 6;
+  static const maxRounds = 8;
 
   /// Page pictures the AI may look at per question; each is a large request.
-  static const maxViews = 4;
+  static const maxViews = 6;
   var _views = 0;
 
   /// Asks [question]; [onStatus] reports what is happening while it works.
