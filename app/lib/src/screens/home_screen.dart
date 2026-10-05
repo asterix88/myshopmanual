@@ -18,7 +18,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    final updateCount = store.updates.length;
+    final updateCount = store.unseenUpdates.length;
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 64,
@@ -306,7 +306,7 @@ class _FolderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final keys = {for (final u in units) for (final f in store.filesOf(u)) f.key};
-    final hasUpdate = store.updates.any((u) => keys.contains(u.file.key));
+    final hasUpdate = store.unseenUpdates.any((u) => keys.contains(u.file.key));
     return AppCard(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => MachineScreen(machine: machine)),

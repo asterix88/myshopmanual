@@ -24,7 +24,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
     if (_store == null) {
       _store = StoreScope.read(context);
       // Freeze the list for this visit, then mark it seen so the bell clears.
-      _shown = _store!.updates;
+      _shown = _store!.listedUpdates;
       WidgetsBinding.instance.addPostFrameCallback((_) => _store!.markUpdatesSeen());
     }
   }
@@ -51,7 +51,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           await store.refresh();
-          setState(() => _shown = store.updates);
+          setState(() => _shown = store.listedUpdates);
           store.markUpdatesSeen();
         },
         child: ListView(
@@ -121,21 +121,15 @@ class _UpdateCard extends StatelessWidget {
         ),
       UpdateKind.withdrawn => (
           const Pill('DITARIK', background: AppColors.greySoft, foreground: AppColors.ink),
-          'Sudah tidak ada di server. File di HP masih bisa dibuka sampai kamu hapus.',
+          'Sudah tidak ada di server. File yang sudah diunduh tetap bisa dibuka.',
         ),
     };
 
-    Widget action;
+    Widget? action;
     if (progress != null) {
       action = LinearProgressIndicator(value: progress.fraction, minHeight: 6, borderRadius: BorderRadius.circular(3));
     } else if (update.kind == UpdateKind.withdrawn) {
-      action = downloaded
-          ? TextButton(
-              style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-              onPressed: () => store.deleteManuals([file.key]),
-              child: const Text('Hapus dari HP', style: TextStyle(fontWeight: FontWeight.w600)),
-            )
-          : const Text('Sudah dihapus dari HP', style: TextStyle(fontSize: 12, color: AppColors.muted));
+      action = null;
     } else if (upToDate) {
       action = const Align(
         alignment: Alignment.centerLeft,
@@ -176,8 +170,7 @@ class _UpdateCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(file.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
           Text(description, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
-          const SizedBox(height: 10),
-          action,
+          if (action != null) ...[const SizedBox(height: 10), action],
         ],
       ),
     );

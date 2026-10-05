@@ -73,7 +73,7 @@ class UnitRow extends StatelessWidget {
     final files = store.filesOf(unit);
     final onPhone = files.where((f) => store.isDownloaded(f.key)).length;
     final keys = {for (final f in files) f.key};
-    final hasUpdate = store.updates.any((u) => keys.contains(u.file.key));
+    final hasUpdate = store.unseenUpdates.any((u) => keys.contains(u.file.key));
     final subtitle = hasUpdate
         ? 'Ada update manual'
         : [
