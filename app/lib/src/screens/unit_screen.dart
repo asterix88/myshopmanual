@@ -30,10 +30,6 @@ class _UnitScreenState extends State<UnitScreen> {
     }
     final files = store.filesOf(unit);
     final onPhone = files.where((f) => store.isDownloaded(f.key)).toList();
-    final usedBytes = onPhone.fold(0, (s, f) => s + f.downloadSize);
-    final remaining = files
-        .where((f) => !store.isDownloaded(f.key))
-        .fold(0, (s, f) => s + f.downloadSize);
 
     return PopScope(
       canPop: !_editing,
@@ -45,43 +41,7 @@ class _UnitScreenState extends State<UnitScreen> {
         body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
           children: [
-            if (!_editing) ...[
-              AppCard(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  children: [
-                    Text.rich(
-                      TextSpan(children: [
-                        const TextSpan(text: 'Tersimpan di HP: '),
-                        TextSpan(
-                          text: '${onPhone.length} dari ${files.length} file',
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ]),
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
-                      child: LinearProgressIndicator(
-                        value: files.isEmpty ? 0 : onPhone.length / files.length,
-                        minHeight: 6,
-                        color: const Color(0xFF27AE60),
-                        backgroundColor: AppColors.divider,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      remaining == 0
-                          ? '${formatSize(usedBytes)} terpakai · semua file sudah di HP'
-                          : '${formatSize(usedBytes)} terpakai · ${formatSize(remaining)} lagi jika semua diunduh',
-                      style: const TextStyle(fontSize: 12, color: AppColors.muted),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-            ] else
+            if (_editing)
               const Padding(
                 padding: EdgeInsets.fromLTRB(4, 0, 4, 12),
                 child: Text(
@@ -225,8 +185,7 @@ class _FileCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              Pill.docType(file.type),
+              if (file.type != DocType.other) ...[const SizedBox(width: 10), Pill.docType(file.type)],
             ],
           ),
           const SizedBox(height: 10),

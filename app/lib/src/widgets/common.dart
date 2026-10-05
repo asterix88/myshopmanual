@@ -29,13 +29,14 @@ class AppCard extends StatelessWidget {
 class Pill extends StatelessWidget {
   const Pill(this.label, {super.key, required this.background, required this.foreground});
 
-  factory Pill.docType(DocType type) => switch (type) {
+  /// The type label of a manual; other documents get none.
+  static Widget docType(DocType type) => switch (type) {
         DocType.shopManual =>
           Pill('SHOP MANUAL', background: AppColors.blueSoft, foreground: AppColors.blue),
         DocType.omm => Pill('OMM', background: AppColors.orangeSoft, foreground: AppColors.orangeText),
         DocType.partsbook =>
           Pill('PARTSBOOK', background: AppColors.greenSoft, foreground: AppColors.green),
-        DocType.other => Pill('LAINNYA', background: AppColors.greySoft, foreground: AppColors.ink),
+        DocType.other => const SizedBox.shrink(),
       };
 
   final String label;
