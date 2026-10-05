@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -46,15 +47,19 @@ void main() {
               'finish_reason': 'stop',
               'message': {
                 'role': 'assistant',
-                'content': 'Lampu menyala karena **filter** tersumbat [S1]. Ganti elemen [S2] [S9].\n[Gambar S2]\n[Gambar S9]',
+                'content': 'Lampu menyala karena **filter** tersumbat 【S1†L3-L5】. Ganti elemen [S2] [S9].\n[Gambar S2]\n[Gambar S9]',
               },
             };
       return http.Response(jsonEncode(reply), 200, headers: {'content-type': 'application/json'});
     });
 
     final statuses = <String>[];
-    final chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'));
+    // Like the app's real client, which holds open sockets: nothing in it may
+    // be sent along with the search to the background isolate.
+    final client = _UnsendableClient(worker);
+    final chat = AiChat(store: store, client: client, endpoint: Uri.parse('https://ai.test/chat'));
     final answer = await chat.ask('Lampu filter oli hidrolik menyala?', onStatus: statuses.add);
+    client.close();
 
     expect(requests.first['manuals'], ['TEST1-1: OMM Test Unit (OMM)']);
     // Second request: question, the AI's tool call, then the pages found.
@@ -188,4 +193,22 @@ void main() {
     expect(store.aiIndexProgress, isNull);
     store.dispose();
   });
+}
+
+/// An HTTP client holding something that can't cross isolates, as a real
+/// `http.Client` does.
+class _UnsendableClient extends http.BaseClient {
+  _UnsendableClient(this._inner);
+
+  final http.Client _inner;
+  final _port = ReceivePort();
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) => _inner.send(request);
+
+  @override
+  void close() {
+    _port.close();
+    _inner.close();
+  }
 }

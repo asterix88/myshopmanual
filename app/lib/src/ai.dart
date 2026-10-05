@@ -166,8 +166,7 @@ class AiChat {
         ? 'Note: $notReady manual(s) are still being prepared on the phone and were not searched.\n\n'
         : '';
     onStatus?.call('Mencari di manual: $query');
-    final found = indexes;
-    final pages = await Isolate.run(() => searchPageTextsSync(found, query, limit: 4));
+    final pages = await _searchInBackground(indexes, query);
     if (pages.isEmpty) return '${note}No matching pages for "$query".';
 
     final out = StringBuffer(note);
@@ -187,9 +186,18 @@ class AiChat {
     return out.toString();
   }
 
+  /// Runs the search on another isolate so the chat stays smooth. Static on
+  /// purpose: a closure made inside an instance method also carries `this`
+  /// (the chat and its HTTP client), which can't be sent to an isolate.
+  static Future<List<PageText>> _searchInBackground(Map<String, String> indexes, String query) =>
+      Isolate.run(() => searchPageTextsSync(indexes, query, limit: 4));
+
   ChatEntry _answer(String content) {
     final cited = <AiSource>[];
     final pictures = <AiSource>[];
+    // Some models cite as 【S3】 or 【S3†L4-L9】; read those as [S3].
+    content = content.replaceAllMapped(
+        RegExp(r'【\s*(Gambar\s+)?S(\d+)[^】]*】'), (m) => '[${m[1] ?? ''}S${m[2]}]');
     // [Gambar S3] asks for page S3 to be shown as a picture under the answer.
     final raw = content.trim().replaceAllMapped(RegExp(r'[ \t]*\[Gambar\s+S(\d+)\]'), (m) {
       final source = _sources[int.parse(m[1]!)];
