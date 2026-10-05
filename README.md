@@ -54,6 +54,10 @@ diunduh; Worker hanya meneruskan percakapan ke AI dan mengembalikan jawabannya, 
 halaman sumber. Tier gratis punya batas permintaan per menit dan per hari; kalau penuh, aplikasi
 menampilkan pesan untuk mencoba lagi nanti.
 
+AI juga bisa melihat halaman manual sebagai gambar (wiring/hydraulic diagram, lokasi komponen). HP
+menggambar halaman itu (atau seperempatnya untuk memperbesar) lalu mengirimnya ke AI. Hanya model di
+`VISION_MODEL` yang dipakai untuk percakapan yang berisi gambar.
+
 Server ini di-deploy otomatis oleh GitHub Actions (`.github/workflows/ai-worker.yml`) setiap folder
 `ai-worker/` berubah di `main`; tidak ada yang perlu dipasang di PC. Siapkan sekali di GitHub, menu
 Settings > Secrets and variables > Actions > New repository secret:

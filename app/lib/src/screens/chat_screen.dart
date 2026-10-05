@@ -177,7 +177,8 @@ class _Intro extends StatelessWidget {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               const Text(
-                'AI mencari di semua manual, termasuk yang belum diunduh, lalu menjawab dengan menyebut sumbernya. '
+                'AI mencari di semua manual, termasuk yang belum diunduh, dan bisa melihat gambar seperti wiring '
+                'atau hydraulic diagram, lalu menjawab dengan menyebut sumbernya. '
                 'Ketuk sumber untuk membuka halamannya. Butuh internet.',
                 style: TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF3A3F45)),
               ),
