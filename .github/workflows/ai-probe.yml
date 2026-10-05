@@ -5,15 +5,36 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: app
     steps:
       - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.47.6"
-          channel: stable
-          cache: true
-      - run: flutter pub get
-      - run: flutter test test/zz_live_ai_test.dart --reporter expanded
+      - env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          echo "deepseek key set: $([ -n "$DEEPSEEK_API_KEY" ] && echo yes || echo no)"
+          python3 - <<'PY'
+          import base64, json, os, urllib.request, time
+          img = base64.b64encode(open('.github/probe/probe.jpg','rb').read()).decode()
+          tool = {"type":"function","function":{"name":"search_manuals","description":"Search manuals","parameters":{"type":"object","properties":{"query":{"type":"string"},"unit":{"type":"string"}},"required":["query","unit"]}}}
+          def call(url, key, body):
+              req = urllib.request.Request(url, json.dumps(body).encode(), {"content-type":"application/json","authorization":"Bearer "+key,"user-agent":"curl/8"})
+              t=time.time()
+              try:
+                  r = urllib.request.urlopen(req, timeout=90); out = r.read().decode(); code = r.status
+              except urllib.error.HTTPError as e:
+                  out = e.read().decode(); code = e.code
+              print("  ->", code, round(time.time()-t,1), "s"); print("  ", out[:900])
+          G="https://api.groq.com/openai/v1/chat/completions"
+          for m in ["meta-llama/llama-4-scout-17b-16e-instruct","meta-llama/llama-4-maverick-17b-128e-instruct"]:
+              print("VISION", m)
+              call(G, os.environ["GROQ_API_KEY"], {"model":m,"tools":[tool],"tool_choice":"auto","max_tokens":400,
+                "messages":[{"role":"system","content":"Answer in Bahasa Indonesia. Use search_manuals when you need manual pages."},
+                  {"role":"user","content":[{"type":"text","text":"Kabel apa yang menghubungkan pump controller ke CN-E12, dan fuse berapa?"},{"type":"image_url","image_url":{"url":"data:image/jpeg;base64,"+img}}]}]})
+          k=os.environ.get("DEEPSEEK_API_KEY")
+          if k:
+              D="https://api.deepseek.com/chat/completions"
+              for extra in [{"thinking":{"type":"disabled"}},{}]:
+                  print("DEEPSEEK v4-flash", extra)
+                  call(D,k,{"model":"deepseek-v4-flash","tools":[tool],"tool_choice":"auto","max_tokens":300,**extra,
+                    "messages":[{"role":"user","content":"Berapa tekanan relief swing motor PC210? Cari di manual."}]})
+          PY
