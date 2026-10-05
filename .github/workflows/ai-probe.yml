@@ -5,9 +5,15 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
     steps:
-      - run: |
-          for ua in "curl/8" "Dart/3.9 (dart:io)" "Python-urllib/3.12"; do
-            curl -sS -m 60 -A "$ua" -o /dev/null -w "$ua -> %{http_code} %{size_download} bytes %{time_total}s\n" https://mymanual.my.id/units/PC210-1OMO/OMM_PC210.sqlite
-          done
-          curl -sS -m 60 -A "Dart/3.9 (dart:io)" -H 'Range: bytes=0-99' -o /dev/null -w "range -> %{http_code} %{size_download}\n" https://mymanual.my.id/units/PC210-1OMO/OMM_PC210.sqlite
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.6"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test test/zz_live_ai_test.dart --reporter expanded
