@@ -34,3 +34,8 @@ jobs:
           PDFIUM=$PDFIUM flutter test test/zz_live_ai_test.dart --reporter expanded
       - if: always()
         run: grep -i "model failed\|error" /tmp/wrangler.log | head -40 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: views
+          path: /tmp/view-*.png

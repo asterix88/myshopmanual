@@ -12,6 +12,7 @@ void main() {
   test('live AI with page pictures', () async {
     {
       Pdfrx.pdfiumModulePath = Platform.environment['PDFIUM'];
+      Pdfrx.cacheDirectoryPath = Directory.systemTemp.createTempSync('pdfcache').path;
       final root = Directory.systemTemp.createTempSync('live');
       final store = await AppStore.open(root: root);
       await store.setServerUrl('https://mymanual.my.id');
