@@ -7,9 +7,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          set -x
-          curl -sS -m 30 -i https://ai.mymanual.my.id/ || true
-          echo
-          curl -sS -m 120 -i -X POST https://ai.mymanual.my.id/chat \
-            -H 'content-type: application/json' \
-            -d '{"messages":[{"role":"user","content":"Berapa tekanan relief swing motor PC210?"}],"manuals":["PC210-10MO: Shop Manual PC210 (Shop Manual)"]}' || true
+          curl -sS -m 60 https://mymanual.my.id/catalog.json -o catalog.json
+          python3 - <<'PY'
+          import json
+          c=json.load(open('catalog.json'))
+          fs=c.get('files',[])
+          print('files',len(fs),'keys',list(fs[0].keys()) if fs else None)
+          for f in fs:
+              ix=f.get('index') or {}
+              print(f.get('unit'),'|',f.get('id'),'|',f.get('type'),'|',f.get('searchable'),'| idx',round((ix.get('size') or 0)/1e6,1),'MB |',ix.get('path') or ix.get('url'))
+          PY
+          curl -sS -m 120 -X POST https://ai.mymanual.my.id/chat -H 'content-type: application/json' \
+            -d '{"messages":[{"role":"user","content":"Berapa tekanan relief swing motor PC210?"},{"role":"assistant","content":null,"tool_calls":[{"id":"c1","type":"function","function":{"name":"search_manuals","arguments":"{\"query\":\"swing relief pressure\",\"unit\":\"PC210\"}"}}]},{"role":"tool","tool_call_id":"c1","content":"[S1] PC210 · Shop Manual · page 120\nSwing motor relief pressure: 27.9 MPa {285 kg/cm2}"}],"manuals":["PC210-10MO: Shop Manual (Shop Manual)"]}'
