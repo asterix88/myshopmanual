@@ -41,4 +41,23 @@ void main() {
     expect(shownOpacity(tester, SearchScreen), 0);
     root.deleteSync(recursive: true);
   });
+
+  testWidgets('Enter on the keyboard sends the question in Tanya AI', (tester) async {
+    late AppStore store;
+    final root = Directory.systemTemp.createTempSync('shell');
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer());
+    });
+    await tester.pumpWidget(MyManualApp(store: store));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tanya AI').last);
+    await tester.pumpAndSettle();
+
+    // A multiline keyboard would put a newline key where Send should be.
+    final input = tester.widget<EditableText>(
+        find.descendant(of: find.byType(ChatScreen), matching: find.byType(EditableText)));
+    expect(input.keyboardType, TextInputType.text);
+    expect(input.textInputAction, TextInputAction.send);
+    root.deleteSync(recursive: true);
+  });
 }
