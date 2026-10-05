@@ -126,6 +126,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ? _Intro(
                     examples: _examples,
                     hasManuals: hasManuals,
+                    preparing: store.aiIndexProgress,
                     onExample: offline ? null : _send,
                   )
                 : ListView(
@@ -150,10 +151,11 @@ class _ChatScreenState extends State<ChatScreen> {
 }
 
 class _Intro extends StatelessWidget {
-  const _Intro({required this.examples, required this.hasManuals, required this.onExample});
+  const _Intro({required this.examples, required this.hasManuals, required this.preparing, required this.onExample});
 
   final List<String> examples;
   final bool hasManuals;
+  final ({int ready, int total})? preparing;
   final ValueChanged<String>? onExample;
 
   @override
@@ -174,6 +176,14 @@ class _Intro extends StatelessWidget {
                 'Ketuk sumber untuk membuka halamannya. Butuh internet.',
                 style: TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF3A3F45)),
               ),
+              if (preparing case final p? when p.total > 0) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Menyiapkan indeks pencarian AI: ${p.ready} dari ${p.total} manual. '
+                  'Pertanyaan tetap bisa dikirim sekarang.',
+                  style: const TextStyle(fontSize: 12, height: 1.4, color: AppColors.muted),
+                ),
+              ],
               if (!hasManuals) ...[
                 const SizedBox(height: 12),
                 const Text(

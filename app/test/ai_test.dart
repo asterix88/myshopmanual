@@ -133,4 +133,20 @@ void main() {
     expect(File(store.pdfPath(file)).existsSync(), isFalse);
     store.dispose();
   });
+
+  test('the search index of every manual is fetched in the background, PDFs are not', () async {
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    final file = store.catalog.files.single;
+    final stale = File('${root.path}/index-cache/OLD/Gone-0123456789ab.sqlite')
+      ..createSync(recursive: true);
+
+    await store.fetchAllAiIndexes();
+
+    expect(File(store.cachedIndexPath(file)).existsSync(), isTrue);
+    expect(File(store.pdfPath(file)).existsSync(), isFalse);
+    expect(stale.existsSync(), isFalse);
+    expect(store.aiIndexProgress, isNull);
+    store.dispose();
+  });
 }

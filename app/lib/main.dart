@@ -13,7 +13,7 @@ Future<void> main() async {
     statusBarColor: Colors.white,
     statusBarIconBrightness: Brightness.dark,
   ));
-  final store = await AppStore.open();
+  final store = await AppStore.open()..autoFetchAiIndexes = true;
   runApp(MyManualApp(store: store));
   // Check the server in the background; the app works offline meanwhile.
   store.refresh();
