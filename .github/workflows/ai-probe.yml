@@ -24,12 +24,13 @@ jobs:
               except urllib.error.HTTPError as e:
                   out = e.read().decode(); code = e.code
               print("  ->", code, round(time.time()-t,1), "s"); print("  ", out[:900])
-          q="Kabel apa yang menghubungkan pump controller ke CN-E12, dan fuse berapa? Jawab singkat."
-          vis=[{"type":"text","text":q},{"type":"image_url","image_url":{"url":"data:image/jpeg;base64,"+img}}]
-          print("GROQ qwen vision")
-          call("https://api.groq.com/openai/v1/chat/completions", os.environ["GROQ_API_KEY"], {"model":"qwen/qwen3.8-27b","max_tokens":600,"tools":[tool],"tool_choice":"auto","messages":[{"role":"user","content":vis}]})
-          print("DEEPSEEK vision")
-          call("https://api.deepseek.com/chat/completions", os.environ["DEEPSEEK_API_KEY"], {"model":"deepseek-v4-flash","max_tokens":300,"thinking":{"type":"disabled"},"messages":[{"role":"user","content":vis}]})
-          req=urllib.request.Request("https://api.deepseek.com/models",headers={"authorization":"Bearer "+os.environ["DEEPSEEK_API_KEY"],"user-agent":"curl/8"})
-          print("DEEPSEEK MODELS", urllib.request.urlopen(req).read().decode()[:600])
+          view={"type":"function","function":{"name":"view_page","description":"Look at a manual page as a picture","parameters":{"type":"object","properties":{"manual":{"type":"string"},"page":{"type":"integer"}},"required":["manual","page"]}}}
+          msgs=[{"role":"system","content":"Answer in Bahasa Indonesia. Manuals: [M1] PC210: Electrical diagram (picture only, 1 page). Use view_page to look at picture-only manuals."},
+                {"role":"user","content":"Kabel apa yang menghubungkan pump controller ke CN-E12, dan fuse berapa?"},
+                {"role":"assistant","content":"","tool_calls":[{"id":"c1","type":"function","function":{"name":"view_page","arguments":"{\"manual\":\"M1\",\"page\":1}"}}]},
+                {"role":"tool","tool_call_id":"c1","content":"The picture of [S1] PC210 · Electrical diagram · page 1 is attached in the next message."},
+                {"role":"user","content":[{"type":"text","text":"[S1] page picture:"},{"type":"image_url","image_url":{"url":"data:image/jpeg;base64,"+img}}]}]
+          for name,url,key,model,extra in [("deepseek","https://api.deepseek.com/chat/completions",os.environ["DEEPSEEK_API_KEY"],"deepseek-v4-flash",{"thinking":{"type":"disabled"}}),("qwen","https://api.groq.com/openai/v1/chat/completions",os.environ["GROQ_API_KEY"],"qwen/qwen3.8-27b",{})]:
+              print("TOOL+IMAGE", name)
+              call(url,key,{"model":model,"max_tokens":500,"tools":[tool,view],"tool_choice":"auto","messages":msgs,**extra})
           PY
