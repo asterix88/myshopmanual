@@ -1,5 +1,6 @@
 export interface Env {
-  GROQ_API_KEY: string;
+  GROQ_API_KEY?: string;
+  DEEPSEEK_API_KEY?: string;
   APP_TOKEN?: string;
   MODEL: string;
   API_URL: string;
@@ -43,6 +44,8 @@ const SEARCH_TOOL = {
   },
 };
 
+const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
+
 const MAX_BODY_BYTES = 400_000;
 
 function json(body: unknown, status = 200): Response {
@@ -52,7 +55,13 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-type ChatMessage = { role: string; content?: unknown; tool_calls?: unknown; tool_call_id?: unknown };
+type ChatMessage = {
+  role: string;
+  content?: unknown;
+  tool_calls?: unknown;
+  tool_call_id?: unknown;
+  reasoning_content?: unknown;
+};
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -91,47 +100,64 @@ export default {
       ? `Manuals in the app (all can be searched; pass unit when the question is about one unit model, so only its manuals are searched):\n${manuals.join("\n")}`
       : "The app has no manual list yet (it has not reached the server), so search_manuals finds nothing. Tell the user to connect to the internet and open the Unit tab first.";
 
-    // Free tiers limit tokens per minute per model, so when one model is
-    // full (or retired) the same request goes to the next one in MODEL.
+    // MODEL is a list tried in order: when one model is full, out of credit
+    // or retired, the same request goes to the next one. "deepseek:<model>"
+    // goes to DeepSeek; a bare name goes to API_URL (Groq). Entries whose key
+    // is not set are skipped.
     const models = env.MODEL.split(",").map((m) => m.trim()).filter(Boolean);
     let lastStatus = 0;
     let rateLimited = false;
-    for (const model of models) {
+    let keyRejected = false;
+    for (const entry of models) {
+      const deepseek = entry.startsWith("deepseek:");
+      const model = deepseek ? entry.slice("deepseek:".length) : entry;
+      const key = deepseek ? env.DEEPSEEK_API_KEY : env.GROQ_API_KEY;
+      if (!key) continue;
+      const url = deepseek ? DEEPSEEK_URL : env.API_URL;
+      // DeepSeek's thinking mode wants its reasoning sent back on every tool
+      // round, which the app doesn't keep, so it's turned off; other
+      // providers may reject the field.
+      const turns = deepseek ? messages : messages.map(({ reasoning_content: _, ...m }) => m);
       let upstream: Response;
       try {
-        upstream = await fetch(env.API_URL, {
+        upstream = await fetch(url, {
           method: "POST",
-          headers: { "content-type": "application/json", authorization: `Bearer ${env.GROQ_API_KEY}` },
+          headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
           body: JSON.stringify({
             model,
-            messages: [{ role: "system", content: `${SYSTEM}\n\n${context}` }, ...messages],
+            messages: [{ role: "system", content: `${SYSTEM}\n\n${context}` }, ...turns],
             tools: [SEARCH_TOOL],
             tool_choice: "auto",
             temperature: 0.2,
             max_tokens: 2048,
+            ...(deepseek ? { thinking: { type: "disabled" } } : {}),
             // Less hidden reasoning means fewer tokens against the limit.
             ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
           }),
         });
-      } catch {
-        return json({ error: "upstream", message: "Layanan AI tidak bisa dihubungi. Coba lagi nanti." }, 502);
+      } catch (e) {
+        console.log("model unreachable", entry, String(e));
+        lastStatus = 502;
+        continue;
       }
       const data = (await upstream.json().catch(() => null)) as {
         choices?: { message?: unknown; finish_reason?: string }[];
         error?: { message?: string; code?: string };
       } | null;
-      if (upstream.status === 401 || upstream.status === 403) {
-        return json({ error: "server_key", message: "Kunci API di server AI tidak valid. Hubungi admin." }, 502);
-      }
       const choice = data?.choices?.[0];
       if (upstream.ok && choice?.message) {
         return json({ message: choice.message, finish_reason: choice.finish_reason, model });
       }
       lastStatus = upstream.status;
       if (upstream.status === 429 || upstream.status === 413) rateLimited = true;
-      console.log("model failed", model, upstream.status, data?.error?.code, data?.error?.message);
-      // 429 and 413 are rate limits; 404 and 400 can mean a retired model.
-      if (![400, 404, 413, 429, 498, 500, 502, 503].includes(upstream.status)) break;
+      if (upstream.status === 401 || upstream.status === 403) keyRejected = true;
+      console.log("model failed", entry, upstream.status, data?.error?.code, data?.error?.message);
+      // 429 and 413 are rate limits, 402 is no credit left, 401/403 a bad key
+      // for that provider; 404 and 400 can mean a retired model.
+      if (![400, 401, 402, 403, 404, 413, 422, 429, 498, 500, 502, 503].includes(upstream.status)) break;
+    }
+    if (keyRejected && !rateLimited) {
+      return json({ error: "server_key", message: "Kunci API di server AI tidak valid. Hubungi admin." }, 502);
     }
     if (rateLimited) {
       return json({ error: "busy", message: "Batas pemakaian AI gratis sedang penuh. Coba lagi dalam 1 menit." }, 429);
