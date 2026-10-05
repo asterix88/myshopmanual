@@ -17,6 +17,16 @@ void main() {
       final store = await AppStore.open(root: root);
       await store.setServerUrl('https://mymanual.my.id');
       print('online=${store.online} files=${store.catalog.files.length}');
+      for (final f in store.catalog.files.where((f) => f.id.contains('CAT359'))) {
+        final doc = await PdfDocument.openUri(store.pdfUri(f), preferRangeAccess: true);
+        print('DOC ${f.id} pages=${doc.pages.length} searchable=${f.searchable}');
+        for (final pg in doc.pages) {
+          final t = await pg.loadText();
+          final txt = t?.fullText ?? '';
+          print('  p${pg.pageNumber} ${pg.width.round()}x${pg.height.round()} text=${txt.length} ${txt.replaceAll(RegExp(r'\s+'), ' ').substring(0, txt.length < 80 ? txt.length : 80)}');
+        }
+        await doc.dispose();
+      }
       final chat = AiChat(
         store: store,
         client: http.Client(),
