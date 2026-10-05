@@ -51,10 +51,12 @@ class _UnitScreenState extends State<UnitScreen> {
               ),
             for (final (group, groupFiles) in _grouped(files))
               for (final (i, file) in groupFiles.indexed) ...[
-                if (i == 0 && group.isNotEmpty)
+                // Below the subfolders, the unit folder's own files get a
+                // heading too, so they don't read as part of the last one.
+                if (i == 0 && (group.isNotEmpty || files.any((f) => f.group.isNotEmpty)))
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: SectionLabel(group),
+                    child: SectionLabel(group.isEmpty ? 'Manual' : group),
                   ),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
