@@ -16,9 +16,7 @@ const pageRegions = ['full', 'top-left', 'top-right', 'bottom-left', 'bottom-rig
 /// side is about 1600 pixels, so a quarter shows the drawing twice as large
 /// as the full page does.
 Future<Uint8List> renderPageImage(AppStore store, ManualFile file, int page, String region) async {
-  final document = store.isDownloaded(file.key)
-      ? await PdfDocument.openFile(store.pdfPath(file))
-      : await PdfDocument.openUri(store.pdfUri(file), preferRangeAccess: true);
+  final document = await _open(store, file);
   try {
     final pdfPage = document.pages[page - 1];
     final (left, top, part) = switch (region) {
@@ -65,3 +63,26 @@ Future<Uint8List> renderPageImage(AppStore store, ManualFile file, int page, Str
     await document.dispose();
   }
 }
+
+/// Pages of [file] that are much larger than its usual page: the fold-out
+/// drawing sheets of a schematic or a shop manual. Knowing them lets the AI
+/// go straight to the drawing instead of paging through covers and tables.
+Future<List<int>> findLargeSheets(AppStore store, ManualFile file) async {
+  final document = await _open(store, file);
+  try {
+    final areas = [for (final p in document.pages) p.width * p.height];
+    if (areas.isEmpty) return const [];
+    final sorted = [...areas]..sort();
+    final usual = sorted[sorted.length ~/ 2];
+    return [
+      for (final (i, area) in areas.indexed)
+        if (area >= usual * 2.5) i + 1,
+    ];
+  } finally {
+    await document.dispose();
+  }
+}
+
+Future<PdfDocument> _open(AppStore store, ManualFile file) => store.isDownloaded(file.key)
+    ? PdfDocument.openFile(store.pdfPath(file))
+    : PdfDocument.openUri(store.pdfUri(file), preferRangeAccess: true);

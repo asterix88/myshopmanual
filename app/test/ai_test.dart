@@ -126,6 +126,7 @@ void main() {
         drawn.add('${file.id} $page $region');
         return Uint8List.fromList([1, 2, 3]);
       },
+      largeSheets: (file) async => [3, 4],
     );
     final statuses = <String>[];
     final answer = await chat.ask('Kabel apa ke CN-E12?', onStatus: statuses.add);
@@ -135,6 +136,8 @@ void main() {
     final messages = (requests[1]['messages'] as List).cast<Map<String, dynamic>>();
     expect(messages.map((m) => m['role']), ['user', 'assistant', 'tool', 'tool', 'user']);
     expect(messages[2]['content'], contains('[S1] TEST1-1 · OMM Test Unit · page 2 (top-left part)'));
+    // After a first look, the AI learns where the drawing sheets are.
+    expect(messages[2]['content'], contains('pages 3, 4 are large drawing sheets'));
     expect(messages[3]['content'], startsWith('No such page'));
     final parts = (messages[4]['content'] as List).cast<Map<String, dynamic>>();
     expect(parts.last['image_url'], {'url': 'data:image/png;base64,AQID'});
