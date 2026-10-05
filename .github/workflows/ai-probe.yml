@@ -24,17 +24,9 @@ jobs:
               except urllib.error.HTTPError as e:
                   out = e.read().decode(); code = e.code
               print("  ->", code, round(time.time()-t,1), "s"); print("  ", out[:900])
-          G="https://api.groq.com/openai/v1/chat/completions"
-          for m in ["meta-llama/llama-4-scout-17b-16e-instruct","meta-llama/llama-4-maverick-17b-128e-instruct"]:
-              print("VISION", m)
-              call(G, os.environ["GROQ_API_KEY"], {"model":m,"tools":[tool],"tool_choice":"auto","max_tokens":400,
-                "messages":[{"role":"system","content":"Answer in Bahasa Indonesia. Use search_manuals when you need manual pages."},
-                  {"role":"user","content":[{"type":"text","text":"Kabel apa yang menghubungkan pump controller ke CN-E12, dan fuse berapa?"},{"type":"image_url","image_url":{"url":"data:image/jpeg;base64,"+img}}]}]})
-          k=os.environ.get("DEEPSEEK_API_KEY")
-          if k:
-              D="https://api.deepseek.com/chat/completions"
-              for extra in [{"thinking":{"type":"disabled"}},{}]:
-                  print("DEEPSEEK v4-flash", extra)
-                  call(D,k,{"model":"deepseek-v4-flash","tools":[tool],"tool_choice":"auto","max_tokens":300,**extra,
-                    "messages":[{"role":"user","content":"Berapa tekanan relief swing motor PC210? Cari di manual."}]})
+          req=urllib.request.Request("https://api.groq.com/openai/v1/models",headers={"authorization":"Bearer "+os.environ["GROQ_API_KEY"],"user-agent":"curl/8"})
+          for m in json.load(urllib.request.urlopen(req))["data"]:
+              print("GROQ MODEL", m["id"], m.get("context_window"), m.get("active"))
+          print("WORKER /chat")
+          call("https://ai.mymanual.my.id/chat", "x", {"messages":[{"role":"user","content":"Berapa tekanan relief swing motor PC210?"}],"manuals":["PC210-1OMO: SM PC210 (Shop Manual)"]})
           PY
