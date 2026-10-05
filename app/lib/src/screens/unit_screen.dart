@@ -59,7 +59,7 @@ class _UnitScreenState extends State<UnitScreen> {
                     child: SectionLabel(group.isEmpty ? 'Manual' : group),
                   ),
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.only(bottom: 10),
                   child: _editing
                       ? _SelectableFile(
                           file: file,
@@ -174,7 +174,7 @@ class _FileCard extends StatelessWidget {
 
     return AppCard(
       onTap: canRead ? () => openViewer(context, file, page: lastPage) : null,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -185,7 +185,11 @@ class _FileCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(file.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    Text(file.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    Text(
+                      '${file.pages} halaman · ${formatSize(file.downloadSize)}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                    ),
                     if (!file.searchable)
                       const Text(
                         'Hasil scan: tidak bisa dicari',
@@ -197,22 +201,15 @@ class _FileCard extends StatelessWidget {
               if (file.type != DocType.other) ...[const SizedBox(width: 10), Pill.docType(file.type)],
             ],
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _Field(label: 'Halaman', value: '${file.pages}'),
-              _Field(label: 'Ukuran', value: formatSize(file.downloadSize)),
-            ],
-          ),
           if (partial > 0)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.only(top: 6),
               child: Text(
                 'Terunduh ${formatSize(partial)} dari ${formatSize(file.downloadSize)}, bisa dilanjutkan',
                 style: const TextStyle(fontSize: 12, color: AppColors.muted),
               ),
             ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           if (progress != null)
             _DownloadingRow(
               progress: progress,
@@ -225,29 +222,33 @@ class _FileCard extends StatelessWidget {
                 Expanded(
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
+                      minimumSize: const Size.fromHeight(36),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      visualDensity: VisualDensity.compact,
                       backgroundColor: AppColors.navy,
                       shape: const StadiumBorder(),
                     ),
                     onPressed: canRead ? () => openViewer(context, file, page: lastPage) : null,
-                    icon: const Icon(Icons.menu_book_outlined, size: 18),
-                    label: const Text('Baca online', style: TextStyle(fontWeight: FontWeight.w600)),
+                    icon: const Icon(Icons.menu_book_outlined, size: 16),
+                    label: const Text('Baca online', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
+                      minimumSize: const Size.fromHeight(36),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      visualDensity: VisualDensity.compact,
                       side: const BorderSide(color: AppColors.navy, width: 1.5),
                       foregroundColor: AppColors.navy,
                       shape: const StadiumBorder(),
                     ),
                     onPressed: () => _download(context, store),
-                    icon: const Icon(Icons.download, size: 18),
+                    icon: const Icon(Icons.download, size: 16),
                     label: Text(
                       partial > 0 ? 'Lanjutkan unduhan' : 'Unduh ${formatSize(file.downloadSize)}',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -322,26 +323,6 @@ class _DownloadingRow extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-class _Field extends StatelessWidget {
-  const _Field({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
-          Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-        ],
-      ),
     );
   }
 }
