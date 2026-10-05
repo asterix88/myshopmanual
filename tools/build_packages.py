@@ -17,7 +17,10 @@ Output layout (what gets uploaded to Cloudflare R2):
 Every file has its own index, so a mechanic can download (and delete) one
 manual at a time and search still works over whatever is on the phone.
 A unit folder may hold an optional unit.json with display info, e.g.
-{"name": "PC210-10M0", "kind": "Excavator"}.
+{"name": "PC210-10M0", "kind": "Excavator"}. PDFs may also sit in
+subfolders of a unit folder (source/CAT395/System Diagram/x.pdf): they
+belong to that unit, and the subfolder name becomes the file's "group",
+which the app shows as a heading on the unit page.
 
 Re-running keeps the previous catalog.json in dist/: units not rebuilt
 (with --only) stay listed, and each file keeps its "updated_at" date until
@@ -140,15 +143,24 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
     unit_out.mkdir(parents=True, exist_ok=True)
 
     files, skipped = [], []
-    for pdf in sorted(unit_dir.glob("*.pdf")):
+    def order(pdf: Path) -> tuple:
+        # Files directly in the unit folder first, then each subfolder.
+        rel = pdf.relative_to(unit_dir)
+        return (len(rel.parts) > 1, [part.lower() for part in rel.parts])
+
+    for pdf in sorted(unit_dir.rglob("*.pdf"), key=order):
+        rel = pdf.relative_to(unit_dir)
+        group = " / ".join(rel.parts[:-1])
         pages, toc = extract(pdf)
         scanned = is_scanned(pages)
         if scanned and not include_scanned:
-            skipped.append(pdf.name)
-            print(f"  skip (scanned): {pdf.name}")
+            skipped.append(rel.as_posix())
+            print(f"  skip (scanned): {rel.as_posix()}")
             continue
 
-        file_id = slugify(pdf.stem)
+        # The folder is part of the id, so equal names in two subfolders
+        # don't collide; files directly in the unit folder keep their ids.
+        file_id = slugify(rel.with_suffix("").as_posix())
         title = pdf.stem
         doc_type = guess_doc_type(pdf.name)
         target = unit_out / f"{file_id}.pdf"
@@ -173,11 +185,12 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
                 # What the app shows as the download size for this file.
                 "download_size": pdf_info["size"] + index_info["size"],
                 "updated_at": before["updated_at"] if unchanged else now,
+                **({"group": group} if group else {}),
             }
         )
         print(
             f"  {doc_type:12} {len(pages):5} pages {len(toc):4} bookmarks  "
-            f"pdf {pdf_info['size'] / 1e6:.1f} MB + index {index_info['size'] / 1e6:.1f} MB  {pdf.name}"
+            f"pdf {pdf_info['size'] / 1e6:.1f} MB + index {index_info['size'] / 1e6:.1f} MB  {rel.as_posix()}"
         )
 
     return {

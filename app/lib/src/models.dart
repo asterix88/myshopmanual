@@ -53,6 +53,7 @@ class ManualFile {
     required this.pdf,
     required this.index,
     required this.updatedAt,
+    this.group = '',
   });
 
   factory ManualFile.fromJson(String unitId, Map<String, dynamic> json) => ManualFile(
@@ -65,6 +66,7 @@ class ManualFile {
         pdf: RemoteFile.fromJson(json['pdf'] as Map<String, dynamic>),
         index: RemoteFile.fromJson(json['index'] as Map<String, dynamic>),
         updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? ''),
+        group: json['group'] as String? ?? '',
       );
 
   final String unitId;
@@ -76,6 +78,11 @@ class ManualFile {
   final RemoteFile pdf;
   final RemoteFile index;
   final DateTime? updatedAt;
+
+  /// The subfolder of the unit folder the PDF came from (e.g. "System
+  /// Diagram"), shown as a heading on the unit page; empty for files placed
+  /// directly in the unit folder.
+  final String group;
 
   /// Unique across the whole catalog.
   String get key => '$unitId/$id';
@@ -91,6 +98,7 @@ class ManualFile {
         'pdf': pdf.toJson(),
         'index': index.toJson(),
         'updated_at': updatedAt?.toIso8601String(),
+        if (group.isNotEmpty) 'group': group,
       };
 }
 

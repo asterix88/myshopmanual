@@ -49,18 +49,25 @@ class _UnitScreenState extends State<UnitScreen> {
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ),
-            for (final file in files)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _editing
-                    ? _SelectableFile(
-                        file: file,
-                        enabled: store.isDownloaded(file.key),
-                        selected: _selected.contains(file.key),
-                        onChanged: (v) => setState(() => v ? _selected.add(file.key) : _selected.remove(file.key)),
-                      )
-                    : _FileCard(file: file, unit: unit),
-              ),
+            for (final (group, groupFiles) in _grouped(files))
+              for (final (i, file) in groupFiles.indexed) ...[
+                if (i == 0 && group.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: SectionLabel(group),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _editing
+                      ? _SelectableFile(
+                          file: file,
+                          enabled: store.isDownloaded(file.key),
+                          selected: _selected.contains(file.key),
+                          onChanged: (v) => setState(() => v ? _selected.add(file.key) : _selected.remove(file.key)),
+                        )
+                      : _FileCard(file: file, unit: unit),
+                ),
+              ],
           ],
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -376,4 +383,17 @@ class _SelectableFile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Files directly in the unit folder first, then one group per subfolder,
+/// in catalog order.
+List<(String, List<ManualFile>)> _grouped(List<ManualFile> files) {
+  final groups = <String, List<ManualFile>>{'': []};
+  for (final f in files) {
+    (groups[f.group] ??= []).add(f);
+  }
+  return [
+    for (final e in groups.entries)
+      if (e.value.isNotEmpty) (e.key, e.value),
+  ];
 }
