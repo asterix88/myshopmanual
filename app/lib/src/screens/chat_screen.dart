@@ -61,6 +61,10 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     } on AiException catch (e) {
       answer = ChatEntry.assistant(e.message, failed: true);
+    } catch (e, stack) {
+      // Never leave the chat stuck on its status line.
+      debugPrint('Tanya AI failed: $e\n$stack');
+      answer = ChatEntry.assistant('Terjadi kesalahan di aplikasi saat mencari jawaban. Coba lagi.', failed: true);
     }
     if (!mounted) return;
     setState(() {
