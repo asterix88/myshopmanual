@@ -22,8 +22,8 @@ void main() {
         print('DOC ${f.id} pages=${doc.pages.length} searchable=${f.searchable}');
         for (final pg in doc.pages) {
           final t = await pg.loadText();
-          final txt = t?.fullText ?? '';
-          print('  p${pg.pageNumber} ${pg.width.round()}x${pg.height.round()} text=${txt.length} ${txt.replaceAll(RegExp(r'\s+'), ' ').substring(0, txt.length < 80 ? txt.length : 80)}');
+          final txt = (t?.fullText ?? '').replaceAll(RegExp(r'\s+'), ' ');
+          print('  p${pg.pageNumber} ${pg.width.round()}x${pg.height.round()} text=${txt.length} ${txt.substring(0, txt.length < 80 ? txt.length : 80)}');
         }
         await doc.dispose();
       }
