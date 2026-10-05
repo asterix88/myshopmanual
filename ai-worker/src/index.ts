@@ -1,7 +1,9 @@
 export interface Env {
-  GROQ_API_KEY: string;
+  GROQ_API_KEY?: string;
+  DEEPSEEK_API_KEY?: string;
   APP_TOKEN?: string;
   MODEL: string;
+  VISION_MODEL: string;
   API_URL: string;
 }
 
@@ -19,6 +21,11 @@ Write the answer in Bahasa Indonesia, keeping technical terms, part names and va
 Cite every fact with the source id of the page it comes from, in square brackets right after the sentence, like [S3]. Use only ids that appear in the search results.
 
 The app can show a page itself as a picture under the answer. When seeing a page would help the mechanic (a component drawing or location, an exploded view or parts figure, a hydraulic or electrical diagram, a connector pin layout, an adjustment illustration), add [Gambar S3] on its own line at the end, using that page's source id. Show at most 3 pictures, only pages whose text shows they carry such a figure (figure numbers, callout numbers, "location", "diagram", parts lists), and none when text alone answers the question.`;
+
+// Added when the app can show the AI manual pages as pictures.
+const VIEW_INSTRUCTIONS = `You can also look at manual pages with view_page. Use it when the answer is in a drawing rather than in text: a wiring or electrical diagram, a hydraulic or pneumatic schematic, a component location, a connector pin layout, an exploded view. Manuals marked "pictures only" cannot be searched at all; look at their pages directly (a schematic usually has only 1 or 2 pages). Large sheets are hard to read whole: look at the full page first to find the area, then at the part (top-left, top-right, bottom-left, bottom-right) that holds it. You can look at up to 4 pictures per question.
+
+When reading a drawing, report only what you can actually read on it: labels, component names, wire numbers and colours, connector and pin numbers, port names, pressures printed on it. Say plainly what you cannot read or follow; never guess where a line goes. Cite the picture with its source id like any other page, and add [Gambar S#] so the mechanic sees it too.`;
 
 const SEARCH_TOOL = {
   type: "function",
@@ -43,7 +50,36 @@ const SEARCH_TOOL = {
   },
 };
 
-const MAX_BODY_BYTES = 400_000;
+const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
+
+const VIEW_TOOL = {
+  type: "function",
+  function: {
+    name: "view_page",
+    description:
+      "Look at one manual page as a picture, or at a quarter of it to see small print. Returns the picture with a source id you can cite.",
+    parameters: {
+      type: "object",
+      properties: {
+        source: {
+          type: "string",
+          description: 'Source id of a page found by search_manuals, e.g. "S3". Leave empty to use manual and page.',
+        },
+        manual: { type: "string", description: 'Manual id from the manual list, e.g. "M4".' },
+        page: { type: "integer", description: "Page number in that manual, from 1." },
+        region: {
+          type: "string",
+          enum: ["full", "top-left", "top-right", "bottom-left", "bottom-right"],
+          description: "Which part of the page; full by default.",
+        },
+      },
+      required: ["source", "manual", "page", "region"],
+    },
+  },
+};
+
+// Page pictures make requests large.
+const MAX_BODY_BYTES = 8_000_000;
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -52,7 +88,13 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-type ChatMessage = { role: string; content?: unknown; tool_calls?: unknown; tool_call_id?: unknown };
+type ChatMessage = {
+  role: string;
+  content?: unknown;
+  tool_calls?: unknown;
+  tool_call_id?: unknown;
+  reasoning_content?: unknown;
+};
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -71,7 +113,7 @@ export default {
       return json({ error: "too_large", message: "Percakapan terlalu panjang. Mulai percakapan baru." }, 413);
     }
 
-    let body: { messages?: unknown; manuals?: unknown };
+    let body: { messages?: unknown; manuals?: unknown; features?: unknown };
     try {
       body = JSON.parse(raw);
     } catch {
@@ -84,6 +126,11 @@ export default {
     const messages = (body.messages as ChatMessage[]).filter(
       (m) => m && (m.role === "user" || m.role === "assistant" || m.role === "tool"),
     );
+    // Older app versions can't show pages to the AI.
+    const canView = Array.isArray(body.features) && body.features.includes("view_page");
+    const hasPictures = messages.some(
+      (m) => Array.isArray(m.content) && m.content.some((part) => part?.type === "image_url"),
+    );
     const manuals = Array.isArray(body.manuals)
       ? body.manuals.filter((m): m is string => typeof m === "string").slice(0, 200)
       : [];
@@ -91,47 +138,69 @@ export default {
       ? `Manuals in the app (all can be searched; pass unit when the question is about one unit model, so only its manuals are searched):\n${manuals.join("\n")}`
       : "The app has no manual list yet (it has not reached the server), so search_manuals finds nothing. Tell the user to connect to the internet and open the Unit tab first.";
 
-    // Free tiers limit tokens per minute per model, so when one model is
-    // full (or retired) the same request goes to the next one in MODEL.
-    const models = env.MODEL.split(",").map((m) => m.trim()).filter(Boolean);
+    // MODEL is a list tried in order: when one model is full, out of credit
+    // or retired, the same request goes to the next one. "deepseek:<model>"
+    // goes to DeepSeek; a bare name goes to API_URL (Groq). Entries whose key
+    // is not set are skipped.
+    // Only models that can see pictures get a conversation that has some.
+    const models = (hasPictures ? env.VISION_MODEL : env.MODEL)
+      .split(",")
+      .map((m) => m.trim())
+      .filter(Boolean);
+    const system = canView ? `${SYSTEM}\n\n${VIEW_INSTRUCTIONS}` : SYSTEM;
     let lastStatus = 0;
     let rateLimited = false;
-    for (const model of models) {
+    let keyRejected = false;
+    for (const entry of models) {
+      const deepseek = entry.startsWith("deepseek:");
+      const model = deepseek ? entry.slice("deepseek:".length) : entry;
+      const key = deepseek ? env.DEEPSEEK_API_KEY : env.GROQ_API_KEY;
+      if (!key) continue;
+      const url = deepseek ? DEEPSEEK_URL : env.API_URL;
+      // DeepSeek's thinking mode wants its reasoning sent back on every tool
+      // round, which the app doesn't keep, so it's turned off; other
+      // providers may reject the field.
+      const turns = deepseek ? messages : messages.map(({ reasoning_content: _, ...m }) => m);
       let upstream: Response;
       try {
-        upstream = await fetch(env.API_URL, {
+        upstream = await fetch(url, {
           method: "POST",
-          headers: { "content-type": "application/json", authorization: `Bearer ${env.GROQ_API_KEY}` },
+          headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
           body: JSON.stringify({
             model,
-            messages: [{ role: "system", content: `${SYSTEM}\n\n${context}` }, ...messages],
-            tools: [SEARCH_TOOL],
+            messages: [{ role: "system", content: `${system}\n\n${context}` }, ...turns],
+            tools: canView ? [SEARCH_TOOL, VIEW_TOOL] : [SEARCH_TOOL],
             tool_choice: "auto",
             temperature: 0.2,
             max_tokens: 2048,
+            ...(deepseek ? { thinking: { type: "disabled" } } : {}),
             // Less hidden reasoning means fewer tokens against the limit.
             ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
           }),
         });
-      } catch {
-        return json({ error: "upstream", message: "Layanan AI tidak bisa dihubungi. Coba lagi nanti." }, 502);
+      } catch (e) {
+        console.log("model unreachable", entry, String(e));
+        lastStatus = 502;
+        continue;
       }
       const data = (await upstream.json().catch(() => null)) as {
         choices?: { message?: unknown; finish_reason?: string }[];
         error?: { message?: string; code?: string };
       } | null;
-      if (upstream.status === 401 || upstream.status === 403) {
-        return json({ error: "server_key", message: "Kunci API di server AI tidak valid. Hubungi admin." }, 502);
-      }
       const choice = data?.choices?.[0];
       if (upstream.ok && choice?.message) {
         return json({ message: choice.message, finish_reason: choice.finish_reason, model });
       }
       lastStatus = upstream.status;
       if (upstream.status === 429 || upstream.status === 413) rateLimited = true;
-      console.log("model failed", model, upstream.status, data?.error?.code, data?.error?.message);
-      // 429 and 413 are rate limits; 404 and 400 can mean a retired model.
-      if (![400, 404, 413, 429, 498, 500, 502, 503].includes(upstream.status)) break;
+      if (upstream.status === 401 || upstream.status === 403) keyRejected = true;
+      console.log("model failed", entry, upstream.status, data?.error?.code, data?.error?.message);
+      // 429 and 413 are rate limits, 402 is no credit left, 401/403 a bad key
+      // for that provider; 404 and 400 can mean a retired model.
+      if (![400, 401, 402, 403, 404, 413, 422, 429, 498, 500, 502, 503].includes(upstream.status)) break;
+    }
+    if (keyRejected && !rateLimited) {
+      return json({ error: "server_key", message: "Kunci API di server AI tidak valid. Hubungi admin." }, 502);
     }
     if (rateLimited) {
       return json({ error: "busy", message: "Batas pemakaian AI gratis sedang penuh. Coba lagi dalam 1 menit." }, 429);
