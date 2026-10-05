@@ -26,8 +26,10 @@ Re-running keeps the previous catalog.json in dist/: units not rebuilt
 (with --only) stay listed, and each file keeps its "updated_at" date until
 its PDF actually changes. The app uses those dates to show what is new.
 
-Scanned PDFs (no text layer) are skipped by default, since they cannot be
-searched; pass --include-scanned to ship them without search.
+PDFs with little or no text layer (scans, wiring and hydraulic diagrams)
+are shipped too, marked as not searchable: they open and keep their
+bookmarks, but search and Tanya AI skip them. Pass --skip-scanned to leave
+them out instead.
 """
 
 import argparse
@@ -209,7 +211,8 @@ def main() -> int:
     parser.add_argument("source", type=Path, help="folder with one subfolder per unit")
     parser.add_argument("dist", type=Path, help="output folder to upload")
     parser.add_argument("--only", nargs="*", help="build only these unit ids")
-    parser.add_argument("--include-scanned", action="store_true")
+    parser.add_argument("--skip-scanned", action="store_true",
+                        help="leave out PDFs without a text layer instead of shipping them unsearchable")
     args = parser.parse_args()
 
     unit_dirs = sorted(d for d in args.source.iterdir() if d.is_dir())
@@ -229,7 +232,7 @@ def main() -> int:
     for unit_dir in unit_dirs:
         print(f"[{unit_dir.name}]")
         started = time.time()
-        unit = build_unit(unit_dir, args.dist, args.include_scanned,
+        unit = build_unit(unit_dir, args.dist, not args.skip_scanned,
                           previous_units.get(unit_dir.name, {}), now)
         built[unit["id"]] = unit
         print(f"  done in {time.time() - started:.1f}s, {unit['size'] / 1e6:.1f} MB")

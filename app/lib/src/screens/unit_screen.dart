@@ -192,7 +192,7 @@ class _FileCard extends StatelessWidget {
                     ),
                     if (!file.searchable)
                       const Text(
-                        'Hasil scan: tidak bisa dicari',
+                        'Gambar atau hasil scan: tidak bisa dicari',
                         style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
                   ],
