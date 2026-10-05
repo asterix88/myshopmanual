@@ -170,6 +170,7 @@ class AppStore extends ChangeNotifier {
       online = true;
       lastChecked = DateTime.now();
       lastError = null;
+      if (autoFetchAiIndexes) unawaited(fetchAllAiIndexes());
     } catch (e) {
       online = false;
       lastError = _friendlyError(e);
@@ -421,6 +422,103 @@ class AppStore extends ChangeNotifier {
   }
 
   /// Index files of every downloaded, searchable manual: {fileKey: path}.
+  /// Whether a successful [refresh] fetches the search index of every manual
+  /// in the background, so Tanya AI never waits for one. The app turns it on;
+  /// tests leave it off.
+  bool autoFetchAiIndexes = false;
+
+  /// Progress of [fetchAllAiIndexes] while it runs: indexes ready of total.
+  ({int ready, int total})? aiIndexProgress;
+
+  /// Fetches every missing search index for Tanya AI (indexes only, never
+  /// PDFs) and deletes cached indexes of manuals no longer on the server.
+  Future<void> fetchAllAiIndexes() async {
+    if (aiIndexProgress != null) return;
+    final files = [for (final f in catalog.files) if (f.searchable) f];
+    var ready = 0;
+    aiIndexProgress = (ready: 0, total: files.length);
+    notifyListeners();
+    try {
+      for (final file in files) {
+        final got = await aiIndexes(where: (f) => f.key == file.key);
+        if (got.isEmpty) return; // offline: try again on the next refresh
+        aiIndexProgress = (ready: ++ready, total: files.length);
+        notifyListeners();
+      }
+      await _deleteStaleAiIndexes();
+    } finally {
+      aiIndexProgress = null;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _deleteStaleAiIndexes() async {
+    final keep = {for (final f in catalog.files) cachedIndexPath(f)};
+    final dir = Directory(p.join(_root.path, 'index-cache'));
+    if (!await dir.exists()) return;
+    await for (final entry in dir.list(recursive: true)) {
+      if (entry is File && entry.path.endsWith('.sqlite') && !keep.contains(entry.path)) await entry.delete();
+    }
+  }
+
+  /// Where the search index of a manual that is not downloaded is kept for
+  /// Tanya AI; the version is in the name so an update fetches it afresh.
+  String cachedIndexPath(ManualFile f) =>
+      p.join(_root.path, 'index-cache', f.unitId, '${f.id}-${f.index.sha256.substring(0, 12)}.sqlite');
+
+  /// Search indexes for Tanya AI over every manual on the server, by file
+  /// key: a downloaded manual uses its own index; for any other only the small
+  /// index is fetched (not the PDF) and kept. [where] narrows the manuals, so
+  /// a question about one unit only fetches that unit's indexes. A manual
+  /// whose index can't be fetched (offline) is left out.
+  Future<Map<String, String>> aiIndexes({
+    bool Function(ManualFile file)? where,
+    void Function(String status)? onStatus,
+  }) async {
+    final result = <String, String>{};
+    for (final file in catalog.files.followedBy(local.values.map((m) => m.file))) {
+      if (!file.searchable || result.containsKey(file.key) || !(where?.call(file) ?? true)) continue;
+      if (isDownloaded(file.key)) {
+        result[file.key] = indexPath(file);
+        continue;
+      }
+      final target = cachedIndexPath(file);
+      if (!File(target).existsSync()) {
+        onStatus?.call('Mengambil indeks ${unitNameOf(file)} · ${file.type.label}…');
+        // The background fetch and a question may want the same index at
+        // once; they share one download.
+        final fetch = _aiIndexFetches[file.key] ??=
+            _fetchAiIndex(file, target).whenComplete(() {
+              // A block body: returning the removed future would await itself.
+              _aiIndexFetches.remove(file.key);
+            });
+        try {
+          await fetch;
+        } on Exception {
+          continue;
+        }
+      }
+      result[file.key] = target;
+    }
+    return result;
+  }
+
+  final _aiIndexFetches = <String, Future<void>>{};
+
+  Future<void> _fetchAiIndex(ManualFile file, String target) async {
+    final dir = Directory(p.dirname(target));
+    if (await dir.exists()) {
+      // Older versions of this manual's index.
+      final old = RegExp('^${RegExp.escape(file.id)}-[0-9a-f]{12}\\.sqlite\$');
+      await for (final entry in dir.list()) {
+        if (old.hasMatch(p.basename(entry.path))) await entry.delete();
+      }
+    }
+    await _fetch(file.index, target, DownloadProgress(file.index.size));
+    await File('$target.part').rename(target);
+    await _deleteIfExists(File('$target.part.sha'));
+  }
+
   Map<String, String> searchableIndexes({DocType? type}) => {
         for (final m in local.values)
           if (m.file.searchable && (type == null || m.file.type == type))

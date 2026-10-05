@@ -88,7 +88,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final offline = store.online == false;
-    final hasManuals = store.searchableIndexes().isNotEmpty;
+    final hasManuals = store.catalog.files.isNotEmpty || store.local.isNotEmpty;
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 64,
@@ -103,7 +103,7 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 Text('Tanya AI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navy)),
                 Text(
-                  'Jawaban dari manual yang terunduh',
+                  'Jawaban dari semua manual',
                   style: TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
                 ),
               ],
@@ -126,6 +126,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ? _Intro(
                     examples: _examples,
                     hasManuals: hasManuals,
+                    preparing: store.aiIndexProgress,
                     onExample: offline ? null : _send,
                   )
                 : ListView(
@@ -150,10 +151,11 @@ class _ChatScreenState extends State<ChatScreen> {
 }
 
 class _Intro extends StatelessWidget {
-  const _Intro({required this.examples, required this.hasManuals, required this.onExample});
+  const _Intro({required this.examples, required this.hasManuals, required this.preparing, required this.onExample});
 
   final List<String> examples;
   final bool hasManuals;
+  final ({int ready, int total})? preparing;
   final ValueChanged<String>? onExample;
 
   @override
@@ -170,14 +172,22 @@ class _Intro extends StatelessWidget {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               const Text(
-                'AI mencari di manual yang sudah diunduh di HP ini, lalu menjawab dengan menyebut sumbernya. '
+                'AI mencari di semua manual, termasuk yang belum diunduh, lalu menjawab dengan menyebut sumbernya. '
                 'Ketuk sumber untuk membuka halamannya. Butuh internet.',
                 style: TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF3A3F45)),
               ),
+              if (preparing case final p? when p.total > 0) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Menyiapkan indeks pencarian AI: ${p.ready} dari ${p.total} manual. '
+                  'Pertanyaan tetap bisa dikirim sekarang.',
+                  style: const TextStyle(fontSize: 12, height: 1.4, color: AppColors.muted),
+                ),
+              ],
               if (!hasManuals) ...[
                 const SizedBox(height: 12),
                 const Text(
-                  'Belum ada manual yang diunduh. Unduh dulu manual yang ingin ditanyakan dari tab Unit.',
+                  'Daftar manual belum termuat. Sambungkan ke internet lalu buka tab Unit.',
                   style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.orangeText),
                 ),
               ],
@@ -276,12 +286,21 @@ class _Bubble extends StatelessWidget {
   }
 }
 
-/// A manual page shown as a picture in an answer, drawn from the downloaded
-/// PDF. Tapping it opens the page in the viewer to zoom in.
+/// A manual page shown as a picture in an answer. Tapping it opens the page
+/// in the viewer to zoom in.
 class _PagePicture extends StatelessWidget {
   const _PagePicture({required this.source});
 
   final AiSource source;
+
+  Widget _page(BuildContext context, PdfDocument? document) =>
+      PdfPageView(document: document, pageNumber: source.page);
+
+  static Widget _loading(BuildContext context) => const Center(child: CircularProgressIndicator(strokeWidth: 2));
+
+  static Widget _error(BuildContext context, Object error, StackTrace? stackTrace) => const Center(
+        child: Text('Gambar tidak bisa dimuat', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -300,15 +319,24 @@ class _PagePicture extends StatelessWidget {
           children: [
             SizedBox(
               height: 260,
-              child: PdfDocumentViewBuilder.file(
-                store.pdfPath(source.file),
-                useProgressiveLoading: true,
-                builder: (context, document) => PdfPageView(document: document, pageNumber: source.page),
-                loadingBuilder: (context) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                errorBuilder: (context, error, stackTrace) => const Center(
-                  child: Text('Gambar tidak bisa dimuat', style: TextStyle(fontSize: 12, color: AppColors.muted)),
-                ),
-              ),
+              // From the phone when downloaded, else only this page's part of
+              // the PDF is fetched from the server.
+              child: store.isDownloaded(source.file.key)
+                  ? PdfDocumentViewBuilder.file(
+                      store.pdfPath(source.file),
+                      useProgressiveLoading: true,
+                      builder: _page,
+                      loadingBuilder: _loading,
+                      errorBuilder: _error,
+                    )
+                  : PdfDocumentViewBuilder.uri(
+                      store.pdfUri(source.file),
+                      useProgressiveLoading: true,
+                      preferRangeAccess: true,
+                      builder: _page,
+                      loadingBuilder: _loading,
+                      errorBuilder: _error,
+                    ),
             ),
             Container(
               color: AppColors.navySoft,

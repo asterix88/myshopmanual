@@ -5,7 +5,7 @@ export interface Env {
   API_URL: string;
 }
 
-// The app runs the search itself, on the manuals stored on the phone, and
+// The app runs the search itself, on the manuals' search indexes, and
 // sends the results back as tool messages. This Worker only adds the fixed
 // instructions and the key, so the conversation lives in the app. It speaks
 // the OpenAI-style chat API that Groq offers (and Gemini, OpenRouter and
@@ -25,7 +25,7 @@ const SEARCH_TOOL = {
   function: {
     name: "search_manuals",
     description:
-      "Full-text search over the manuals downloaded on the user's phone. Returns the best matching pages, each with a source id, the manual title, the unit model, the page number, the section and the page text.",
+      "Full-text search over all the manuals in the app (downloaded on the phone or not). Returns the best matching pages, each with a source id, the manual title, the unit model, the page number, the section and the page text.",
     parameters: {
       type: "object",
       properties: {
@@ -88,8 +88,8 @@ export default {
       ? body.manuals.filter((m): m is string => typeof m === "string").slice(0, 200)
       : [];
     const context = manuals.length
-      ? `Manuals downloaded on this phone (only these can be searched):\n${manuals.join("\n")}`
-      : "No manuals are downloaded on this phone, so search_manuals finds nothing. Tell the user to download the manuals they need first.";
+      ? `Manuals in the app (all can be searched; pass unit when the question is about one unit model, so only its manuals are searched):\n${manuals.join("\n")}`
+      : "The app has no manual list yet (it has not reached the server), so search_manuals finds nothing. Tell the user to connect to the internet and open the Unit tab first.";
 
     // Free tiers limit tokens per minute per model, so when one model is
     // full (or retired) the same request goes to the next one in MODEL.

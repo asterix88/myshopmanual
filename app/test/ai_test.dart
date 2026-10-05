@@ -97,4 +97,56 @@ void main() {
       (text: ', lalu cek 2 * 3 kali.', bold: false),
     ]);
   });
+
+  test('the AI also searches a manual that is not downloaded, fetching only its index', () async {
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    final file = store.catalog.files.single;
+
+    var round = 0;
+    final worker = MockClient((request) async {
+      final body = jsonDecode(request.body) as Map<String, dynamic>;
+      final Map<String, dynamic> message = round++ == 0
+          ? {
+              'role': 'assistant',
+              'content': null,
+              'tool_calls': [
+                {
+                  'id': 'call_1',
+                  'type': 'function',
+                  'function': {'name': 'search_manuals', 'arguments': jsonEncode({'query': 'hydraulic oil filter'})},
+                },
+              ],
+            }
+          : {'role': 'assistant', 'content': 'Ganti elemen filter [S1].'};
+      expect(body['manuals'], isNotEmpty);
+      return http.Response(jsonEncode({'finish_reason': 'stop', 'message': message}), 200);
+    });
+
+    final chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'));
+    final answer = await chat.ask('Filter oli hidrolik?');
+
+    expect(answer.failed, isFalse);
+    expect(answer.sources.single.file.key, file.key);
+    expect(store.isDownloaded(file.key), isFalse);
+    expect(File(store.cachedIndexPath(file)).existsSync(), isTrue);
+    expect(File(store.pdfPath(file)).existsSync(), isFalse);
+    store.dispose();
+  });
+
+  test('the search index of every manual is fetched in the background, PDFs are not', () async {
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    final file = store.catalog.files.single;
+    final stale = File('${root.path}/index-cache/OLD/Gone-0123456789ab.sqlite')
+      ..createSync(recursive: true);
+
+    await store.fetchAllAiIndexes();
+
+    expect(File(store.cachedIndexPath(file)).existsSync(), isTrue);
+    expect(File(store.pdfPath(file)).existsSync(), isFalse);
+    expect(stale.existsSync(), isFalse);
+    expect(store.aiIndexProgress, isNull);
+    store.dispose();
+  });
 }
