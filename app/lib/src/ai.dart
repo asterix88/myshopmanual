@@ -62,15 +62,28 @@ class AiException implements Exception {
 /// Draws a manual page, or a quarter of it (see [pageRegions]), as a PNG.
 typedef PageImage = Future<Uint8List> Function(ManualFile file, int page, String region);
 
+/// Finds the large drawing sheets of a manual (see [findLargeSheets]).
+typedef LargeSheets = Future<List<int>> Function(ManualFile file);
+
 class AiChat {
-  AiChat({required this.store, required this.client, Uri? endpoint, PageImage? pageImage})
-      : _endpoint = endpoint ?? Uri.parse('$aiUrl/chat'),
-        _pageImage = pageImage ?? ((file, page, region) => renderPageImage(store, file, page, region));
+  AiChat({
+    required this.store,
+    required this.client,
+    Uri? endpoint,
+    PageImage? pageImage,
+    LargeSheets? largeSheets,
+  })  : _endpoint = endpoint ?? Uri.parse('$aiUrl/chat'),
+        _pageImage = pageImage ?? ((file, page, region) => renderPageImage(store, file, page, region)),
+        _largeSheets = largeSheets ?? ((file) => findLargeSheets(store, file));
 
   final AppStore store;
   final http.Client client;
   final Uri _endpoint;
   final PageImage _pageImage;
+  final LargeSheets _largeSheets;
+
+  /// Large drawing sheets per manual, found the first time the AI looks at it.
+  final Map<String, List<int>> _sheets = {};
 
   final List<Map<String, dynamic>> _messages = [];
   final Map<int, AiSource> _sources = {};
@@ -274,7 +287,17 @@ class AiChat {
         'type': 'image_url',
         'image_url': {'url': 'data:image/png;base64,${base64Encode(png)}'},
       });
-    return 'The picture of $label is attached in the next message.';
+    return 'The picture of $label is attached in the next message.${await _sheetHint(file)}';
+  }
+
+  /// Tells the AI which pages of [file] are large drawing sheets, so after
+  /// one look it can go straight to the drawing.
+  Future<String> _sheetHint(ManualFile file) async {
+    final sheets = _sheets[file.key] ??= await _largeSheets(file).catchError((Object _) => const <int>[]);
+    if (sheets.isEmpty) return '';
+    final shown = sheets.take(40).join(', ');
+    return ' In this manual, pages $shown${sheets.length > 40 ? ' and more' : ''} are large drawing sheets '
+        '(much bigger than its other pages).';
   }
 
   /// Page pictures from earlier questions are dropped from the history (they
