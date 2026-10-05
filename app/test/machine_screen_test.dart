@@ -47,7 +47,7 @@ void main() {
     final catalog = fixtureCatalog();
     final unit = (catalog['units'] as List).single as Map<String, dynamic>;
     catalog['units'] = [
-      for (final id in ['PC1250-11', 'PC2000-11R', 'PC210-10MO', 'PC500LC-10']) {...unit, 'id': id, 'name': id},
+      for (final id in ['PC1250-11', 'PC2000-11R', 'PC210-10MO', 'PC500LC-10', 'PC300-8']) {...unit, 'id': id, 'name': id},
     ];
     late AppStore store;
     final root = Directory.systemTemp.createTempSync('machine');
@@ -61,12 +61,18 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.byType(UnitRow), findsNWidgets(4));
+    expect(find.byType(UnitRow), findsNWidgets(5));
     // A model with a picture shows it whatever its suffix (PC500 -> PC500LC-10 too).
     final pictures = tester.widgetList<Image>(find.byType(Image)).map((i) => (i.image as AssetImage).assetName);
-    expect(pictures, ['assets/units/pc500.png', 'assets/units/pc210.png']);
+    expect(pictures, [
+      'assets/units/pc2000.png',
+      'assets/units/pc1250.png',
+      'assets/units/pc500.png',
+      'assets/units/pc210.png',
+    ]);
     expect(find.textContaining('belum ada file'), findsNothing);
-    expect(find.text('PC1250'), findsOneWidget);
+    // A model without a picture shows its code instead.
+    expect(find.text('PC300'), findsOneWidget);
     // The last row ends near the bottom of the page instead of leaving space.
     final body = tester.getRect(find.byType(ListView));
     final last = tester.getRect(find.byType(UnitRow).last);
