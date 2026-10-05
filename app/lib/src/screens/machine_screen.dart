@@ -111,7 +111,7 @@ class UnitRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(
               children: [
-                _UnitIcon(code: _shortCode(unit)),
+                _UnitIcon(code: _shortCode(unit), model: _modelCode(unit)),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -140,6 +140,10 @@ class UnitRow extends StatelessWidget {
     );
   }
 
+  /// Letters and the first number of the unit id: PC500LC-10 is a PC500.
+  static String _modelCode(Unit unit) =>
+      RegExp(r'^[A-Z]+[-_ ]?\d+').firstMatch(unit.id.toUpperCase())?[0]?.replaceAll(RegExp(r'[-_ ]'), '') ?? '';
+
   static String _shortCode(Unit unit) {
     final code = unit.id.split(RegExp(r'[-_ ]')).first.toUpperCase();
     return code.length > 7 ? code.substring(0, 7) : code;
@@ -149,20 +153,24 @@ class UnitRow extends StatelessWidget {
 /// A picture of the machine when the app has one for this model code,
 /// otherwise the code on an orange tile.
 class _UnitIcon extends StatelessWidget {
-  const _UnitIcon({required this.code});
+  const _UnitIcon({required this.code, required this.model});
 
+  /// Shown on the tile when there is no picture.
   final String code;
 
-  /// Model codes with a picture in assets/units/<code>.png.
+  /// Picks the picture, so PC500-10 and PC500LC-10 share one.
+  final String model;
+
+  /// Model codes with a picture in `assets/units/<model>.png`.
   static const pictures = {'PC500', 'PC210', 'CAT395'};
 
   @override
   Widget build(BuildContext context) {
-    if (pictures.contains(code)) {
+    if (pictures.contains(model)) {
       return SizedBox(
         width: 82,
         height: 56,
-        child: Image.asset('assets/units/${code.toLowerCase()}.png', fit: BoxFit.contain),
+        child: Image.asset('assets/units/${model.toLowerCase()}.png', fit: BoxFit.contain),
       );
     }
     return Container(
