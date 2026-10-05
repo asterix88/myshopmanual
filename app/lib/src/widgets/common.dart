@@ -35,7 +35,7 @@ class Pill extends StatelessWidget {
           Pill('SHOP MANUAL', background: AppColors.blueSoft, foreground: AppColors.blue),
         DocType.omm => Pill('OMM', background: AppColors.orangeSoft, foreground: AppColors.orangeText),
         DocType.partsbook =>
-          Pill('PARTSBOOK', background: AppColors.greenSoft, foreground: AppColors.green),
+          Pill('PARTBOOK', background: AppColors.greenSoft, foreground: AppColors.green),
         DocType.other => const SizedBox.shrink(),
       };
 

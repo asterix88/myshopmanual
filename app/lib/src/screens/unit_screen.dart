@@ -49,18 +49,27 @@ class _UnitScreenState extends State<UnitScreen> {
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ),
-            for (final file in files)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _editing
-                    ? _SelectableFile(
-                        file: file,
-                        enabled: store.isDownloaded(file.key),
-                        selected: _selected.contains(file.key),
-                        onChanged: (v) => setState(() => v ? _selected.add(file.key) : _selected.remove(file.key)),
-                      )
-                    : _FileCard(file: file, unit: unit),
-              ),
+            for (final (group, groupFiles) in _grouped(files))
+              for (final (i, file) in groupFiles.indexed) ...[
+                // Below the subfolders, the unit folder's own files get a
+                // heading too, so they don't read as part of the last one.
+                if (i == 0 && (group.isNotEmpty || files.any((f) => f.group.isNotEmpty)))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: SectionLabel(group.isEmpty ? 'Manual' : group),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _editing
+                      ? _SelectableFile(
+                          file: file,
+                          enabled: store.isDownloaded(file.key),
+                          selected: _selected.contains(file.key),
+                          onChanged: (v) => setState(() => v ? _selected.add(file.key) : _selected.remove(file.key)),
+                        )
+                      : _FileCard(file: file, unit: unit),
+                ),
+              ],
           ],
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -165,7 +174,7 @@ class _FileCard extends StatelessWidget {
 
     return AppCard(
       onTap: canRead ? () => openViewer(context, file, page: lastPage) : null,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -176,7 +185,11 @@ class _FileCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(file.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    Text(file.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    Text(
+                      '${file.pages} halaman · ${formatSize(file.downloadSize)}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                    ),
                     if (!file.searchable)
                       const Text(
                         'Hasil scan: tidak bisa dicari',
@@ -188,22 +201,15 @@ class _FileCard extends StatelessWidget {
               if (file.type != DocType.other) ...[const SizedBox(width: 10), Pill.docType(file.type)],
             ],
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _Field(label: 'Halaman', value: '${file.pages}'),
-              _Field(label: 'Ukuran', value: formatSize(file.downloadSize)),
-            ],
-          ),
           if (partial > 0)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.only(top: 6),
               child: Text(
                 'Terunduh ${formatSize(partial)} dari ${formatSize(file.downloadSize)}, bisa dilanjutkan',
                 style: const TextStyle(fontSize: 12, color: AppColors.muted),
               ),
             ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           if (progress != null)
             _DownloadingRow(
               progress: progress,
@@ -211,34 +217,48 @@ class _FileCard extends StatelessWidget {
               onCancel: () => store.cancelDownload(file.key),
             )
           else if (!downloaded)
+            // Compact buttons, each where the left and right half of the card
+            // start, as they sat when they filled those halves.
             Row(
               children: [
                 Expanded(
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
-                      backgroundColor: AppColors.navy,
-                      shape: const StadiumBorder(),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        backgroundColor: AppColors.navy,
+                        shape: const StadiumBorder(),
+                      ),
+                      onPressed: canRead ? () => openViewer(context, file, page: lastPage) : null,
+                      icon: const Icon(Icons.menu_book_outlined, size: 15),
+                      label: const Text('Baca online', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                     ),
-                    onPressed: canRead ? () => openViewer(context, file, page: lastPage) : null,
-                    icon: const Icon(Icons.menu_book_outlined, size: 18),
-                    label: const Text('Baca online', style: TextStyle(fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
-                      side: const BorderSide(color: AppColors.navy, width: 1.5),
-                      foregroundColor: AppColors.navy,
-                      shape: const StadiumBorder(),
-                    ),
-                    onPressed: () => _download(context, store),
-                    icon: const Icon(Icons.download, size: 18),
-                    label: Text(
-                      partial > 0 ? 'Lanjutkan unduhan' : 'Unduh ${formatSize(file.downloadSize)}',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        side: const BorderSide(color: AppColors.navy, width: 1.2),
+                        foregroundColor: AppColors.navy,
+                        shape: const StadiumBorder(),
+                      ),
+                      onPressed: () => _download(context, store),
+                      icon: const Icon(Icons.download, size: 15),
+                      label: Text(
+                        partial > 0 ? 'Lanjutkan unduhan' : 'Unduh',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                 ),
@@ -317,26 +337,6 @@ class _DownloadingRow extends StatelessWidget {
   }
 }
 
-class _Field extends StatelessWidget {
-  const _Field({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
-          Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-        ],
-      ),
-    );
-  }
-}
-
 class _SelectableFile extends StatelessWidget {
   const _SelectableFile({
     required this.file,
@@ -376,4 +376,17 @@ class _SelectableFile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Consecutive files of one subfolder under one heading ([files] come in
+/// [ManualFile.pageOrder]: subfolders first, then the unit folder's own).
+List<(String, List<ManualFile>)> _grouped(List<ManualFile> files) {
+  final groups = <String, List<ManualFile>>{};
+  for (final f in files) {
+    (groups[f.group] ??= []).add(f);
+  }
+  return [
+    for (final e in groups.entries)
+      if (e.value.isNotEmpty) (e.key, e.value),
+  ];
 }

@@ -43,6 +43,8 @@ python tools/upload_r2.py dist             # unggah file yang berubah, catalog.j
    ke GitHub (ada di `.gitignore`), jadi kunci tetap di PC.
 2. Taruh PDF di `source\<UNIT>\`, lalu klik dua kali `update.bat`. Script membuat paket lalu
    mengunggah yang berubah saja. Untuk satu unit saja: `update.bat --only PC210`.
+   PDF boleh juga ditaruh di subfolder unit, misalnya `source\CAT395\System Diagram\`: file itu tetap
+   masuk unit CAT395 dan tampil di bawah judul "System Diagram" di halaman unit.
 
 ## Server AI (`ai-worker/`)
 

@@ -4,7 +4,7 @@ library;
 enum DocType {
   shopManual('shop_manual', 'Shop Manual'),
   omm('omm', 'OMM'),
-  partsbook('partsbook', 'Partsbook'),
+  partsbook('partsbook', 'Partbook'),
   other('other', 'Lainnya');
 
   const DocType(this.id, this.label);
@@ -53,6 +53,7 @@ class ManualFile {
     required this.pdf,
     required this.index,
     required this.updatedAt,
+    this.group = '',
   });
 
   factory ManualFile.fromJson(String unitId, Map<String, dynamic> json) => ManualFile(
@@ -65,7 +66,20 @@ class ManualFile {
         pdf: RemoteFile.fromJson(json['pdf'] as Map<String, dynamic>),
         index: RemoteFile.fromJson(json['index'] as Map<String, dynamic>),
         updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? ''),
+        group: json['group'] as String? ?? '',
       );
+
+  /// Order of files on a unit page: subfolders first, then the files placed
+  /// directly in the unit folder; inside each, Shop Manual, OMM, Partsbook,
+  /// then the rest, by title.
+  static int pageOrder(ManualFile a, ManualFile b) {
+    if (a.group.isEmpty != b.group.isEmpty) return a.group.isEmpty ? 1 : -1;
+    final byGroup = a.group.toLowerCase().compareTo(b.group.toLowerCase());
+    if (byGroup != 0) return byGroup;
+    final byType = a.type.index.compareTo(b.type.index);
+    if (byType != 0) return byType;
+    return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+  }
 
   final String unitId;
   final String id;
@@ -76,6 +90,11 @@ class ManualFile {
   final RemoteFile pdf;
   final RemoteFile index;
   final DateTime? updatedAt;
+
+  /// The subfolder of the unit folder the PDF came from (e.g. "System
+  /// Diagram"), shown as a heading on the unit page; empty for files placed
+  /// directly in the unit folder.
+  final String group;
 
   /// Unique across the whole catalog.
   String get key => '$unitId/$id';
@@ -91,6 +110,7 @@ class ManualFile {
         'pdf': pdf.toJson(),
         'index': index.toJson(),
         'updated_at': updatedAt?.toIso8601String(),
+        if (group.isNotEmpty) 'group': group,
       };
 }
 
@@ -113,6 +133,21 @@ class Unit {
   final String name;
   final String kind;
   final List<ManualFile> files;
+
+  /// Rough machine size from the model code, used to list the biggest
+  /// machines first: PC2000, PC1250, CAT395, PC500, PC210; D375, D155, D85.
+  /// Komatsu-style excavator codes are tonnes x 10 (PC1250 = 125 t), CAT 3xx
+  /// ends in the tonnes (CAT395 = 95 t); dozer numbers already grow with size.
+  double get sizeClass {
+    final code = id.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    final cat = RegExp(r'^CAT3(\d\d)').firstMatch(code);
+    if (cat != null) return double.parse(cat[1]!);
+    // The first run of digits only: PC500-10 is a PC500, not 50010.
+    final digits = RegExp(r'\d+').firstMatch(id);
+    if (digits == null) return 0;
+    final n = double.parse(digits[0]!);
+    return code.startsWith('D') ? n : n / 10;
+  }
 
   int get totalSize => files.fold(0, (sum, f) => sum + f.downloadSize);
 

@@ -256,6 +256,11 @@ class AppStore extends ChangeNotifier {
         files: [for (final m in e.value) m.file],
       ));
     }
+    // Biggest machines first; equal sizes by model code.
+    result.sort((a, b) {
+      final bySize = b.sizeClass.compareTo(a.sizeClass);
+      return bySize != 0 ? bySize : a.id.compareTo(b.id);
+    });
     return result;
   }
 
@@ -266,7 +271,7 @@ class AppStore extends ChangeNotifier {
     for (final m in local.values) {
       if (m.file.unitId == unit.id && !keys.contains(m.file.key)) files.add(m.file);
     }
-    return files;
+    return files..sort(ManualFile.pageOrder);
   }
 
   LocalManual? localManual(String key) => local[key];
