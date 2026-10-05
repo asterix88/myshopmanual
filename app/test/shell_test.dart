@@ -42,7 +42,7 @@ void main() {
     root.deleteSync(recursive: true);
   });
 
-  testWidgets('Enter on the keyboard sends the question in Tanya AI', (tester) async {
+  testWidgets('Enter on the keyboard starts a new line in Tanya AI', (tester) async {
     late AppStore store;
     final root = Directory.systemTemp.createTempSync('shell');
     await tester.runAsync(() async {
@@ -53,11 +53,12 @@ void main() {
     await tester.tap(find.text('Tanya AI').last);
     await tester.pumpAndSettle();
 
-    // A multiline keyboard would put a newline key where Send should be.
+    // Questions are sent with the send button, so Enter only adds a line.
     final input = tester.widget<EditableText>(
         find.descendant(of: find.byType(ChatScreen), matching: find.byType(EditableText)));
-    expect(input.keyboardType, TextInputType.text);
-    expect(input.textInputAction, TextInputAction.send);
+    expect(input.keyboardType, TextInputType.multiline);
+    expect(input.textInputAction, TextInputAction.newline);
+    expect(input.onSubmitted, isNull);
     root.deleteSync(recursive: true);
   });
 }

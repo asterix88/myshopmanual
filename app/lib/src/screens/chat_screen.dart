@@ -441,12 +441,10 @@ class _InputBar extends StatelessWidget {
                   enabled: enabled,
                   minLines: 1,
                   maxLines: 4,
-                  // A multi-line field gets a newline key by default; a plain
-                  // text keyboard shows Send, so Enter sends the question.
-                  // Long questions still wrap onto up to 4 lines.
-                  keyboardType: TextInputType.text,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => onSend(),
+                  // Enter on the keyboard starts a new line; the send button
+                  // next to the field sends the question.
+                  keyboardType: TextInputType.multiline,
+                  textInputAction: TextInputAction.newline,
                   style: const TextStyle(fontSize: 14),
                   decoration: InputDecoration(
                     isDense: true,
