@@ -148,16 +148,29 @@ class AiChat {
     final wanted = _normalize(unit);
     bool ofUnit(ManualFile f) =>
         _normalize(store.unitNameOf(f)).contains(wanted) || _normalize(f.unitId).contains(wanted);
+    // A question about one unit fetches that unit's missing indexes (a few
+    // files). Otherwise only indexes already on the phone are searched, so a
+    // question never waits for every manual's index to download.
     var indexes = <String, String>{};
-    if (wanted.isNotEmpty) indexes = await store.aiIndexes(where: ofUnit, onStatus: onStatus);
-    // No unit named, or none matched: search every manual.
-    if (indexes.isEmpty) indexes = await store.aiIndexes(onStatus: onStatus);
+    var searchable = 0;
+    if (wanted.isNotEmpty) {
+      indexes = await store.aiIndexes(where: ofUnit, onStatus: onStatus);
+      searchable = store.catalog.files.where((f) => f.searchable && ofUnit(f)).length;
+    }
+    if (indexes.isEmpty) {
+      indexes = await store.aiIndexes(fetch: false);
+      searchable = store.catalog.files.where((f) => f.searchable).length;
+    }
+    final notReady = searchable - indexes.length;
+    final note = notReady > 0
+        ? 'Note: $notReady manual(s) are still being prepared on the phone and were not searched.\n\n'
+        : '';
     onStatus?.call('Mencari di manual: $query');
     final found = indexes;
     final pages = await Isolate.run(() => searchPageTextsSync(found, query, limit: 4));
-    if (pages.isEmpty) return 'No matching pages for "$query".';
+    if (pages.isEmpty) return '${note}No matching pages for "$query".';
 
-    final out = StringBuffer();
+    final out = StringBuffer(note);
     for (final p in pages) {
       final file = store.fileByKey(p.fileKey)!;
       final unitName = store.unitNameOf(file);

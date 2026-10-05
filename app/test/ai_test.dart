@@ -98,7 +98,7 @@ void main() {
     ]);
   });
 
-  test('the AI also searches a manual that is not downloaded, fetching only its index', () async {
+  test('a question about a unit fetches only the index of its manuals that are not downloaded', () async {
     final store = await AppStore.open(root: root, client: fixtureServer());
     await store.setServerUrl('https://example.test');
     final file = store.catalog.files.single;
@@ -114,7 +114,7 @@ void main() {
                 {
                   'id': 'call_1',
                   'type': 'function',
-                  'function': {'name': 'search_manuals', 'arguments': jsonEncode({'query': 'hydraulic oil filter'})},
+                  'function': {'name': 'search_manuals', 'arguments': jsonEncode({'query': 'hydraulic oil filter', 'unit': 'TEST1'})},
                 },
               ],
             }
@@ -134,6 +134,39 @@ void main() {
     store.dispose();
   });
 
+  test('a question about no unit searches only indexes already on the phone, without waiting', () async {
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    final file = store.catalog.files.single;
+
+    final requests = <Map<String, dynamic>>[];
+    final worker = MockClient((request) async {
+      requests.add(jsonDecode(request.body) as Map<String, dynamic>);
+      final Map<String, dynamic> message = requests.length == 1
+          ? {
+              'role': 'assistant',
+              'content': null,
+              'tool_calls': [
+                {
+                  'id': 'call_1',
+                  'type': 'function',
+                  'function': {'name': 'search_manuals', 'arguments': jsonEncode({'query': 'hydraulic oil filter', 'unit': ''})},
+                },
+              ],
+            }
+          : {'role': 'assistant', 'content': 'Indeks manual masih disiapkan.'};
+      return http.Response(jsonEncode({'finish_reason': 'stop', 'message': message}), 200);
+    });
+
+    final chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'));
+    await chat.ask('Filter oli hidrolik?');
+
+    final tool = (requests[1]['messages'] as List).cast<Map<String, dynamic>>().last;
+    expect(tool['content'], contains('1 manual(s) are still being prepared'));
+    expect(File(store.cachedIndexPath(file)).existsSync(), isFalse);
+    store.dispose();
+  });
+
   test('the search index of every manual is fetched in the background, PDFs are not', () async {
     final store = await AppStore.open(root: root, client: fixtureServer());
     await store.setServerUrl('https://example.test');
@@ -141,8 +174,14 @@ void main() {
     final stale = File('${root.path}/index-cache/OLD/Gone-0123456789ab.sqlite')
       ..createSync(recursive: true);
 
+    final progress = <String>[];
+    store.addListener(() {
+      if (store.aiIndexProgress case final p?) progress.add('${p.ready}/${p.total} ${p.receivedBytes}/${p.totalBytes}');
+    });
     await store.fetchAllAiIndexes();
 
+    expect(progress.first, '0/1 0/${file.index.size}');
+    expect(progress.last, '1/1 ${file.index.size}/${file.index.size}');
     expect(File(store.cachedIndexPath(file)).existsSync(), isTrue);
     expect(File(store.pdfPath(file)).existsSync(), isFalse);
     expect(stale.existsSync(), isFalse);
