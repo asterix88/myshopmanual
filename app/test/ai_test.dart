@@ -109,6 +109,11 @@ void main() {
                 'type': 'function',
                 'function': {'name': 'view_page', 'arguments': jsonEncode({'manual': 'M1', 'page': 9})},
               },
+              {
+                'id': 'v3',
+                'type': 'function',
+                'function': {'name': 'view_page', 'arguments': jsonEncode({'manual': 'M1', 'page': 2})},
+              },
             ],
           }),
         2 => reply({'role': 'assistant', 'content': 'Kabel 105 merah-putih [S1].\n[Gambar S1]'}),
@@ -132,14 +137,17 @@ void main() {
     final answer = await chat.ask('Kabel apa ke CN-E12?', onStatus: statuses.add);
 
     // Only the existing page was drawn; the wrong page number got a hint.
-    expect(drawn, ['${store.catalog.files.single.id} 2 top-left']);
+    final id = store.catalog.files.single.id;
+    expect(drawn, ['$id 2 top-left', '$id 2 full']);
     final messages = (requests[1]['messages'] as List).cast<Map<String, dynamic>>();
-    expect(messages.map((m) => m['role']), ['user', 'assistant', 'tool', 'tool', 'user']);
+    expect(messages.map((m) => m['role']), ['user', 'assistant', 'tool', 'tool', 'tool', 'user']);
+    // The whole of a page already seen in part keeps its source id.
+    expect(messages[4]['content'], contains('[S1] TEST1-1 · OMM Test Unit · page 2 is attached'));
     expect(messages[2]['content'], contains('[S1] TEST1-1 · OMM Test Unit · page 2 (top-left part)'));
     // After a first look, the AI learns where the drawing sheets are.
     expect(messages[2]['content'], contains('pages 3, 4 are large drawing sheets'));
     expect(messages[3]['content'], startsWith('No such page'));
-    final parts = (messages[4]['content'] as List).cast<Map<String, dynamic>>();
+    final parts = (messages[5]['content'] as List).cast<Map<String, dynamic>>();
     expect(parts.last['image_url'], {'url': 'data:image/png;base64,AQID'});
     expect(statuses, contains('Melihat gambar: TEST1-1 · OMM Test Unit · hlm 2'));
 

@@ -278,8 +278,11 @@ class AiChat {
     } on Object catch (e) {
       return 'The page could not be opened ($e). The phone may be offline and the manual not downloaded.';
     }
-    final id = _sources.length + 1;
-    _sources[id] = AiSource(id: id, file: file, unitName: unitName, page: page);
+    // Looking at a part of a page already seen keeps the same source id, so
+    // the answer cites and shows that page once.
+    final seen = _sources.values.where((s) => s.file.key == file!.key && s.page == page).firstOrNull;
+    final id = seen?.id ?? _sources.length + 1;
+    _sources[id] ??= AiSource(id: id, file: file, unitName: unitName, page: page);
     final label = '[S$id] $unitName · ${file.title} · page $page${region == 'full' ? '' : ' ($region part)'}';
     pictures
       ..add({'type': 'text', 'text': label})
