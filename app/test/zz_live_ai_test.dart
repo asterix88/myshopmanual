@@ -8,8 +8,8 @@ import 'package:mymanual/src/store.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 void main() {
-  testWidgets('live AI with page pictures', (tester) async {
-    await tester.runAsync(() async {
+  test('live AI with page pictures', () async {
+    {
       Pdfrx.pdfiumModulePath = Platform.environment['PDFIUM'];
       final root = Directory.systemTemp.createTempSync('live');
       final store = await AppStore.open(root: root);
@@ -40,6 +40,6 @@ void main() {
           print('  EXCEPTION $e\n$st');
         }
       }
-    });
+    }
   }, timeout: const Timeout(Duration(minutes: 10)));
 }
