@@ -199,6 +199,14 @@ class ManualUpdate {
   final UpdateKind kind;
   final ManualFile file;
   final String unitName;
+
+  /// Remembered once the user has opened the update list, so the bell only
+  /// counts changes they have not looked at yet.
+  String get seenKey => switch (kind) {
+        UpdateKind.added => file.key,
+        UpdateKind.newVersion => '${file.key}@${file.pdf.sha256}/${file.index.sha256}',
+        UpdateKind.withdrawn => 'withdrawn:${file.key}',
+      };
 }
 
 /// Compares the server catalog with what is on the phone.

@@ -293,5 +293,46 @@ void main() {
       expect(store.updates, isEmpty);
       store.dispose();
     });
+
+    test('opening the update list clears the bell for every kind of change', () async {
+      final catalog = fixtureCatalog();
+      final unit = (catalog['units'] as List).single as Map<String, dynamic>;
+      final file = (unit['files'] as List).single as Map<String, dynamic>;
+      var store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
+      await store.setServerUrl('https://example.test');
+      await store.download(store.catalog.files.single, unitName: 'TEST1-1');
+      store.dispose();
+
+      // The manual is withdrawn from the server.
+      unit['files'] = [];
+      store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
+      await store.refresh();
+      expect(store.unseenUpdates.single.kind, UpdateKind.withdrawn);
+      expect(store.listedUpdates, hasLength(1));
+      store.markUpdatesSeen();
+      expect(store.unseenUpdates, isEmpty);
+      expect(store.listedUpdates, isEmpty);
+      expect(store.isDownloaded(store.local.keys.single), isTrue);
+      store.dispose();
+
+      // Seen state survives a restart.
+      store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
+      await store.refresh();
+      expect(store.unseenUpdates, isEmpty);
+      store.dispose();
+
+      // It comes back as a new version: the bell lights once, then clears,
+      // while the list still offers the update.
+      unit['files'] = [
+        {...file, 'pdf': {...file['pdf'] as Map<String, dynamic>, 'sha256': 'f' * 64}},
+      ];
+      store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
+      await store.refresh();
+      expect(store.unseenUpdates.single.kind, UpdateKind.newVersion);
+      store.markUpdatesSeen();
+      expect(store.unseenUpdates, isEmpty);
+      expect(store.listedUpdates.single.kind, UpdateKind.newVersion);
+      store.dispose();
+    });
   });
 }

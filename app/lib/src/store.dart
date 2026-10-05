@@ -191,9 +191,24 @@ class AppStore extends ChangeNotifier {
   List<ManualUpdate> get updates =>
       computeUpdates(remote: catalog, local: local, seenKeys: seenKeys);
 
+  /// Updates the user has not looked at yet: what the bell counts.
+  List<ManualUpdate> get unseenUpdates => [
+        for (final u in updates)
+          if (!seenKeys.contains(u.seenKey)) u,
+      ];
+
+  /// What the update list shows. A withdrawn manual is listed until the user
+  /// has seen it once; after that there is nothing left to do about it.
+  List<ManualUpdate> get listedUpdates => [
+        for (final u in updates)
+          if (u.kind != UpdateKind.withdrawn || !seenKeys.contains(u.seenKey)) u,
+      ];
+
   void markUpdatesSeen() {
     final before = seenKeys.length;
+    final pending = updates;
     seenKeys.addAll(catalog.files.map((f) => f.key));
+    seenKeys.addAll(pending.map((u) => u.seenKey));
     if (seenKeys.length != before) {
       _scheduleSave();
       notifyListeners();
@@ -529,7 +544,8 @@ class AppStore extends ChangeNotifier {
   void dispose() {
     if (_saveTimer?.isActive ?? false) {
       _saveTimer!.cancel();
-      _save();
+      // Last write on the way out; nobody is left to report a failure to.
+      _save().catchError((Object e) => debugPrint('saving state failed: $e'));
     }
     _client.close();
     super.dispose();
