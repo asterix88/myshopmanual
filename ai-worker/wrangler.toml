@@ -11,15 +11,17 @@ compatibility_flags = ["nodejs_compat"]
 routes = [{ pattern = "ai.mymanual.my.id", custom_domain = true }]
 
 [vars]
-# Any OpenAI-compatible chat API with tool calling works; Groq's free tier
-# is the default. MODEL is a list tried in order: each Groq model has its own
-# free per-minute limit, so when one is full the next one answers. Edit it
-# (console.groq.com/docs/models) when a model is retired.
+# Any OpenAI-compatible chat API with tool calling works. MODEL is a list
+# tried in order: when one model is busy, out of credit or retired, the next
+# one answers. "deepseek:<model>" goes to DeepSeek (paid, cheap); a bare name
+# goes to API_URL (Groq's free tier, each model with its own per-minute
+# limit). Entries whose API key secret is not set are skipped.
 API_URL = "https://api.groq.com/openai/v1/chat/completions"
-MODEL = "openai/gpt-oss-120b,llama-3.3-70b-versatile,meta-llama/llama-4-scout-17b-16e-instruct,openai/gpt-oss-20b,llama-3.1-8b-instant"
+MODEL = "deepseek:deepseek-v4-flash,openai/gpt-oss-120b,llama-3.3-70b-versatile,meta-llama/llama-4-scout-17b-16e-instruct,openai/gpt-oss-20b,llama-3.1-8b-instant"
 
 # Secrets, never in this file:
-#   GROQ_API_KEY  key from console.groq.com, uploaded by the workflow from
-#                 the GitHub secret of the same name
-#   APP_TOKEN     optional; when set (npx wrangler secret put APP_TOKEN), the
-#                 app must send it, so also set the GitHub secret AI_TOKEN
+#   DEEPSEEK_API_KEY  key from platform.deepseek.com, uploaded by the workflow
+#                     from the GitHub secret of the same name
+#   GROQ_API_KEY      key from console.groq.com, uploaded the same way
+#   APP_TOKEN         optional; when set (npx wrangler secret put APP_TOKEN), the
+#                     app must send it, so also set the GitHub secret AI_TOKEN

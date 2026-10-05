@@ -59,6 +59,10 @@ Server ini di-deploy otomatis oleh GitHub Actions (`.github/workflows/ai-worker.
 Settings > Secrets and variables > Actions > New repository secret:
 
 - `GROQ_API_KEY`: dari console.groq.com > API Keys (gratis, cukup login).
+- `DEEPSEEK_API_KEY` (opsional): dari platform.deepseek.com > API Keys (berbayar, isi saldo). Kalau
+  diisi, AI menjawab pakai DeepSeek dulu; kalau saldo habis atau DeepSeek bermasalah, otomatis
+  pindah ke Groq gratis. Setelah menambah atau mengganti secret ini, jalankan ulang workflow
+  "Deploy AI server" (tab Actions > Deploy AI server > Run workflow).
 - `CLOUDFLARE_API_TOKEN`: dari Cloudflare, My Profile > API Tokens > Create Token > template
   "Edit Cloudflare Workers", tambahkan izin Zone > DNS > Edit untuk zona `mymanual.my.id`.
 - `CLOUDFLARE_ACCOUNT_ID`: ID akun di halaman Workers & Pages Cloudflare (kolom kanan).
