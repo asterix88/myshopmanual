@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -20,7 +21,13 @@ void main() {
         client: http.Client(),
         endpoint: Uri.parse('http://127.0.0.1:8787/chat'),
         pageImage: (f, p, r) async {
-          final png = await renderPageImage(store, f, p, r);
+          final Uint8List png;
+          try {
+            png = await renderPageImage(store, f, p, r);
+          } catch (e, st) {
+            print('  RENDER FAILED ${f.id} p$p: $e\n$st');
+            rethrow;
+          }
           print('  drew ${f.id} p$p $r: ${png.length} bytes');
           File('${Directory.systemTemp.path}/view-${f.id}-$p-$r.png').writeAsBytesSync(png);
           return png;
@@ -28,7 +35,6 @@ void main() {
       );
       for (final q in [
         'Di hydraulic schematic CAT395, komponen apa saja yang terhubung ke main pump?',
-        'Pada electrical diagram CAT395, apa nama komponen di bagian kiri atas?',
       ]) {
         print('\n=== Q: $q');
         final sw = Stopwatch()..start();
