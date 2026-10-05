@@ -18,12 +18,12 @@ void main() {
   });
 
   test('units are listed biggest machine first', () {
-    final ids = ['PC210', 'D85', 'CAT395', 'PC1250-11', 'D375A-8', 'PC500', 'PC2000-11R', 'D155'];
+    final ids = ['PC210-10MO', 'D85ESS-2', 'CAT395', 'PC1250-11', 'D375A-8', 'PC500-10', 'PC2000-11R', 'D155A-6'];
     final units = [for (final id in ids) Unit(id: id, name: id, kind: '', files: const [])]
       ..sort((a, b) => b.sizeClass.compareTo(a.sizeClass));
     expect(units.where((u) => u.machine == Machine.excavator).map((u) => u.id),
-        ['PC2000-11R', 'PC1250-11', 'CAT395', 'PC500', 'PC210']);
-    expect(units.where((u) => u.machine == Machine.bulldozer).map((u) => u.id), ['D375A-8', 'D155', 'D85']);
+        ['PC2000-11R', 'PC1250-11', 'CAT395', 'PC500-10', 'PC210-10MO']);
+    expect(units.where((u) => u.machine == Machine.bulldozer).map((u) => u.id), ['D375A-8', 'D155A-6', 'D85ESS-2']);
   });
 
   test('a unit page lists subfolders first, then Shop Manual, OMM, Partsbook, the rest', () {

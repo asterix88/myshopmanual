@@ -4,7 +4,7 @@ library;
 enum DocType {
   shopManual('shop_manual', 'Shop Manual'),
   omm('omm', 'OMM'),
-  partsbook('partsbook', 'Partsbook'),
+  partsbook('partsbook', 'Partbook'),
   other('other', 'Lainnya');
 
   const DocType(this.id, this.label);
@@ -142,7 +142,8 @@ class Unit {
     final code = id.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
     final cat = RegExp(r'^CAT3(\d\d)').firstMatch(code);
     if (cat != null) return double.parse(cat[1]!);
-    final digits = RegExp(r'\d+').firstMatch(code);
+    // The first run of digits only: PC500-10 is a PC500, not 50010.
+    final digits = RegExp(r'\d+').firstMatch(id);
     if (digits == null) return 0;
     final n = double.parse(digits[0]!);
     return code.startsWith('D') ? n : n / 10;

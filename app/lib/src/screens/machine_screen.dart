@@ -100,7 +100,7 @@ class UnitRow extends StatelessWidget {
           ].join(' · ');
     return Column(
       children: [
-        if (showDivider) const Divider(height: 1, indent: 76),
+        if (showDivider) const Divider(height: 1, indent: 100),
         InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: () => Navigator.of(context).push(
@@ -111,20 +111,7 @@ class UnitRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(
               children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(14)),
-                  alignment: Alignment.center,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      _shortCode(unit),
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.orangeText),
-                    ),
-                  ),
-                ),
+                _UnitIcon(code: _shortCode(unit)),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -156,5 +143,41 @@ class UnitRow extends StatelessWidget {
   static String _shortCode(Unit unit) {
     final code = unit.id.split(RegExp(r'[-_ ]')).first.toUpperCase();
     return code.length > 7 ? code.substring(0, 7) : code;
+  }
+}
+
+/// A picture of the machine when the app has one for this model code,
+/// otherwise the code on an orange tile.
+class _UnitIcon extends StatelessWidget {
+  const _UnitIcon({required this.code});
+
+  final String code;
+
+  /// Model codes with a picture in assets/units/<code>.png.
+  static const pictures = {'PC500', 'PC210', 'CAT395'};
+
+  @override
+  Widget build(BuildContext context) {
+    if (pictures.contains(code)) {
+      return SizedBox(
+        width: 82,
+        height: 56,
+        child: Image.asset('assets/units/${code.toLowerCase()}.png', fit: BoxFit.contain),
+      );
+    }
+    return Container(
+      width: 82,
+      height: 56,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(14)),
+      alignment: Alignment.center,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          code,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.orangeText),
+        ),
+      ),
+    );
   }
 }
