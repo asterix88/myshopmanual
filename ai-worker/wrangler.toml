@@ -17,7 +17,10 @@ routes = [{ pattern = "ai.mymanual.my.id", custom_domain = true }]
 # goes to API_URL (Groq's free tier, each model with its own per-minute
 # limit). Entries whose API key secret is not set are skipped.
 API_URL = "https://api.groq.com/openai/v1/chat/completions"
-MODEL = "deepseek:deepseek-v4-flash,openai/gpt-oss-120b,llama-3.3-70b-versatile,meta-llama/llama-4-scout-17b-16e-instruct,openai/gpt-oss-20b,llama-3.1-8b-instant"
+MODEL = "deepseek:deepseek-v4-flash,openai/gpt-oss-120b,qwen/qwen3.8-27b,openai/gpt-oss-20b"
+# Used instead of MODEL once the AI has looked at a page picture: only these
+# models can see pictures.
+VISION_MODEL = "deepseek:deepseek-v4-flash,qwen/qwen3.8-27b"
 
 # Secrets, never in this file:
 #   DEEPSEEK_API_KEY  key from platform.deepseek.com, uploaded by the workflow

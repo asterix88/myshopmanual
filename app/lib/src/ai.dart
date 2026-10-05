@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
 import 'models.dart';
+import 'page_image.dart';
 import 'search.dart';
 import 'store.dart';
 
@@ -57,32 +59,57 @@ class AiException implements Exception {
 /// A conversation with the AI. The Worker is stateless: the full history, in
 /// the OpenAI-style chat format, including the AI's tool calls and the pages
 /// found, is kept here and sent on every request.
+/// Draws a manual page, or a quarter of it (see [pageRegions]), as a PNG.
+typedef PageImage = Future<Uint8List> Function(ManualFile file, int page, String region);
+
 class AiChat {
-  AiChat({required this.store, required this.client, Uri? endpoint})
-      : _endpoint = endpoint ?? Uri.parse('$aiUrl/chat');
+  AiChat({required this.store, required this.client, Uri? endpoint, PageImage? pageImage})
+      : _endpoint = endpoint ?? Uri.parse('$aiUrl/chat'),
+        _pageImage = pageImage ?? ((file, page, region) => renderPageImage(store, file, page, region));
 
   final AppStore store;
   final http.Client client;
   final Uri _endpoint;
+  final PageImage _pageImage;
 
   final List<Map<String, dynamic>> _messages = [];
   final Map<int, AiSource> _sources = {};
 
-  /// Requests per question: each search the AI asks for costs one round.
-  static const maxRounds = 4;
+  /// Manuals by the id the AI knows them by in this conversation (M1, M2…).
+  final Map<String, ManualFile> _manuals = {};
+
+  /// Requests per question: each search or look at a page costs one round.
+  static const maxRounds = 6;
+
+  /// Page pictures the AI may look at per question; each is a large request.
+  static const maxViews = 4;
+  var _views = 0;
 
   /// Asks [question]; [onStatus] reports what is happening while it works.
   Future<ChatEntry> ask(String question, {void Function(String status)? onStatus}) async {
+    _dropOldPictures();
+    _views = 0;
     _messages.add({'role': 'user', 'content': question});
-    // Every manual on the server can be searched; downloaded or not.
+    // Every manual on the server can be searched, downloaded or not; manuals
+    // that are only pictures (diagrams, scans) can be looked at.
+    final files = store.catalog.files.followedBy(store.local.values.map((m) => m.file)).toSet().toList();
+    _manuals
+      ..clear()
+      ..addAll({for (final (i, f) in files.indexed) 'M${i + 1}': f});
     final manuals = [
-      for (final f in store.catalog.files.followedBy(store.local.values.map((m) => m.file)).toSet())
-        if (f.searchable) '${store.unitNameOf(f)}: ${f.title} (${f.type.label})',
+      for (final MapEntry(key: id, value: f) in _manuals.entries)
+        '[$id] ${store.unitNameOf(f)}: ${f.title} (${f.type.label}, ${f.pages} pages'
+            '${f.searchable ? '' : ', pictures only: not searchable, use view_page'})',
     ];
 
     for (var round = 0; round < maxRounds; round++) {
       onStatus?.call(round == 0 ? 'Memahami pertanyaan…' : 'Menyusun jawaban…');
-      final response = await _post({'messages': _messages, 'manuals': manuals});
+      final response = await _post({
+        'messages': _messages,
+        'manuals': manuals,
+        // Tells the server this app can show the AI manual pages.
+        'features': const ['view_page'],
+      });
       final message = (response['message'] as Map).cast<String, dynamic>();
       final toolCalls = (message['tool_calls'] as List? ?? const []).cast<Map<String, dynamic>>();
       _messages.add({
@@ -92,6 +119,7 @@ class AiChat {
       });
 
       if (toolCalls.isEmpty) return _answer(message['content'] as String? ?? '');
+      final pictures = <Map<String, dynamic>>[];
       for (final call in toolCalls) {
         final function = (call['function'] as Map).cast<String, dynamic>();
         Map<String, dynamic> args;
@@ -100,11 +128,24 @@ class AiChat {
         } on FormatException {
           args = const {};
         }
-        final query = (args['query'] as String? ?? '').trim();
+        final String content;
+        if (function['name'] == 'view_page') {
+          content = await _view(args, pictures, onStatus: onStatus);
+        } else {
+          final query = (args['query'] as String? ?? '').trim();
+          content = await _search(query, (args['unit'] as String? ?? '').trim(), onStatus: onStatus);
+        }
+        _messages.add({'role': 'tool', 'tool_call_id': call['id'], 'content': content});
+      }
+      // Tool results can only carry text, so the pages the AI asked to see
+      // follow as pictures in one message.
+      if (pictures.isNotEmpty) {
         _messages.add({
-          'role': 'tool',
-          'tool_call_id': call['id'],
-          'content': await _search(query, (args['unit'] as String? ?? '').trim(), onStatus: onStatus),
+          'role': 'user',
+          'content': [
+            {'type': 'text', 'text': 'Pictures of the pages requested with view_page:'},
+            ...pictures,
+          ],
         });
       }
     }
@@ -191,6 +232,64 @@ class AiChat {
   /// (the chat and its HTTP client), which can't be sent to an isolate.
   static Future<List<PageText>> _searchInBackground(Map<String, String> indexes, String query) =>
       Isolate.run(() => searchPageTextsSync(indexes, query, limit: 4));
+
+  /// Looks up the page the AI asked to see and draws it; the picture goes
+  /// into [pictures], and the returned text tells the AI its source id.
+  Future<String> _view(Map<String, dynamic> args, List<Map<String, dynamic>> pictures,
+      {void Function(String status)? onStatus}) async {
+    final source = RegExp(r'^\[?S(\d+)\]?$').firstMatch((args['source'] as String? ?? '').trim());
+    final known = source == null ? null : _sources[int.parse(source[1]!)];
+    ManualFile? file;
+    int? page;
+    if (known != null) {
+      file = known.file;
+      page = known.page;
+    } else {
+      file = _manuals[(args['manual'] as String? ?? '').replaceAll(RegExp(r'[\[\]\s]'), '').toUpperCase()];
+      page = (args['page'] as num?)?.toInt();
+    }
+    if (file == null || page == null || page < 1 || page > file.pages) {
+      return 'No such page. Give a source id like "S3", or a manual id like "M2" with a page number from 1 '
+          'to the page count shown in the manual list.';
+    }
+    if (_views >= maxViews) {
+      return 'No more pictures for this question; answer with what you have seen.';
+    }
+    _views++;
+    final region = pageRegions.contains(args['region']) ? args['region'] as String : 'full';
+    final unitName = store.unitNameOf(file);
+    onStatus?.call('Melihat gambar: $unitName · ${file.title} · hlm $page');
+    final Uint8List png;
+    try {
+      png = await _pageImage(file, page, region);
+    } on Object catch (e) {
+      return 'The page could not be opened ($e). The phone may be offline and the manual not downloaded.';
+    }
+    final id = _sources.length + 1;
+    _sources[id] = AiSource(id: id, file: file, unitName: unitName, page: page);
+    final label = '[S$id] $unitName · ${file.title} · page $page${region == 'full' ? '' : ' ($region part)'}';
+    pictures
+      ..add({'type': 'text', 'text': label})
+      ..add({
+        'type': 'image_url',
+        'image_url': {'url': 'data:image/png;base64,${base64Encode(png)}'},
+      });
+    return 'The picture of $label is attached in the next message.';
+  }
+
+  /// Page pictures from earlier questions are dropped from the history (they
+  /// are large); the AI can ask to see a page again.
+  void _dropOldPictures() {
+    for (final (i, m) in _messages.indexed) {
+      if (m['role'] == 'user' && m['content'] is List) {
+        _messages[i] = {
+          'role': 'user',
+          'content': 'Page pictures were shown here; they are no longer attached. '
+              'Call view_page again to look at a page.',
+        };
+      }
+    }
+  }
 
   ChatEntry _answer(String content) {
     final cited = <AiSource>[];
