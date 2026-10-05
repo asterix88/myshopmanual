@@ -20,7 +20,7 @@ A unit folder may hold an optional unit.json with display info, e.g.
 {"name": "PC210-10M0", "kind": "Excavator"}. PDFs may also sit in
 subfolders of a unit folder (source/CAT395/System Diagram/x.pdf): they
 belong to that unit, and the subfolder name becomes the file's "group",
-which the app shows as a heading on the unit page.
+which the app shows as a heading at the top of the unit page.
 
 Re-running keeps the previous catalog.json in dist/: units not rebuilt
 (with --only) stay listed, and each file keeps its "updated_at" date until
@@ -144,9 +144,10 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
 
     files, skipped = [], []
     def order(pdf: Path) -> tuple:
-        # Files directly in the unit folder first, then each subfolder.
+        # Subfolders first, then the files directly in the unit folder
+        # (the app orders them the same way).
         rel = pdf.relative_to(unit_dir)
-        return (len(rel.parts) > 1, [part.lower() for part in rel.parts])
+        return (len(rel.parts) == 1, [part.lower() for part in rel.parts])
 
     for pdf in sorted(unit_dir.rglob("*.pdf"), key=order):
         rel = pdf.relative_to(unit_dir)

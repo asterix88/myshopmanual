@@ -17,6 +17,32 @@ void main() {
     expect(DocType.of('omm', 'PB something'), DocType.omm);
   });
 
+  test('units are listed biggest machine first', () {
+    final ids = ['PC210', 'D85', 'CAT395', 'PC1250-11', 'D375A-8', 'PC500', 'PC2000-11R', 'D155'];
+    final units = [for (final id in ids) Unit(id: id, name: id, kind: '', files: const [])]
+      ..sort((a, b) => b.sizeClass.compareTo(a.sizeClass));
+    expect(units.where((u) => u.machine == Machine.excavator).map((u) => u.id),
+        ['PC2000-11R', 'PC1250-11', 'CAT395', 'PC500', 'PC210']);
+    expect(units.where((u) => u.machine == Machine.bulldozer).map((u) => u.id), ['D375A-8', 'D155', 'D85']);
+  });
+
+  test('a unit page lists subfolders first, then Shop Manual, OMM, Partsbook, the rest', () {
+    final catalog = Catalog.fromJson(fixtureCatalog());
+    final base = catalog.units.single.files.single;
+    ManualFile f(String title, DocType type, [String group = '']) => ManualFile(
+          unitId: 'U', id: title, title: title, type: type, pages: 1, searchable: true,
+          pdf: base.pdf, index: base.index, updatedAt: null, group: group);
+    final files = [
+      f('Schematic', DocType.other),
+      f('PB', DocType.partsbook),
+      f('OMM', DocType.omm),
+      f('Wiring', DocType.other, 'System Diagram'),
+      f('SM', DocType.shopManual),
+      f('Engine', DocType.other, 'Machine'),
+    ]..sort(ManualFile.pageOrder);
+    expect(files.map((f) => f.title), ['Engine', 'Wiring', 'SM', 'OMM', 'PB', 'Schematic']);
+  });
+
   testWidgets('unit rows fill the page and skip the empty-phone note', (tester) async {
     final catalog = fixtureCatalog();
     final unit = (catalog['units'] as List).single as Map<String, dynamic>;
@@ -65,8 +91,10 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
+    // The subfolder comes first, then the files placed in the unit folder.
     final heading = tester.getTopLeft(find.text('System Diagram')).dy;
-    expect(tester.getTopLeft(find.text('OMM Test Unit')).dy, lessThan(heading));
-    expect(tester.getTopLeft(find.text('Hydraulic diagram')).dy, greaterThan(heading));
+    final grouped = tester.getTopLeft(find.text('Hydraulic diagram')).dy;
+    expect(grouped, greaterThan(heading));
+    expect(tester.getTopLeft(find.text('OMM Test Unit')).dy, greaterThan(grouped));
   });
 }

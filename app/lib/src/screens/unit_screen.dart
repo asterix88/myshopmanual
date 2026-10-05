@@ -385,10 +385,10 @@ class _SelectableFile extends StatelessWidget {
   }
 }
 
-/// Files directly in the unit folder first, then one group per subfolder,
-/// in catalog order.
+/// Consecutive files of one subfolder under one heading ([files] come in
+/// [ManualFile.pageOrder]: subfolders first, then the unit folder's own).
 List<(String, List<ManualFile>)> _grouped(List<ManualFile> files) {
-  final groups = <String, List<ManualFile>>{'': []};
+  final groups = <String, List<ManualFile>>{};
   for (final f in files) {
     (groups[f.group] ??= []).add(f);
   }
