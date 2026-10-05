@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:pdfrx/pdfrx.dart';
 
 import '../ai.dart';
+import '../models.dart';
+import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import 'shell.dart';
@@ -126,7 +128,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 ? _Intro(
                     examples: _examples,
                     hasManuals: hasManuals,
-                    preparing: store.aiIndexProgress,
                     onExample: offline ? null : _send,
                   )
                 : ListView(
@@ -138,6 +139,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ],
                   ),
           ),
+          if (store.aiIndexProgress case final p?) _Preparing(progress: p),
           _InputBar(
             controller: _input,
             enabled: !offline && _status == null,
@@ -151,11 +153,10 @@ class _ChatScreenState extends State<ChatScreen> {
 }
 
 class _Intro extends StatelessWidget {
-  const _Intro({required this.examples, required this.hasManuals, required this.preparing, required this.onExample});
+  const _Intro({required this.examples, required this.hasManuals, required this.onExample});
 
   final List<String> examples;
   final bool hasManuals;
-  final ({int ready, int total})? preparing;
   final ValueChanged<String>? onExample;
 
   @override
@@ -176,14 +177,6 @@ class _Intro extends StatelessWidget {
                 'Ketuk sumber untuk membuka halamannya. Butuh internet.',
                 style: TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF3A3F45)),
               ),
-              if (preparing case final p? when p.total > 0) ...[
-                const SizedBox(height: 12),
-                Text(
-                  'Menyiapkan indeks pencarian AI: ${p.ready} dari ${p.total} manual. '
-                  'Pertanyaan tetap bisa dikirim sekarang.',
-                  style: const TextStyle(fontSize: 12, height: 1.4, color: AppColors.muted),
-                ),
-              ],
               if (!hasManuals) ...[
                 const SizedBox(height: 12),
                 const Text(
@@ -379,6 +372,41 @@ class _Working extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 13, color: AppColors.muted)),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown above the input while the phone downloads the search indexes of
+/// manuals that are not downloaded, in any state of the chat.
+class _Preparing extends StatelessWidget {
+  const _Preparing({required this.progress});
+
+  final AiIndexProgress progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = progress;
+    final bytes = p.totalBytes == 0 ? null : (p.receivedBytes / p.totalBytes).clamp(0.0, 1.0);
+    return Container(
+      color: AppColors.navySoft,
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Menyiapkan indeks pencarian AI: ${p.ready} dari ${p.total} manual'
+            '${p.totalBytes == 0 ? '' : ' (${formatSize(p.receivedBytes)} dari ${formatSize(p.totalBytes)})'}',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.navy),
+          ),
+          const SizedBox(height: 2),
+          const Text(
+            'Sementara itu AI menjawab dari manual yang indeksnya sudah siap.',
+            style: TextStyle(fontSize: 11, color: AppColors.muted),
+          ),
+          const SizedBox(height: 6),
+          LinearProgressIndicator(value: bytes, minHeight: 4, borderRadius: BorderRadius.circular(2)),
         ],
       ),
     );

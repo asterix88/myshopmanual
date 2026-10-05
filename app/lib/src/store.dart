@@ -19,6 +19,21 @@ const defaultServerUrl = _buildServerUrl == ''
     ? 'https://mymanual.my.id'
     : _buildServerUrl;
 
+/// How far [AppStore.fetchAllAiIndexes] has come.
+class AiIndexProgress {
+  AiIndexProgress({required this.total, required this.ready, required this.totalBytes});
+
+  final int total;
+  int ready;
+  final int totalBytes;
+
+  /// Bytes of indexes finished (or given up on).
+  int doneBytes = 0;
+  final _inFlight = <DownloadProgress>{};
+
+  int get receivedBytes => doneBytes + _inFlight.fold(0, (s, p) => s + p.received);
+}
+
 class DownloadProgress {
   DownloadProgress(this.total);
 
@@ -442,27 +457,47 @@ class AppStore extends ChangeNotifier {
   /// tests leave it off.
   bool autoFetchAiIndexes = false;
 
-  /// Progress of [fetchAllAiIndexes] while it runs: indexes ready of total.
-  ({int ready, int total})? aiIndexProgress;
+  /// Progress of [fetchAllAiIndexes] while it runs: indexes ready of total,
+  /// and bytes received of the bytes it has to fetch.
+  AiIndexProgress? get aiIndexProgress => _aiIndexRun;
+  AiIndexProgress? _aiIndexRun;
 
   /// Fetches every missing search index for Tanya AI (indexes only, never
-  /// PDFs) and deletes cached indexes of manuals no longer on the server.
+  /// PDFs), a few at a time, and deletes cached indexes of manuals no longer
+  /// on the server. A failed index is skipped; after several failures in a
+  /// row (offline) it stops and tries again on the next refresh.
   Future<void> fetchAllAiIndexes() async {
-    if (aiIndexProgress != null) return;
+    if (_aiIndexRun != null) return;
     final files = [for (final f in catalog.files) if (f.searchable) f];
-    var ready = 0;
-    aiIndexProgress = (ready: 0, total: files.length);
+    final missing = [for (final f in files) if (_readyAiIndex(f) == null) f];
+    final run = _aiIndexRun = AiIndexProgress(
+      total: files.length,
+      ready: files.length - missing.length,
+      totalBytes: missing.fold(0, (s, f) => s + f.index.size),
+    );
     notifyListeners();
-    try {
-      for (final file in files) {
+    var failuresInARow = 0;
+    var next = 0;
+    Future<void> worker() async {
+      while (next < missing.length && failuresInARow < 3) {
+        final file = missing[next++];
         final got = await aiIndexes(where: (f) => f.key == file.key);
-        if (got.isEmpty) return; // offline: try again on the next refresh
-        aiIndexProgress = (ready: ++ready, total: files.length);
+        if (got.isEmpty) {
+          failuresInARow++;
+        } else {
+          failuresInARow = 0;
+          run.ready++;
+        }
+        run.doneBytes += file.index.size;
         notifyListeners();
       }
-      await _deleteStaleAiIndexes();
+    }
+
+    try {
+      await Future.wait([for (var i = 0; i < 3; i++) worker()]);
+      if (failuresInARow < 3) await _deleteStaleAiIndexes();
     } finally {
-      aiIndexProgress = null;
+      _aiIndexRun = null;
       notifyListeners();
     }
   }
@@ -486,32 +521,36 @@ class AppStore extends ChangeNotifier {
   /// index is fetched (not the PDF) and kept. [where] narrows the manuals, so
   /// a question about one unit only fetches that unit's indexes. A manual
   /// whose index can't be fetched (offline) is left out.
+  ///
+  /// With [fetch] false nothing is downloaded: only indexes already on the
+  /// phone are returned.
   Future<Map<String, String>> aiIndexes({
     bool Function(ManualFile file)? where,
     void Function(String status)? onStatus,
+    bool fetch = true,
   }) async {
     final result = <String, String>{};
     for (final file in catalog.files.followedBy(local.values.map((m) => m.file))) {
       if (!file.searchable || result.containsKey(file.key) || !(where?.call(file) ?? true)) continue;
-      if (isDownloaded(file.key)) {
-        result[file.key] = indexPath(file);
+      final ready = _readyAiIndex(file);
+      if (ready != null) {
+        result[file.key] = ready;
         continue;
       }
+      if (!fetch) continue;
       final target = cachedIndexPath(file);
-      if (!File(target).existsSync()) {
-        onStatus?.call('Mengambil indeks ${unitNameOf(file)} · ${file.type.label}…');
-        // The background fetch and a question may want the same index at
-        // once; they share one download.
-        final fetch = _aiIndexFetches[file.key] ??=
-            _fetchAiIndex(file, target).whenComplete(() {
-              // A block body: returning the removed future would await itself.
-              _aiIndexFetches.remove(file.key);
-            });
-        try {
-          await fetch;
-        } on Exception {
-          continue;
-        }
+      onStatus?.call('Mengambil indeks ${unitNameOf(file)} · ${file.type.label}…');
+      // The background fetch and a question may want the same index at
+      // once; they share one download.
+      final download = _aiIndexFetches[file.key] ??=
+          _fetchAiIndex(file, target).whenComplete(() {
+            // A block body: returning the removed future would await itself.
+            _aiIndexFetches.remove(file.key);
+          });
+      try {
+        await download;
+      } on Exception {
+        continue;
       }
       result[file.key] = target;
     }
@@ -519,6 +558,13 @@ class AppStore extends ChangeNotifier {
   }
 
   final _aiIndexFetches = <String, Future<void>>{};
+
+  /// The index of [file] if it is on the phone already, else null.
+  String? _readyAiIndex(ManualFile file) {
+    if (isDownloaded(file.key)) return indexPath(file);
+    final cached = cachedIndexPath(file);
+    return File(cached).existsSync() ? cached : null;
+  }
 
   Future<void> _fetchAiIndex(ManualFile file, String target) async {
     final dir = Directory(p.dirname(target));
@@ -529,7 +575,14 @@ class AppStore extends ChangeNotifier {
         if (old.hasMatch(p.basename(entry.path))) await entry.delete();
       }
     }
-    await _fetch(file.index, target, DownloadProgress(file.index.size));
+    final progress = DownloadProgress(file.index.size);
+    final run = _aiIndexRun;
+    run?._inFlight.add(progress);
+    try {
+      await _fetch(file.index, target, progress);
+    } finally {
+      run?._inFlight.remove(progress);
+    }
     await File('$target.part').rename(target);
     await _deleteIfExists(File('$target.part.sha'));
   }
