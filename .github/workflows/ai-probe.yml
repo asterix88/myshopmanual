@@ -24,9 +24,12 @@ jobs:
               except urllib.error.HTTPError as e:
                   out = e.read().decode(); code = e.code
               print("  ->", code, round(time.time()-t,1), "s"); print("  ", out[:900])
-          req=urllib.request.Request("https://api.groq.com/openai/v1/models",headers={"authorization":"Bearer "+os.environ["GROQ_API_KEY"],"user-agent":"curl/8"})
-          for m in json.load(urllib.request.urlopen(req))["data"]:
-              print("GROQ MODEL", m["id"], m.get("context_window"), m.get("active"))
-          print("WORKER /chat")
-          call("https://ai.mymanual.my.id/chat", "x", {"messages":[{"role":"user","content":"Berapa tekanan relief swing motor PC210?"}],"manuals":["PC210-1OMO: SM PC210 (Shop Manual)"]})
+          q="Kabel apa yang menghubungkan pump controller ke CN-E12, dan fuse berapa? Jawab singkat."
+          vis=[{"type":"text","text":q},{"type":"image_url","image_url":{"url":"data:image/jpeg;base64,"+img}}]
+          print("GROQ qwen vision")
+          call("https://api.groq.com/openai/v1/chat/completions", os.environ["GROQ_API_KEY"], {"model":"qwen/qwen3.8-27b","max_tokens":600,"tools":[tool],"tool_choice":"auto","messages":[{"role":"user","content":vis}]})
+          print("DEEPSEEK vision")
+          call("https://api.deepseek.com/chat/completions", os.environ["DEEPSEEK_API_KEY"], {"model":"deepseek-v4-flash","max_tokens":300,"thinking":{"type":"disabled"},"messages":[{"role":"user","content":vis}]})
+          req=urllib.request.Request("https://api.deepseek.com/models",headers={"authorization":"Bearer "+os.environ["DEEPSEEK_API_KEY"],"user-agent":"curl/8"})
+          print("DEEPSEEK MODELS", urllib.request.urlopen(req).read().decode()[:600])
           PY
