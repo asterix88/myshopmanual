@@ -217,39 +217,49 @@ class _FileCard extends StatelessWidget {
               onCancel: () => store.cancelDownload(file.key),
             )
           else if (!downloaded)
-            // Compact buttons at their own width, not stretched across the card.
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
+            // Compact buttons, each where the left and right half of the card
+            // start, as they sat when they filled those halves.
+            Row(
               children: [
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, 32),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                    backgroundColor: AppColors.navy,
-                    shape: const StadiumBorder(),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(0, 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        backgroundColor: AppColors.navy,
+                        shape: const StadiumBorder(),
+                      ),
+                      onPressed: canRead ? () => openViewer(context, file, page: lastPage) : null,
+                      icon: const Icon(Icons.menu_book_outlined, size: 15),
+                      label: const Text('Baca online', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    ),
                   ),
-                  onPressed: canRead ? () => openViewer(context, file, page: lastPage) : null,
-                  icon: const Icon(Icons.menu_book_outlined, size: 15),
-                  label: const Text('Baca online', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                 ),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 32),
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                    side: const BorderSide(color: AppColors.navy, width: 1.2),
-                    foregroundColor: AppColors.navy,
-                    shape: const StadiumBorder(),
-                  ),
-                  onPressed: () => _download(context, store),
-                  icon: const Icon(Icons.download, size: 15),
-                  label: Text(
-                    partial > 0 ? 'Lanjutkan unduhan' : 'Unduh ${formatSize(file.downloadSize)}',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        side: const BorderSide(color: AppColors.navy, width: 1.2),
+                        foregroundColor: AppColors.navy,
+                        shape: const StadiumBorder(),
+                      ),
+                      onPressed: () => _download(context, store),
+                      icon: const Icon(Icons.download, size: 15),
+                      label: Text(
+                        partial > 0 ? 'Lanjutkan unduhan' : 'Unduh',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ),
                   ),
                 ),
               ],
