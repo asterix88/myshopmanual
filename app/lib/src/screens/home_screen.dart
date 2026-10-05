@@ -194,7 +194,11 @@ class _ContinueReading extends StatelessWidget {
                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
                       alignment: Alignment.center,
                       child: Text(
-                        file.type == DocType.shopManual ? 'SM' : file.type.label.substring(0, 3).toUpperCase(),
+                        switch (file.type) {
+                          DocType.shopManual => 'SM',
+                          DocType.other => '',
+                          _ => file.type.label.substring(0, 3).toUpperCase(),
+                        },
                         style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFC86A0A)),
                       ),
                     ),

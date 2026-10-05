@@ -12,6 +12,16 @@ enum DocType {
   final String id;
   final String label;
 
+  /// The catalog's type, except that a title starting with "PB" is a
+  /// partsbook even in catalogs built before the pipeline knew that.
+  static DocType of(String? id, String title) {
+    final type = parse(id);
+    if (type == DocType.other && RegExp(r'^PB\b', caseSensitive: false).hasMatch(title.trim())) {
+      return DocType.partsbook;
+    }
+    return type;
+  }
+
   static DocType parse(String? id) =>
       values.firstWhere((t) => t.id == id, orElse: () => DocType.other);
 }
@@ -49,7 +59,7 @@ class ManualFile {
         unitId: unitId,
         id: json['id'] as String,
         title: json['title'] as String,
-        type: DocType.parse(json['type'] as String?),
+        type: DocType.of(json['type'] as String?, json['title'] as String),
         pages: json['pages'] as int,
         searchable: json['searchable'] as bool? ?? true,
         pdf: RemoteFile.fromJson(json['pdf'] as Map<String, dynamic>),

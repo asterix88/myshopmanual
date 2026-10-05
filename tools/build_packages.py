@@ -48,7 +48,7 @@ MIN_TEXT_PAGE_RATIO = 0.5
 DOC_TYPES = [
     ("shop_manual", re.compile(r"shop\s*manual|\bsm\b|\bsen\d", re.I)),
     ("omm", re.compile(r"\bomm\b|operation|\bpen\d", re.I)),
-    ("partsbook", re.compile(r"part", re.I)),
+    ("partsbook", re.compile(r"part|\bpb\b", re.I)),
 ]
 
 

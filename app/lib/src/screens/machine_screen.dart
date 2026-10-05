@@ -39,22 +39,33 @@ class MachineScreen extends StatelessWidget {
       ),
       body: RefreshIndicator(
         onRefresh: store.refresh,
-        child: ListView(
-          padding: const EdgeInsets.only(top: 10, bottom: 24),
-          children: [
-            Container(
-              color: AppColors.surface,
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-              child: units.isEmpty
-                  ? const EmptyState(icon: Icons.folder_off_outlined, title: 'Belum ada model unit di folder ini')
-                  : Column(
-                      children: [
-                        for (final (i, unit) in units.indexed)
-                          UnitRow(unit: unit, store: store, showDivider: i > 0),
-                      ],
-                    ),
-            ),
-          ],
+        // The rows share the whole page, so a folder with a few units has no
+        // empty space under the list; many units scroll at a minimum height.
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const minRowHeight = 76.0;
+            final rowHeight = units.isEmpty
+                ? minRowHeight
+                : (constraints.maxHeight / units.length).clamp(minRowHeight, 140.0).toDouble();
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                Container(
+                  color: AppColors.surface,
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: units.isEmpty
+                      ? const EmptyState(icon: Icons.folder_off_outlined, title: 'Belum ada model unit di folder ini')
+                      : Column(
+                          children: [
+                            for (final (i, unit) in units.indexed)
+                              UnitRow(unit: unit, store: store, showDivider: i > 0, height: rowHeight),
+                          ],
+                        ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -62,11 +73,18 @@ class MachineScreen extends StatelessWidget {
 }
 
 class UnitRow extends StatelessWidget {
-  const UnitRow({super.key, required this.unit, required this.store, required this.showDivider});
+  const UnitRow({
+    super.key,
+    required this.unit,
+    required this.store,
+    required this.showDivider,
+    this.height = 76,
+  });
 
   final Unit unit;
   final AppStore store;
   final bool showDivider;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -78,44 +96,51 @@ class UnitRow extends StatelessWidget {
         ? 'Ada update manual'
         : [
             if (unit.kind.isNotEmpty) unit.kind,
-            onPhone == 0 ? 'belum ada file di HP' : '$onPhone dari ${files.length} file di HP',
+            if (onPhone > 0) '$onPhone dari ${files.length} file di HP',
           ].join(' · ');
     return Column(
       children: [
-        if (showDivider) const Divider(indent: 72),
+        if (showDivider) const Divider(height: 1, indent: 76),
         InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => UnitScreen(unitId: unit.id)),
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+          child: Container(
+            height: showDivider ? height - 1 : height,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(12)),
+                  width: 52,
+                  height: 52,
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(14)),
                   alignment: Alignment.center,
-                  child: Text(
-                    _shortCode(unit),
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.orangeText),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _shortCode(unit),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.orangeText),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(unit.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: hasUpdate ? const Color(0xFFC2410C) : AppColors.muted,
-                          fontWeight: hasUpdate ? FontWeight.w600 : FontWeight.w400,
+                      Text(unit.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      if (subtitle.isNotEmpty)
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: hasUpdate ? const Color(0xFFC2410C) : AppColors.muted,
+                            fontWeight: hasUpdate ? FontWeight.w600 : FontWeight.w400,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -130,6 +155,6 @@ class UnitRow extends StatelessWidget {
 
   static String _shortCode(Unit unit) {
     final code = unit.id.split(RegExp(r'[-_ ]')).first.toUpperCase();
-    return code.length > 5 ? code.substring(0, 5) : code;
+    return code.length > 7 ? code.substring(0, 7) : code;
   }
 }
