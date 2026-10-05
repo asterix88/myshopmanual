@@ -7,20 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -sS -m 60 https://mymanual.my.id/catalog.json -o catalog.json
-          python3 - <<'PY'
-          import json, urllib.request, time
-          c=json.load(open('catalog.json'))
-          print('generated', c.get('generated_at'))
-          tot=0
-          first=None
-          for u in c['units']:
-              for f in u['files']:
-                  ix=f.get('index') or {}
-                  tot+=ix.get('size') or 0
-                  print(u.get('id'),'|',f.get('id'),'|',f.get('type'),'| s=',f.get('searchable'),'| idx',round((ix.get('size') or 0)/1e6,1),'MB |',ix.get('path'), '| grp', f.get('group'))
-                  if first is None and ix.get('path'): first=ix['path']
-          print('total index MB', round(tot/1e6,1))
-          if first:
-              t=time.time(); r=urllib.request.urlopen('https://mymanual.my.id/'+first); n=len(r.read()); print('fetched',first,n,'bytes in',round(time.time()-t,1),'s', r.headers.get('content-type'))
-          PY
+          for ua in "curl/8" "Dart/3.9 (dart:io)" "Python-urllib/3.12"; do
+            curl -sS -m 60 -A "$ua" -o /dev/null -w "$ua -> %{http_code} %{size_download} bytes %{time_total}s\n" https://mymanual.my.id/units/PC210-1OMO/OMM_PC210.sqlite
+          done
+          curl -sS -m 60 -A "Dart/3.9 (dart:io)" -H 'Range: bytes=0-99' -o /dev/null -w "range -> %{http_code} %{size_download}\n" https://mymanual.my.id/units/PC210-1OMO/OMM_PC210.sqlite
