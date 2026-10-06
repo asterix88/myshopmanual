@@ -86,6 +86,14 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}5_chat.png'));
 
+    await tester.tap(find.text('Spek').last);
+    for (var i = 0; i < 5; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}5b_spek.png'));
+
     // A manual not on the phone: read online or download.
     await tester.runAsync(() => store.deleteManuals([store.catalog.files.single.key]));
     await tester.tap(find.text('Unit').last);
