@@ -27,12 +27,12 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         toolbarHeight: 64,
         titleSpacing: 14,
-        shape: const Border(bottom: BorderSide(color: Color(0xFFE6E8EB))),
+        shape: Border(bottom: BorderSide(color: AppColors.line)),
         title: Row(
           children: [
             Image.asset('assets/images/logo.png', width: 42, height: 42),
             const SizedBox(width: 10),
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -63,19 +63,21 @@ class HomeScreen extends StatelessWidget {
               isLabelVisible: updateCount > 0,
               label: Text('$updateCount'),
               backgroundColor: const Color(0xFFE8541E),
-              child: const Icon(Icons.notifications, color: AppColors.navy, size: 26),
+              child: Icon(Icons.notifications, color: AppColors.navy, size: 26),
             ),
           ),
           PopupMenuButton<String>(
             tooltip: 'Lainnya',
-            icon: const Icon(Icons.more_vert, color: AppColors.navy),
+            icon: Icon(Icons.more_vert, color: AppColors.navy),
             onSelected: (value) => switch (value) {
               'report' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportScreen())),
               'admin' => _enterAdminCode(context, store),
+              'theme' => _chooseTheme(context, store),
               _ => _editServer(context, store),
             },
             itemBuilder: (_) => [
               const PopupMenuItem(value: 'server', child: Text('Alamat server')),
+              const PopupMenuItem(value: 'theme', child: Text('Tampilan (terang / gelap)')),
               const PopupMenuItem(value: 'report', child: Text('Laporan masalah')),
               PopupMenuItem(value: 'admin', child: Text(store.aiOwner ? 'Kode admin (aktif)' : 'Kode admin')),
             ],
@@ -105,6 +107,31 @@ class HomeScreen extends StatelessWidget {
 
   /// The admin code lifts the daily Tanya AI limit on this phone; the AI
   /// server checks it, so it is not stored in the app.
+  Future<void> _chooseTheme(BuildContext context, AppStore store) async {
+    final mode = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Tampilan'),
+        children: [
+          for (final (value, label) in const [
+            ('system', 'Ikuti pengaturan HP'),
+            ('light', 'Terang'),
+            ('dark', 'Gelap'),
+          ])
+            ListTile(
+              leading: Icon(
+                store.themeMode == value ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                color: AppColors.navy,
+              ),
+              title: Text(label),
+              onTap: () => Navigator.pop(context, value),
+            ),
+        ],
+      ),
+    );
+    if (mode != null) store.setThemeMode(mode);
+  }
+
   Future<void> _enterAdminCode(BuildContext context, AppStore store) async {
     final controller = TextEditingController();
     final code = await showDialog<String>(
@@ -193,7 +220,7 @@ class _OfflineBanner extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
       child: Row(
         children: [
-          const Icon(Icons.cloud_off, size: 18, color: AppColors.muted),
+          Icon(Icons.cloud_off, size: 18, color: AppColors.muted),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -201,9 +228,9 @@ class _OfflineBanner extends StatelessWidget {
               children: [
                 Text(
                   store.lastError ?? 'Tidak ada koneksi internet.',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
                 ),
-                const Text(
+                Text(
                   'Manual yang sudah diunduh tetap bisa dibuka.',
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
@@ -238,7 +265,7 @@ class _ContinueReading extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Lanjutkan membaca',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
           ),
@@ -327,7 +354,7 @@ class _MachineFolders extends StatelessWidget {
             'Jenis alat',
             trailing: Text(
               '${formatSize(store.usedBytes)} di HP',
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
           ),
           const SizedBox(height: 4),
@@ -350,7 +377,7 @@ class _MachineFolders extends StatelessWidget {
                         ? 'Sambungkan HP ke internet sekali untuk mengambil daftar manual.'
                         : 'Belum ada manual di server.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                style: TextStyle(fontSize: 13, color: AppColors.muted),
               ),
             ),
         ],
@@ -396,7 +423,7 @@ class _FolderCard extends StatelessWidget {
               children: [
                 Text(
                   machine.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppColors.navy,
@@ -405,17 +432,17 @@ class _FolderCard extends StatelessWidget {
                 ),
                 Text(
                   units.isEmpty ? 'belum ada model' : '${units.length} model unit',
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
                 if (hasUpdate)
-                  const Text(
+                  Text(
                     'Ada update manual',
-                    style: TextStyle(fontSize: 12, color: Color(0xFFC2410C), fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 12, color: AppColors.update, fontWeight: FontWeight.w600),
                   ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: Color(0xFF9AA0A6)),
+          Icon(Icons.chevron_right, color: AppColors.faint),
         ],
       ),
     );

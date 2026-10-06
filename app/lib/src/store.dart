@@ -128,6 +128,7 @@ class AppStore extends ChangeNotifier {
           e.key: (e.value as List).cast<int>(),
       };
       aiOwner = json['ai_owner'] as bool? ?? false;
+      themeMode = json['theme'] as String? ?? 'system';
       _aiDay = json['ai_day'] as String? ?? '';
       _aiAsked = json['ai_asked'] as int? ?? 0;
     }
@@ -158,6 +159,15 @@ class AppStore extends ChangeNotifier {
       _aiAsked = 0;
     }
     _aiAsked++;
+    _scheduleSave();
+    notifyListeners();
+  }
+
+  /// 'system' (follow the phone), 'light' or 'dark'.
+  String themeMode = 'system';
+
+  void setThemeMode(String mode) {
+    themeMode = mode;
     _scheduleSave();
     notifyListeners();
   }
@@ -194,6 +204,7 @@ class AppStore extends ChangeNotifier {
       'last_read': lastRead?.toJson(),
       'bookmarks': bookmarks,
       'ai_owner': aiOwner,
+      'theme': themeMode,
       'ai_day': _aiDay,
       'ai_asked': _aiAsked,
     };

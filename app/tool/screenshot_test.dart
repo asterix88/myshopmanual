@@ -33,6 +33,9 @@ Future<void> loadFonts() async {
 }
 
 void main() {
+  // SHOTS_THEME=dark renders the dark versions (file names start with d_).
+  final themeMode = Platform.environment['SHOTS_THEME'] ?? 'light';
+  final prefix = themeMode == 'dark' ? 'd_' : '';
   testWidgets('screens', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 2.75;
@@ -44,24 +47,25 @@ void main() {
       await store.setServerUrl('https://example.test');
       await store.download(store.catalog.files.single, unitName: 'TEST1-1');
       store.setLastRead(store.catalog.files.single.key, 2, section: 'Hydraulic oil filter clogging caution lamp');
+      store.setThemeMode(themeMode);
     });
 
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pumpAndSettle();
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/1_home.png'));
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}1_home.png'));
 
     await tester.tap(find.text('EXCAVATOR'));
     await tester.pumpAndSettle();
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/1b_excavator.png'));
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}1b_excavator.png'));
     await tester.tap(find.text('TEST1-1'));
     await tester.pumpAndSettle();
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/2_unit.png'));
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}2_unit.png'));
 
     await tester.tap(find.text('Edit'));
     await tester.pumpAndSettle();
     await tester.tap(find.byType(Checkbox).first);
     await tester.pumpAndSettle();
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/3_edit.png'));
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}3_edit.png'));
     await tester.tap(find.byTooltip('Selesai edit'));
     await tester.pumpAndSettle();
     await tester.pageBack();
@@ -76,11 +80,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 800)));
     await tester.pumpAndSettle();
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/4_search.png'));
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}4_search.png'));
 
     await tester.tap(find.text('Tanya AI').last);
     await tester.pumpAndSettle();
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/5_chat.png'));
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}5_chat.png'));
 
     // A manual not on the phone: read online or download.
     await tester.runAsync(() => store.deleteManuals([store.catalog.files.single.key]));
@@ -90,7 +94,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('TEST1-1'));
     await tester.pumpAndSettle();
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/6_unit_online.png'));
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}6_unit_online.png'));
   });
 
   testWidgets('chat answer', (tester) async {
@@ -135,7 +139,7 @@ void main() {
     });
     await tester.pumpWidget(StoreScope(
       store: store,
-      child: MaterialApp(theme: buildTheme(), home: ChatScreen(client: worker)),
+      child: MaterialApp(theme: buildTheme(dark: themeMode == 'dark'), home: ChatScreen(client: worker)),
     ));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Lampu filter oli hidrolik menyala, apa yang harus dilakukan?');
@@ -145,6 +149,6 @@ void main() {
       await tester.pump();
     }
     await tester.pumpAndSettle();
-    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/7_chat_answer.png'));
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}7_chat_answer.png'));
   });
 }

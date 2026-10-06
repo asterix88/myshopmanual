@@ -28,7 +28,7 @@ class _ReportScreenState extends State<ReportScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              const Text(
+              Text(
                 'Kalau aplikasi tertutup sendiri, salin laporan ini dan kirim ke admin.',
                 style: TextStyle(color: AppColors.muted),
               ),

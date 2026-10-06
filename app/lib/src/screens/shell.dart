@@ -100,9 +100,9 @@ class _NavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
-        border: Border(top: BorderSide(color: Color(0xFFE6E8EB))),
+        border: Border(top: BorderSide(color: AppColors.line)),
       ),
       child: SafeArea(
         top: false,
@@ -137,7 +137,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? AppColors.navy : const Color(0xFF8A9097);
+    final color = active ? AppColors.navy : AppColors.tabInactive;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

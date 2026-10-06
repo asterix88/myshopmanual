@@ -38,12 +38,12 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Update manual', style: TextStyle(color: AppColors.navy, fontWeight: FontWeight.w700)),
+            Text('Update manual', style: TextStyle(color: AppColors.navy, fontWeight: FontWeight.w700)),
             Text(
               store.online == true && checked != null
                   ? 'Dicek dari server · ${_time(checked)}'
                   : 'Belum tersambung ke server',
-              style: const TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
+              style: TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
             ),
           ],
         ),
@@ -58,7 +58,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             if (store.online == false)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(bottom: 12),
                 child: Text(
                   'Tidak ada sinyal. Update dicek otomatis saat HP tersambung internet.',
@@ -76,7 +76,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
                   '${_shown.length} perubahan file manual di server.',
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ),
               for (final update in _shown)
@@ -112,15 +112,15 @@ class _UpdateCard extends StatelessWidget {
 
     final (pill, description) = switch (update.kind) {
       UpdateKind.added => (
-          const Pill('MANUAL BARU', background: AppColors.greenSoft, foreground: AppColors.green),
+          Pill('MANUAL BARU', background: AppColors.greenSoft, foreground: AppColors.green),
           '${update.unitName} · ${formatSize(file.downloadSize)}',
         ),
       UpdateKind.newVersion => (
-          const Pill('VERSI BARU', background: AppColors.orangeSoft, foreground: AppColors.orangeText),
+          Pill('VERSI BARU', background: AppColors.orangeSoft, foreground: AppColors.orangeText),
           '${update.unitName} · file di HP sudah lama · unduh ulang ${formatSize(file.downloadSize)}',
         ),
       UpdateKind.withdrawn => (
-          const Pill('DITARIK', background: AppColors.greySoft, foreground: AppColors.ink),
+          Pill('DITARIK', background: AppColors.greySoft, foreground: AppColors.ink),
           'Sudah tidak ada di server. File yang sudah diunduh tetap bisa dibuka.',
         ),
     };
@@ -131,7 +131,7 @@ class _UpdateCard extends StatelessWidget {
     } else if (update.kind == UpdateKind.withdrawn) {
       action = null;
     } else if (upToDate) {
-      action = const Align(
+      action = Align(
         alignment: Alignment.centerLeft,
         child: Pill('Diunduh', background: AppColors.greySoft, foreground: AppColors.ink),
       );
@@ -146,7 +146,7 @@ class _UpdateCard extends StatelessWidget {
           : OutlinedButton(
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(40),
-                side: const BorderSide(color: AppColors.navy, width: 1.5),
+                side: BorderSide(color: AppColors.navy, width: 1.5),
                 foregroundColor: AppColors.navy,
               ),
               onPressed: () => _download(context, store),
@@ -164,12 +164,12 @@ class _UpdateCard extends StatelessWidget {
               pill,
               const Spacer(),
               if (file.updatedAt != null)
-                Text(_date(file.updatedAt!), style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                Text(_date(file.updatedAt!), style: TextStyle(fontSize: 11, color: AppColors.muted)),
             ],
           ),
           const SizedBox(height: 8),
           Text(file.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-          Text(description, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+          Text(description, style: TextStyle(fontSize: 12, color: AppColors.muted)),
           if (action != null) ...[const SizedBox(height: 10), action],
         ],
       ),

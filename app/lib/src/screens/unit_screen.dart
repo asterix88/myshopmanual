@@ -65,7 +65,7 @@ class _UnitScreenState extends State<UnitScreen> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
           children: [
             if (_editing)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.fromLTRB(4, 0, 4, 12),
                 child: Text(
                   'Pilih file yang ingin dihapus dari HP. File bisa diunduh lagi kapan saja.',
@@ -85,7 +85,7 @@ class _UnitScreenState extends State<UnitScreen> {
                     filled: true,
                     fillColor: AppColors.surface,
                     hintText: widget.folder.isEmpty ? 'Cari file di ${unit.name}' : 'Cari file di ${widget.folder.last}',
-                    prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.muted),
+                    prefixIcon: Icon(Icons.search, size: 20, color: AppColors.muted),
                     suffixIcon: query.isEmpty
                         ? null
                         : IconButton(
@@ -163,7 +163,7 @@ class _UnitScreenState extends State<UnitScreen> {
             if (widget.folder.isNotEmpty || unit.kind.isNotEmpty)
               Text(
                 widget.folder.isEmpty ? unit.kind : [unit.name, ...widget.folder.take(widget.folder.length - 1)].join(' / '),
-                style: const TextStyle(fontSize: 12, color: AppColors.muted, fontWeight: FontWeight.w400),
+                style: TextStyle(fontSize: 12, color: AppColors.muted, fontWeight: FontWeight.w400),
               ),
           ],
         ),
@@ -257,10 +257,10 @@ class _FileCard extends StatelessWidget {
                     Text(file.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                     Text(
                       '${file.pages} halaman · ${formatSize(file.downloadSize)}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                      style: TextStyle(fontSize: 12, color: AppColors.muted),
                     ),
                     if (!file.searchable)
-                      const Text(
+                      Text(
                         'Gambar atau hasil scan: tidak bisa dicari',
                         style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
@@ -275,7 +275,7 @@ class _FileCard extends StatelessWidget {
               padding: const EdgeInsets.only(top: 6),
               child: Text(
                 'Terunduh ${formatSize(partial)} dari ${formatSize(file.downloadSize)}, bisa dilanjutkan',
-                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
               ),
             ),
           const SizedBox(height: 8),
@@ -318,7 +318,7 @@ class _FileCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         visualDensity: VisualDensity.compact,
-                        side: const BorderSide(color: AppColors.navy, width: 1.2),
+                        side: BorderSide(color: AppColors.navy, width: 1.2),
                         foregroundColor: AppColors.navy,
                         shape: const StadiumBorder(),
                       ),
@@ -343,7 +343,7 @@ class _FileCard extends StatelessWidget {
                         : lastPage != null
                             ? 'Terakhir dibuka: hlm $lastPage'
                             : 'Siap dibuka offline',
-                    style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
                   ),
                 ),
                 if (hasNewVersion)
@@ -351,7 +351,7 @@ class _FileCard extends StatelessWidget {
                     onPressed: () => _download(context, store),
                     child: const Text('Perbarui', style: TextStyle(fontWeight: FontWeight.w600)),
                   ),
-                const Pill('Diunduh', background: AppColors.greySoft, foreground: AppColors.ink),
+                Pill('Diunduh', background: AppColors.greySoft, foreground: AppColors.ink),
               ],
             ),
         ],
@@ -382,7 +382,7 @@ class _DownloadingRow extends StatelessWidget {
       children: [
         Text(
           'Mengunduh ${formatSize(progress.received)} dari ${formatSize(progress.total)}',
-          style: const TextStyle(fontSize: 12, color: AppColors.muted),
+          style: TextStyle(fontSize: 12, color: AppColors.muted),
         ),
         Row(
           children: [
@@ -421,7 +421,7 @@ class _SelectableFile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = enabled ? AppColors.ink : const Color(0xFF9AA0A6);
+    final color = enabled ? AppColors.ink : AppColors.faint;
     return AppCard(
       color: selected ? AppColors.navySoft : null,
       onTap: enabled ? () => onChanged(!selected) : null,
@@ -469,7 +469,7 @@ class _FolderCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
       child: Row(
         children: [
-          const Icon(Icons.folder, size: 34, color: AppColors.orange),
+          Icon(Icons.folder, size: 34, color: AppColors.orange),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -485,14 +485,14 @@ class _FolderCard extends StatelessWidget {
                         ].join(' · '),
                   style: TextStyle(
                     fontSize: 12,
-                    color: hasUpdate ? const Color(0xFFC2410C) : AppColors.muted,
+                    color: hasUpdate ? AppColors.update : AppColors.muted,
                     fontWeight: hasUpdate ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: Color(0xFF9AA0A6)),
+          Icon(Icons.chevron_right, color: AppColors.faint),
         ],
       ),
     );

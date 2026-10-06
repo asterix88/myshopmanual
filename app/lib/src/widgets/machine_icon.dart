@@ -26,8 +26,8 @@ class _MachinePainter extends CustomPainter {
 
   final Machine machine;
 
-  static final _body = Paint()..color = AppColors.orange;
-  static final _dark = Paint()..color = AppColors.navy;
+  static final _body = Paint()..color = const Color(0xFFF08A1C);
+  static final _dark = Paint()..color = const Color(0xFF1E3A64);
   static final _glass = Paint()..color = const Color(0xFFDDE6F3);
   static final _wheel = Paint()..color = const Color(0xFF8FA3C0);
 

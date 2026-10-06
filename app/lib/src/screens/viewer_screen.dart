@@ -184,7 +184,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
     final section = _sectionFor(_page);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE4E6EA),
+      backgroundColor: AppColors.viewerBackground,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,7 +192,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
             Text(file.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15)),
             Text(
               [store.unitNameOf(file), file.type.label, if (_online) 'online'].join(' · '),
-              style: const TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
+              style: TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
             ),
           ],
         ),
@@ -246,7 +246,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   /// Built once: the viewer re-lays out whenever its params change.
   late final PdfViewerParams _viewerParams = PdfViewerParams(
-        backgroundColor: const Color(0xFFE4E6EA),
+        backgroundColor: AppColors.viewerBackground,
         margin: 8,
         layoutPages: _fixedSlotLayout,
         sizeDelegateProvider: const _FixedSlotSizeDelegateProvider(),
@@ -265,7 +265,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
               const CircularProgressIndicator(),
               if (_online) ...[
                 const SizedBox(height: 14),
-                const Text('Membuka dari server…', style: TextStyle(fontSize: 13, color: AppColors.muted)),
+                Text('Membuka dari server…', style: TextStyle(fontSize: 13, color: AppColors.muted)),
               ],
             ],
           ),
@@ -334,12 +334,12 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 decoration: InputDecoration(
                   isDense: true,
                   filled: true,
-                  fillColor: const Color(0xFFF4F5F7),
+                  fillColor: AppColors.field,
                   // Online, only pages already shown have been measured and can be searched.
                   hintText: _online ? 'Cari di halaman yang sudah dimuat' : 'Cari kata di file ini',
-                  prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.muted),
+                  prefixIcon: Icon(Icons.search, size: 18, color: AppColors.muted),
                   suffixText: status,
-                  suffixStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+                  suffixStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                 ),
               ),
@@ -454,11 +454,11 @@ class _PageBarState extends State<_PageBar> {
                   widget.section ?? '',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ),
               const SizedBox(width: 10),
-              const Text('Hlm', style: TextStyle(fontSize: 13, color: AppColors.muted)),
+              Text('Hlm', style: TextStyle(fontSize: 13, color: AppColors.muted)),
               const SizedBox(width: 6),
               SizedBox(
                 width: 64,
@@ -475,15 +475,15 @@ class _PageBarState extends State<_PageBar> {
                   decoration: InputDecoration(
                     isDense: true,
                     filled: true,
-                    fillColor: const Color(0xFFF4F5F7),
+                    fillColor: AppColors.field,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderSide: BorderSide(color: AppColors.border),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderSide: BorderSide(color: AppColors.border),
                     ),
                   ),
                 ),
@@ -531,7 +531,7 @@ class _BookmarksSheetState extends State<_BookmarksSheet> {
       builder: (context, scrollController) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(20, 0, 20, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -591,7 +591,7 @@ class _BookmarksSheetState extends State<_BookmarksSheet> {
             child: Container(
               constraints: const BoxConstraints(minHeight: 46),
               padding: EdgeInsets.only(left: 8.0 + depth * 18, right: 4),
-              decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.divider))),
+              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.divider))),
               child: Row(
                 children: [
                   Expanded(
@@ -608,7 +608,7 @@ class _BookmarksSheetState extends State<_BookmarksSheet> {
                     ),
                   ),
                   if (node.dest != null)
-                    Text('${node.dest!.pageNumber}', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                    Text('${node.dest!.pageNumber}', style: TextStyle(fontSize: 12, color: AppColors.muted)),
                   if (node.children.isNotEmpty)
                     IconButton(
                       tooltip: _expanded.contains(node) ? 'Tutup' : 'Buka',
@@ -647,13 +647,13 @@ class _BookmarksSheetState extends State<_BookmarksSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
-                const Icon(Icons.bookmark, color: AppColors.orange, size: 20),
+                Icon(Icons.bookmark, color: AppColors.orange, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(widget.sectionFor(page) ?? 'Halaman $page',
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                 ),
-                Text('hlm $page', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                Text('hlm $page', style: TextStyle(fontSize: 12, color: AppColors.muted)),
               ],
             ),
           ),

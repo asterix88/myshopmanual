@@ -104,7 +104,7 @@ class HighlightedSnippet extends StatelessWidget {
       }
       spans.add(TextSpan(
         text: part.substring(0, end),
-        style: const TextStyle(backgroundColor: AppColors.highlight, fontWeight: FontWeight.w600),
+        style: TextStyle(backgroundColor: AppColors.highlight, fontWeight: FontWeight.w600),
       ));
       spans.add(TextSpan(text: part.substring(end + 1)));
     }
@@ -112,7 +112,7 @@ class HighlightedSnippet extends StatelessWidget {
       TextSpan(children: spans),
       maxLines: maxLines,
       overflow: TextOverflow.ellipsis,
-      style: const TextStyle(fontSize: 12.5, height: 1.5, color: Color(0xFF3A3F45)),
+      style: TextStyle(fontSize: 12.5, height: 1.5, color: AppColors.inkSoft),
     );
   }
 }
@@ -144,7 +144,7 @@ class EmptyState extends StatelessWidget {
             Text(
               message!,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, color: AppColors.muted),
+              style: TextStyle(fontSize: 13, color: AppColors.muted),
             ),
           ],
           if (action != null) ...[const SizedBox(height: 16), action!],
