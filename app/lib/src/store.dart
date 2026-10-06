@@ -127,8 +127,49 @@ class AppStore extends ChangeNotifier {
         for (final e in (json['bookmarks'] as Map<String, dynamic>? ?? {}).entries)
           e.key: (e.value as List).cast<int>(),
       };
+      aiOwner = json['ai_owner'] as bool? ?? false;
+      _aiDay = json['ai_day'] as String? ?? '';
+      _aiAsked = json['ai_asked'] as int? ?? 0;
     }
   }
+
+  /// Questions to Tanya AI per day on this phone, to keep the AI bill small.
+  static const aiDailyLimit = 10;
+
+  /// The admin's phone (unlocked with the admin code) has no daily limit.
+  bool aiOwner = false;
+  String _aiDay = '';
+  int _aiAsked = 0;
+
+  static String _today() => DateTime.now().toIso8601String().substring(0, 10);
+
+  /// Questions left today, or null when there is no limit.
+  int? get aiQuestionsLeft {
+    if (aiOwner) return null;
+    final asked = _aiDay == _today() ? _aiAsked : 0;
+    return (aiDailyLimit - asked).clamp(0, aiDailyLimit);
+  }
+
+  /// Counts one answered question against today's limit.
+  void countAiQuestion() {
+    final today = _today();
+    if (_aiDay != today) {
+      _aiDay = today;
+      _aiAsked = 0;
+    }
+    _aiAsked++;
+    _scheduleSave();
+    notifyListeners();
+  }
+
+  void setAiOwner(bool owner) {
+    aiOwner = owner;
+    _scheduleSave();
+    notifyListeners();
+  }
+
+  /// Where the Tanya AI conversation is kept between app starts.
+  String get chatHistoryPath => p.join(_root.path, 'chat.json');
 
   Timer? _saveTimer;
 
@@ -152,6 +193,9 @@ class AppStore extends ChangeNotifier {
       'seen_initialized': _seenInitialized,
       'last_read': lastRead?.toJson(),
       'bookmarks': bookmarks,
+      'ai_owner': aiOwner,
+      'ai_day': _aiDay,
+      'ai_asked': _aiAsked,
     };
     return jsonEncode(json);
   }

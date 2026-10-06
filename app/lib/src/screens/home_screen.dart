@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
+import '../ai.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -66,12 +68,15 @@ class HomeScreen extends StatelessWidget {
           PopupMenuButton<String>(
             tooltip: 'Lainnya',
             icon: const Icon(Icons.more_vert, color: AppColors.navy),
-            onSelected: (value) => value == 'report'
-                ? Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportScreen()))
-                : _editServer(context, store),
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'server', child: Text('Alamat server')),
-              PopupMenuItem(value: 'report', child: Text('Laporan masalah')),
+            onSelected: (value) => switch (value) {
+              'report' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportScreen())),
+              'admin' => _enterAdminCode(context, store),
+              _ => _editServer(context, store),
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'server', child: Text('Alamat server')),
+              const PopupMenuItem(value: 'report', child: Text('Laporan masalah')),
+              PopupMenuItem(value: 'admin', child: Text(store.aiOwner ? 'Kode admin (aktif)' : 'Kode admin')),
             ],
           ),
           const SizedBox(width: 4),
@@ -95,6 +100,59 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// The admin code lifts the daily Tanya AI limit on this phone; the AI
+  /// server checks it, so it is not stored in the app.
+  Future<void> _enterAdminCode(BuildContext context, AppStore store) async {
+    final controller = TextEditingController();
+    final code = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Kode admin'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              store.aiOwner
+                  ? 'HP ini sudah tanpa batas pertanyaan Tanya AI.'
+                  : 'Masukkan kode admin agar HP ini tanpa batas ${AppStore.aiDailyLimit} pertanyaan per hari.',
+              style: const TextStyle(fontSize: 13),
+            ),
+            if (!store.aiOwner)
+              TextField(controller: controller, autofocus: true, obscureText: true),
+          ],
+        ),
+        actions: [
+          if (store.aiOwner)
+            TextButton(
+              onPressed: () {
+                store.setAiOwner(false);
+                Navigator.pop(context);
+              },
+              child: const Text('Matikan'),
+            ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Tutup')),
+          if (!store.aiOwner)
+            FilledButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Cek')),
+        ],
+      ),
+    );
+    if (code == null || code.trim().isEmpty || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final client = http.Client();
+    String message;
+    try {
+      final ok = await checkOwnerCode(client, code.trim());
+      if (ok) store.setAiOwner(true);
+      message = ok ? 'Kode benar. Tanya AI tanpa batas di HP ini.' : 'Kode salah.';
+    } on AiException catch (e) {
+      message = e.message;
+    } finally {
+      client.close();
+    }
+    messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _editServer(BuildContext context, AppStore store) async {
