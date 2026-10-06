@@ -2,6 +2,8 @@ export interface Env {
   GROQ_API_KEY?: string;
   DEEPSEEK_API_KEY?: string;
   APP_TOKEN?: string;
+  // The admin code that lifts the app's daily question limit on a phone.
+  OWNER_CODE?: string;
   MODEL: string;
   VISION_MODEL: string;
   API_URL: string;
@@ -101,6 +103,16 @@ export default {
     const url = new URL(request.url);
     if (request.method === "GET" && url.pathname === "/") {
       return json({ ok: true, model: env.MODEL });
+    }
+    if (request.method === "POST" && url.pathname === "/owner") {
+      // The app asks once whether a code typed in its menu is the admin code.
+      let code = "";
+      try {
+        code = String(((await request.json()) as { code?: unknown }).code ?? "");
+      } catch {
+        return json({ error: "bad_request" }, 400);
+      }
+      return json({ ok: !!env.OWNER_CODE && code.trim() === env.OWNER_CODE.trim() });
     }
     if (request.method !== "POST" || url.pathname !== "/chat") {
       return json({ error: "not_found" }, 404);

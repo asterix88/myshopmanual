@@ -162,6 +162,87 @@ void main() {
     store.dispose();
   });
 
+  test('the chat is kept on the phone and only recent questions go to the AI', () async {
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    await store.download(store.catalog.files.single, unitName: 'TEST1-1');
+    store.setAiOwner(true);
+
+    final requests = <Map<String, dynamic>>[];
+    final worker = MockClient((request) async {
+      requests.add(jsonDecode(request.body) as Map<String, dynamic>);
+      final n = requests.length;
+      return http.Response(
+          jsonEncode({
+            'finish_reason': 'stop',
+            'message': {'role': 'assistant', 'content': 'Jawaban $n [S1].'},
+          }),
+          200);
+    });
+    var chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'));
+    final entries = [ChatEntry.user('Pertanyaan 1'), await chat.ask('Pertanyaan 1')];
+    await chat.save(entries);
+
+    // The app is opened again: the conversation is still there and carries on.
+    chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'));
+    final restored = await chat.load();
+    expect(restored.map((e) => (e.fromUser, e.text)), [(true, 'Pertanyaan 1'), (false, 'Jawaban 1.')]);
+    for (var i = 2; i <= 7; i++) {
+      await chat.ask('Pertanyaan $i');
+    }
+    final sent = (requests.last['messages'] as List).cast<Map<String, dynamic>>();
+    final questions = [for (final m in sent) if (m['role'] == 'user') m['content']];
+    expect(questions, ['Pertanyaan 3', 'Pertanyaan 4', 'Pertanyaan 5', 'Pertanyaan 6', 'Pertanyaan 7']);
+
+    // A new conversation forgets it on the phone too.
+    await chat.clear();
+    expect(await AiChat(store: store, client: worker).load(), isEmpty);
+    store.dispose();
+  });
+
+  test('each phone gets ten questions a day unless the admin code is set', () async {
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    final worker = MockClient((request) async => http.Response(
+        jsonEncode({
+          'finish_reason': 'stop',
+          'message': {'role': 'assistant', 'content': 'Oke.'},
+        }),
+        200));
+    final chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'));
+    for (var i = 0; i < AppStore.aiDailyLimit; i++) {
+      expect(store.aiQuestionsLeft, AppStore.aiDailyLimit - i);
+      await chat.ask('Tanya $i');
+    }
+    expect(store.aiQuestionsLeft, 0);
+    await expectLater(
+      chat.ask('Satu lagi'),
+      throwsA(isA<AiException>().having((e) => e.message, 'message', contains('sudah habis'))),
+    );
+
+    // The admin's phone has no limit.
+    store.setAiOwner(true);
+    expect(store.aiQuestionsLeft, isNull);
+    await chat.ask('Admin bebas');
+    store.dispose();
+
+    // The count survives a restart.
+    final reopened = await AppStore.open(root: root, client: fixtureServer());
+    expect(reopened.aiOwner, isTrue);
+    reopened.setAiOwner(false);
+    expect(reopened.aiQuestionsLeft, 0);
+    reopened.dispose();
+  });
+
+  test('the admin code is checked by the AI server', () async {
+    final server = MockClient((request) async {
+      final code = (jsonDecode(request.body) as Map)['code'];
+      return http.Response(jsonEncode({'ok': code == 'rahasia'}), 200);
+    });
+    expect(await checkOwnerCode(server, 'rahasia', endpoint: Uri.parse('https://ai.test/owner')), isTrue);
+    expect(await checkOwnerCode(server, 'salah', endpoint: Uri.parse('https://ai.test/owner')), isFalse);
+  });
+
   test('a Worker error shows its message', () async {
     final store = await AppStore.open(root: root, client: fixtureServer());
     final worker = MockClient((_) async => http.Response(

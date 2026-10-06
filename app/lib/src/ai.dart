@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
@@ -18,6 +19,20 @@ const aiUrl = _buildAiUrl == '' ? 'https://ai.mymanual.my.id' : _buildAiUrl;
 /// Optional shared token the Worker checks (its APP_TOKEN secret).
 const _aiToken = String.fromEnvironment('AI_TOKEN');
 
+/// Asks the Worker whether [code] is the admin code (its OWNER_CODE secret),
+/// which lifts the daily question limit on this phone.
+Future<bool> checkOwnerCode(http.Client client, String code, {Uri? endpoint}) async {
+  try {
+    final response = await client
+        .post(endpoint ?? Uri.parse('$aiUrl/owner'),
+            headers: {'content-type': 'application/json'}, body: jsonEncode({'code': code}))
+        .timeout(const Duration(seconds: 20));
+    return response.statusCode == 200 && (jsonDecode(response.body) as Map)['ok'] == true;
+  } on Exception {
+    throw AiException('Tidak bisa terhubung ke server. Periksa sinyal internet.');
+  }
+}
+
 /// A manual page the AI was shown, numbered so its answer can cite it.
 class AiSource {
   const AiSource({required this.id, required this.file, required this.unitName, required this.page});
@@ -26,6 +41,15 @@ class AiSource {
   final ManualFile file;
   final String unitName;
   final int page;
+
+  Map<String, dynamic> toJson() => {'id': id, 'file': file.key, 'unit': unitName, 'page': page};
+
+  /// Null when the manual is no longer on the server or the phone.
+  static AiSource? fromJson(AppStore store, Map<String, dynamic> json) {
+    final file = store.fileByKey(json['file'] as String? ?? '');
+    if (file == null) return null;
+    return AiSource(id: json['id'] as int, file: file, unitName: json['unit'] as String, page: json['page'] as int);
+  }
 }
 
 /// What the user sees of one exchange.
@@ -48,6 +72,24 @@ class ChatEntry {
   /// AI chose to show with the answer.
   final List<AiSource> pictures;
   final bool failed;
+
+  Map<String, dynamic> toJson() => {
+        'user': fromUser,
+        'text': text,
+        if (sources.isNotEmpty) 'sources': [for (final s in sources) s.toJson()],
+        if (pictures.isNotEmpty) 'pictures': [for (final s in pictures) s.toJson()],
+        if (failed) 'failed': true,
+      };
+
+  static ChatEntry fromJson(AppStore store, Map<String, dynamic> json) {
+    final text = json['text'] as String? ?? '';
+    if (json['user'] == true) return ChatEntry.user(text);
+    List<AiSource> list(String key) => [
+          for (final s in (json[key] as List? ?? const [])) ?AiSource.fromJson(store, (s as Map).cast<String, dynamic>()),
+        ];
+    return ChatEntry.assistant(text,
+        sources: list('sources'), pictures: list('pictures'), failed: json['failed'] == true);
+  }
 }
 
 class AiException implements Exception {
@@ -101,7 +143,11 @@ class AiChat {
 
   /// Asks [question]; [onStatus] reports what is happening while it works.
   Future<ChatEntry> ask(String question, {void Function(String status)? onStatus}) async {
+    if (store.aiQuestionsLeft == 0) {
+      throw AiException('Jatah ${AppStore.aiDailyLimit} pertanyaan hari ini sudah habis. Coba lagi besok.');
+    }
     _dropOldPictures();
+    _keepRecentQuestions();
     _views = 0;
     _messages.add({'role': 'user', 'content': question});
     Diagnostics.log('ask (${question.length} chars, ${_messages.length} messages)');
@@ -134,7 +180,10 @@ class AiChat {
         if (toolCalls.isNotEmpty) 'tool_calls': toolCalls,
       });
 
-      if (toolCalls.isEmpty) return _answer(message['content'] as String? ?? '');
+      if (toolCalls.isEmpty) {
+        store.countAiQuestion();
+        return _answer(message['content'] as String? ?? '');
+      }
       final pictures = <Map<String, dynamic>>[];
       for (final call in toolCalls) {
         final function = (call['function'] as Map).cast<String, dynamic>();
@@ -165,6 +214,7 @@ class AiChat {
         });
       }
     }
+    store.countAiQuestion();
     return ChatEntry.assistant(
       'AI belum menemukan jawabannya di manual. Coba tanyakan dengan lebih spesifik.',
       failed: true,
@@ -231,7 +281,7 @@ class AiChat {
     for (final p in pages) {
       final file = store.fileByKey(p.fileKey)!;
       final unitName = store.unitNameOf(file);
-      final id = _sources.length + 1;
+      final id = _nextSourceId();
       _sources[id] = AiSource(id: id, file: file, unitName: unitName, page: p.page);
       // Kept short: free tiers limit tokens per minute.
       final text = p.text.length > 1200 ? '${p.text.substring(0, 1200)}…' : p.text;
@@ -285,7 +335,7 @@ class AiChat {
     // Looking at a part of a page already seen keeps the same source id, so
     // the answer cites and shows that page once.
     final seen = _sources.values.where((s) => s.file.key == file!.key && s.page == page).firstOrNull;
-    final id = seen?.id ?? _sources.length + 1;
+    final id = seen?.id ?? _nextSourceId();
     _sources[id] ??= AiSource(id: id, file: file, unitName: unitName, page: page);
     final label = '[S$id] $unitName · ${file.title} · page $page${region == 'full' ? '' : ' ($region part)'}';
     pictures
@@ -305,6 +355,79 @@ class AiChat {
     final shown = sheets.take(40).join(', ');
     return ' In this manual, pages $shown${sheets.length > 40 ? ' and more' : ''} are large drawing sheets '
         '(much bigger than its other pages).';
+  }
+
+  /// Questions the AI still sees from earlier in the conversation. The whole
+  /// history is sent with every question, so keeping it short keeps answers
+  /// fast and the AI bill small even when the chat is kept for days.
+  static const rememberedQuestions = 5;
+
+  void _keepRecentQuestions() {
+    final starts = [
+      for (final (i, m) in _messages.indexed)
+        if (m['role'] == 'user' && m['content'] is String && !(m['content'] as String).startsWith('Page pictures')) i,
+    ];
+    if (starts.length < rememberedQuestions) return;
+    _messages.removeRange(0, starts[starts.length - rememberedQuestions + 1]);
+    // Pages only the forgotten questions used are not needed any more.
+    final used = {
+      for (final m in _messages)
+        for (final match in RegExp(r'S(\d+)').allMatches(jsonEncode(m['content'] ?? ''))) int.parse(match[1]!),
+    };
+    _sources.removeWhere((id, _) => !used.contains(id));
+  }
+
+  int _nextSourceId() => _sources.keys.fold(0, (a, b) => a > b ? a : b) + 1;
+
+  /// Most chat bubbles kept on the phone; older ones are dropped.
+  static const keptEntries = 60;
+
+  /// Saves [entries] (what the chat shows) and what the AI needs to carry on,
+  /// so the conversation is still there the next time the app opens.
+  Future<void> save(List<ChatEntry> entries) async {
+    _dropOldPictures();
+    final file = File(store.chatHistoryPath);
+    final json = jsonEncode({
+      'entries': [for (final e in entries.skip(entries.length > keptEntries ? entries.length - keptEntries : 0)) e.toJson()],
+      'messages': _messages,
+      'sources': [for (final s in _sources.values) s.toJson()],
+    });
+    final part = File('${file.path}.part');
+    await part.writeAsString(json);
+    await part.rename(file.path);
+  }
+
+  /// Loads the saved conversation; returns the chat bubbles to show.
+  Future<List<ChatEntry>> load() async {
+    final file = File(store.chatHistoryPath);
+    try {
+      if (!await file.exists()) return [];
+      final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      _messages
+        ..clear()
+        ..addAll([for (final m in json['messages'] as List? ?? const []) (m as Map).cast<String, dynamic>()]);
+      final sources = [
+        for (final s in json['sources'] as List? ?? const []) ?AiSource.fromJson(store, (s as Map).cast<String, dynamic>()),
+      ];
+      _sources
+        ..clear()
+        ..addAll({for (final source in sources) source.id: source});
+      return [
+        for (final e in json['entries'] as List? ?? const []) ChatEntry.fromJson(store, (e as Map).cast<String, dynamic>()),
+      ];
+    } on Object catch (e) {
+      // A damaged history starts a new conversation rather than breaking the tab.
+      Diagnostics.log('chat history unreadable: $e');
+      return [];
+    }
+  }
+
+  /// Forgets the conversation, on the phone too.
+  Future<void> clear() async {
+    _messages.clear();
+    _sources.clear();
+    final file = File(store.chatHistoryPath);
+    if (await file.exists()) await file.delete();
   }
 
   /// Page pictures from earlier questions are dropped from the history (they

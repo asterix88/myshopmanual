@@ -67,6 +67,9 @@ Settings > Secrets and variables > Actions > New repository secret:
   diisi, AI menjawab pakai DeepSeek dulu; kalau saldo habis atau DeepSeek bermasalah, otomatis
   pindah ke Groq gratis. Setelah menambah atau mengganti secret ini, jalankan ulang workflow
   "Deploy AI server" (tab Actions > Deploy AI server > Run workflow).
+- `OWNER_CODE` (opsional): kode admin bebas (misalnya 8 huruf/angka acak). Setiap HP dibatasi 10 pertanyaan
+  Tanya AI per hari; di HP yang memasukkan kode ini lewat menu ⋮ > Kode admin, batasnya hilang. Setelah
+  menambah atau mengganti secret ini, jalankan ulang workflow "Deploy AI server".
 - `CLOUDFLARE_API_TOKEN`: dari Cloudflare, My Profile > API Tokens > Create Token > template
   "Edit Cloudflare Workers", tambahkan izin Zone > DNS > Edit untuk zona `mymanual.my.id`.
 - `CLOUDFLARE_ACCOUNT_ID`: ID akun di halaman Workers & Pages Cloudflare (kolom kanan).

@@ -3,7 +3,8 @@ name: Deploy AI server
 # Publishes ai-worker/ to Cloudflare (ai.mymanual.my.id) whenever it changes
 # on main, so nothing has to be installed or run on a PC.
 # Needs repository secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and
-# GROQ_API_KEY; DEEPSEEK_API_KEY is optional (without it DeepSeek is skipped).
+# GROQ_API_KEY; DEEPSEEK_API_KEY is optional (without it DeepSeek is skipped),
+# and so is OWNER_CODE (the admin code that lifts the app's daily limit).
 on:
   push:
     branches: [main]
@@ -19,8 +20,10 @@ jobs:
         env:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           DEEPSEEK: ${{ secrets.DEEPSEEK_API_KEY }}
+          OWNER: ${{ secrets.OWNER_CODE }}
         run: |
           if [ -n "$DEEPSEEK" ]; then echo "deepseek=true" >> "$GITHUB_OUTPUT"; fi
+          if [ -n "$OWNER" ]; then echo "owner=true" >> "$GITHUB_OUTPUT"; fi
           if [ -z "$TOKEN" ]; then
             echo "::warning::CLOUDFLARE_API_TOKEN is not set; skipping the AI server deploy."
             echo "ready=false" >> "$GITHUB_OUTPUT"
@@ -58,3 +61,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: printf '%s' "$DEEPSEEK_API_KEY" | npx wrangler secret put DEEPSEEK_API_KEY
+      - name: Upload the admin code
+        if: steps.check.outputs.ready == 'true' && steps.check.outputs.owner == 'true'
+        working-directory: ai-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          OWNER_CODE: ${{ secrets.OWNER_CODE }}
+        run: printf '%s' "$OWNER_CODE" | npx wrangler secret put OWNER_CODE

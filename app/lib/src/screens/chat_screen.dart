@@ -26,8 +26,22 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   late final http.Client _client = widget.client ?? http.Client();
-  AiChat? _chat;
+  late final AiChat _chat = AiChat(store: StoreScope.read(context), client: _client);
   final List<ChatEntry> _entries = [];
+  bool _loaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loaded) return;
+    _loaded = true;
+    // The conversation is kept on the phone, so it carries on after a restart.
+    _chat.load().then((entries) {
+      if (!mounted || entries.isEmpty || _entries.isNotEmpty) return;
+      setState(() => _entries.addAll(entries));
+      _scrollToEnd();
+    });
+  }
   final _input = TextEditingController();
   final _scroll = ScrollController();
   String? _status;
@@ -49,7 +63,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _send([String? text]) async {
     final question = (text ?? _input.text).trim();
     if (question.isEmpty || _status != null) return;
-    final chat = _chat ??= AiChat(store: StoreScope.read(context), client: _client);
+    if (StoreScope.read(context).aiQuestionsLeft == 0) return;
+    final chat = _chat;
     _input.clear();
     setState(() {
       _entries.add(ChatEntry.user(question));
@@ -74,13 +89,16 @@ class _ChatScreenState extends State<ChatScreen> {
       _status = null;
     });
     _scrollToEnd();
+    try {
+      await chat.save(_entries);
+    } on Object catch (e) {
+      debugPrint('saving the chat failed: $e');
+    }
   }
 
   void _newChat() {
-    setState(() {
-      _chat = null;
-      _entries.clear();
-    });
+    setState(_entries.clear);
+    _chat.clear();
   }
 
   void _scrollToEnd() {
@@ -146,13 +164,40 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
           ),
           if (store.aiIndexProgress case final p?) _Preparing(progress: p),
+          if (store.aiQuestionsLeft case final left?) _QuestionsLeft(left: left),
           _InputBar(
             controller: _input,
-            enabled: !offline && _status == null,
-            hint: offline ? 'Butuh internet untuk bertanya' : 'Tulis pertanyaan…',
+            enabled: !offline && _status == null && store.aiQuestionsLeft != 0,
+            hint: offline
+                ? 'Butuh internet untuk bertanya'
+                : store.aiQuestionsLeft == 0
+                    ? 'Jatah hari ini habis, coba lagi besok'
+                    : 'Tulis pertanyaan…',
             onSend: _send,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// How many of today's questions are left on this phone.
+class _QuestionsLeft extends StatelessWidget {
+  const _QuestionsLeft({required this.left});
+
+  final int left;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: AppColors.surface,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Text(
+        left == 0
+            ? 'Jatah ${AppStore.aiDailyLimit} pertanyaan hari ini sudah habis.'
+            : 'Sisa $left dari ${AppStore.aiDailyLimit} pertanyaan hari ini',
+        style: TextStyle(fontSize: 12, color: left == 0 ? AppColors.orangeText : AppColors.muted),
       ),
     );
   }
