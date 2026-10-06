@@ -19,8 +19,9 @@ manual at a time and search still works over whatever is on the phone.
 A unit folder may hold an optional unit.json with display info, e.g.
 {"name": "PC210-10M0", "kind": "Excavator"}. PDFs may also sit in
 subfolders of a unit folder (source/CAT395/System Diagram/x.pdf): they
-belong to that unit, and the subfolder name becomes the file's "group",
-which the app shows as a heading at the top of the unit page.
+belong to that unit, and the subfolder name becomes the file's "group"
+("A / B" for a folder inside a folder). The app shows each subfolder as a
+folder at the top of the unit page that opens on its own page.
 
 Re-running keeps the previous catalog.json in dist/: units not rebuilt
 (with --only) stay listed, and each file keeps its "updated_at" date until

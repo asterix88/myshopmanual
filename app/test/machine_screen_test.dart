@@ -79,13 +79,14 @@ void main() {
     expect(body.bottom - last.bottom, lessThan(4));
   });
 
-  testWidgets('files from subfolders of a unit folder sit under their subfolder name', (tester) async {
+  testWidgets('subfolders of a unit folder open as their own folder page', (tester) async {
     final catalog = fixtureCatalog();
     final unit = (catalog['units'] as List).single as Map<String, dynamic>;
     final file = (unit['files'] as List).single as Map<String, dynamic>;
     unit['files'] = [
       file,
       {...file, 'id': 'System_Diagram_file', 'title': 'Hydraulic diagram', 'group': 'System Diagram'},
+      {...file, 'id': 'System_Diagram_Electric_file', 'title': 'Wiring', 'group': 'System Diagram / Electric'},
     ];
     late AppStore store;
     final root = Directory.systemTemp.createTempSync('unit');
@@ -93,17 +94,31 @@ void main() {
       store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
       await store.setServerUrl('https://example.test');
     });
-    expect(store.catalog.files.last.group, 'System Diagram');
+    expect(store.catalog.files.last.folder, ['System Diagram', 'Electric']);
     await tester.pumpWidget(StoreScope(
       store: store,
       child: MaterialApp(home: UnitScreen(unitId: unit['id'] as String)),
     ));
     await tester.pumpAndSettle();
 
-    // The subfolder comes first, then the files placed in the unit folder.
-    final heading = tester.getTopLeft(find.text('System Diagram')).dy;
-    final grouped = tester.getTopLeft(find.text('Hydraulic diagram')).dy;
-    expect(grouped, greaterThan(heading));
-    expect(tester.getTopLeft(find.text('OMM Test Unit')).dy, greaterThan(grouped));
+    // The unit page lists the subfolder (not its files) above the unit
+    // folder's own files.
+    expect(find.text('Hydraulic diagram'), findsNothing);
+    expect(find.text('2 file'), findsOneWidget);
+    expect(tester.getTopLeft(find.text('OMM Test Unit')).dy,
+        greaterThan(tester.getTopLeft(find.text('System Diagram')).dy));
+
+    // Opening it shows its files and its own subfolder.
+    await tester.tap(find.text('System Diagram'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hydraulic diagram'), findsOneWidget);
+    expect(find.text('OMM Test Unit'), findsNothing);
+    expect(find.text('Electric'), findsOneWidget);
+    expect(find.text('Wiring'), findsNothing);
+
+    await tester.tap(find.text('Electric'));
+    await tester.pumpAndSettle();
+    expect(find.text('Wiring'), findsOneWidget);
+    expect(find.text('TEST1-1 / System Diagram'), findsOneWidget);
   });
 }
