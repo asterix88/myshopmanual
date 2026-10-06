@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -116,6 +117,54 @@ Future<List<int>> findLargeSheets(AppStore store, ManualFile file) => _oneAtATim
       }
     });
 
-Future<PdfDocument> _open(AppStore store, ManualFile file) => store.isDownloaded(file.key)
-    ? PdfDocument.openFile(store.pdfPath(file))
-    : PdfDocument.openUri(store.pdfUri(file), preferRangeAccess: true);
+/// Opens [file]: from the phone when it is downloaded, otherwise piece by
+/// piece from the server. The server pieces are kept here, in memory, and
+/// not in the PDF viewer's cache file: the viewer may have the same manual
+/// open, and two readers of one cache file corrupt it (blank pages, then a
+/// crash inside PDFium).
+Future<PdfDocument> _open(AppStore store, ManualFile file) {
+  if (store.isDownloaded(file.key)) return PdfDocument.openFile(store.pdfPath(file));
+  final key = '${file.key}@${file.pdf.sha256}';
+  if (_remoteKey != key) {
+    _remoteKey = key;
+    _remoteBlocks.clear();
+  }
+  final size = file.pdf.size;
+  Future<Uint8List> block(int id) async {
+    // Most recently used last, so the oldest piece is dropped first.
+    final cached = _remoteBlocks.remove(id);
+    if (cached != null) return _remoteBlocks[id] = cached;
+    final start = id * _blockSize;
+    final data = await store.fetchPdfRange(file, start, math.min(start + _blockSize, size));
+    _remoteBlocks[id] = data;
+    while (_remoteBlocks.length > _maxBlocks) {
+      _remoteBlocks.remove(_remoteBlocks.keys.first);
+    }
+    return data;
+  }
+
+  return PdfDocument.openCustom(
+    read: (buffer, position, length) async {
+      var done = 0;
+      while (done < length && position + done < size) {
+        final at = position + done;
+        final data = await block(at ~/ _blockSize);
+        final offset = at % _blockSize;
+        final n = math.min(length - done, data.length - offset);
+        buffer.setRange(done, done + n, data, offset);
+        done += n;
+      }
+      return done;
+    },
+    fileSize: size,
+    sourceName: 'ai:$key',
+  );
+}
+
+/// The manual whose server pieces are in [_remoteBlocks]. Pages are drawn
+/// one at a time, so one manual's pieces are enough: the next page of the
+/// same manual reuses its table of contents instead of fetching it again.
+String? _remoteKey;
+final _remoteBlocks = <int, Uint8List>{};
+const _blockSize = 256 * 1024;
+const _maxBlocks = 48; // 12 MB

@@ -18,8 +18,9 @@ class AppCard extends StatelessWidget {
     return Material(
       color: color ?? AppColors.surface,
       borderRadius: BorderRadius.circular(14),
-      shadowColor: const Color(0x14101828),
-      elevation: 1,
+      // A soft shadow lifts the card off the grey page.
+      shadowColor: const Color(0x33101828),
+      elevation: 3,
       clipBehavior: Clip.antiAlias,
       child: onTap == null ? content : InkWell(onTap: onTap, child: content),
     );

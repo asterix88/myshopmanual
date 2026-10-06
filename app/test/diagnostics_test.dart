@@ -1,6 +1,9 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mymanual/src/diagnostics.dart';
 import 'package:mymanual/src/page_image.dart';
 import 'package:mymanual/src/store.dart';
@@ -36,6 +39,34 @@ void main() {
       final again = await pageThumbnail(store, file, 2);
       expect(again.path, first.path);
       expect(again.lastModifiedSync(), first.lastModifiedSync());
+      store.dispose();
+    });
+  });
+
+  testWidgets('a page of a manual not on the phone is drawn from pieces fetched from the server', (tester) async {
+    await tester.runAsync(() async {
+      Pdfrx.pdfiumModulePath ??= File('build/native_assets/linux/libpdfium.so').absolute.path;
+      Pdfrx.cacheDirectoryPath ??= Directory.systemTemp.createTempSync('pdfcache').path;
+      final ranges = <String>[];
+      final server = fixtureServer();
+      final client = MockClient((request) async {
+        final range = request.headers['Range'];
+        final whole = await server.get(request.url);
+        if (range == null || !request.url.path.endsWith('.pdf')) return whole;
+        ranges.add(range);
+        final m = RegExp(r'bytes=(\d+)-(\d+)').firstMatch(range)!;
+        final end = math.min(int.parse(m[2]!) + 1, whole.bodyBytes.length);
+        return http.Response.bytes(whole.bodyBytes.sublist(int.parse(m[1]!), end), 206);
+      });
+      final store = await AppStore.open(root: Directory.systemTemp.createTempSync('remote'), client: client);
+      await store.setServerUrl('https://example.test');
+      final file = store.catalog.files.single;
+      expect(store.isDownloaded(file.key), isFalse);
+      final png = await renderPageImage(store, file, 2, 'full', longest: 400);
+      expect(png.sublist(1, 4), 'PNG'.codeUnits);
+      expect(ranges, isNotEmpty);
+      // The viewer's cache file for this manual is never touched.
+      expect(Directory('${Pdfrx.cacheDirectoryPath}/pdfrx.cache').existsSync(), isFalse);
       store.dispose();
     });
   });
