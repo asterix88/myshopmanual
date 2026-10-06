@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
 
+import 'src/diagnostics.dart';
 import 'src/screens/shell.dart';
 import 'src/store.dart';
 import 'src/theme.dart';
@@ -9,6 +10,7 @@ import 'src/theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   pdfrxFlutterInitialize();
+  await Diagnostics.start();
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.white,
     statusBarIconBrightness: Brightness.dark,

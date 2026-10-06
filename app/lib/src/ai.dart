@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import 'diagnostics.dart';
 import 'models.dart';
 import 'page_image.dart';
 import 'search.dart';
@@ -103,6 +104,7 @@ class AiChat {
     _dropOldPictures();
     _views = 0;
     _messages.add({'role': 'user', 'content': question});
+    Diagnostics.log('ask (${question.length} chars, ${_messages.length} messages)');
     // Every manual on the server can be searched, downloaded or not; manuals
     // that are only pictures (diagrams, scans) can be looked at.
     final files = store.catalog.files.followedBy(store.local.values.map((m) => m.file)).toSet().toList();
@@ -117,6 +119,7 @@ class AiChat {
 
     for (var round = 0; round < maxRounds; round++) {
       onStatus?.call(round == 0 ? 'Memahami pertanyaan…' : 'Menyusun jawaban…');
+      Diagnostics.log('ai round $round');
       final response = await _post({
         'messages': _messages,
         'manuals': manuals,
@@ -220,6 +223,7 @@ class AiChat {
         ? 'Note: $notReady manual(s) are still being prepared on the phone and were not searched.\n\n'
         : '';
     onStatus?.call('Mencari di manual: $query');
+    Diagnostics.log('search "$query" in ${indexes.length} indexes');
     final pages = await _searchInBackground(indexes, query);
     if (pages.isEmpty) return '${note}No matching pages for "$query".';
 

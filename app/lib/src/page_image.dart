@@ -1,8 +1,11 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:pdfrx/pdfrx.dart';
 
+import 'diagnostics.dart';
 import 'models.dart';
 import 'store.dart';
 
@@ -10,78 +13,108 @@ import 'store.dart';
 /// each side, so a line crossing the middle shows in both neighbours.
 const pageRegions = ['full', 'top-left', 'top-right', 'bottom-left', 'bottom-right'];
 
+/// Drawing pages takes a lot of memory on big manuals, so one page is drawn
+/// at a time and its manual is closed again before the next.
+Future<void> _queue = Future.value();
+
+Future<T> _oneAtATime<T>(Future<T> Function() work) {
+  final result = _queue.then((_) => work());
+  _queue = result.then((_) {}, onError: (_) {});
+  return result;
+}
+
 /// Renders [page] (1-based) of [file], or one quarter of it, as a PNG for the
 /// AI to look at: from the phone when the manual is downloaded, otherwise
 /// only that page's part of the PDF is fetched from the server. The longest
-/// side is about 1600 pixels, so a quarter shows the drawing twice as large
-/// as the full page does.
-Future<Uint8List> renderPageImage(AppStore store, ManualFile file, int page, String region) async {
-  final document = await _open(store, file);
-  try {
-    final pdfPage = document.pages[page - 1];
-    final (left, top, part) = switch (region) {
-      'top-left' => (0.0, 0.0, 0.55),
-      'top-right' => (0.45, 0.0, 0.55),
-      'bottom-left' => (0.0, 0.45, 0.55),
-      'bottom-right' => (0.45, 0.45, 0.55),
-      _ => (0.0, 0.0, 1.0),
-    };
-    // Very large colour sheets can make a big PNG; try smaller until it fits
-    // comfortably in one request.
-    for (final longest in const [1600.0, 1200.0, 900.0]) {
-      final scale = longest / (part * (pdfPage.width > pdfPage.height ? pdfPage.width : pdfPage.height));
-      final fullWidth = pdfPage.width * scale;
-      final fullHeight = pdfPage.height * scale;
-      final image = await pdfPage.render(
-        x: (left * fullWidth).round(),
-        y: (top * fullHeight).round(),
-        width: (part * fullWidth).round(),
-        height: (part * fullHeight).round(),
-        fullWidth: fullWidth,
-        fullHeight: fullHeight,
-        backgroundColor: 0xffffffff,
-      );
-      if (image == null) throw StateError('page $page could not be drawn');
-      final ui.Image picture;
+/// side is about [longest] pixels, so a quarter shows the drawing twice as
+/// large as the full page does.
+Future<Uint8List> renderPageImage(AppStore store, ManualFile file, int page, String region,
+        {double longest = 1600}) =>
+    _oneAtATime(() async {
+      Diagnostics.log('draw ${file.key} p$page $region');
+      final document = await _open(store, file);
       try {
-        picture = await image.createImage();
+        final png = await _render(document.pages[page - 1], region, longest);
+        Diagnostics.log('drawn ${png.length ~/ 1024} KB');
+        return png;
       } finally {
-        image.dispose();
+        await document.dispose();
       }
-      final ByteData? data;
-      try {
-        data = await picture.toByteData(format: ui.ImageByteFormat.png);
-      } finally {
-        picture.dispose();
-      }
-      if (data == null) throw StateError('page $page could not be encoded');
-      final png = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-      if (png.length <= 1500000 || longest == 900.0) return png;
+    });
+
+Future<Uint8List> _render(PdfPage pdfPage, String region, double longest) async {
+  final (left, top, part) = switch (region) {
+    'top-left' => (0.0, 0.0, 0.55),
+    'top-right' => (0.45, 0.0, 0.55),
+    'bottom-left' => (0.0, 0.45, 0.55),
+    'bottom-right' => (0.45, 0.45, 0.55),
+    _ => (0.0, 0.0, 1.0),
+  };
+  // Very large colour sheets can make a big PNG; try smaller until it fits
+  // comfortably in one request.
+  for (final size in [longest, longest * 0.75, longest * 0.56]) {
+    final scale = size / (part * (pdfPage.width > pdfPage.height ? pdfPage.width : pdfPage.height));
+    final fullWidth = pdfPage.width * scale;
+    final fullHeight = pdfPage.height * scale;
+    final image = await pdfPage.render(
+      x: (left * fullWidth).round(),
+      y: (top * fullHeight).round(),
+      width: (part * fullWidth).round(),
+      height: (part * fullHeight).round(),
+      fullWidth: fullWidth,
+      fullHeight: fullHeight,
+      backgroundColor: 0xffffffff,
+    );
+    if (image == null) throw StateError('page ${pdfPage.pageNumber} could not be drawn');
+    final ui.Image picture;
+    try {
+      picture = await image.createImage();
+    } finally {
+      image.dispose();
     }
-    throw StateError('unreachable');
-  } finally {
-    await document.dispose();
+    final ByteData? data;
+    try {
+      data = await picture.toByteData(format: ui.ImageByteFormat.png);
+    } finally {
+      picture.dispose();
+    }
+    if (data == null) throw StateError('page ${pdfPage.pageNumber} could not be encoded');
+    final png = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    if (png.length <= 1500000 || size < longest * 0.6) return png;
   }
+  throw StateError('unreachable');
+}
+
+/// A small picture of [page] for showing under an AI answer, drawn once and
+/// kept on the phone, so the chat does not keep big manuals open.
+Future<File> pageThumbnail(AppStore store, ManualFile file, int page) async {
+  final target = File(store.pageThumbPath(file, page));
+  if (await target.exists()) return target;
+  final png = await renderPageImage(store, file, page, 'full', longest: 900);
+  await target.parent.create(recursive: true);
+  final part = File('${target.path}.part');
+  await part.writeAsBytes(png);
+  return part.rename(target.path);
 }
 
 /// Pages of [file] that are much larger than its usual page: the fold-out
 /// drawing sheets of a schematic or a shop manual. Knowing them lets the AI
 /// go straight to the drawing instead of paging through covers and tables.
-Future<List<int>> findLargeSheets(AppStore store, ManualFile file) async {
-  final document = await _open(store, file);
-  try {
-    final areas = [for (final p in document.pages) p.width * p.height];
-    if (areas.isEmpty) return const [];
-    final sorted = [...areas]..sort();
-    final usual = sorted[sorted.length ~/ 2];
-    return [
-      for (final (i, area) in areas.indexed)
-        if (area >= usual * 2.5) i + 1,
-    ];
-  } finally {
-    await document.dispose();
-  }
-}
+Future<List<int>> findLargeSheets(AppStore store, ManualFile file) => _oneAtATime(() async {
+      final document = await _open(store, file);
+      try {
+        final areas = [for (final p in document.pages) p.width * p.height];
+        if (areas.isEmpty) return const <int>[];
+        final sorted = [...areas]..sort();
+        final usual = sorted[sorted.length ~/ 2];
+        return [
+          for (final (i, area) in areas.indexed)
+            if (area >= usual * 2.5) i + 1,
+        ];
+      } finally {
+        await document.dispose();
+      }
+    });
 
 Future<PdfDocument> _open(AppStore store, ManualFile file) => store.isDownloaded(file.key)
     ? PdfDocument.openFile(store.pdfPath(file))

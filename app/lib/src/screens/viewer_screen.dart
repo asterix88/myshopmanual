@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
 
+import '../diagnostics.dart';
 import '../models.dart';
 import '../search.dart';
 import '../store.dart';
@@ -14,6 +15,7 @@ import 'shell.dart';
 /// Opens a manual, optionally at [page] and with [query] highlighted. A
 /// downloaded manual opens from the phone; any other is read from the server.
 Future<void> openViewer(BuildContext context, ManualFile file, {int? page, String? query}) {
+  Diagnostics.log('open ${file.key} p${page ?? 1}');
   return Navigator.of(context).push(MaterialPageRoute(
     builder: (_) => ViewerScreen(fileKey: file.key, initialPage: page, initialQuery: query),
   ));
