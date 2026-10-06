@@ -7,6 +7,7 @@ import '../widgets/common.dart';
 import 'shell.dart';
 import '../widgets/machine_icon.dart';
 import 'machine_screen.dart';
+import 'report_screen.dart';
 import 'updates_screen.dart';
 import 'viewer_screen.dart';
 
@@ -65,8 +66,13 @@ class HomeScreen extends StatelessWidget {
           PopupMenuButton<String>(
             tooltip: 'Lainnya',
             icon: const Icon(Icons.more_vert, color: AppColors.navy),
-            onSelected: (_) => _editServer(context, store),
-            itemBuilder: (_) => const [PopupMenuItem(value: 'server', child: Text('Alamat server'))],
+            onSelected: (value) => value == 'report'
+                ? Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportScreen()))
+                : _editServer(context, store),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'server', child: Text('Alamat server')),
+              PopupMenuItem(value: 'report', child: Text('Laporan masalah')),
+            ],
           ),
           const SizedBox(width: 4),
         ],

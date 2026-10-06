@@ -92,6 +92,11 @@ class AppStore extends ChangeNotifier {
   String pdfPath(ManualFile f) => p.join(_root.path, 'manuals', f.unitId, '${f.id}.pdf');
   String indexPath(ManualFile f) => p.join(_root.path, 'manuals', f.unitId, '${f.id}.sqlite');
 
+  /// A small picture of a manual page shown under an AI answer; the version
+  /// is in the name so an updated manual draws it again.
+  String pageThumbPath(ManualFile f, int page) =>
+      p.join(_root.path, 'page-thumbs', f.unitId, '${f.id}-${f.pdf.sha256.substring(0, 12)}-$page.png');
+
   bool isDownloaded(String key) => local.containsKey(key);
 
   Future<void> _load() async {

@@ -1,9 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:pdfrx/pdfrx.dart';
 
 import '../ai.dart';
 import '../models.dart';
+import '../page_image.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -286,23 +288,30 @@ class _Bubble extends StatelessWidget {
 
 /// A manual page shown as a picture in an answer. Tapping it opens the page
 /// in the viewer to zoom in.
-class _PagePicture extends StatelessWidget {
+class _PagePicture extends StatefulWidget {
   const _PagePicture({required this.source});
 
   final AiSource source;
 
-  Widget _page(BuildContext context, PdfDocument? document) =>
-      PdfPageView(document: document, pageNumber: source.page);
+  @override
+  State<_PagePicture> createState() => _PagePictureState();
+}
 
-  static Widget _loading(BuildContext context) => const Center(child: CircularProgressIndicator(strokeWidth: 2));
+class _PagePictureState extends State<_PagePicture> {
+  Future<File>? _thumb;
 
-  static Widget _error(BuildContext context, Object error, StackTrace? stackTrace) => const Center(
-        child: Text('Gambar tidak bisa dimuat', style: TextStyle(fontSize: 12, color: AppColors.muted)),
-      );
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Drawn once into a small picture file (from the phone when downloaded,
+    // else only this page's part of the PDF is fetched), so the chat never
+    // keeps whole manuals open.
+    _thumb ??= pageThumbnail(StoreScope.of(context), widget.source.file, widget.source.page);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final store = StoreScope.of(context);
+    final source = widget.source;
     return Material(
       color: Colors.white,
       shape: RoundedRectangleBorder(
@@ -317,24 +326,19 @@ class _PagePicture extends StatelessWidget {
           children: [
             SizedBox(
               height: 260,
-              // From the phone when downloaded, else only this page's part of
-              // the PDF is fetched from the server.
-              child: store.isDownloaded(source.file.key)
-                  ? PdfDocumentViewBuilder.file(
-                      store.pdfPath(source.file),
-                      useProgressiveLoading: true,
-                      builder: _page,
-                      loadingBuilder: _loading,
-                      errorBuilder: _error,
-                    )
-                  : PdfDocumentViewBuilder.uri(
-                      store.pdfUri(source.file),
-                      useProgressiveLoading: true,
-                      preferRangeAccess: true,
-                      builder: _page,
-                      loadingBuilder: _loading,
-                      errorBuilder: _error,
-                    ),
+              child: FutureBuilder<File>(
+                future: _thumb,
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const Center(
+                      child: Text('Gambar tidak bisa dimuat', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                    );
+                  }
+                  final file = snapshot.data;
+                  if (file == null) return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                  return Image.file(file, fit: BoxFit.contain, cacheHeight: 600);
+                },
+              ),
             ),
             Container(
               color: AppColors.navySoft,
