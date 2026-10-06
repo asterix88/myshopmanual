@@ -46,7 +46,7 @@ class UnitIcon extends StatelessWidget {
         fit: BoxFit.scaleDown,
         child: Text(
           shortCode(unitId),
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.orangeText),
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.orangeText),
         ),
       ),
     );

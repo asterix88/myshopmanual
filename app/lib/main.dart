@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdfrx/pdfrx.dart';
 
@@ -18,16 +17,12 @@ Future<void> main() async {
   await pdfrxFlutterInitialize();
   await Diagnostics.start();
   await _clearOldPdfCache();
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.white,
-    statusBarIconBrightness: Brightness.dark,
-  ));
   final store = await AppStore.open()..autoFetchAiIndexes = true;
   runApp(MyManualApp(store: store));
   // Tapping an update notification opens the update list.
   unawaited(startUpdateNotifications(
     onOpenUpdates: () => _navigator.currentState?.push(
-      MaterialPageRoute(builder: (_) => const UpdatesScreen()),
+      MaterialPageRoute(builder: (_) => UpdatesScreen()),
     ),
   ));
   // Check the server in the background; the app works offline meanwhile.
@@ -51,23 +46,63 @@ Future<void> _clearOldPdfCache() async {
   }
 }
 
-final _navigator = GlobalKey<NavigatorState>();
+/// Replaced when the app switches light/dark, so the new app starts fresh.
+var _navigator = GlobalKey<NavigatorState>();
+bool? _navigatorDark;
 
-class MyManualApp extends StatelessWidget {
+class MyManualApp extends StatefulWidget {
   const MyManualApp({super.key, required this.store});
 
   final AppStore store;
 
   @override
+  State<MyManualApp> createState() => _MyManualAppState();
+}
+
+class _MyManualAppState extends State<MyManualApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// The phone switched between light and dark.
+  @override
+  void didChangePlatformBrightness() => setState(() {});
+
+  @override
   Widget build(BuildContext context) {
+    final store = widget.store;
     return StoreScope(
       store: store,
-      child: MaterialApp(
-        title: 'MyManual',
-        navigatorKey: _navigator,
-        debugShowCheckedModeBanner: false,
-        theme: buildTheme(),
-        home: const HomeShell(),
+      child: ListenableBuilder(
+        listenable: store,
+        builder: (context, _) {
+          final dark = switch (store.themeMode) {
+            'dark' => true,
+            'light' => false,
+            _ => WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark,
+          };
+          // Screens read AppColors directly, so switching rebuilds the app.
+          if (_navigatorDark != dark) {
+            if (_navigatorDark != null) _navigator = GlobalKey<NavigatorState>();
+            _navigatorDark = dark;
+          }
+          return MaterialApp(
+            key: ValueKey(dark),
+            title: 'MyManual',
+            navigatorKey: _navigator,
+            debugShowCheckedModeBanner: false,
+            theme: buildTheme(dark: dark),
+            home: const HomeShell(),
+          );
+        },
       ),
     );
   }

@@ -119,12 +119,12 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(
         toolbarHeight: 64,
         titleSpacing: 14,
-        shape: const Border(bottom: BorderSide(color: Color(0xFFE6E8EB))),
+        shape: Border(bottom: BorderSide(color: AppColors.line)),
         title: Row(
           children: [
             Image.asset('assets/images/logo.png', width: 42, height: 42),
             const SizedBox(width: 10),
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Tanya AI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navy)),
@@ -223,15 +223,15 @@ class _Intro extends StatelessWidget {
               const Text('Tanya soal teknis, AI menjawab dari manual',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'AI mencari di semua manual, termasuk yang belum diunduh, dan bisa melihat gambar seperti wiring '
                 'atau hydraulic diagram, lalu menjawab dengan menyebut sumbernya. '
                 'Ketuk sumber untuk membuka halamannya. Butuh internet.',
-                style: TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF3A3F45)),
+                style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.inkSoft),
               ),
               if (!hasManuals) ...[
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Daftar manual belum termuat. Sambungkan ke internet lalu buka tab Unit.',
                   style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.orangeText),
                 ),
@@ -250,7 +250,7 @@ class _Intro extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
-                  const Icon(Icons.chat_bubble_outline, size: 18, color: AppColors.navy),
+                  Icon(Icons.chat_bubble_outline, size: 18, color: AppColors.navy),
                   const SizedBox(width: 10),
                   Expanded(child: Text(example, style: const TextStyle(fontSize: 13))),
                 ],
@@ -304,7 +304,7 @@ class _Bubble extends StatelessWidget {
             ],
             if (entry.sources.isNotEmpty) ...[
               const SizedBox(height: 12),
-              const Text('Sumber', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted)),
+              Text('Sumber', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted)),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
@@ -317,7 +317,7 @@ class _Bubble extends StatelessWidget {
                       side: BorderSide.none,
                       label: Text(
                         '[${i + 1}] ${s.unitName} · ${s.file.type.label} · hlm ${s.page}',
-                        style: const TextStyle(fontSize: 12, color: AppColors.navy),
+                        style: TextStyle(fontSize: 12, color: AppColors.navy),
                       ),
                       onPressed: () => openViewer(context, s.file, page: s.page),
                     ),
@@ -358,10 +358,10 @@ class _PagePictureState extends State<_PagePicture> {
   Widget build(BuildContext context) {
     final source = widget.source;
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
-        side: const BorderSide(color: Color(0xFFE6E8EB)),
+        side: BorderSide(color: AppColors.line),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -375,7 +375,7 @@ class _PagePictureState extends State<_PagePicture> {
                 future: _thumb,
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
-                    return const Center(
+                    return Center(
                       child: Text('Gambar tidak bisa dimuat', style: TextStyle(fontSize: 12, color: AppColors.muted)),
                     );
                   }
@@ -393,10 +393,10 @@ class _PagePictureState extends State<_PagePicture> {
                   Expanded(
                     child: Text(
                       '${source.unitName} · ${source.file.type.label} · hlm ${source.page}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.navy),
+                      style: TextStyle(fontSize: 12, color: AppColors.navy),
                     ),
                   ),
-                  const Icon(Icons.zoom_in, size: 16, color: AppColors.navy),
+                  Icon(Icons.zoom_in, size: 16, color: AppColors.navy),
                 ],
               ),
             ),
@@ -424,7 +424,7 @@ class _Working extends StatelessWidget {
             child: Text(status,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+                style: TextStyle(fontSize: 13, color: AppColors.muted)),
           ),
         ],
       ),
@@ -452,10 +452,10 @@ class _Preparing extends StatelessWidget {
           Text(
             'Menyiapkan indeks pencarian AI: ${p.ready} dari ${p.total} manual'
             '${p.totalBytes == 0 ? '' : ' (${formatSize(p.receivedBytes)} dari ${formatSize(p.totalBytes)})'}',
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.navy),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.navy),
           ),
           const SizedBox(height: 2),
-          const Text(
+          Text(
             'Sementara itu AI menjawab dari manual yang indeksnya sudah siap.',
             style: TextStyle(fontSize: 11, color: AppColors.muted),
           ),
@@ -499,7 +499,7 @@ class _InputBar extends StatelessWidget {
                   decoration: InputDecoration(
                     isDense: true,
                     filled: true,
-                    fillColor: const Color(0xFFF4F5F7),
+                    fillColor: AppColors.field,
                     hintText: hint,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
                   ),
@@ -508,7 +508,7 @@ class _InputBar extends StatelessWidget {
               IconButton(
                 tooltip: 'Kirim',
                 onPressed: enabled ? onSend : null,
-                icon: const Icon(Icons.send_rounded, color: AppColors.navy),
+                icon: Icon(Icons.send_rounded, color: AppColors.navy),
               ),
             ],
           ),

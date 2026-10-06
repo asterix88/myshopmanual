@@ -68,7 +68,7 @@ class _SearchScreenState extends State<SearchScreen> {
           slivers: [
             SliverToBoxAdapter(
               child: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
                 ),
@@ -77,7 +77,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Cari', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
-                    const Text(
+                    Text(
                       'Di semua manual, termasuk yang belum diunduh',
                       style: TextStyle(fontSize: 13, color: AppColors.muted),
                     ),
@@ -91,7 +91,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         filled: true,
                         fillColor: AppColors.background,
                         hintText: 'Contoh: hydraulic oil filter',
-                        prefixIcon: const Icon(Icons.search, color: AppColors.muted),
+                        prefixIcon: Icon(Icons.search, color: AppColors.muted),
                         suffixIcon: _field.text.isEmpty
                             ? null
                             : IconButton(
@@ -121,7 +121,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             selectedColor: AppColors.navy,
                             labelStyle: TextStyle(
                               fontSize: 12,
-                              color: _type == type ? Colors.white : const Color(0xFF3A3F45),
+                              color: _type == type ? Colors.white : AppColors.inkSoft,
                               fontWeight: _type == type ? FontWeight.w600 : FontWeight.w400,
                             ),
                             side: BorderSide(color: _type == type ? AppColors.navy : AppColors.border),
@@ -181,7 +181,7 @@ class _SearchScreenState extends State<SearchScreen> {
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
           child: Text(
             '${result.totalPages} halaman cocok di ${groups.length} file',
-            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
         ),
       ),
@@ -216,7 +216,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                   '$count halaman',
                                   if (!downloaded) 'belum diunduh, perlu internet',
                                 ].join(' · '),
-                                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                                style: TextStyle(fontSize: 12, color: AppColors.muted),
                               ),
                             ],
                           ),
@@ -245,7 +245,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text('hlm ${hit.page}',
-                                    style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                                    style: TextStyle(fontSize: 12, color: AppColors.muted)),
                               ],
                             ),
                             const SizedBox(height: 2),
@@ -260,7 +260,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                       child: Text(
                         '+${count - 5} halaman lain. Buka file lalu pakai pencarian di dalamnya.',
-                        style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                        style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
                     ),
                 ],
