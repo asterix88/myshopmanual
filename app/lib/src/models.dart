@@ -118,8 +118,56 @@ class ManualFile {
       };
 }
 
+/// A unit's spec pages (bolt torque, capacities, standard values) cut from
+/// its manuals into one small PDF, `spek.pdf`, kept on the phone.
+class SpecPack {
+  const SpecPack({required this.file, required this.pages});
+
+  factory SpecPack.fromJson(Map<String, dynamic> json) => SpecPack(
+        file: RemoteFile.fromJson(json),
+        pages: [for (final e in json['pages'] as List) SpecPackPage.fromJson(e as Map<String, dynamic>)],
+      );
+
+  final RemoteFile file;
+  final List<SpecPackPage> pages;
+}
+
+class SpecPackPage {
+  const SpecPackPage({
+    required this.section,
+    required this.title,
+    required this.fileId,
+    required this.page,
+    required this.at,
+    required this.count,
+  });
+
+  factory SpecPackPage.fromJson(Map<String, dynamic> json) => SpecPackPage(
+        section: json['section'] as int,
+        title: json['title'] as String,
+        fileId: json['file'] as String,
+        page: json['page'] as int,
+        at: json['at'] as int,
+        count: json['count'] as int? ?? 1,
+      );
+
+  /// Index into the Spek tab's sections: torque, capacities, standard values.
+  final int section;
+
+  /// The manual's own bookmark title.
+  final String title;
+  final String fileId;
+
+  /// Page in the full manual.
+  final int page;
+
+  /// Page in spek.pdf.
+  final int at;
+  final int count;
+}
+
 class Unit {
-  const Unit({required this.id, required this.name, required this.kind, required this.files});
+  const Unit({required this.id, required this.name, required this.kind, required this.files, this.spec});
 
   factory Unit.fromJson(Map<String, dynamic> json) {
     final id = json['id'] as String;
@@ -130,8 +178,13 @@ class Unit {
       files: [
         for (final f in json['files'] as List) ManualFile.fromJson(id, f as Map<String, dynamic>),
       ],
+      spec: json['spec'] == null ? null : SpecPack.fromJson(json['spec'] as Map<String, dynamic>),
     );
   }
+
+  /// Null in catalogs built before spek.pdf existed, or when no manual of
+  /// this unit bookmarks a spec page.
+  final SpecPack? spec;
 
   final String id;
   final String name;

@@ -27,6 +27,12 @@ Re-running keeps the previous catalog.json in dist/: units not rebuilt
 (with --only) stay listed, and each file keeps its "updated_at" date until
 its PDF actually changes. The app uses those dates to show what is new.
 
+Each unit also gets units/<UNIT>/spek.pdf: the pages its manuals bookmark
+as bolt torque, refill capacities, or standard values and pressures, cut
+into one small PDF that the app keeps on the phone for its Spek tab (the
+catalog's unit "spec" lists those pages). The bookmark titles are matched
+with SPEC_SECTIONS below.
+
 PDFs with little or no text layer (scans, wiring and hydraulic diagrams)
 are shipped too, marked as not searchable: they open and keep their
 bookmarks, but search and Tanya AI skip them. Pass --skip-scanned to leave
@@ -50,6 +56,27 @@ import pymupdf
 MIN_CHARS_PER_PAGE = 40
 # A PDF is "scanned" when fewer than this share of its pages carry text.
 MIN_TEXT_PAGE_RATIO = 0.5
+
+# Spek tab sections and the bookmark titles that belong to them. Keep in
+# step with specSections in app/lib/src/specs.dart (used for catalogs built
+# before spek.pdf existed).
+SPEC_SECTIONS = [
+    re.compile(r"tightening torque|torque (table|chart|spec)", re.I),
+    re.compile(
+        r"(fuel|coolant|lubricant|oil)s?[^/]*capacit|capacit[^/]*(fuel|coolant|lubricant|oil|refill)|refill capacit"
+        r"|table of fuel|fuel, coolant and lubricants",
+        re.I,
+    ),
+    re.compile(
+        r"standard value|relief (valve|pressure)[^/]*(test|adjust|measur)|pressure[^/]*(test|adjust|setting)"
+        r"|testing and adjusting.*pressure",
+        re.I,
+    ),
+]
+SPEC_SECTION_TITLES = ["Torsi baut", "Kapasitas oli & cairan", "Nilai standar & tekanan"]
+# A matched bookmark takes its pages up to the next bookmark at its level or
+# above, but never more than this many.
+MAX_SPEC_PAGES = 40
 
 DOC_TYPES = [
     ("shop_manual", re.compile(r"shop\s*manual|\bsm\b|\bsen\d", re.I)),
@@ -132,6 +159,79 @@ def write_index(path: Path, title: str, doc_type: str, pages: list[str],
     db.close()
 
 
+def spec_ranges(toc: list[list], page_count: int) -> list[tuple[int, str, int, int]]:
+    """(section, title, first page, last page) for each bookmark in [toc]
+    that names a spec page, pages counted from 1; each title and page once."""
+    found, seen = [], set()
+    for i, (level, title, page) in enumerate(toc):
+        title = " ".join(title.split())
+        if page < 1 or page > page_count:
+            continue
+        for section, pattern in enumerate(SPEC_SECTIONS):
+            if not pattern.search(title) or (section, title.lower(), page) in seen:
+                continue
+            seen.add((section, title.lower(), page))
+            last = page_count
+            for next_level, _, next_page in toc[i + 1:]:
+                if next_level <= level and next_page > page:
+                    last = next_page - 1
+                    break
+            found.append((section, title, page, min(last, page + MAX_SPEC_PAGES - 1)))
+    return found
+
+
+def build_spec_pack(sources: list[tuple[str, Path, list[list], int]], target: Path) -> list[dict]:
+    """Copies the spec pages of [sources] (file id, PDF, bookmarks, page
+    count) into [target] and returns where each one landed; nothing is
+    written when no manual bookmarks a spec page."""
+    entries, runs = [], []
+    for file_id, pdf, toc, page_count in sources:
+        ranges = spec_ranges(toc, page_count)
+        if not ranges:
+            continue
+        # Each source page goes in once, even when bookmarks overlap.
+        pages = sorted({n for _, _, first, last in ranges for n in range(first, last + 1)})
+        runs.append((file_id, pdf, pages, ranges))
+    if not runs:
+        if target.exists():
+            target.unlink()
+        return []
+
+    pack = pymupdf.open()
+    at = {}
+    for file_id, pdf, pages, ranges in runs:
+        with pymupdf.open(pdf) as src:
+            start = 0
+            while start < len(pages):
+                end = start
+                while end + 1 < len(pages) and pages[end + 1] == pages[end] + 1:
+                    end += 1
+                for n in pages[start:end + 1]:
+                    at[(file_id, n)] = pack.page_count + 1 + n - pages[start]
+                pack.insert_pdf(src, from_page=pages[start] - 1, to_page=pages[end] - 1)
+                start = end + 1
+        for section, title, first, last in ranges:
+            entries.append({
+                "section": section,
+                "title": title,
+                "file": file_id,
+                "page": first,
+                "at": at[(file_id, first)],
+                "count": last - first + 1,
+            })
+    entries.sort(key=lambda e: e["section"])  # stable: manual order inside a section
+    toc = []
+    for section, name in enumerate(SPEC_SECTION_TITLES):
+        mine = [e for e in entries if e["section"] == section]
+        if mine:
+            toc.append([1, name, mine[0]["at"]])
+            toc += [[2, e["title"], e["at"]] for e in mine]
+    pack.set_toc(toc)
+    pack.save(target, garbage=4, deflate=True)
+    pack.close()
+    return entries
+
+
 def file_entry(path: Path, rel: str) -> dict:
     return {"path": rel, "size": path.stat().st_size, "sha256": sha256_of(path)}
 
@@ -145,7 +245,7 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
     unit_out = out_dir / "units" / unit_id
     unit_out.mkdir(parents=True, exist_ok=True)
 
-    files, skipped = [], []
+    files, skipped, spec_sources = [], [], []
     def order(pdf: Path) -> tuple:
         # Subfolders first, then the files directly in the unit folder
         # (the app orders them the same way).
@@ -171,6 +271,8 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
         index_path = unit_out / f"{file_id}.sqlite"
         shutil.copy2(pdf, target)
         write_index(index_path, title, doc_type, pages, toc, not scanned)
+        if doc_type != "partsbook":
+            spec_sources.append((file_id, target, toc, len(pages)))
 
         pdf_info = file_entry(target, f"units/{unit_id}/{target.name}")
         index_info = file_entry(index_path, f"units/{unit_id}/{index_path.name}")
@@ -197,6 +299,14 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
             f"pdf {pdf_info['size'] / 1e6:.1f} MB + index {index_info['size'] / 1e6:.1f} MB  {rel.as_posix()}"
         )
 
+    spec_path = unit_out / "spek.pdf"
+    spec_pages = build_spec_pack(spec_sources, spec_path)
+    if spec_pages:
+        spec = {**file_entry(spec_path, f"units/{unit_id}/spek.pdf"), "pages": spec_pages}
+        print(f"  spek.pdf      {len(spec_pages):4} spec pages, {spec['size'] / 1e6:.1f} MB")
+    else:
+        print("  spek.pdf      no spec bookmarks found")
+
     return {
         "id": unit_id,
         "name": meta.get("name", unit_id),
@@ -204,6 +314,7 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
         "size": sum(f["download_size"] for f in files),
         "files": files,
         "skipped_scanned": skipped,
+        **({"spec": spec} if spec_pages else {}),
     }
 
 
