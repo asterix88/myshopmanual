@@ -16,6 +16,7 @@ import 'package:mymanual/src/screens/shell.dart';
 import 'package:mymanual/src/theme.dart';
 import 'package:mymanual/src/store.dart';
 
+import '../test/specs_test.dart' show catalogWithSpec;
 import '../test/store_test.dart' show fixtureServer;
 
 Future<void> loadFonts() async {
@@ -43,9 +44,10 @@ void main() {
     await tester.runAsync(() async {
       await loadFonts();
       final root = Directory.systemTemp.createTempSync('shots');
-      store = await AppStore.open(root: root, client: fixtureServer());
+      store = await AppStore.open(root: root, client: fixtureServer(catalog: catalogWithSpec()));
       await store.setServerUrl('https://example.test');
       await store.download(store.catalog.files.single, unitName: 'TEST1-1');
+      await store.fetchSpecPacks();
       store.setLastRead(store.catalog.files.single.key, 2, section: 'Hydraulic oil filter clogging caution lamp');
       store.setThemeMode(themeMode);
     });
@@ -93,6 +95,11 @@ void main() {
     }
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}5b_spek.png'));
+    await tester.tap(find.byTooltip('Pilih unit'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}5c_spek_units.png'));
+    await tester.tapAt(const Offset(370, 300));
+    await tester.pumpAndSettle();
 
     // A manual not on the phone: read online or download.
     await tester.runAsync(() => store.deleteManuals([store.catalog.files.single.key]));
