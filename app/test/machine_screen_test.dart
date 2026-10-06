@@ -121,4 +121,35 @@ void main() {
     expect(find.text('Wiring'), findsOneWidget);
     expect(find.text('TEST1-1 / System Diagram'), findsOneWidget);
   });
+
+  testWidgets('a folder with many manuals can be searched by file name', (tester) async {
+    final catalog = fixtureCatalog();
+    final unit = (catalog['units'] as List).single as Map<String, dynamic>;
+    final file = (unit['files'] as List).single as Map<String, dynamic>;
+    unit['files'] = [
+      for (final name in ['Boom System', 'Bucket System', 'Swing Motor', 'Travel Motor', 'Pilot Valve'])
+        {...file, 'id': name.replaceAll(' ', '_'), 'title': name, 'group': 'Machine System'},
+      {...file, 'id': 'Boom_Cylinder', 'title': 'Boom Cylinder', 'group': 'Machine System / Cylinders'},
+    ];
+    late AppStore store;
+    final root = Directory.systemTemp.createTempSync('unit');
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
+      await store.setServerUrl('https://example.test');
+    });
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(home: UnitScreen(unitId: unit['id'] as String, folder: const ['Machine System'])),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Cylinders'), findsOneWidget);
+
+    // Typing finds matching manuals here and in the folders inside.
+    await tester.enterText(find.byType(TextField), 'boom');
+    await tester.pumpAndSettle();
+    expect(find.text('Boom System'), findsOneWidget);
+    expect(find.text('Boom Cylinder'), findsOneWidget);
+    expect(find.text('Swing Motor'), findsNothing);
+    expect(find.text('Cylinders'), findsNothing);
+  });
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../diagnostics.dart';
@@ -376,7 +377,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 }
 
-class _PageBar extends StatelessWidget {
+/// The section being read and a page number box: type a page and press
+/// enter to go there.
+class _PageBar extends StatefulWidget {
   const _PageBar({required this.page, required this.pageCount, required this.section, required this.onJump});
 
   final int page;
@@ -385,80 +388,101 @@ class _PageBar extends StatelessWidget {
   final ValueChanged<int> onJump;
 
   @override
+  State<_PageBar> createState() => _PageBarState();
+}
+
+class _PageBarState extends State<_PageBar> {
+  late final _field = TextEditingController(text: '${widget.page}');
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    // Leaving the box without pressing enter shows the current page again.
+    _focus.addListener(() {
+      if (_focus.hasFocus) {
+        _field.selection = TextSelection(baseOffset: 0, extentOffset: _field.text.length);
+      } else {
+        _field.text = '${widget.page}';
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(_PageBar old) {
+    super.didUpdateWidget(old);
+    if (!_focus.hasFocus && old.page != widget.page) _field.text = '${widget.page}';
+  }
+
+  @override
+  void dispose() {
+    _field.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _go(String text) {
+    final page = int.tryParse(text.trim());
+    _focus.unfocus();
+    if (page == null) return;
+    widget.onJump(page.clamp(1, widget.pageCount));
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       color: AppColors.surface,
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      section ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, color: AppColors.muted),
-                    ),
-                  ),
-                  InkWell(
-                    onTap: () => _askPage(context),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                      child: Text('$page / $pageCount', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                ],
-              ),
-              SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: 3,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-                  overlayShape: SliderComponentShape.noOverlay,
-                ),
-                child: Slider(
-                  value: page.clamp(1, pageCount).toDouble(),
-                  min: 1,
-                  max: pageCount.toDouble(),
-                  activeColor: AppColors.navy,
-                  inactiveColor: AppColors.divider,
-                  onChanged: (v) => onJump(v.round()),
+              Expanded(
+                child: Text(
+                  widget.section ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ),
+              const SizedBox(width: 10),
+              const Text('Hlm', style: TextStyle(fontSize: 13, color: AppColors.muted)),
+              const SizedBox(width: 6),
+              SizedBox(
+                width: 64,
+                child: TextField(
+                  key: const Key('page-input'),
+                  controller: _field,
+                  focusNode: _focus,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.go,
+                  textAlign: TextAlign.center,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  onSubmitted: _go,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    filled: true,
+                    fillColor: const Color(0xFFF4F5F7),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                  ),
+                ),
+              ),
+              Text(' / ${widget.pageCount}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
             ],
           ),
         ),
       ),
     );
-  }
-
-  Future<void> _askPage(BuildContext context) async {
-    final controller = TextEditingController();
-    final page = await showDialog<int>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ke halaman'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(hintText: '1 – $pageCount'),
-          onSubmitted: (v) => Navigator.pop(context, int.tryParse(v)),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, int.tryParse(controller.text)),
-            child: const Text('Buka'),
-          ),
-        ],
-      ),
-    );
-    if (page != null) onJump(page.clamp(1, pageCount));
   }
 }
 

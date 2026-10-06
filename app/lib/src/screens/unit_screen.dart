@@ -25,6 +25,16 @@ class UnitScreen extends StatefulWidget {
 class _UnitScreenState extends State<UnitScreen> {
   bool _editing = false;
   final Set<String> _selected = {};
+  final _filter = TextEditingController();
+
+  @override
+  void dispose() {
+    _filter.dispose();
+    super.dispose();
+  }
+
+  /// Shown when the folder holds this many manuals or more.
+  static const _filterFrom = 6;
 
   @override
   Widget build(BuildContext context) {
@@ -34,8 +44,14 @@ class _UnitScreenState extends State<UnitScreen> {
       return Scaffold(appBar: AppBar(), body: const EmptyState(icon: Icons.folder_off, title: 'Unit tidak ditemukan'));
     }
     final all = store.filesOf(unit);
-    final files = all.where((f) => _sameList(f.folder, widget.folder)).toList();
-    final subfolders = _subfolders(all, widget.folder);
+    final inFolder = all.where((f) => _startsWith(f.folder, widget.folder)).toList();
+    final query = _filter.text.trim().toLowerCase();
+    // Typing a name lists the matching manuals of this folder and every
+    // folder inside it, without the folders themselves.
+    final files = query.isEmpty
+        ? all.where((f) => _sameList(f.folder, widget.folder)).toList()
+        : inFolder.where((f) => f.title.toLowerCase().contains(query)).toList();
+    final subfolders = query.isEmpty ? _subfolders(all, widget.folder) : const <(String, List<ManualFile>)>[];
     final onPhone = files.where((f) => store.isDownloaded(f.key)).toList();
 
     return PopScope(
@@ -54,6 +70,34 @@ class _UnitScreenState extends State<UnitScreen> {
                 child: Text(
                   'Pilih file yang ingin dihapus dari HP. File bisa diunduh lagi kapan saja.',
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+              ),
+            if (!_editing && inFolder.length >= _filterFrom)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: TextField(
+                  controller: _filter,
+                  onChanged: (_) => setState(() {}),
+                  textInputAction: TextInputAction.search,
+                  style: const TextStyle(fontSize: 14),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    filled: true,
+                    fillColor: AppColors.surface,
+                    hintText: widget.folder.isEmpty ? 'Cari file di ${unit.name}' : 'Cari file di ${widget.folder.last}',
+                    prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.muted),
+                    suffixIcon: query.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Hapus',
+                            icon: const Icon(Icons.close, size: 18),
+                            onPressed: () => setState(_filter.clear),
+                          ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
               ),
             if (!_editing)
@@ -88,7 +132,9 @@ class _UnitScreenState extends State<UnitScreen> {
                     : _FileCard(file: file, unit: unit),
               ),
             if (files.isEmpty && subfolders.isEmpty)
-              const EmptyState(icon: Icons.folder_off_outlined, title: 'Folder ini kosong'),
+              query.isEmpty
+                  ? const EmptyState(icon: Icons.folder_off_outlined, title: 'Folder ini kosong')
+                  : const EmptyState(icon: Icons.search_off, title: 'Tidak ada file dengan nama itu'),
           ],
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -459,12 +505,15 @@ List<(String, List<ManualFile>)> _subfolders(List<ManualFile> files, List<String
   final inside = <String, List<ManualFile>>{};
   for (final f in files) {
     final path = f.folder;
-    if (path.length > folder.length && _sameList(path.take(folder.length).toList(), folder)) {
+    if (path.length > folder.length && _startsWith(path, folder)) {
       (inside[path[folder.length]] ??= []).add(f);
     }
   }
   return [for (final e in inside.entries) (e.key, e.value)];
 }
+
+bool _startsWith(List<String> path, List<String> folder) =>
+    path.length >= folder.length && _sameList(path.take(folder.length).toList(), folder);
 
 bool _sameList(List<String> a, List<String> b) {
   if (a.length != b.length) return false;

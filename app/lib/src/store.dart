@@ -333,6 +333,16 @@ class AppStore extends ChangeNotifier {
   /// downloading.
   Uri pdfUri(ManualFile f) => _url(f.pdf.path);
 
+  /// Bytes [start] to [end] (exclusive) of [f]'s PDF from the server, for
+  /// drawing a page of a manual that is not on the phone.
+  Future<Uint8List> fetchPdfRange(ManualFile f, int start, int end) async {
+    final response = await _client
+        .get(pdfUri(f), headers: {'Range': 'bytes=$start-${end - 1}'})
+        .timeout(const Duration(seconds: 30));
+    if (response.statusCode == 206 && response.bodyBytes.length == end - start) return response.bodyBytes;
+    throw HttpException('HTTP ${response.statusCode} untuk ${f.pdf.path}');
+  }
+
   /// The manual for [key]: the downloaded copy if there is one, else the
   /// server's entry.
   ManualFile? fileByKey(String key) => local[key]?.file ?? catalog.file(key);

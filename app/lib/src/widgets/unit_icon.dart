@@ -24,7 +24,7 @@ class UnitIcon extends StatelessWidget {
   }
 
   /// Model codes with a picture in `assets/units/<model>.png`.
-  static const pictures = {'PC2000', 'PC1250', 'PC500', 'PC210', 'CAT395', 'D155', 'D85'};
+  static const pictures = {'PC2000', 'PC1250', 'PC500', 'PC210', 'CAT395', 'D375', 'D155', 'D85'};
 
   @override
   Widget build(BuildContext context) {
