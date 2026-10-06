@@ -7,6 +7,7 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../diagnostics.dart';
 import '../models.dart';
+import '../page_image.dart';
 import '../search.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -58,6 +59,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   void initState() {
     super.initState();
     _page = widget.initialPage ?? 1;
+    _resumeServerDrawing = pauseServerDrawing();
     final query = widget.initialQuery?.trim();
     if (query != null && query.isNotEmpty) {
       _searching = true;
@@ -77,8 +79,13 @@ class _ViewerScreenState extends State<ViewerScreen> {
     if (manual != null) _toc = loadToc(store.indexPath(manual.file));
   }
 
+  /// Pages for the AI are not drawn from the server while a manual is open
+  /// here: they share PDFium's one worker, and this page comes first.
+  late final void Function() _resumeServerDrawing;
+
   @override
   void dispose() {
+    _resumeServerDrawing();
     if (_saveTimer?.isActive ?? false) {
       _saveTimer!.cancel();
       _saveLastRead();
@@ -103,6 +110,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   void _onViewerReady(PdfDocument document, PdfViewerController controller) {
+    Diagnostics.log('viewer ready, ${document.pages.length} pages');
     _searcher ??= PdfTextSearcher(_controller)..addListener(_onSearchChanged);
     setState(() => _pageCount = document.pages.length);
     document.loadOutline().then((outline) {
@@ -262,13 +270,16 @@ class _ViewerScreenState extends State<ViewerScreen> {
             ],
           ),
         ),
-        errorBannerBuilder: (context, error, stackTrace, documentRef) => EmptyState(
+        errorBannerBuilder: (context, error, stackTrace, documentRef) {
+          Diagnostics.log('viewer error: $error');
+          return EmptyState(
           icon: _online ? Icons.cloud_off : Icons.error_outline,
           title: _online ? 'Gagal membuka file secara online' : 'File tidak bisa dibuka',
           message: _online
               ? 'Periksa sinyal, atau unduh file ini supaya bisa dibuka tanpa internet.'
               : 'Coba hapus lalu unduh ulang file ini.',
-        ),
+          );
+        },
       );
 
   /// Every page gets a slot of the same size (A4 portrait at a fixed width)

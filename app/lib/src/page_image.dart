@@ -33,15 +33,33 @@ Future<Uint8List> renderPageImage(AppStore store, ManualFile file, int page, Str
         {double longest = 1600}) =>
     _oneAtATime(() async {
       Diagnostics.log('draw ${file.key} p$page $region');
-      final document = await _open(store, file);
+      PdfDocument? document;
       try {
-        final png = await _render(document.pages[page - 1], region, longest);
+        document = await _open(store, file);
+        final png = await _render(await _loadPage(document, page), region, longest);
         Diagnostics.log('drawn ${png.length ~/ 1024} KB');
         return png;
+      } on Object catch (e) {
+        Diagnostics.log('not drawn: $e');
+        rethrow;
       } finally {
-        await document.dispose();
+        await document?.dispose();
       }
     });
+
+/// Page [page] with its real size. A manual read from the server is opened
+/// without measuring all its pages (that alone fetches most of a big shop
+/// manual), so only this page is measured.
+Future<PdfPage> _loadPage(PdfDocument document, int page) async {
+  if (!document.pages[page - 1].isLoaded) {
+    await document.loadPagesProgressively(
+      startPageNumber: page,
+      loadUnitDuration: Duration.zero,
+      onPageLoadProgress: (_, _, _) => !document.pages[page - 1].isLoaded,
+    );
+  }
+  return document.pages[page - 1];
+}
 
 Future<Uint8List> _render(PdfPage pdfPage, String region, double longest) async {
   final (left, top, part) = switch (region) {
@@ -102,6 +120,9 @@ Future<File> pageThumbnail(AppStore store, ManualFile file, int page) async {
 /// drawing sheets of a schematic or a shop manual. Knowing them lets the AI
 /// go straight to the drawing instead of paging through covers and tables.
 Future<List<int>> findLargeSheets(AppStore store, ManualFile file) => _oneAtATime(() async {
+      // Measuring every page of a manual on the server means fetching most
+      // of it; the hint is only worth that for manuals on the phone.
+      if (!store.isDownloaded(file.key)) return const <int>[];
       final document = await _open(store, file);
       try {
         final areas = [for (final p in document.pages) p.width * p.height];
@@ -130,12 +151,25 @@ Future<PdfDocument> _open(AppStore store, ManualFile file) {
     _remoteBlocks.clear();
   }
   final size = file.pdf.size;
+  // Pages are drawn by the same PDFium worker the PDF viewer uses, which
+  // waits while a page is being fetched. So give up after a minute, and at
+  // once while the user has a manual open (see [pauseServerDrawing]).
+  final deadline = DateTime.now().add(const Duration(seconds: 60));
   Future<Uint8List> block(int id) async {
+    if (_viewersOpen > 0 || DateTime.now().isAfter(deadline)) {
+      throw const HttpException('drawing from the server paused');
+    }
     // Most recently used last, so the oldest piece is dropped first.
     final cached = _remoteBlocks.remove(id);
     if (cached != null) return _remoteBlocks[id] = cached;
     final start = id * _blockSize;
-    final data = await store.fetchPdfRange(file, start, math.min(start + _blockSize, size));
+    // A piece still on its way when a manual is opened is not waited for.
+    final fetch = store.fetchPdfRange(file, start, math.min(start + _blockSize, size));
+    final data = await Future.any<Uint8List?>([fetch, _viewerOpened.future.then((_) => null)]);
+    if (data == null) {
+      fetch.ignore();
+      throw const HttpException('drawing from the server paused');
+    }
     _remoteBlocks[id] = data;
     while (_remoteBlocks.length > _maxBlocks) {
       _remoteBlocks.remove(_remoteBlocks.keys.first);
@@ -158,7 +192,27 @@ Future<PdfDocument> _open(AppStore store, ManualFile file) {
     },
     fileSize: size,
     sourceName: 'ai:$key',
+    useProgressiveLoading: true,
   );
+}
+
+/// Manuals open in the PDF viewer; while there is one, pages are not drawn
+/// from the server, so the viewer never waits behind the AI.
+int _viewersOpen = 0;
+var _viewerOpened = Completer<void>();
+
+/// Called by the PDF viewer while it is open; returns the function to call
+/// when it closes.
+void Function() pauseServerDrawing() {
+  _viewersOpen++;
+  _viewerOpened.complete();
+  _viewerOpened = Completer<void>();
+  var done = false;
+  return () {
+    if (done) return;
+    done = true;
+    _viewersOpen--;
+  };
 }
 
 /// The manual whose server pieces are in [_remoteBlocks]. Pages are drawn
@@ -167,4 +221,4 @@ Future<PdfDocument> _open(AppStore store, ManualFile file) {
 String? _remoteKey;
 final _remoteBlocks = <int, Uint8List>{};
 const _blockSize = 256 * 1024;
-const _maxBlocks = 48; // 12 MB
+const _maxBlocks = 96; // 24 MB

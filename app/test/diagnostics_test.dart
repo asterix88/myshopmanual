@@ -67,6 +67,14 @@ void main() {
       expect(ranges, isNotEmpty);
       // The viewer's cache file for this manual is never touched.
       expect(Directory('${Pdfrx.cacheDirectoryPath}/pdfrx.cache').existsSync(), isFalse);
+
+      // While a manual is open in the viewer, nothing is drawn from the
+      // server: the viewer must not wait behind the AI.
+      final resume = pauseServerDrawing();
+      await expectLater(renderPageImage(store, file, 3, 'full', longest: 400), throwsA(anything));
+      resume();
+      final again = await renderPageImage(store, file, 3, 'full', longest: 400);
+      expect(again.sublist(1, 4), 'PNG'.codeUnits);
       store.dispose();
     });
   });
