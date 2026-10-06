@@ -130,7 +130,7 @@ void main() {
     final viewer = tester.widget<SpecViewerScreen>(find.byType(SpecViewerScreen));
     expect(viewer.path, store.readySpecPath(unit));
     expect(viewer.page, 3);
-    expect(find.text('Buka manual lengkap'), findsOneWidget);
+    expect(find.text('Manual lengkap'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
 

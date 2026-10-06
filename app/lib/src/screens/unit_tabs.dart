@@ -495,15 +495,21 @@ class _SpecViewerScreenState extends State<SpecViewerScreen> {
                 if (file != null) ...[
                   Expanded(
                     child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
                       onPressed: () => openViewer(context, file, page: widget.sourcePage),
-                      child: const Text('Buka manual lengkap'),
+                      // One line on a narrow phone.
+                      child: const Text('Manual lengkap', maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
                   ),
                   const SizedBox(width: 10),
                 ],
                 Expanded(
                   child: FilledButton.icon(
-                    style: FilledButton.styleFrom(backgroundColor: AppColors.navy),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.navy,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
                     onPressed: _askAi,
                     icon: const Icon(Icons.auto_awesome, size: 18),
                     label: const Text('Tanya Nyel AI'),
