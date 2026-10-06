@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,8 +8,10 @@ import 'package:pdfrx/pdfrx.dart';
 
 import 'src/diagnostics.dart';
 import 'src/screens/shell.dart';
+import 'src/screens/updates_screen.dart';
 import 'src/store.dart';
 import 'src/theme.dart';
+import 'src/update_notifications.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +24,12 @@ Future<void> main() async {
   ));
   final store = await AppStore.open()..autoFetchAiIndexes = true;
   runApp(MyManualApp(store: store));
+  // Tapping an update notification opens the update list.
+  unawaited(startUpdateNotifications(
+    onOpenUpdates: () => _navigator.currentState?.push(
+      MaterialPageRoute(builder: (_) => const UpdatesScreen()),
+    ),
+  ));
   // Check the server in the background; the app works offline meanwhile.
   store.refresh();
 }
@@ -42,6 +51,8 @@ Future<void> _clearOldPdfCache() async {
   }
 }
 
+final _navigator = GlobalKey<NavigatorState>();
+
 class MyManualApp extends StatelessWidget {
   const MyManualApp({super.key, required this.store});
 
@@ -53,6 +64,7 @@ class MyManualApp extends StatelessWidget {
       store: store,
       child: MaterialApp(
         title: 'MyManual',
+        navigatorKey: _navigator,
         debugShowCheckedModeBanner: false,
         theme: buildTheme(),
         home: const HomeShell(),
