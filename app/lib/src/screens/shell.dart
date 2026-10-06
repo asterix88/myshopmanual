@@ -5,6 +5,7 @@ import '../theme.dart';
 import 'chat_screen.dart';
 import 'home_screen.dart';
 import 'search_screen.dart';
+import 'specs_screen.dart';
 
 /// Makes the [AppStore] available below it and rebuilds dependents on change.
 class StoreScope extends InheritedNotifier<AppStore> {
@@ -19,7 +20,7 @@ class StoreScope extends InheritedNotifier<AppStore> {
       context.getInheritedWidgetOfExactType<StoreScope>()!.notifier!;
 }
 
-/// Bottom navigation: Unit, Cari, Tanya AI.
+/// Bottom navigation: Unit, Cari, Tanya AI, Spek.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -39,6 +40,7 @@ class _HomeShellState extends State<HomeShell> {
             HomeScreen(onOpenSearch: () => setState(() => _tab = 1)),
             const SearchScreen(),
             const ChatScreen(),
+            const SpecsScreen(),
           ].indexed)
             _TabPage(active: i == _tab, child: page),
         ],
@@ -95,6 +97,7 @@ class _NavBar extends StatelessWidget {
     (Icons.folder_outlined, Icons.folder, 'Unit'),
     (Icons.search, Icons.search, 'Cari'),
     (Icons.chat_bubble_outline, Icons.chat_bubble, 'Tanya AI'),
+    (Icons.fact_check_outlined, Icons.fact_check, 'Spek'),
   ];
 
   @override
@@ -140,7 +143,7 @@ class _NavItem extends StatelessWidget {
     final color = active ? AppColors.navy : AppColors.tabInactive;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: active ? AppColors.navySoft : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
