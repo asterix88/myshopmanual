@@ -12,7 +12,7 @@ import '../widgets/common.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
 
-/// Tanya AI: answers from the manuals downloaded on the phone, citing the
+/// Nyel AI: answers from the manuals downloaded on the phone, citing the
 /// pages it used. Needs internet; the search itself runs on the phone.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key, this.client});
@@ -80,7 +80,7 @@ class _ChatScreenState extends State<ChatScreen> {
       answer = ChatEntry.assistant(e.message, failed: true);
     } catch (e, stack) {
       // Never leave the chat stuck on its status line.
-      debugPrint('Tanya AI failed: $e\n$stack');
+      debugPrint('Nyel AI failed: $e\n$stack');
       answer = ChatEntry.assistant('Terjadi kesalahan di aplikasi saat mencari jawaban. Coba lagi.', failed: true);
     }
     if (!mounted) return;
@@ -113,6 +113,16 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    if (store.pendingAiQuestion != null) {
+      // "Tanya Nyel AI" on a page: put the question in the box to edit or send.
+      final question = store.takeAiQuestion()!;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _input.value = TextEditingValue(
+          text: question,
+          selection: TextSelection.collapsed(offset: question.length),
+        );
+      });
+    }
     final offline = store.online == false;
     final hasManuals = store.catalog.files.isNotEmpty || store.local.isNotEmpty;
     return Scaffold(
@@ -127,7 +137,7 @@ class _ChatScreenState extends State<ChatScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Tanya AI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navy)),
+                Text('Nyel AI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navy)),
                 Text(
                   'Jawaban dari semua manual',
                   style: TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),

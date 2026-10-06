@@ -134,7 +134,7 @@ class AppStore extends ChangeNotifier {
     }
   }
 
-  /// Questions to Tanya AI per day on this phone, to keep the AI bill small.
+  /// Questions to Nyel AI per day on this phone, to keep the AI bill small.
   static const aiDailyLimit = 10;
 
   /// The admin's phone (unlocked with the admin code) has no daily limit.
@@ -178,7 +178,7 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Where the Tanya AI conversation is kept between app starts.
+  /// Where the Nyel AI conversation is kept between app starts.
   String get chatHistoryPath => p.join(_root.path, 'chat.json');
 
   Timer? _saveTimer;
@@ -553,7 +553,7 @@ class AppStore extends ChangeNotifier {
 
   /// Index files of every downloaded, searchable manual: {fileKey: path}.
   /// Whether a successful [refresh] fetches the search index of every manual
-  /// in the background, so Tanya AI never waits for one. The app turns it on;
+  /// in the background, so Nyel AI never waits for one. The app turns it on;
   /// tests leave it off.
   bool autoFetchAiIndexes = false;
 
@@ -562,7 +562,7 @@ class AppStore extends ChangeNotifier {
   AiIndexProgress? get aiIndexProgress => _aiIndexRun;
   AiIndexProgress? _aiIndexRun;
 
-  /// Fetches every missing search index for Tanya AI (indexes only, never
+  /// Fetches every missing search index for Nyel AI (indexes only, never
   /// PDFs), a few at a time, and deletes cached indexes of manuals no longer
   /// on the server. A failed index is skipped; after several failures in a
   /// row (offline) it stops and tries again on the next refresh.
@@ -609,6 +609,34 @@ class AppStore extends ChangeNotifier {
     await for (final entry in dir.list(recursive: true)) {
       if (entry is File && entry.path.endsWith('.sqlite') && !keep.contains(entry.path)) await entry.delete();
     }
+  }
+
+  /// The unit shown on the Spek and Servis tabs, once picked (not saved).
+  String? pickedUnitId;
+
+  void pickUnit(String id) {
+    pickedUnitId = id;
+    notifyListeners();
+  }
+
+  /// A question waiting to be put in Nyel AI's input box (from "Tanya Nyel
+  /// AI" on a page); the chat takes it with [takeAiQuestion].
+  String? get pendingAiQuestion => _pendingAiQuestion;
+  String? _pendingAiQuestion;
+
+  /// Counts [askAi] calls, so the tab bar switches to Nyel AI once per ask.
+  int aiAsks = 0;
+
+  void askAi(String question) {
+    _pendingAiQuestion = question;
+    aiAsks++;
+    notifyListeners();
+  }
+
+  String? takeAiQuestion() {
+    final q = _pendingAiQuestion;
+    _pendingAiQuestion = null;
+    return q;
   }
 
   /// Where a unit's spek.pdf is kept; the version is in the name so an
@@ -663,11 +691,11 @@ class AppStore extends ChangeNotifier {
   }
 
   /// Where the search index of a manual that is not downloaded is kept for
-  /// Tanya AI; the version is in the name so an update fetches it afresh.
+  /// Nyel AI; the version is in the name so an update fetches it afresh.
   String cachedIndexPath(ManualFile f) =>
       p.join(_root.path, 'index-cache', f.unitId, '${f.id}-${f.index.sha256.substring(0, 12)}.sqlite');
 
-  /// Search indexes for Tanya AI over every manual on the server, by file
+  /// Search indexes for Nyel AI over every manual on the server, by file
   /// key: a downloaded manual uses its own index; for any other only the small
   /// index is fetched (not the PDF) and kept. [where] narrows the manuals, so
   /// a question about one unit only fetches that unit's indexes. A manual
@@ -740,7 +768,7 @@ class AppStore extends ChangeNotifier {
 
   /// Search indexes for the Cari tab, by file key: every manual whose index
   /// is on the phone, downloaded or not (the small indexes of the others are
-  /// fetched in the background for Tanya AI).
+  /// fetched in the background for Nyel AI).
   Map<String, String> searchableIndexes({DocType? type}) => {
         for (final file in catalog.files.followedBy(local.values.map((m) => m.file)))
           if (file.searchable && (type == null || file.type == type))

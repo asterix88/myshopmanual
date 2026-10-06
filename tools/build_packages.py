@@ -28,7 +28,8 @@ Re-running keeps the previous catalog.json in dist/: units not rebuilt
 its PDF actually changes. The app uses those dates to show what is new.
 
 Each unit also gets units/<UNIT>/spek.pdf: the pages its manuals bookmark
-as bolt torque, refill capacities, or standard values and pressures, cut
+as bolt torque, refill capacities, standard values and pressures, or the
+maintenance schedule (chart and every-N-hours service items), cut
 into one small PDF that the app keeps on the phone for its Spek tab (the
 catalog's unit "spec" lists those pages). The bookmark titles are matched
 with SPEC_SECTIONS below.
@@ -74,6 +75,17 @@ SPEC_SECTIONS = [
     ),
 ]
 SPEC_SECTION_TITLES = ["Torsi baut", "Kapasitas oli & cairan", "Nilai standar & tekanan"]
+# Servis tab: bookmarks of the maintenance schedule. "EVERY 500 HOURS
+# SERVICE" opens a tab HM 500 listing the items under it; the schedule chart
+# itself shows on every tab.
+SERVICE_INTERVAL = re.compile(
+    r"\b(?:every|initial)?\s*([\d.,]{3,7})\s*(?:hours?|hrs?|h|hm|smr)\b[^/]*?\b(?:service|maintenance)\b", re.I)
+SERVICE_CHART = re.compile(
+    r"maintenance (?:schedule|interval)s?(?: chart| table| list)?$|periodic maintenance (?:chart|table|schedule)"
+    r"|maintenance (?:chart|table)", re.I)
+# Pages kept per maintenance item, and for an interval's own heading page.
+MAX_SERVICE_ITEM_PAGES = 10
+
 # A matched bookmark takes its pages up to the next bookmark at its level or
 # above, but never more than this many.
 MAX_SPEC_PAGES = 40
@@ -180,26 +192,82 @@ def spec_ranges(toc: list[list], page_count: int) -> list[tuple[int, str, int, i
     return found
 
 
-def build_spec_pack(sources: list[tuple[str, Path, list[list], int]], target: Path) -> list[dict]:
-    """Copies the spec pages of [sources] (file id, PDF, bookmarks, page
-    count) into [target] and returns where each one landed; nothing is
-    written when no manual bookmarks a spec page."""
-    entries, runs = [], []
+def _section_end(toc: list[list], i: int, page_count: int) -> int:
+    """Last page of bookmark i: the page before the next bookmark at its
+    level or above (or the end of the PDF)."""
+    level, _, page = toc[i]
+    for next_level, _, next_page in toc[i + 1:]:
+        if next_level <= level and next_page > page:
+            return next_page - 1
+    return page_count
+
+
+def service_ranges(toc: list[list], page_count: int) -> list[dict]:
+    """The maintenance schedule in [toc]: the chart (hours 0) and, for each
+    "every N hours service" bookmark, its heading and the items under it,
+    each with its first and last page."""
+    found = []
+    for i, (level, title, page) in enumerate(toc):
+        title = " ".join(title.split())
+        if page < 1 or page > page_count:
+            continue
+        if SERVICE_CHART.search(title):
+            # "MAINTENANCE SCHEDULE" holding a "MAINTENANCE SCHEDULE CHART":
+            # keep only the inner one.
+            nxt = toc[i + 1] if i + 1 < len(toc) else None
+            if nxt and nxt[0] > level and SERVICE_CHART.search(" ".join(nxt[1].split())):
+                continue
+            found.append({"hours": 0, "title": title, "page": page, "item": False,
+                          "last": min(_section_end(toc, i, page_count), page + MAX_SPEC_PAGES - 1)})
+            continue
+        match = SERVICE_INTERVAL.search(title)
+        if not match:
+            continue
+        try:
+            hours = int(re.sub(r"[.,]", "", match.group(1)))
+        except ValueError:
+            continue
+        if hours < 10:
+            continue
+        children = []
+        for j in range(i + 1, len(toc)):
+            child_level, child_title, child_page = toc[j]
+            if child_level <= level:
+                break
+            if child_level == level + 1 and 1 <= child_page <= page_count:
+                end = _section_end(toc, j, page_count)
+                children.append({"hours": hours, "title": " ".join(child_title.split()), "page": child_page,
+                                 "item": True, "last": min(end, child_page + MAX_SERVICE_ITEM_PAGES - 1)})
+        heading_last = children[0]["page"] - 1 if children else _section_end(toc, i, page_count)
+        heading_last = max(page, min(heading_last, page + MAX_SERVICE_ITEM_PAGES - 1))
+        found.append({"hours": hours, "title": title, "page": page, "item": False, "last": heading_last})
+        found += children
+    return found
+
+
+def build_spec_pack(sources: list[tuple[str, Path, list[list], int]], target: Path) -> tuple[list[dict], list[dict]]:
+    """Copies the spec and maintenance schedule pages of [sources] (file id,
+    PDF, bookmarks, page count) into [target] and returns where each one
+    landed: (spec pages, service pages). Nothing is written when no manual
+    bookmarks either."""
+    entries, service, runs = [], [], []
     for file_id, pdf, toc, page_count in sources:
         ranges = spec_ranges(toc, page_count)
-        if not ranges:
+        svc = service_ranges(toc, page_count)
+        if not ranges and not svc:
             continue
         # Each source page goes in once, even when bookmarks overlap.
-        pages = sorted({n for _, _, first, last in ranges for n in range(first, last + 1)})
-        runs.append((file_id, pdf, pages, ranges))
+        pages = sorted({n for _, _, first, last in ranges for n in range(first, last + 1)}
+                       | {n for e in svc for n in range(e["page"], e["last"] + 1)})
+        runs.append((file_id, pdf, pages, ranges, svc))
     if not runs:
         if target.exists():
             target.unlink()
-        return []
+        return [], []
 
     pack = pymupdf.open()
     at = {}
-    for file_id, pdf, pages, ranges in runs:
+    for file_id, pdf, pages, ranges, svc in runs:
         with pymupdf.open(pdf) as src:
             start = 0
             while start < len(pages):
@@ -219,6 +287,16 @@ def build_spec_pack(sources: list[tuple[str, Path, list[list], int]], target: Pa
                 "at": at[(file_id, first)],
                 "count": last - first + 1,
             })
+        for e in svc:
+            service.append({
+                "hours": e["hours"],
+                "title": e["title"],
+                "file": file_id,
+                "page": e["page"],
+                "at": at[(file_id, e["page"])],
+                "count": e["last"] - e["page"] + 1,
+                "item": e["item"],
+            })
     entries.sort(key=lambda e: e["section"])  # stable: manual order inside a section
     toc = []
     for section, name in enumerate(SPEC_SECTION_TITLES):
@@ -226,10 +304,15 @@ def build_spec_pack(sources: list[tuple[str, Path, list[list], int]], target: Pa
         if mine:
             toc.append([1, name, mine[0]["at"]])
             toc += [[2, e["title"], e["at"]] for e in mine]
+    if service:
+        toc.append([1, "Jadwal servis", service[0]["at"]])
+        for e in service:
+            if not e["item"]:
+                toc.append([2, e["title"], e["at"]])
     pack.set_toc(toc)
     pack.save(target, garbage=4, deflate=True)
     pack.close()
-    return entries
+    return entries, service
 
 
 def file_entry(path: Path, rel: str) -> dict:
@@ -300,12 +383,15 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
         )
 
     spec_path = unit_out / "spek.pdf"
-    spec_pages = build_spec_pack(spec_sources, spec_path)
-    if spec_pages:
-        spec = {**file_entry(spec_path, f"units/{unit_id}/spek.pdf"), "pages": spec_pages}
-        print(f"  spek.pdf      {len(spec_pages):4} spec pages, {spec['size'] / 1e6:.1f} MB")
+    spec_pages, service_pages = build_spec_pack(spec_sources, spec_path)
+    has_spec = bool(spec_pages or service_pages)
+    if has_spec:
+        spec = {**file_entry(spec_path, f"units/{unit_id}/spek.pdf"), "pages": spec_pages, "service": service_pages}
+        intervals = sorted({e["hours"] for e in service_pages if e["hours"]})
+        print(f"  spek.pdf      {len(spec_pages):4} spec pages, service HM {intervals or '-'}, "
+              f"{spec['size'] / 1e6:.1f} MB")
     else:
-        print("  spek.pdf      no spec bookmarks found")
+        print("  spek.pdf      no spec or maintenance bookmarks found")
 
     return {
         "id": unit_id,
@@ -314,7 +400,7 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
         "size": sum(f["download_size"] for f in files),
         "files": files,
         "skipped_scanned": skipped,
-        **({"spec": spec} if spec_pages else {}),
+        **({"spec": spec} if has_spec else {}),
     }
 
 

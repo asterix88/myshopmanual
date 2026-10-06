@@ -121,15 +121,51 @@ class ManualFile {
 /// A unit's spec pages (bolt torque, capacities, standard values) cut from
 /// its manuals into one small PDF, `spek.pdf`, kept on the phone.
 class SpecPack {
-  const SpecPack({required this.file, required this.pages});
+  const SpecPack({required this.file, required this.pages, this.service = const []});
 
   factory SpecPack.fromJson(Map<String, dynamic> json) => SpecPack(
         file: RemoteFile.fromJson(json),
-        pages: [for (final e in json['pages'] as List) SpecPackPage.fromJson(e as Map<String, dynamic>)],
+        pages: [for (final e in json['pages'] as List? ?? const []) SpecPackPage.fromJson(e as Map<String, dynamic>)],
+        service: [
+          for (final e in json['service'] as List? ?? const []) ServicePage.fromJson(e as Map<String, dynamic>),
+        ],
       );
 
   final RemoteFile file;
   final List<SpecPackPage> pages;
+
+  /// The maintenance schedule, in manual order.
+  final List<ServicePage> service;
+}
+
+/// A maintenance schedule page in spek.pdf: the schedule chart ([hours] 0),
+/// an interval heading like "EVERY 500 HOURS SERVICE", or one service item
+/// under it ([item]).
+class ServicePage {
+  const ServicePage({
+    required this.hours,
+    required this.title,
+    required this.fileId,
+    required this.page,
+    required this.at,
+    required this.item,
+  });
+
+  factory ServicePage.fromJson(Map<String, dynamic> json) => ServicePage(
+        hours: json['hours'] as int,
+        title: json['title'] as String,
+        fileId: json['file'] as String,
+        page: json['page'] as int,
+        at: json['at'] as int,
+        item: json['item'] as bool? ?? false,
+      );
+
+  final int hours;
+  final String title;
+  final String fileId;
+  final int page;
+  final int at;
+  final bool item;
 }
 
 class SpecPackPage {
