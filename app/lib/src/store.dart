@@ -601,10 +601,13 @@ class AppStore extends ChangeNotifier {
     await _deleteIfExists(File('$target.part.sha'));
   }
 
+  /// Search indexes for the Cari tab, by file key: every manual whose index
+  /// is on the phone, downloaded or not (the small indexes of the others are
+  /// fetched in the background for Tanya AI).
   Map<String, String> searchableIndexes({DocType? type}) => {
-        for (final m in local.values)
-          if (m.file.searchable && (type == null || m.file.type == type))
-            m.file.key: indexPath(m.file),
+        for (final file in catalog.files.followedBy(local.values.map((m) => m.file)))
+          if (file.searchable && (type == null || file.type == type))
+            file.key: ?_readyAiIndex(file),
       };
 
   @override

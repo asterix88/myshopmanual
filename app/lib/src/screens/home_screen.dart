@@ -6,6 +6,7 @@ import '../theme.dart';
 import '../widgets/common.dart';
 import 'shell.dart';
 import '../widgets/machine_icon.dart';
+import '../widgets/unit_icon.dart';
 import 'machine_screen.dart';
 import 'report_screen.dart';
 import 'updates_screen.dart';
@@ -194,19 +195,13 @@ class _ContinueReading extends StatelessWidget {
                 padding: const EdgeInsets.all(14),
                 child: Row(
                   children: [
+                    // The unit's machine picture, like in its folder.
                     Container(
-                      width: 44,
+                      width: 72,
                       height: 56,
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
-                      alignment: Alignment.center,
-                      child: Text(
-                        switch (file.type) {
-                          DocType.shopManual => 'SM',
-                          DocType.other => '',
-                          _ => file.type.label.substring(0, 3).toUpperCase(),
-                        },
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFC86A0A)),
-                      ),
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                      child: UnitIcon(unitId: file.unitId, width: 64, height: 48),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -220,7 +215,7 @@ class _ContinueReading extends StatelessWidget {
                             style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
                           ),
                           Text(
-                            [if (lastRead.section != null) lastRead.section!, 'hlm ${lastRead.page}'].join(' · '),
+                            [store.unitNameOf(file), if (lastRead.section != null) lastRead.section!, 'hlm ${lastRead.page}'].join(' · '),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(color: Color(0xFFC9D3E3), fontSize: 12),
