@@ -92,9 +92,13 @@ class ManualFile {
   final DateTime? updatedAt;
 
   /// The subfolder of the unit folder the PDF came from (e.g. "System
-  /// Diagram"), shown as a heading on the unit page; empty for files placed
-  /// directly in the unit folder.
+  /// Diagram", or "A / B" for a folder inside a folder), opened as its own
+  /// page from the unit page; empty for files placed directly in the unit
+  /// folder.
   final String group;
+
+  /// [group] split into its folder names, outermost first.
+  List<String> get folder => group.isEmpty ? const [] : group.split(' / ');
 
   /// Unique across the whole catalog.
   String get key => '$unitId/$id';

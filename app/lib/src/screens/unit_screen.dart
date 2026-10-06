@@ -7,11 +7,16 @@ import '../widgets/common.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
 
-/// A unit's folder: one card per manual, each downloaded on its own.
+/// A unit's folder: its subfolders first, each opened on its own page, then
+/// one card per manual, each downloaded on its own.
 class UnitScreen extends StatefulWidget {
-  const UnitScreen({super.key, required this.unitId});
+  const UnitScreen({super.key, required this.unitId, this.folder = const []});
 
   final String unitId;
+
+  /// The subfolder shown, as its path inside the unit folder (empty: the
+  /// unit folder itself).
+  final List<String> folder;
 
   @override
   State<UnitScreen> createState() => _UnitScreenState();
@@ -28,7 +33,9 @@ class _UnitScreenState extends State<UnitScreen> {
     if (unit == null) {
       return Scaffold(appBar: AppBar(), body: const EmptyState(icon: Icons.folder_off, title: 'Unit tidak ditemukan'));
     }
-    final files = store.filesOf(unit);
+    final all = store.filesOf(unit);
+    final files = all.where((f) => _sameList(f.folder, widget.folder)).toList();
+    final subfolders = _subfolders(all, widget.folder);
     final onPhone = files.where((f) => store.isDownloaded(f.key)).toList();
 
     return PopScope(
@@ -49,27 +56,39 @@ class _UnitScreenState extends State<UnitScreen> {
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ),
-            for (final (group, groupFiles) in _grouped(files))
-              for (final (i, file) in groupFiles.indexed) ...[
-                // Below the subfolders, the unit folder's own files get a
-                // heading too, so they don't read as part of the last one.
-                if (i == 0 && (group.isNotEmpty || files.any((f) => f.group.isNotEmpty)))
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: SectionLabel(group.isEmpty ? 'Manual' : group),
-                  ),
+            if (!_editing)
+              for (final (name, inside) in subfolders)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
-                  child: _editing
-                      ? _SelectableFile(
-                          file: file,
-                          enabled: store.isDownloaded(file.key),
-                          selected: _selected.contains(file.key),
-                          onChanged: (v) => setState(() => v ? _selected.add(file.key) : _selected.remove(file.key)),
-                        )
-                      : _FileCard(file: file, unit: unit),
+                  child: _FolderCard(
+                    name: name,
+                    files: inside,
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => UnitScreen(unitId: unit.id, folder: [...widget.folder, name]),
+                    )),
+                  ),
                 ),
-              ],
+            // Below the subfolders, the folder's own files get a heading, so
+            // they don't read as part of the last subfolder.
+            if (!_editing && subfolders.isNotEmpty && files.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: SectionLabel('Manual'),
+              ),
+            for (final file in files)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _editing
+                    ? _SelectableFile(
+                        file: file,
+                        enabled: store.isDownloaded(file.key),
+                        selected: _selected.contains(file.key),
+                        onChanged: (v) => setState(() => v ? _selected.add(file.key) : _selected.remove(file.key)),
+                      )
+                    : _FileCard(file: file, unit: unit),
+              ),
+            if (files.isEmpty && subfolders.isEmpty)
+              const EmptyState(icon: Icons.folder_off_outlined, title: 'Folder ini kosong'),
           ],
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -93,9 +112,13 @@ class _UnitScreenState extends State<UnitScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(unit.name),
-            if (unit.kind.isNotEmpty)
-              Text(unit.kind, style: const TextStyle(fontSize: 12, color: AppColors.muted, fontWeight: FontWeight.w400)),
+            Text(widget.folder.isEmpty ? unit.name : widget.folder.last),
+            // Inside a subfolder the line below says whose folder it is.
+            if (widget.folder.isNotEmpty || unit.kind.isNotEmpty)
+              Text(
+                widget.folder.isEmpty ? unit.kind : [unit.name, ...widget.folder.take(widget.folder.length - 1)].join(' / '),
+                style: const TextStyle(fontSize: 12, color: AppColors.muted, fontWeight: FontWeight.w400),
+              ),
           ],
         ),
         actions: [
@@ -378,15 +401,75 @@ class _SelectableFile extends StatelessWidget {
   }
 }
 
-/// Consecutive files of one subfolder under one heading ([files] come in
-/// [ManualFile.pageOrder]: subfolders first, then the unit folder's own).
-List<(String, List<ManualFile>)> _grouped(List<ManualFile> files) {
-  final groups = <String, List<ManualFile>>{};
-  for (final f in files) {
-    (groups[f.group] ??= []).add(f);
+/// A subfolder of the unit folder: tapping it opens its files on their own
+/// page.
+class _FolderCard extends StatelessWidget {
+  const _FolderCard({required this.name, required this.files, required this.onTap});
+
+  final String name;
+
+  /// Every manual inside the folder, its own subfolders included.
+  final List<ManualFile> files;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final onPhone = files.where((f) => store.isDownloaded(f.key)).length;
+    final keys = {for (final f in files) f.key};
+    final hasUpdate = store.unseenUpdates.any((u) => keys.contains(u.file.key));
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+      child: Row(
+        children: [
+          const Icon(Icons.folder, size: 34, color: AppColors.orange),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                Text(
+                  hasUpdate
+                      ? 'Ada update manual'
+                      : [
+                          '${files.length} file',
+                          if (onPhone > 0) '$onPhone di HP',
+                        ].join(' · '),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: hasUpdate ? const Color(0xFFC2410C) : AppColors.muted,
+                    fontWeight: hasUpdate ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: Color(0xFF9AA0A6)),
+        ],
+      ),
+    );
   }
-  return [
-    for (final e in groups.entries)
-      if (e.value.isNotEmpty) (e.key, e.value),
-  ];
+}
+
+/// The subfolders directly inside [folder], each with every manual it holds,
+/// in the order their files come ([ManualFile.pageOrder], A-Z).
+List<(String, List<ManualFile>)> _subfolders(List<ManualFile> files, List<String> folder) {
+  final inside = <String, List<ManualFile>>{};
+  for (final f in files) {
+    final path = f.folder;
+    if (path.length > folder.length && _sameList(path.take(folder.length).toList(), folder)) {
+      (inside[path[folder.length]] ??= []).add(f);
+    }
+  }
+  return [for (final e in inside.entries) (e.key, e.value)];
+}
+
+bool _sameList(List<String> a, List<String> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }
