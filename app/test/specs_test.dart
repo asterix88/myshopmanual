@@ -1,8 +1,10 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mymanual/main.dart';
-import 'package:mymanual/src/screens/specs_screen.dart';
+import 'package:mymanual/src/screens/chat_screen.dart';
+import 'package:mymanual/src/screens/unit_tabs.dart';
 import 'package:mymanual/src/specs.dart';
 import 'package:mymanual/src/store.dart';
 import 'package:path/path.dart' as p;
@@ -33,6 +35,13 @@ Map<String, dynamic> catalogWithSpec() {
     'pages': [
       {'section': 0, 'title': 'Standard tightening torque table', 'file': 'OMM_Test_Unit', 'page': 40, 'at': 2, 'count': 1},
       {'section': 1, 'title': 'Table of fuel, coolant and lubricants', 'file': 'OMM_Test_Unit', 'page': 80, 'at': 3, 'count': 1},
+    ],
+    'service': [
+      {'hours': 0, 'title': 'MAINTENANCE SCHEDULE CHART', 'file': 'OMM_Test_Unit', 'page': 100, 'at': 1, 'count': 1, 'item': false},
+      {'hours': 250, 'title': 'EVERY 250 HOURS SERVICE', 'file': 'OMM_Test_Unit', 'page': 110, 'at': 2, 'count': 1, 'item': false},
+      {'hours': 250, 'title': 'CHECK ENGINE OIL LEVEL', 'file': 'OMM_Test_Unit', 'page': 111, 'at': 2, 'count': 1, 'item': true},
+      {'hours': 500, 'title': 'EVERY 500 HOURS SERVICE', 'file': 'OMM_Test_Unit', 'page': 120, 'at': 3, 'count': 1, 'item': false},
+      {'hours': 500, 'title': 'REPLACE FUEL MAIN FILTER', 'file': 'OMM_Test_Unit', 'page': 121, 'at': 3, 'count': 1, 'item': true},
     ],
   };
   return catalog;
@@ -121,7 +130,7 @@ void main() {
     final viewer = tester.widget<SpecViewerScreen>(find.byType(SpecViewerScreen));
     expect(viewer.path, store.readySpecPath(unit));
     expect(viewer.page, 3);
-    expect(find.text('Buka manual lengkap'), findsOneWidget);
+    expect(find.text('Manual lengkap'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
 
@@ -138,6 +147,43 @@ void main() {
       expect(File(old).existsSync(), isFalse);
       expect(store.readySpecPath(store.units.single), isNotNull);
     });
+    root.deleteSync(recursive: true);
+  });
+
+  testWidgets('Servis lists each interval, and Tanya Nyel AI fills the chat', (tester) async {
+    Pdfrx.pdfiumModulePath ??= File('build/native_assets/linux/libpdfium.so').absolute.path;
+    Pdfrx.cacheDirectoryPath ??= Directory.systemTemp.createTempSync('pdfcache').path;
+    late AppStore store;
+    final root = Directory.systemTemp.createTempSync('specs');
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer(catalog: catalogWithSpec()));
+      await store.setServerUrl('https://example.test');
+      await store.fetchSpecPacks();
+    });
+    await tester.pumpWidget(MyManualApp(store: store));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Servis').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('HM 250'), findsOneWidget);
+    expect(find.text('HM 500'), findsOneWidget);
+    expect(find.text('MAINTENANCE SCHEDULE CHART'), findsOneWidget);
+    expect(find.text('CHECK ENGINE OIL LEVEL'), findsOneWidget);
+    await tester.tap(find.text('HM 500'));
+    await tester.pumpAndSettle();
+    expect(find.text('REPLACE FUEL MAIN FILTER'), findsOneWidget);
+
+    await tester.tap(find.text('REPLACE FUEL MAIN FILTER'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(tester.widget<SpecViewerScreen>(find.byType(SpecViewerScreen)).page, 3);
+    await tester.tap(find.text('Tanya Nyel AI'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SpecViewerScreen), findsNothing);
+    final input = tester.widget<EditableText>(
+        find.descendant(of: find.byType(ChatScreen), matching: find.byType(EditableText)));
+    expect(input.controller.text, contains('REPLACE FUEL MAIN FILTER'));
+    expect(input.controller.text, contains('TEST1-1'));
     root.deleteSync(recursive: true);
   });
 }

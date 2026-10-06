@@ -13,6 +13,7 @@ import 'package:http/testing.dart';
 import 'package:mymanual/main.dart';
 import 'package:mymanual/src/screens/chat_screen.dart';
 import 'package:mymanual/src/screens/shell.dart';
+import 'package:mymanual/src/screens/specs_screen.dart';
 import 'package:mymanual/src/theme.dart';
 import 'package:mymanual/src/store.dart';
 
@@ -84,7 +85,7 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}4_search.png'));
 
-    await tester.tap(find.text('Tanya AI').last);
+    await tester.tap(find.text('Nyel AI').last);
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}5_chat.png'));
 
@@ -95,11 +96,14 @@ void main() {
     }
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}5b_spek.png'));
-    await tester.tap(find.byTooltip('Pilih unit'));
+    await tester.tap(find.descendant(of: find.byType(SpecsScreen), matching: find.byTooltip('Pilih unit')));
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}5c_spek_units.png'));
     await tester.tapAt(const Offset(370, 300));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Servis').last);
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}5d_servis.png'));
 
     // A manual not on the phone: read online or download.
     await tester.runAsync(() => store.deleteManuals([store.catalog.files.single.key]));

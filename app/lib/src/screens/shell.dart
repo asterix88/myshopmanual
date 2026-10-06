@@ -5,6 +5,7 @@ import '../theme.dart';
 import 'chat_screen.dart';
 import 'home_screen.dart';
 import 'search_screen.dart';
+import 'service_screen.dart';
 import 'specs_screen.dart';
 
 /// Makes the [AppStore] available below it and rebuilds dependents on change.
@@ -20,7 +21,8 @@ class StoreScope extends InheritedNotifier<AppStore> {
       context.getInheritedWidgetOfExactType<StoreScope>()!.notifier!;
 }
 
-/// Bottom navigation: Unit, Cari, Tanya AI, Spek.
+/// Bottom navigation: Unit, Cari, Nyel AI (raised, in the middle), Spek,
+/// Servis.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -30,9 +32,18 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
+  int _aiAsks = 0;
+
+  static const chatTab = 2;
 
   @override
   Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    if (store.aiAsks != _aiAsks) {
+      // "Tanya Nyel AI" on a page: show the chat with the question in it.
+      _aiAsks = store.aiAsks;
+      _tab = chatTab;
+    }
     return Scaffold(
       body: Stack(
         children: [
@@ -41,6 +52,7 @@ class _HomeShellState extends State<HomeShell> {
             const SearchScreen(),
             const ChatScreen(),
             const SpecsScreen(),
+            const ServiceScreen(),
           ].indexed)
             _TabPage(active: i == _tab, child: page),
         ],
@@ -96,37 +108,109 @@ class _NavBar extends StatelessWidget {
   static const _items = [
     (Icons.folder_outlined, Icons.folder, 'Unit'),
     (Icons.search, Icons.search, 'Cari'),
-    (Icons.chat_bubble_outline, Icons.chat_bubble, 'Tanya AI'),
+    (Icons.auto_awesome, Icons.auto_awesome, 'Nyel AI'),
     (Icons.fact_check_outlined, Icons.fact_check, 'Spek'),
+    (Icons.event_note_outlined, Icons.event_note, 'Servis'),
   ];
+
+  /// How far the Nyel AI button rises above the bar.
+  static const _rise = 24.0;
+  static const _barHeight = 66.0;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.line)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 68,
-          child: Row(
-            children: [
-              for (var i = 0; i < _items.length; i++)
-                Expanded(
-                  child: Semantics(
-                    selected: i == current,
-                    button: true,
-                    child: InkWell(
-                      onTap: () => onSelect(i),
-                      child: Center(child: _NavItem(item: _items[i], active: i == current)),
+    final bottom = MediaQuery.paddingOf(context).bottom;
+    return SizedBox(
+      height: _barHeight + _rise + bottom,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: _barHeight + bottom,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+                boxShadow: const [BoxShadow(color: Color(0x1F101828), blurRadius: 16, offset: Offset(0, -2))],
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: bottom,
+            top: 0,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                for (var i = 0; i < _items.length; i++)
+                  Expanded(
+                    child: Semantics(
+                      selected: i == current,
+                      button: true,
+                      label: _items[i].$3,
+                      excludeSemantics: true,
+                      child: i == _HomeShellState.chatTab
+                          ? _AiButton(item: _items[i], active: i == current, onTap: () => onSelect(i))
+                          : InkWell(
+                              onTap: () => onSelect(i),
+                              child: SizedBox(
+                                height: _barHeight,
+                                child: Center(child: _NavItem(item: _items[i], active: i == current)),
+                              ),
+                            ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The raised round Nyel AI button in the middle of the bar.
+class _AiButton extends StatelessWidget {
+  const _AiButton({required this.item, required this.active, required this.onTap});
+
+  final (IconData, IconData, String) item;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: AppColors.orange,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.surface, width: 4),
+              boxShadow: const [BoxShadow(color: Color(0x40F08A1C), blurRadius: 12, offset: Offset(0, 4))],
+            ),
+            child: const Icon(Icons.auto_awesome, color: Colors.white, size: 28),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            item.$3,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.orangeText,
+              fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 7),
+        ],
       ),
     );
   }
@@ -143,7 +227,7 @@ class _NavItem extends StatelessWidget {
     final color = active ? AppColors.navy : AppColors.tabInactive;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: active ? AppColors.navySoft : Colors.transparent,
         borderRadius: BorderRadius.circular(14),

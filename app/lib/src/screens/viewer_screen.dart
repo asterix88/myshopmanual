@@ -23,6 +23,28 @@ Future<void> openViewer(BuildContext context, ManualFile file, {int? page, Strin
   ));
 }
 
+/// A handle on the right edge that shows the page number; dragging it
+/// scrolls through the whole document fast.
+Widget pageScrollThumb(PdfViewerController controller) => PdfViewerScrollThumb(
+      controller: controller,
+      orientation: ScrollbarOrientation.right,
+      thumbSize: const Size(46, 30),
+      margin: 0,
+      thumbBuilder: (context, size, page, controller) => Container(
+        key: const Key('page-thumb'),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.navy,
+          borderRadius: const BorderRadius.horizontal(left: Radius.circular(15)),
+          boxShadow: const [BoxShadow(color: Color(0x33101828), blurRadius: 6, offset: Offset(0, 2))],
+        ),
+        child: Text(
+          page == null ? '' : '$page',
+          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
+
 class ViewerScreen extends StatefulWidget {
   const ViewerScreen({super.key, required this.fileKey, this.initialPage, this.initialQuery});
 
@@ -255,6 +277,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
         behaviorControlParams: PdfViewerBehaviorControlParams(loadPageDimensionsOnDemand: _online),
         onViewerReady: _onViewerReady,
         onPageChanged: _onPageChanged,
+        viewerOverlayBuilder: (context, size, handleLinkTap) => [pageScrollThumb(_controller)],
         pagePaintCallbacks: [
           (canvas, pageRect, page) => _searcher?.pageTextMatchPaintCallback(canvas, pageRect, page),
         ],
