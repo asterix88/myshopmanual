@@ -5,6 +5,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/machine_icon.dart';
+import '../widgets/unit_icon.dart';
 import 'shell.dart';
 import 'unit_screen.dart';
 
@@ -111,7 +112,7 @@ class UnitRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(
               children: [
-                _UnitIcon(code: _shortCode(unit), model: _modelCode(unit)),
+                UnitIcon(unitId: unit.id),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -140,52 +141,4 @@ class UnitRow extends StatelessWidget {
     );
   }
 
-  /// Letters and the first number of the unit id: PC500LC-10 is a PC500.
-  static String _modelCode(Unit unit) =>
-      RegExp(r'^[A-Z]+[-_ ]?\d+').firstMatch(unit.id.toUpperCase())?[0]?.replaceAll(RegExp(r'[-_ ]'), '') ?? '';
-
-  static String _shortCode(Unit unit) {
-    final code = unit.id.split(RegExp(r'[-_ ]')).first.toUpperCase();
-    return code.length > 7 ? code.substring(0, 7) : code;
-  }
-}
-
-/// A picture of the machine when the app has one for this model code,
-/// otherwise the code on an orange tile.
-class _UnitIcon extends StatelessWidget {
-  const _UnitIcon({required this.code, required this.model});
-
-  /// Shown on the tile when there is no picture.
-  final String code;
-
-  /// Picks the picture, so PC500-10 and PC500LC-10 share one.
-  final String model;
-
-  /// Model codes with a picture in `assets/units/<model>.png`.
-  static const pictures = {'PC2000', 'PC1250', 'PC500', 'PC210', 'CAT395', 'D155', 'D85'};
-
-  @override
-  Widget build(BuildContext context) {
-    if (pictures.contains(model)) {
-      return SizedBox(
-        width: 82,
-        height: 56,
-        child: Image.asset('assets/units/${model.toLowerCase()}.png', fit: BoxFit.contain),
-      );
-    }
-    return Container(
-      width: 82,
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(14)),
-      alignment: Alignment.center,
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          code,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.orangeText),
-        ),
-      ),
-    );
-  }
 }

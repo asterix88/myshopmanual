@@ -270,6 +270,8 @@ void main() {
     expect(progress.last, '1/1 ${file.index.size}/${file.index.size}');
     expect(File(store.cachedIndexPath(file)).existsSync(), isTrue);
     expect(File(store.pdfPath(file)).existsSync(), isFalse);
+    // The Cari tab searches it too, although the manual is not downloaded.
+    expect(store.searchableIndexes(), {file.key: store.cachedIndexPath(file)});
     expect(stale.existsSync(), isFalse);
     expect(store.aiIndexProgress, isNull);
     store.dispose();

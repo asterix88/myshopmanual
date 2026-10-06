@@ -9,7 +9,7 @@ import '../widgets/common.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
 
-/// Search across every manual on the phone, using each manual's index.
+/// Search across every manual, downloaded or not, using each manual's index.
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -78,7 +78,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   children: [
                     const Text('Cari', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
                     const Text(
-                      'Di semua manual yang ada di HP',
+                      'Di semua manual, termasuk yang belum diunduh',
                       style: TextStyle(fontSize: 13, color: AppColors.muted),
                     ),
                     const SizedBox(height: 12),
@@ -137,12 +137,13 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ),
             ),
-            if (store.local.isEmpty)
+            if (store.searchableIndexes().isEmpty)
               const SliverToBoxAdapter(
                 child: EmptyState(
-                  icon: Icons.download_for_offline_outlined,
-                  title: 'Belum ada manual di HP',
-                  message: 'Unduh manual dari tab Unit dulu, lalu cari di sini tanpa sinyal.',
+                  icon: Icons.cloud_download_outlined,
+                  title: 'Indeks pencarian belum ada',
+                  message: 'Sambungkan ke internet sebentar: indeks semua manual diambil otomatis, '
+                      'lalu pencarian bisa dipakai tanpa sinyal.',
                 ),
               )
             else if (result == null)
@@ -150,7 +151,8 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: EmptyState(
                   icon: Icons.manage_search,
                   title: 'Ketik kata yang dicari',
-                  message: 'Hasil muncul dari semua manual yang sudah diunduh, lengkap dengan halamannya.',
+                  message: 'Hasil muncul dari semua manual, lengkap dengan halamannya. '
+                      'Manual yang belum diunduh dibuka lewat internet.',
                 ),
               )
             else if (result.hits.isEmpty)
@@ -189,8 +191,9 @@ class _SearchScreenState extends State<SearchScreen> {
         itemBuilder: (context, i) {
           final key = groups.keys.elementAt(i);
           final hits = groups[key]!;
-          final manual = store.localManual(key);
-          if (manual == null) return const SizedBox.shrink();
+          final file = store.fileByKey(key);
+          if (file == null) return const SizedBox.shrink();
+          final downloaded = store.isDownloaded(key);
           final count = result.pageCounts[key] ?? hits.length;
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -206,21 +209,26 @@ class _SearchScreenState extends State<SearchScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(manual.file.title,
-                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                              Text('${manual.unitName} · $count halaman',
-                                  style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                              Text(file.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                              Text(
+                                [
+                                  store.unitNameOf(file),
+                                  '$count halaman',
+                                  if (!downloaded) 'belum diunduh, perlu internet',
+                                ].join(' · '),
+                                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                              ),
                             ],
                           ),
                         ),
-                        Pill.docType(manual.file.type),
+                        Pill.docType(file.type),
                       ],
                     ),
                   ),
                   for (final hit in hits.take(5)) ...[
                     const Divider(),
                     InkWell(
-                      onTap: () => openViewer(context, manual.file, page: hit.page, query: _query),
+                      onTap: () => openViewer(context, file, page: hit.page, query: _query),
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
                         child: Column(
