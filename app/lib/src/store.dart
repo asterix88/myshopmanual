@@ -211,6 +211,24 @@ class AppStore extends ChangeNotifier {
     await refresh();
   }
 
+  /// The server's catalog right now, without saving it or changing anything
+  /// on the phone (used by the background update check).
+  Future<Catalog> fetchCatalog() async {
+    final response = await _client
+        .get(_url('catalog.json'), headers: {'Cache-Control': 'no-cache'})
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode != 200) throw HttpException('HTTP ${response.statusCode}');
+    return Catalog.fromJson(jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>);
+  }
+
+  /// False until the catalog was fetched once: before that every manual on
+  /// the server would count as new.
+  bool get seenInitialized => _seenInitialized;
+
+  /// Where the phone keeps its files (state, manuals, notes of the
+  /// background update check).
+  Directory get root => _root;
+
   /// Fetches catalog.json. Offline is normal: the cached catalog stays.
   Future<void> refresh() async {
     if (serverUrl.isEmpty) {
