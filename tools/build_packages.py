@@ -217,7 +217,13 @@ def main() -> int:
 
     unit_dirs = sorted(d for d in args.source.iterdir() if d.is_dir())
     if args.only:
-        unit_dirs = [d for d in unit_dirs if d.name in args.only]
+        # Folder names typed on Windows may differ in case (pc210 vs PC210).
+        wanted = {name.strip().upper() for name in args.only}
+        unknown = wanted - {d.name.upper() for d in unit_dirs}
+        if unknown:
+            print(f"folder not found in {args.source}: {', '.join(sorted(unknown))}", file=sys.stderr)
+            return 1
+        unit_dirs = [d for d in unit_dirs if d.name.upper() in wanted]
     if not unit_dirs:
         print("no unit folders found", file=sys.stderr)
         return 1

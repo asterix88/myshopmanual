@@ -42,7 +42,10 @@ python tools/upload_r2.py dist             # unggah file yang berubah, catalog.j
 1. Salin `r2-keys.example.bat` menjadi `r2-keys.bat`, lalu isi kunci R2 Anda. File ini tidak ikut
    ke GitHub (ada di `.gitignore`), jadi kunci tetap di PC.
 2. Taruh PDF di `source\<UNIT>\`, lalu klik dua kali `update.bat`. Script membuat paket lalu
-   mengunggah yang berubah saja. Untuk satu unit saja: `update.bat --only PC210`.
+   mengunggah yang berubah saja.
+3. Untuk meng-update folder tertentu saja, klik dua kali `update-unit.bat`: daftar folder di `source\`
+   ditampilkan, ketik nama foldernya (lebih dari satu dipisah spasi, huruf besar/kecil sama saja). Unit
+   lain tetap ada di aplikasi seperti sebelumnya. Lewat Command Prompt bisa juga `update.bat --only PC210`.
    PDF boleh juga ditaruh di subfolder unit, misalnya `source\CAT395\System Diagram\`: file itu tetap
    masuk unit CAT395 dan tampil di bawah judul "System Diagram" di halaman unit.
 
