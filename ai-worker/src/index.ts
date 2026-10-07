@@ -4,6 +4,8 @@ export interface Env {
   APP_TOKEN?: string;
   // The admin code that lifts the app's daily question limit on a phone.
   OWNER_CODE?: string;
+  // Key from app.tavily.com for web_search; without it Wikipedia is used.
+  TAVILY_API_KEY?: string;
   MODEL: string;
   VISION_MODEL: string;
   API_URL: string;
@@ -36,6 +38,30 @@ The app can show a page itself as a picture under the answer. When seeing a page
 const VIEW_INSTRUCTIONS = `You can also look at manual pages with view_page. Use it when the answer is in a drawing rather than in text: a wiring or electrical diagram, a hydraulic or pneumatic schematic, a component location, a connector pin layout, an exploded view. Manuals marked "pictures only" cannot be searched at all; look at their pages directly (a schematic usually has only 1 or 2 pages). In a schematic manual the first pages are usually a cover, a legend and component location tables; the drawing sheets come after them. Search first: the component tables give each component's sheet and grid location (like D-3), which tells you which page and which part of it to look at. After your first look at a manual, the reply also names its large drawing sheets (pages much bigger than the rest): that is where the drawing is, so go there next. Large sheets are hard to read whole: look at the full page first to find the area, then at the part (top-left, top-right, bottom-left, bottom-right) that holds it. You can look at up to 6 pictures per question, so don't spend them on cover or table pages that search already gave you.
 
 When reading a drawing, report only what you can actually read on it: labels, component names, wire numbers and colours, connector and pin numbers, port names, pressures printed on it. Say plainly what you cannot read or follow; never guess where a line goes. Cite the picture with its source id like any other page, and add [Gambar S#] so the mechanic sees it too.`;
+
+// Added to the instructions: the Worker runs web_search itself, so every
+// app version gets it.
+const WEB_INSTRUCTIONS = `You can also search the internet with web_search. When the manuals do not cover the question, search the web once before answering to check your explanation, especially for a term, abbreviation, product or brand name, or how a particular system works; then answer, correcting anything the results show you had wrong. Skip it when the manuals already answer the question, for basic theory (Ohm's law, how a gear pump works), and for follow-up questions the earlier results already cover. Never search the web for a machine's specification values. Call it on its own, not together with other tools, with a short English query. Facts from web results are not manual facts: give them without source ids and name the site in brackets after the sentence, like (sumber: wikipedia.org). Web results can be wrong; prefer the manuals and say so when they disagree.`;
+
+const WEB_TOOL = {
+  type: "function",
+  function: {
+    name: "web_search",
+    description:
+      "Search the internet. Returns a few results, each with a title, a site address and a short text. Use sparingly; see the instructions.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: 'Short English keywords, e.g. "spring loaded brake bulldozer steering clutch".' },
+      },
+      required: ["query"],
+    },
+  },
+};
+
+// Web searches per question. Tavily's free plan gives 1,000 a month and
+// simply stops (no bill) when they are used up; Wikipedia takes over then.
+const MAX_WEB_SEARCHES = 2;
 
 const SEARCH_TOOL = {
   type: "function",
@@ -90,6 +116,72 @@ const VIEW_TOOL = {
 
 // Page pictures make requests large.
 const MAX_BODY_BYTES = 8_000_000;
+
+const USER_AGENT = "MyManual-AI/1.0 (https://mymanual.my.id)";
+
+type WebResult = { title: string; url: string; text: string };
+
+async function tavilySearch(query: string, key: string): Promise<WebResult[]> {
+  const response = await fetch("https://api.tavily.com/search", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+    body: JSON.stringify({ query, search_depth: "basic", max_results: 5, include_answer: false }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error(`tavily ${response.status}`);
+  const data = (await response.json()) as { results?: { title?: string; url?: string; content?: string }[] };
+  return (data.results ?? []).map((r) => ({ title: r.title ?? "", url: r.url ?? "", text: r.content ?? "" }));
+}
+
+async function wikipediaSearch(query: string): Promise<WebResult[]> {
+  const headers = { "user-agent": USER_AGENT };
+  const found = await fetch(
+    `https://en.wikipedia.org/w/rest.php/v1/search/page?q=${encodeURIComponent(query)}&limit=3`,
+    { headers, signal: AbortSignal.timeout(10_000) },
+  );
+  if (!found.ok) throw new Error(`wikipedia ${found.status}`);
+  const pages = ((await found.json()) as { pages?: { key?: string; title?: string }[] }).pages ?? [];
+  const results = await Promise.all(
+    pages.map(async (page): Promise<WebResult | null> => {
+      if (!page.key) return null;
+      const summary = await fetch(
+        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(page.key)}`,
+        { headers, signal: AbortSignal.timeout(10_000) },
+      ).catch(() => null);
+      const data = summary?.ok ? ((await summary.json()) as { extract?: string }) : null;
+      if (!data?.extract) return null;
+      return { title: page.title ?? page.key, url: `https://en.wikipedia.org/wiki/${page.key}`, text: data.extract };
+    }),
+  );
+  return results.filter((r): r is WebResult => r !== null);
+}
+
+// Tavily when it has a key and searches left, otherwise Wikipedia.
+async function webSearch(query: string, env: Env): Promise<string> {
+  let results: WebResult[] = [];
+  if (env.TAVILY_API_KEY) {
+    try {
+      results = await tavilySearch(query, env.TAVILY_API_KEY);
+      console.log("web search (tavily)", query, results.length);
+    } catch (e) {
+      console.log("tavily failed", String(e));
+    }
+  }
+  if (results.length === 0) {
+    try {
+      results = await wikipediaSearch(query);
+      console.log("web search (wikipedia)", query, results.length);
+    } catch (e) {
+      console.log("wikipedia failed", String(e));
+    }
+  }
+  if (results.length === 0) return "Web search found nothing (or is not available now). Answer from your own knowledge.";
+  return results
+    .map((r) => `${r.title}\n${r.url}\n${r.text.replace(/\s+/g, " ").slice(0, 1200)}`)
+    .join("\n\n");
+}
+
+type ToolCall = { id?: string; function?: { name?: string; arguments?: string } };
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -167,11 +259,12 @@ export default {
       .split(",")
       .map((m) => m.trim())
       .filter(Boolean);
-    const system = canView ? `${SYSTEM}\n\n${VIEW_INSTRUCTIONS}` : SYSTEM;
+    const system = `${canView ? `${SYSTEM}\n\n${VIEW_INSTRUCTIONS}` : SYSTEM}\n\n${WEB_INSTRUCTIONS}`;
+    const appTools = canView ? [SEARCH_TOOL, VIEW_TOOL] : [SEARCH_TOOL];
     let lastStatus = 0;
     let rateLimited = false;
     let keyRejected = false;
-    for (const entry of models) {
+    models: for (const entry of models) {
       const deepseek = entry.startsWith("deepseek:");
       const model = deepseek ? entry.slice("deepseek:".length) : entry;
       const key = deepseek ? env.DEEPSEEK_API_KEY : env.GROQ_API_KEY;
@@ -180,44 +273,96 @@ export default {
       // DeepSeek's thinking mode wants its reasoning sent back on every tool
       // round, which the app doesn't keep, so it's turned off; other
       // providers may reject the field.
-      const turns = deepseek ? messages : messages.map(({ reasoning_content: _, ...m }) => m);
-      let upstream: Response;
-      try {
-        upstream = await fetch(url, {
-          method: "POST",
-          headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
-          body: JSON.stringify({
-            model,
-            messages: [{ role: "system", content: `${system}\n\n${context}` }, ...turns],
-            tools: canView ? [SEARCH_TOOL, VIEW_TOOL] : [SEARCH_TOOL],
-            tool_choice: "auto",
-            temperature: 0.2,
-            max_tokens: 2048,
-            ...(deepseek ? { thinking: { type: "disabled" } } : {}),
-            // Less hidden reasoning means fewer tokens against the limit.
-            ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
-          }),
-        });
-      } catch (e) {
-        console.log("model unreachable", entry, String(e));
-        lastStatus = 502;
-        continue;
+      let turns: unknown[] = deepseek ? messages : messages.map(({ reasoning_content: _, ...m }) => m);
+      // web_search runs here, not in the app: its rounds are added to the
+      // request and the model is asked again.
+      let webSearches = 0;
+      const webNotes: string[] = [];
+      for (let round = 0; ; round++) {
+        let upstream: Response;
+        try {
+          upstream = await fetch(url, {
+            method: "POST",
+            headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+            body: JSON.stringify({
+              model,
+              messages: [{ role: "system", content: `${system}\n\n${context}` }, ...turns],
+              tools: webSearches < MAX_WEB_SEARCHES ? [...appTools, WEB_TOOL] : appTools,
+              tool_choice: "auto",
+              temperature: 0.2,
+              max_tokens: 2048,
+              ...(deepseek ? { thinking: { type: "disabled" } } : {}),
+              // Less hidden reasoning means fewer tokens against the limit.
+              ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
+            }),
+          });
+        } catch (e) {
+          console.log("model unreachable", entry, String(e));
+          lastStatus = 502;
+          continue models;
+        }
+        const data = (await upstream.json().catch(() => null)) as {
+          choices?: { message?: Record<string, unknown>; finish_reason?: string }[];
+          error?: { message?: string; code?: string };
+        } | null;
+        const choice = data?.choices?.[0];
+        if (upstream.ok && choice?.message) {
+          const message = choice.message;
+          const calls = Array.isArray(message.tool_calls) ? (message.tool_calls as ToolCall[]) : [];
+          const web = calls.filter((c) => c.function?.name === "web_search");
+          const others = calls.filter((c) => c.function?.name !== "web_search");
+          // A model that keeps asking for the web after its searches are
+          // used up gets no more rounds.
+          if (web.length === 0 || others.length > 0 || round > MAX_WEB_SEARCHES) {
+            if (others.length === 0) {
+              const { tool_calls: _, ...answer } = message;
+              return json({ message: answer, finish_reason: choice.finish_reason, model, web: webSearches });
+            }
+            // The app runs the other tools but does not keep the web rounds,
+            // so what the web said rides along as this message's text (the
+            // app keeps it in the conversation but does not show it).
+            const notes = webNotes.length
+              ? `Notes from my web search for this question:\n${webNotes.join("\n\n")}`
+              : "";
+            const content = [typeof message.content === "string" ? message.content : "", notes]
+              .filter(Boolean)
+              .join("\n\n");
+            return json({ message: { ...message, content, tool_calls: others }, finish_reason: choice.finish_reason, model, web: webSearches });
+          }
+          const results = await Promise.all(
+            web.map((call) => {
+              let query = "";
+              try {
+                query = String((JSON.parse(call.function?.arguments ?? "{}") as { query?: unknown }).query ?? "").trim();
+              } catch {
+                // An unreadable call gets an empty query.
+              }
+              if (!query) return Promise.resolve("Empty query.");
+              if (webSearches++ >= MAX_WEB_SEARCHES) {
+                return Promise.resolve("No more web searches for this question. Answer with what you have.");
+              }
+              return webSearch(query, env).then((text) => {
+                webNotes.push(`Web search "${query}":\n${text}`);
+                return text;
+              });
+            }),
+          );
+          turns = [
+            ...turns,
+            { ...message, content: message.content ?? "" },
+            ...web.map((call, i) => ({ role: "tool", tool_call_id: call.id, content: results[i] })),
+          ];
+          continue;
+        }
+        lastStatus = upstream.status;
+        if (upstream.status === 429 || upstream.status === 413) rateLimited = true;
+        if (upstream.status === 401 || upstream.status === 403) keyRejected = true;
+        console.log("model failed", entry, upstream.status, data?.error?.code, data?.error?.message);
+        // 429 and 413 are rate limits, 402 is no credit left, 401/403 a bad key
+        // for that provider; 404 and 400 can mean a retired model.
+        if (![400, 401, 402, 403, 404, 413, 422, 429, 498, 500, 502, 503].includes(upstream.status)) break models;
+        continue models;
       }
-      const data = (await upstream.json().catch(() => null)) as {
-        choices?: { message?: unknown; finish_reason?: string }[];
-        error?: { message?: string; code?: string };
-      } | null;
-      const choice = data?.choices?.[0];
-      if (upstream.ok && choice?.message) {
-        return json({ message: choice.message, finish_reason: choice.finish_reason, model });
-      }
-      lastStatus = upstream.status;
-      if (upstream.status === 429 || upstream.status === 413) rateLimited = true;
-      if (upstream.status === 401 || upstream.status === 403) keyRejected = true;
-      console.log("model failed", entry, upstream.status, data?.error?.code, data?.error?.message);
-      // 429 and 413 are rate limits, 402 is no credit left, 401/403 a bad key
-      // for that provider; 404 and 400 can mean a retired model.
-      if (![400, 401, 402, 403, 404, 413, 422, 429, 498, 500, 502, 503].includes(upstream.status)) break;
     }
     if (keyRejected && !rateLimited) {
       return json({ error: "server_key", message: "Kunci API di server AI tidak valid. Hubungi admin." }, 502);
