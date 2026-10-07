@@ -14,8 +14,9 @@ void main() {
     final chat = AiChat(store: store, client: http.Client(), endpoint: Uri.parse('http://127.0.0.1:8787/chat'));
     for (final q in [
       'Apa itu spring loaded 1?',
-      'SL1 itu apa di tipe clutch?',
-      'Berapa torsi baut cylinder head PC210?',
+      'SL1 (spring loaded satu) tipe clutch itu apa?',
+      'SL1',
+      'Kenapa unit tidak bisa jalan kalau tekanan oli clutch hilang?',
     ]) {
       print('\n=== Q: $q');
       try {
