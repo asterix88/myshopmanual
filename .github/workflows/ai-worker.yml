@@ -4,7 +4,8 @@ name: Deploy AI server
 # on main, so nothing has to be installed or run on a PC.
 # Needs repository secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and
 # GROQ_API_KEY; DEEPSEEK_API_KEY is optional (without it DeepSeek is skipped),
-# and so is OWNER_CODE (the admin code that lifts the app's daily limit).
+# and so are OWNER_CODE (the admin code that lifts the app's daily limit) and
+# TAVILY_API_KEY (web search; without it the AI searches Wikipedia).
 on:
   push:
     branches: [main]
@@ -21,9 +22,11 @@ jobs:
           TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           DEEPSEEK: ${{ secrets.DEEPSEEK_API_KEY }}
           OWNER: ${{ secrets.OWNER_CODE }}
+          TAVILY: ${{ secrets.TAVILY_API_KEY }}
         run: |
           if [ -n "$DEEPSEEK" ]; then echo "deepseek=true" >> "$GITHUB_OUTPUT"; fi
           if [ -n "$OWNER" ]; then echo "owner=true" >> "$GITHUB_OUTPUT"; fi
+          if [ -n "$TAVILY" ]; then echo "tavily=true" >> "$GITHUB_OUTPUT"; fi
           if [ -z "$TOKEN" ]; then
             echo "::warning::CLOUDFLARE_API_TOKEN is not set; skipping the AI server deploy."
             echo "ready=false" >> "$GITHUB_OUTPUT"
@@ -69,3 +72,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           OWNER_CODE: ${{ secrets.OWNER_CODE }}
         run: printf '%s' "$OWNER_CODE" | npx wrangler secret put OWNER_CODE
+      - name: Upload the web search key
+        if: steps.check.outputs.ready == 'true' && steps.check.outputs.tavily == 'true'
+        working-directory: ai-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        run: printf '%s' "$TAVILY_API_KEY" | npx wrangler secret put TAVILY_API_KEY

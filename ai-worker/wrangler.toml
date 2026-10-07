@@ -26,5 +26,8 @@ VISION_MODEL = "deepseek:deepseek-v4-flash,qwen/qwen3.8-27b"
 #   DEEPSEEK_API_KEY  key from platform.deepseek.com, uploaded by the workflow
 #                     from the GitHub secret of the same name
 #   GROQ_API_KEY      key from console.groq.com, uploaded the same way
+#   TAVILY_API_KEY    optional; key from app.tavily.com for the AI's web search
+#                     (free plan, 1,000 searches a month); without it, or when
+#                     those run out, the AI searches Wikipedia
 #   APP_TOKEN         optional; when set (npx wrangler secret put APP_TOKEN), the
 #                     app must send it, so also set the GitHub secret AI_TOKEN
