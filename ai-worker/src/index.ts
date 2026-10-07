@@ -315,7 +315,7 @@ export default {
           // used up gets no more rounds.
           if (web.length === 0 || others.length > 0 || round > MAX_WEB_SEARCHES) {
             if (web.length === 0 && others.length === 0) {
-              return json({ message, finish_reason: choice.finish_reason, model });
+              return json({ message, finish_reason: choice.finish_reason, model, web: webSearches });
             }
             // The app runs the other tools but does not keep the web rounds,
             // so what the web said rides along as this message's text (the
@@ -326,7 +326,7 @@ export default {
             const content = [typeof message.content === "string" ? message.content : "", notes]
               .filter(Boolean)
               .join("\n\n");
-            return json({ message: { ...message, content, tool_calls: others }, finish_reason: choice.finish_reason, model });
+            return json({ message: { ...message, content, tool_calls: others }, finish_reason: choice.finish_reason, model, web: webSearches });
           }
           const results = await Promise.all(
             web.map((call) => {

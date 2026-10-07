@@ -1,31 +1,29 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:mymanual/src/ai.dart';
-import 'package:mymanual/src/store.dart';
 
 void main() {
-  test('live AI general knowledge', () async {
-    final root = Directory.systemTemp.createTempSync('live');
-    final store = await AppStore.open(root: root);
-    await store.setServerUrl('https://mymanual.my.id');
-    print('online=${store.online} files=${store.catalog.files.length}');
+  test('live AI web search', () async {
     for (final q in [
       'Apa itu Komatsu Smart Construction Retrofit kit?',
-      'Apa itu standar kebersihan oli ISO 4406 dan berapa target untuk oli hidrolik?',
       'Apa itu SL1?',
-      'Cara kerja steering clutch tipe SL1 saat tuas netral?',
+      'Apa itu hydraulic oil ISO VG 46?',
     ]) {
-      // Each question in a new chat, as after the new-chat button.
-      final chat = AiChat(store: store, client: http.Client(), endpoint: Uri.parse('http://127.0.0.1:8787/chat'));
       print('\n=== Q: $q');
-      try {
-        final a = await chat.ask(q, onStatus: (s) => print('  [$s]'));
-        print(a.text);
-      } catch (e) {
-        print('  EXCEPTION $e');
-      }
+      final r = await http.post(Uri.parse('http://127.0.0.1:8787/chat'),
+          headers: {'content-type': 'application/json'},
+          body: jsonEncode({
+            'messages': [
+              {'role': 'user', 'content': q}
+            ],
+            'manuals': ['[M1] D155A-6: Shop Manual (Shop Manual, 1200 pages)'],
+          }));
+      final data = jsonDecode(utf8.decode(r.bodyBytes)) as Map;
+      final m = data['message'] as Map?;
+      print('status=${r.statusCode} model=${data['model']} web=${data['web']} calls=${jsonEncode(m?['tool_calls'])}');
+      print((m?['content'] ?? data).toString());
     }
   }, timeout: const Timeout(Duration(minutes: 10)));
 }
