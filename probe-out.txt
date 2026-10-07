@@ -1,0 +1,74 @@
+Resolving dependencies...
+Downloading packages...
+  dbus 0.7.15 (0.8.0 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  test_api 0.7.12 (0.7.14 available)
+  vector_math 2.4.0 (2.4.3 available)
+Got dependencies!
+4 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading /home/runner/work/myshopmanual/myshopmanual/app/test/zz_live_ai_test.dart
+00:00 +0: live AI web search
+
+=== Q: Apa itu Komatsu Smart Construction Retrofit kit?
+status=200 model=deepseek-v4-flash web=1 calls=null
+Smart Construction Retrofit Kit (sering disingkat RFK) adalah paket tambahan aftermarket dari Komatsu yang mengubah excavator biasa — termasuk unit lama atau merek lain — menjadi excavator dengan 3D Machine Guidance (panduan penggalian 3D) plus pencatatan payload, tanpa harus membeli unit baru yang sudah terpasang sistem itu dari pabrik (sumber: komatsu.com).
+
+Isi dan cara kerjanya secara umum:
+
+- Sensor GNSS (GPS/RTK) di boom dan bucket memberi posisi ujung bucket secara real time, dibandingkan dengan file desain 3D yang diunggah ke monitor di kabin. Operator jadi bisa melihat di layar berapa lagi yang harus digali atau diurug, tanpa patok dan tanpa laser/bench yang harus disetel ulang setiap unit berpindah.
+- Sistem payload (timbangan) pada model tertentu menghitung berat material yang diangkat per bucket, sehingga bisa mencegah truk kelebihan muatan dan mencatat volume produksi.
+- Data as-built dan payload dikirim ke aplikasi Smart Construction (dashboard di kantor), jadi progres pekerjaan bisa dipantau jarak jauh dan dibandingkan dengan desain.
+
+Pembagian kit menurut ukuran unit (sumber: smartconstruction.mykomatsu.komatsu):
+
+- Small Kit: PC78 – PC170
+- Medium Kit: PC210 – PC290
+- Large Kit: PC360 – PC490
+
+Pemasangannya dilakukan oleh distributor Komatsu setempat, dan kit ini juga kompatibel untuk excavator non-Komatsu (mixed fleet) (sumber: komatsu.com, smartconstruction.mykomatsu.komatsu). Klaim penghematan waktunya: permukaan miring selesai sekitar 42% lebih cepat dan permukaan datar sekitar 32% lebih cepat dibanding cara patok tradisional (sumber: smartconstruction.mykomatsu.komatsu).
+
+Catatan untuk bengkel: ini murni kit elektronik/teknologi (sensor, harness, monitor, receiver GNSS), bukan bagian dari sistem hidraulik atau powertrain, jadi tidak ada di Shop Manual D155A-6. Kalau unit di workshop Anda akan dipasangi kit ini, urusan kalibrasi sensor dan file desain ditangani tim Smart Construction, bukan prosedur servis biasa.
+
+=== Q: Apa itu SL1?
+status=200 model=deepseek-v4-flash web=0 calls=null
+SL1 (Spring Loaded I) pada sistem kemudi dan pengereman bulldozer adalah tipe kopling kemudi/pengereman yang **diikat oleh gaya pegas dan dilepas oleh tekanan oli** — jadi saat mesin mati atau tekanan oli hilang, kopling/rem tetap dalam keadaan terikat (menyambung/mengerem). Ini disebut fail-safe.
+
+Cara kerjanya:
+- Mesin mati / tekanan oli hilang: pegas menekan pelat kopling/rem sehingga terikat. Bulldozer tidak bisa didorong bebas dan tetap mengerem.
+- Mesin hidup, tuas kemudi dioperasikan: tekanan oli dari sistem kemudi masuk ke piston, menekan pegas, dan melepas ikatan kopling/rem sehingga terjadi belokan atau pelepasan rem.
+
+Kenapa dibuat begitu: kalau ada kegagalan tekanan hidraulik, kemudi/rem tidak hilang mendadak — mesin tetap aman terkendali. Ini kebalikan dari tipe "hydraulic loaded" yang terikat oleh tekanan oli.
+
+Di lapangan, yang sering bermasalah pada tipe spring-loaded:
+- Pegas lemah atau patah → kopling/rem selip atau tidak mau lepas.
+- Tekanan oli pelepas kurang (pompa, relief valve, seal piston bocor) → kemudi berat atau tidak mau belok.
+- Pelat kopling/rem aus → selip saat beban.
+
+Secara umum, istilah "SL1" juga bisa muncul sebagai kode lain di manual tertentu, jadi pastikan konteksnya di bagian steering/brake system unit Anda. Kalau Anda sebutkan model unitnya, saya bisa bantu arahkan ke bagian manual yang tepat.
+
+=== Q: Apa itu hydraulic oil ISO VG 46?
+status=200 model=deepseek-v4-flash web=0 calls=null
+ISO VG 46 adalah salah satu tingkat kekentalan (viscosity grade) oli hidraulik menurut standar ISO 3448, di mana angka 46 menunjukkan viskositas kinematik oli sekitar **46 cSt (mm²/s) pada suhu 40 °C**. Ini adalah oli hidraulik yang paling umum dipakai pada excavator, bulldozer, dan alat berat lainnya.
+
+Secara umum, cara membacanya:
+
+- "ISO VG" = International Organization for Standardization Viscosity Grade. Standar ini membagi oli industri ke dalam kelas kekentalan berdasarkan viskositas pada 40 °C, dengan toleransi ±10% dari angka nominalnya. Jadi ISO VG 46 berarti viskositasnya antara sekitar 41,4 sampai 50,6 cSt pada 40 °C.
+- Angka 46 bukan angka mutu atau kekuatan oli, hanya ukuran kekentalan. Mutu oli ditentukan oleh klasifikasi lain (misalnya API, atau spesifikasi pabrikan seperti Komatsu KES, Caterpillar TO-4, dan sejenisnya).
+
+Kenapa ISO VG 46 banyak dipakai di alat berat:
+
+- Pada suhu kerja normal sistem hidraulik (sekitar 50–80 °C), kekentalan ini memberi keseimbangan antara pelumasan pompa dan motor, kemampuan mengalir lewat saluran dan orifice, serta kemampuan menahan kebocoran internal.
+- Oli yang terlalu encer (misal VG 32) membuat pompa cepat aus dan tekanan sulit tercapai saat panas; oli yang terlalu kental (misal VG 68) membuat pompa sulit menghisap saat dingin, timbul kavitasi, dan respons sistem lambat.
+
+Hal praktis di lapangan:
+
+- VG 46 biasanya dipakai untuk daerah beriklim sedang sampai panas. Untuk daerah sangat dingin, pabrikan kadang menganjurkan VG 32 atau oli multigrade; untuk daerah sangat panas atau mesin tua yang sudah longgar, kadang VG 68.
+- Jangan mencampur merek atau tipe oli berbeda tanpa alasan, dan jangan mengganti kelas kekentalan tanpa mengikuti rekomendasi manual unit. Kekentalan yang salah bisa mengubah karakter tekanan dan aliran sistem, memicu panas berlebih, dan memperpendek umur pompa.
+- Nilai kekentalan, spesifikasi oli, dan kapasitas tangki untuk unit tertentu tetap harus dicek di Operation & Maintenance Manual unit tersebut, karena pabrikan bisa mensyaratkan kelas kekentalan berbeda sesuai suhu lingkungan.
+
+Kalau yang Anda maksud oli hidraulik untuk unit tertentu (misalnya D155A-6), sebutkan modelnya supaya bisa saya cek rekomendasi dan kapasitasnya di manual.
+00:13 +1: All tests passed!
+=== worker log
+env.TAVILY_API_KEY ("(hidden)")                                        Environment Variable      local
+web search (tavily) Komatsu Smart Construction Retrofit kit 5
