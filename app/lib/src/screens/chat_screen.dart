@@ -139,7 +139,7 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 Text('Nyel AI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navy)),
                 Text(
-                  'Manual + ilmu elektrik, hidrolik, mekanis',
+                  'Teman diskusi masalah teknismu :)',
                   style: TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
                 ),
               ],
@@ -235,9 +235,9 @@ class _Intro extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 'Nyel AI mencari di semua manual, termasuk yang belum diunduh, dan bisa melihat gambar seperti wiring '
-                'atau hydraulic diagram. Penjelasan cara kerja dan troubleshooting ditambah dari pengetahuan umum '
-                'elektrik, hidrolik dan mekanis, ditandai "Secara umum". Angka spesifik unit tetap hanya dari manual, '
-                'dengan sumbernya. Ketuk sumber untuk membuka halamannya. Butuh internet.',
+                'atau hydraulic diagram. Kalau manual tidak membahasnya, Nyel AI menjawab dari ilmu elektrik, '
+                'hidrolik dan mekanis, ditandai "Secara umum". Isi dari manual diberi sumber; ketuk sumber untuk '
+                'membuka halamannya. Butuh internet.',
                 style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.inkSoft),
               ),
               if (!hasManuals) ...[

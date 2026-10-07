@@ -42,7 +42,7 @@ void main() {
     root.deleteSync(recursive: true);
   });
 
-  testWidgets('back goes to Unit first, then asks before leaving the app', (tester) async {
+  testWidgets('back goes to Unit first, then leaves the app from Unit', (tester) async {
     late AppStore store;
     final root = Directory.systemTemp.createTempSync('shell');
     await tester.runAsync(() async {
@@ -53,18 +53,14 @@ void main() {
 
     await tester.tap(find.text('Cari').last);
     await tester.pumpAndSettle();
-    await tester.binding.handlePopRoute();
+    // Handled in the app: the Unit tab shows again.
+    expect(await tester.binding.handlePopRoute(), isTrue);
     await tester.pumpAndSettle();
     expect(shownOpacity(tester, SearchScreen), 0);
-    expect(find.text('Keluar dari MyManual?'), findsNothing);
 
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    expect(find.text('Keluar dari MyManual?'), findsOneWidget);
-    await tester.tap(find.text('Batal'));
-    await tester.pumpAndSettle();
-    expect(find.text('Keluar dari MyManual?'), findsNothing);
-    expect(find.byType(SearchScreen), findsOneWidget);
+    // On Unit the app no longer holds back, so Android closes it.
+    expect(await tester.binding.handlePopRoute(), isFalse);
+    expect(find.byType(AlertDialog), findsNothing);
     root.deleteSync(recursive: true);
   });
 
