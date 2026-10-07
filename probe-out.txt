@@ -1,0 +1,66 @@
+Resolving dependencies...
+Downloading packages...
+  dbus 0.7.15 (0.8.0 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  test_api 0.7.12 (0.7.14 available)
+  vector_math 2.4.0 (2.4.3 available)
+Got dependencies!
+4 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading /home/runner/work/myshopmanual/myshopmanual/app/test/zz_live_ai_test.dart
+00:00 +0: live AI general knowledge
+online=true files=80
+
+=== Q: Apa itu spring loaded 1?
+  [Memahami pertanyaan…]
+"Spring loaded 1" biasanya bukan nama komponen, melainkan **keterangan/penomoran pada simbol atau callout di diagram hidraulik/kelistrikan** — artinya komponen atau posisi katup yang bekerja dengan **pegas (spring)**, dan angka "1" hanya nomor urut callout pada gambar itu.
+
+Secara umum (pengetahuan umum), dalam manual alat berat istilah ini muncul dalam beberapa konteks:
+
+- **Katup dengan pegas pengembali (spring return / spring loaded)**: spool katup kembali ke posisi netral oleh pegas saat tuas/solenoid tidak digerakkan. Angka 1 = posisi/callout pertama pada gambar.
+- **Spring-applied, hydraulically released (SAHR)**: misalnya parking brake swing atau travel — pegas yang menekan (mengerem), dilepas oleh tekanan hidraulik. Kadang ditulis "spring loaded" pada sisi pegasnya.
+- **Relief valve / check valve spring loaded**: pegas menentukan tekanan bukaan (cracking pressure).
+- **Pilot valve spring loaded**: pegas menahan spool pada posisi tertentu sampai tekanan pilot melawan.
+
+Kalau "spring loaded 1" muncul di halaman tertentu (misalnya di skema hidraulik CAT395 atau diagram PC1250), arti tepatnya tergantung simbol di sebelahnya — apakah itu solenoid, spool, atau pegas pada aktuator.
+
+Supaya saya bisa tunjukkan arti persisnya, sebutkan: unit/model alatnya, dan di halaman atau bagian mana tulisan "spring loaded 1" itu Anda lihat (misal di skema pilot, swing brake, atau travel motor).
+
+=== Q: SL1 itu apa di tipe clutch?
+  [Memahami pertanyaan…]
+SL1 pada tipe clutch hampir pasti adalah singkatan dari **Solenoid 1** (atau **Shift Solenoid 1**), bukan "spring loaded". Di transmisi/klutch alat berat, solenoid diberi nomor urut: SL1, SL2, SL3, dst. — masing-masing menggerakkan satu katup (shift valve) yang mengalirkan tekanan oli ke satu paket clutch tertentu.
+
+Secara umum (pengetahuan umum):
+
+- **SL = Solenoid** (kadang juga ditulis "Shift Solenoid" atau "Clutch Solenoid"). Angka 1 = solenoid nomor satu dalam urutan rangkaian.
+- Cara kerja: ECM/TCM mengirim arus ke SL1 → spool katup bergeser → oli bertekanan masuk ke clutch pack yang dituju → clutch mengunci → satu gigi/kecepatan aktif.
+- Tabel kombinasi ON/OFF solenoid (SL1, SL2, SL3…) menentukan gigi yang didapat. Kalau satu solenoid mati atau bocor, biasanya hanya gigi tertentu yang hilang atau terjadi slip.
+- Pada beberapa unit, "SL" juga bisa berarti **Spring Loaded** (misal SL1 = spring loaded valve 1), jadi artinya tergantung konteks halaman. Tapi di konteks "tipe clutch" pada transmisi powershift, arti yang paling lazim adalah Solenoid.
+
+Untuk memastikan arti SL1 di unit Anda (misalnya D85ESS-2A, D155A-6, atau PC1250), sebutkan model dan di halaman mana Anda menemukannya — saya bisa cek tabel solenoid/clutch-nya di manual unit itu.
+
+=== Q: Berapa torsi baut cylinder head PC210?
+  [Memahami pertanyaan…]
+  [Mengambil indeks PC210-1OMO · Lainnya…]
+  [Mengambil indeks PC210-1OMO · OMM…]
+  [Mengambil indeks PC210-1OMO · Partbook…]
+  [Mengambil indeks PC210-1OMO · Partbook…]
+  [Mengambil indeks PC210-1OMO · Shop Manual…]
+  [Mencari di manual: cylinder head bolt tightening torque]
+  [Mencari di manual: cylinder head installation tightening torque sequence]
+  [Menyusun jawaban…]
+Perlu dibedakan dulu: "cylinder head bolt" di manual PC210 ada dua arti — baut kepala silinder **engine**, dan baut kepala silinder **hidraulik** (boom/arm/bucket cylinder). Yang ketemu di manual adalah yang hidraulik.
+
+Baut kepala silinder hidraulik (cylinder head bolt pada cylinder assembly):
+- Boom cylinder: **270 ± 39.0 Nm {27.5 ± 4.0 kgm}** [1]
+- Arm cylinder: **373 ± 54.0 Nm {38.0 ± 5.5 kgm}** [2]
+- Bucket cylinder: **270 ± 39.0 Nm {27.5 ± 4.0 kgm}** [3]
+
+Untuk baut kepala silinder **engine** (cylinder head assembly), halaman prosedur pemasangan di manual PC210 memakai **metode sudut (angular tightening)**, bukan angka torsi akhir:
+- Panjang batang baut (stem length) harus **kurang dari 132.1 mm**; kalau lebih panjang, ganti baut baru [4].
+- Baut (62) ada **26 buah**, dikencangkan tangan 2–3 putaran lebih dulu, lalu dikencangkan **menurut urutan nomor pada gambar** [4].
+- Olesi ulir dan permukaan dudukan kepala baut dengan **engine oil EO15W-40** [4].
+- Pengencangan akhir dilakukan dengan **wrench (angle)** — torsi awal + putaran sudut; angka torsi tahap awal dan besar sudutnya ada di halaman lanjutan prosedur ini, bukan di potongan yang terbaca [4].
+
+Jadi: kalau yang Anda maksud baut kepala silinder engine PC210, jangan pakai angka torsi saja — ikuti urutan nomor dan metode sudut di halaman prosedur. Sebutkan apakah unit Anda PC210-10M0 atau seri lain, supaya saya bisa tarik halaman tahap torsi awalnya.
+00:13 +1: All tests passed!
