@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../store.dart';
 import '../theme.dart';
@@ -46,15 +45,10 @@ class _HomeShellState extends State<HomeShell> {
       _tab = chatTab;
     }
     return PopScope(
-      canPop: false,
+      // Back on another tab goes to Unit first; on Unit it closes the app.
+      canPop: _tab == 0,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        // Back on another tab goes to Unit first; on Unit it asks to quit.
-        if (_tab != 0) {
-          setState(() => _tab = 0);
-        } else {
-          _confirmExit();
-        }
+        if (!didPop) setState(() => _tab = 0);
       },
       child: Scaffold(
         body: Stack(
@@ -75,20 +69,6 @@ class _HomeShellState extends State<HomeShell> {
         ),
       ),
     );
-  }
-
-  Future<void> _confirmExit() async {
-    final quit = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Keluar dari MyManual?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Keluar')),
-        ],
-      ),
-    );
-    if (quit == true) await SystemNavigator.pop();
   }
 }
 
