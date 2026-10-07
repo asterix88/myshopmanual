@@ -32,7 +32,10 @@ as bolt torque, refill capacities, standard values and pressures, or the
 maintenance schedule (chart and every-N-hours service items), cut
 into one small PDF that the app keeps on the phone for its Spek tab (the
 catalog's unit "spec" lists those pages). The bookmark titles are matched
-with SPEC_SECTIONS below.
+with SPEC_SECTIONS below. Service items without bookmarks of their own are
+read from the upper-case lines on the interval's pages. A spek-hapus.txt in
+the unit folder lists titles (or parts of titles, one per line) to leave
+out of that unit's Spek and Servis tabs.
 
 PDFs with little or no text layer (scans, wiring and hydraulic diagrams)
 are shipped too, marked as not searchable: they open and keep their
@@ -85,6 +88,16 @@ SERVICE_CHART = re.compile(
     r"|maintenance (?:chart|table)", re.I)
 # Pages kept per maintenance item, and for an interval's own heading page.
 MAX_SERVICE_ITEM_PAGES = 10
+# Manuals without bookmarks for the items under "EVERY 250 HOURS SERVICE"
+# (D155A-6, D375A-6 OMM): the items are the upper-case lines on those pages
+# that start with one of these words, e.g. "REPLACE FUEL PRE-FILTER CARTRIDGE".
+SERVICE_ITEM_LINE = re.compile(
+    r"^(?:CHECK|REPLACE|CHANGE|CLEAN|DRAIN|GREASE|GREASING|LUBRICAT\w*|ADJUST|INSPECT|WASH|ADD|TIGHTEN|MEASURE"
+    r"|METHOD|BLEED|TEST|OVERHAUL|REFILL|REMOVE)\b")
+SERVICE_ITEM_STOP = re.compile(r"^(?:WARNING|NOTICE|CAUTION|DANGER|REMARK|NOTE)\b")
+# Bookmark titles listed in this file in a unit folder (one per line, any part
+# of the title) are left out of that unit's Spek and Servis tabs.
+SPEC_EXCLUDE_FILE = "spek-hapus.txt"
 
 # A matched bookmark takes its pages up to the next bookmark at its level or
 # above, but never more than this many.
@@ -202,10 +215,59 @@ def _section_end(toc: list[list], i: int, page_count: int) -> int:
     return page_count
 
 
-def service_ranges(toc: list[list], page_count: int) -> list[dict]:
+def _is_upper_line(line: str) -> bool:
+    return any(c.isalpha() for c in line) and line == line.upper()
+
+
+def service_items_from_text(texts: list[str], first: int, last: int, hours: int) -> list[dict]:
+    """Maintenance items written as upper-case lines on pages [first]..[last]
+    (1-based) of [texts], for interval headings without item bookmarks."""
+    found, seen = [], set()
+    for page in range(first, last + 1):
+        if page > len(texts):
+            break
+        lines = [" ".join(line.split()) for line in texts[page - 1].splitlines()]
+        lines = [line for line in lines if line]
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            i += 1
+            if not (6 <= len(line) <= 140 and _is_upper_line(line) and SERVICE_ITEM_LINE.match(line)) \
+                    or '"' in line or "(PAGE" in line:
+                continue
+            title = line
+            # Long titles wrap onto the next upper-case line(s).
+            for _ in range(2):
+                if i >= len(lines):
+                    break
+                nxt = lines[i]
+                wraps = title.endswith(",")
+                if not (4 <= len(nxt) <= 80 and _is_upper_line(nxt)) or (SERVICE_ITEM_LINE.match(nxt) and not wraps) \
+                        or SERVICE_ITEM_STOP.match(nxt) or SERVICE_INTERVAL.search(nxt) or not nxt[0].isalpha():
+                    break
+                # A lone "-ING" word under a title is a sub-heading ("CHECKING").
+                if len(nxt.split()) < 2 and nxt.endswith("ING") and not re.search(r"(,| AND| OF| FOR)$", title):
+                    break
+                title += " " + nxt
+                i += 1
+            # "REPLACE", "CHANGE OIL": step headings inside an item.
+            if len(title.split()) < 3 and not title.startswith("LUBRICAT"):
+                continue
+            if title in seen:
+                continue
+            seen.add(title)
+            found.append({"hours": hours, "title": title, "page": page, "item": True})
+    for k, e in enumerate(found):
+        nxt = found[k + 1]["page"] if k + 1 < len(found) else last
+        e["last"] = min(max(e["page"], nxt), e["page"] + MAX_SERVICE_ITEM_PAGES - 1)
+    return found
+
+
+def service_ranges(toc: list[list], page_count: int, texts: list[str] | None = None) -> list[dict]:
     """The maintenance schedule in [toc]: the chart (hours 0) and, for each
     "every N hours service" bookmark, its heading and the items under it,
-    each with its first and last page."""
+    each with its first and last page. Items come from child bookmarks, or
+    from the page [texts] when the heading has none."""
     found = []
     for i, (level, title, page) in enumerate(toc):
         title = " ".join(title.split())
@@ -238,6 +300,8 @@ def service_ranges(toc: list[list], page_count: int) -> list[dict]:
                 end = _section_end(toc, j, page_count)
                 children.append({"hours": hours, "title": " ".join(child_title.split()), "page": child_page,
                                  "item": True, "last": min(end, child_page + MAX_SERVICE_ITEM_PAGES - 1)})
+        if not children and texts and re.match(r"every\b", title, re.I):
+            children = service_items_from_text(texts, page, _section_end(toc, i, page_count), hours)
         heading_last = children[0]["page"] - 1 if children else _section_end(toc, i, page_count)
         heading_last = max(page, min(heading_last, page + MAX_SERVICE_ITEM_PAGES - 1))
         found.append({"hours": hours, "title": title, "page": page, "item": False, "last": heading_last})
@@ -245,15 +309,31 @@ def service_ranges(toc: list[list], page_count: int) -> list[dict]:
     return found
 
 
-def build_spec_pack(sources: list[tuple[str, Path, list[list], int]], target: Path) -> tuple[list[dict], list[dict]]:
+def read_excludes(unit_dir: Path) -> list[str]:
+    """Lower-case title parts from the unit's spek-hapus.txt (# = comment)."""
+    path = unit_dir / SPEC_EXCLUDE_FILE
+    if not path.exists():
+        return []
+    lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
+    return [" ".join(line.split()).lower() for line in lines if line.strip() and not line.strip().startswith("#")]
+
+
+def build_spec_pack(sources: list[tuple], target: Path,
+                    exclude: list[str] | None = None) -> tuple[list[dict], list[dict]]:
     """Copies the spec and maintenance schedule pages of [sources] (file id,
-    PDF, bookmarks, page count) into [target] and returns where each one
-    landed: (spec pages, service pages). Nothing is written when no manual
-    bookmarks either."""
+    PDF, bookmarks, page count, optional page texts) into [target] and
+    returns where each one landed: (spec pages, service pages). Titles
+    containing any of [exclude] (lower case) are left out. Nothing is
+    written when no manual bookmarks either."""
+    def kept(title: str) -> bool:
+        low = " ".join(title.split()).lower()
+        return not any(x in low for x in exclude or [])
+
     entries, service, runs = [], [], []
-    for file_id, pdf, toc, page_count in sources:
-        ranges = spec_ranges(toc, page_count)
-        svc = service_ranges(toc, page_count)
+    for file_id, pdf, toc, page_count, *rest in sources:
+        texts = rest[0] if rest else None
+        ranges = [r for r in spec_ranges(toc, page_count) if kept(r[1])]
+        svc = [e for e in service_ranges(toc, page_count, texts) if kept(e["title"])]
         if not ranges and not svc:
             continue
         # Each source page goes in once, even when bookmarks overlap.
@@ -355,7 +435,7 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
         shutil.copy2(pdf, target)
         write_index(index_path, title, doc_type, pages, toc, not scanned)
         if doc_type != "partsbook":
-            spec_sources.append((file_id, target, toc, len(pages)))
+            spec_sources.append((file_id, target, toc, len(pages), pages))
 
         pdf_info = file_entry(target, f"units/{unit_id}/{target.name}")
         index_info = file_entry(index_path, f"units/{unit_id}/{index_path.name}")
@@ -383,7 +463,10 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
         )
 
     spec_path = unit_out / "spek.pdf"
-    spec_pages, service_pages = build_spec_pack(spec_sources, spec_path)
+    excludes = read_excludes(unit_dir)
+    if excludes:
+        print(f"  {SPEC_EXCLUDE_FILE}: {len(excludes)} judul tidak dimasukkan ke Spek/Servis")
+    spec_pages, service_pages = build_spec_pack(spec_sources, spec_path, excludes)
     has_spec = bool(spec_pages or service_pages)
     if has_spec:
         spec = {**file_entry(spec_path, f"units/{unit_id}/spek.pdf"), "pages": spec_pages, "service": service_pages}

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../store.dart';
 import '../theme.dart';
@@ -44,24 +45,50 @@ class _HomeShellState extends State<HomeShell> {
       _aiAsks = store.aiAsks;
       _tab = chatTab;
     }
-    return Scaffold(
-      body: Stack(
-        children: [
-          for (final (i, page) in [
-            HomeScreen(onOpenSearch: () => setState(() => _tab = 1)),
-            const SearchScreen(),
-            const ChatScreen(),
-            const SpecsScreen(),
-            const ServiceScreen(),
-          ].indexed)
-            _TabPage(active: i == _tab, child: page),
-        ],
-      ),
-      bottomNavigationBar: _NavBar(
-        current: _tab,
-        onSelect: (i) => setState(() => _tab = i),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        // Back on another tab goes to Unit first; on Unit it asks to quit.
+        if (_tab != 0) {
+          setState(() => _tab = 0);
+        } else {
+          _confirmExit();
+        }
+      },
+      child: Scaffold(
+        body: Stack(
+          children: [
+            for (final (i, page) in [
+              HomeScreen(onOpenSearch: () => setState(() => _tab = 1)),
+              const SearchScreen(),
+              const ChatScreen(),
+              const SpecsScreen(),
+              const ServiceScreen(),
+            ].indexed)
+              _TabPage(active: i == _tab, child: page),
+          ],
+        ),
+        bottomNavigationBar: _NavBar(
+          current: _tab,
+          onSelect: (i) => setState(() => _tab = i),
+        ),
       ),
     );
+  }
+
+  Future<void> _confirmExit() async {
+    final quit = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Keluar dari MyManual?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Keluar')),
+        ],
+      ),
+    );
+    if (quit == true) await SystemNavigator.pop();
   }
 }
 
