@@ -314,8 +314,9 @@ export default {
           // A model that keeps asking for the web after its searches are
           // used up gets no more rounds.
           if (web.length === 0 || others.length > 0 || round > MAX_WEB_SEARCHES) {
-            if (web.length === 0 && others.length === 0) {
-              return json({ message, finish_reason: choice.finish_reason, model, web: webSearches });
+            if (others.length === 0) {
+              const { tool_calls: _, ...answer } = message;
+              return json({ message: answer, finish_reason: choice.finish_reason, model, web: webSearches });
             }
             // The app runs the other tools but does not keep the web rounds,
             // so what the web said rides along as this message's text (the
