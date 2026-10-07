@@ -11,13 +11,13 @@ void main() {
     final store = await AppStore.open(root: root);
     await store.setServerUrl('https://mymanual.my.id');
     print('online=${store.online} files=${store.catalog.files.length}');
-    final chat = AiChat(store: store, client: http.Client(), endpoint: Uri.parse('http://127.0.0.1:8787/chat'));
     for (final q in [
       'Apa itu spring loaded 1?',
-      'SL1 (spring loaded satu) tipe clutch itu apa?',
       'SL1',
-      'Kenapa unit tidak bisa jalan kalau tekanan oli clutch hilang?',
+      'spring loaded 1',
     ]) {
+      // Each question in a new chat, as after the new-chat button.
+      final chat = AiChat(store: store, client: http.Client(), endpoint: Uri.parse('http://127.0.0.1:8787/chat'));
       print('\n=== Q: $q');
       try {
         final a = await chat.ask(q, onStatus: (s) => print('  [$s]'));
