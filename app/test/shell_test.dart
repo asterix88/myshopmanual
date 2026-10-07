@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -81,6 +82,51 @@ void main() {
     expect(input.keyboardType, TextInputType.multiline);
     expect(input.textInputAction, TextInputAction.newline);
     expect(input.onSubmitted, isNull);
+    root.deleteSync(recursive: true);
+  });
+
+  testWidgets('questions can be copied and the chat can be searched', (tester) async {
+    late AppStore store;
+    final root = Directory.systemTemp.createTempSync('shell');
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer());
+      await File(store.chatHistoryPath).writeAsString(jsonEncode({
+        'entries': [
+          {'user': true, 'text': 'Apa itu SL1?'},
+          {'user': false, 'text': 'SL1 adalah steering clutch spring loaded.'},
+          {'user': true, 'text': 'Tekanan pilot PC210?'},
+          {'user': false, 'text': 'Lihat manual PC210.'},
+        ],
+      }));
+    });
+    await tester.pumpWidget(MyManualApp(store: store));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Nyel AI').last);
+    // The saved conversation is read from the phone.
+    for (var i = 0; i < 20 && find.byType(SelectableText).evaluate().isEmpty; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+
+    // The user's own question is selectable text, like the answers.
+    expect(
+        find.byWidgetPredicate((w) => w is SelectableText && w.textSpan?.toPlainText() == 'Apa itu SL1?'),
+        findsOneWidget);
+
+    await tester.tap(find.byTooltip('Cari di obrolan'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Cari di obrolan…'), 'sl1');
+    await tester.pumpAndSettle();
+    // Two bubbles hold it; the newest is shown first.
+    expect(find.text('1/2'), findsOneWidget);
+    await tester.tap(find.byTooltip('Lebih lama'));
+    await tester.pumpAndSettle();
+    expect(find.text('2/2'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Tutup pencarian'));
+    await tester.pumpAndSettle();
+    expect(find.text('Teman diskusi masalah teknismu :)'), findsOneWidget);
     root.deleteSync(recursive: true);
   });
 }

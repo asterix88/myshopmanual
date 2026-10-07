@@ -42,9 +42,18 @@ class _ChatScreenState extends State<ChatScreen> {
       _scrollToEnd();
     });
   }
+
   final _input = TextEditingController();
   final _scroll = ScrollController();
   String? _status;
+
+  // Search in the conversation: the bubbles holding the words, and the one
+  // shown now (counted from the newest, like a chat app).
+  bool _searching = false;
+  final _searchInput = TextEditingController();
+  List<int> _hits = const [];
+  int _hit = 0;
+  final _bubbleKeys = <GlobalKey>[];
 
   static const _examples = [
     'Lampu hydraulic oil filter clogging menyala, apa yang harus dilakukan?',
@@ -56,6 +65,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     if (widget.client == null) _client.close();
     _input.dispose();
+    _searchInput.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -73,9 +83,12 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToEnd();
     ChatEntry answer;
     try {
-      answer = await chat.ask(question, onStatus: (s) {
-        if (mounted) setState(() => _status = s);
-      });
+      answer = await chat.ask(
+        question,
+        onStatus: (s) {
+          if (mounted) setState(() => _status = s);
+        },
+      );
     } on AiException catch (e) {
       answer = ChatEntry.assistant(e.message, failed: true);
     } catch (e, stack) {
@@ -98,16 +111,68 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _newChat() {
     setState(_entries.clear);
+    _closeSearch();
     _chat.clear();
+  }
+
+  String get _query => _searchInput.text.trim();
+
+  void _closeSearch() {
+    _searchInput.clear();
+    setState(() {
+      _searching = false;
+      _hits = const [];
+    });
+  }
+
+  void _findHits() {
+    final query = _query.toLowerCase();
+    setState(() {
+      _hits = query.isEmpty
+          ? const []
+          : [
+              for (final (i, e) in _entries.indexed)
+                if (e.text.toLowerCase().contains(query)) i,
+            ];
+      _hit = _hits.length - 1;
+    });
+    _showHit();
+  }
+
+  void _moveHit(int step) {
+    if (_hits.isEmpty) return;
+    setState(() => _hit = (_hit + step).clamp(0, _hits.length - 1));
+    _showHit();
+  }
+
+  void _showHit() {
+    if (_hits.isEmpty) return;
+    final index = _hits[_hit];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = index < _bubbleKeys.length ? _bubbleKeys[index].currentContext : null;
+      if (target != null && target.mounted) {
+        Scrollable.ensureVisible(target, alignment: 0.1, duration: const Duration(milliseconds: 250));
+      }
+    });
   }
 
   void _scrollToEnd() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) {
-        _scroll.animateTo(_scroll.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+        _scroll.animateTo(
+          _scroll.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
       }
     });
+  }
+
+  GlobalKey _bubbleKey(int i) {
+    while (_bubbleKeys.length <= i) {
+      _bubbleKeys.add(GlobalKey());
+    }
+    return _bubbleKeys[i];
   }
 
   @override
@@ -130,47 +195,95 @@ class _ChatScreenState extends State<ChatScreen> {
         toolbarHeight: 64,
         titleSpacing: 14,
         shape: Border(bottom: BorderSide(color: AppColors.line)),
-        title: Row(
-          children: [
-            Image.asset('assets/images/logo.png', width: 42, height: 42),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Nyel AI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navy)),
-                Text(
-                  'Teman diskusi masalah teknismu :)',
-                  style: TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
+        title: _searching
+            ? TextField(
+                controller: _searchInput,
+                autofocus: true,
+                textInputAction: TextInputAction.search,
+                onChanged: (_) => _findHits(),
+                style: const TextStyle(fontSize: 15),
+                decoration: const InputDecoration(
+                  hintText: 'Cari di obrolan…',
+                  border: InputBorder.none,
+                  isDense: true,
                 ),
-              ],
-            ),
-          ],
-        ),
+              )
+            : Row(
+                children: [
+                  Image.asset('assets/images/logo.png', width: 42, height: 42),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Nyel AI',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navy),
+                      ),
+                      Text(
+                        'Teman diskusi masalah teknismu :)',
+                        style: TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
         actions: [
-          if (_entries.isNotEmpty)
+          if (_searching) ...[
+            if (_query.isNotEmpty)
+              Center(
+                child: Text(
+                  _hits.isEmpty ? '0' : '${_hits.length - _hit}/${_hits.length}',
+                  style: TextStyle(fontSize: 13, color: AppColors.muted),
+                ),
+              ),
+            IconButton(
+              tooltip: 'Lebih lama',
+              onPressed: _hits.isNotEmpty && _hit > 0 ? () => _moveHit(-1) : null,
+              icon: const Icon(Icons.keyboard_arrow_up),
+            ),
+            IconButton(
+              tooltip: 'Lebih baru',
+              onPressed: _hits.isNotEmpty && _hit < _hits.length - 1 ? () => _moveHit(1) : null,
+              icon: const Icon(Icons.keyboard_arrow_down),
+            ),
+            IconButton(tooltip: 'Tutup pencarian', onPressed: _closeSearch, icon: const Icon(Icons.close)),
+          ] else if (_entries.isNotEmpty) ...[
+            IconButton(
+              tooltip: 'Cari di obrolan',
+              onPressed: () => setState(() => _searching = true),
+              icon: const Icon(Icons.search),
+            ),
             IconButton(
               tooltip: 'Percakapan baru',
               onPressed: _status == null ? _newChat : null,
               icon: const Icon(Icons.add_comment_outlined),
             ),
+          ],
         ],
       ),
       body: Column(
         children: [
           Expanded(
             child: _entries.isEmpty
-                ? _Intro(
-                    examples: _examples,
-                    hasManuals: hasManuals,
-                    onExample: offline ? null : _send,
-                  )
-                : ListView(
+                ? _Intro(examples: _examples, hasManuals: hasManuals, onExample: offline ? null : _send)
+                // Every bubble is built (the chat keeps at most 60), so a
+                // search hit far up can be scrolled to.
+                : SingleChildScrollView(
                     controller: _scroll,
                     padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
-                    children: [
-                      for (final entry in _entries) _Bubble(entry: entry),
-                      if (_status != null) _Working(status: _status!),
-                    ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (final (i, entry) in _entries.indexed)
+                          _Bubble(
+                            key: _bubbleKey(i),
+                            entry: entry,
+                            highlight: _searching ? _query : '',
+                            current: _searching && _hits.isNotEmpty && _hits[_hit] == i,
+                          ),
+                        if (_status != null) _Working(status: _status!),
+                      ],
+                    ),
                   ),
           ),
           if (store.aiIndexProgress case final p?) _Preparing(progress: p),
@@ -181,8 +294,8 @@ class _ChatScreenState extends State<ChatScreen> {
             hint: offline
                 ? 'Butuh internet untuk bertanya'
                 : store.aiQuestionsLeft == 0
-                    ? 'Jatah hari ini habis, coba lagi besok'
-                    : 'Tulis pertanyaan…',
+                ? 'Jatah hari ini habis, coba lagi besok'
+                : 'Tulis pertanyaan…',
             onSend: _send,
           ),
         ],
@@ -230,8 +343,7 @@ class _Intro extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Tanya soal teknis ke Nyel AI',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const Text('Tanya soal teknis ke Nyel AI', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               Text(
                 'Nyel AI mencari di semua manual, termasuk yang belum diunduh, dan bisa melihat gambar seperti wiring '
@@ -274,9 +386,52 @@ class _Intro extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.entry});
+  const _Bubble({super.key, required this.entry, this.highlight = '', this.current = false});
 
   final ChatEntry entry;
+
+  /// Words searched for in the conversation, marked in the text.
+  final String highlight;
+
+  /// This bubble is the search hit shown now.
+  final bool current;
+
+  /// [runs] with every place [highlight] occurs marked.
+  List<TextSpan> _spans(List<({String text, bool bold})> runs) {
+    final query = highlight.toLowerCase();
+    final mark = TextStyle(
+      backgroundColor: current ? AppColors.orange : AppColors.highlight,
+      color: current ? Colors.white : AppColors.ink,
+    );
+    return [
+      for (final run in runs)
+        if (query.isEmpty)
+          TextSpan(
+            text: run.text,
+            style: run.bold ? const TextStyle(fontWeight: FontWeight.w700) : null,
+          )
+        else
+          TextSpan(
+            style: run.bold ? const TextStyle(fontWeight: FontWeight.w700) : null,
+            children: [
+              for (final (part, found) in _split(run.text, query)) TextSpan(text: part, style: found ? mark : null),
+            ],
+          ),
+    ];
+  }
+
+  static Iterable<(String, bool)> _split(String text, String query) sync* {
+    final lower = text.toLowerCase();
+    var at = 0;
+    while (true) {
+      final found = lower.indexOf(query, at);
+      if (found < 0) break;
+      if (found > at) yield (text.substring(at, found), false);
+      yield (text.substring(found, found + query.length), true);
+      at = found + query.length;
+    }
+    if (at < text.length) yield (text.substring(at), false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -287,7 +442,11 @@ class _Bubble extends StatelessWidget {
           margin: const EdgeInsets.only(left: 48, bottom: 12),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(14)),
-          child: Text(entry.text, style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4)),
+          // Selectable like the answers, so a question can be copied.
+          child: SelectableText.rich(
+            TextSpan(children: _spans([(text: entry.text, bold: false)])),
+            style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
+          ),
         ),
       );
     }
@@ -299,23 +458,16 @@ class _Bubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SelectableText.rich(
-              TextSpan(children: [
-                for (final run in boldRuns(entry.text))
-                  TextSpan(text: run.text, style: run.bold ? const TextStyle(fontWeight: FontWeight.w700) : null),
-              ]),
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.5,
-                color: entry.failed ? AppColors.danger : AppColors.ink,
-              ),
+              TextSpan(children: _spans(boldRuns(entry.text))),
+              style: TextStyle(fontSize: 14, height: 1.5, color: entry.failed ? AppColors.danger : AppColors.ink),
             ),
-            for (final picture in entry.pictures) ...[
-              const SizedBox(height: 12),
-              _PagePicture(source: picture),
-            ],
+            for (final picture in entry.pictures) ...[const SizedBox(height: 12), _PagePicture(source: picture)],
             if (entry.sources.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text('Sumber', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted)),
+              Text(
+                'Sumber',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+              ),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
@@ -432,10 +584,12 @@ class _Working extends StatelessWidget {
           const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(status,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 13, color: AppColors.muted)),
+            child: Text(
+              status,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13, color: AppColors.muted),
+            ),
           ),
         ],
       ),
