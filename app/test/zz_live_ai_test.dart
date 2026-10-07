@@ -15,6 +15,7 @@ void main() {
       'Apa itu Komatsu Smart Construction Retrofit kit?',
       'Apa itu standar kebersihan oli ISO 4406 dan berapa target untuk oli hidrolik?',
       'Apa itu SL1?',
+      'Cara kerja steering clutch tipe SL1 saat tuas netral?',
     ]) {
       // Each question in a new chat, as after the new-chat button.
       final chat = AiChat(store: store, client: http.Client(), endpoint: Uri.parse('http://127.0.0.1:8787/chat'));
