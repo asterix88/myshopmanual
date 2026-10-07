@@ -42,6 +42,32 @@ void main() {
     root.deleteSync(recursive: true);
   });
 
+  testWidgets('back goes to Unit first, then asks before leaving the app', (tester) async {
+    late AppStore store;
+    final root = Directory.systemTemp.createTempSync('shell');
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer());
+    });
+    await tester.pumpWidget(MyManualApp(store: store));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Cari').last);
+    await tester.pumpAndSettle();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(shownOpacity(tester, SearchScreen), 0);
+    expect(find.text('Keluar dari MyManual?'), findsNothing);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Keluar dari MyManual?'), findsOneWidget);
+    await tester.tap(find.text('Batal'));
+    await tester.pumpAndSettle();
+    expect(find.text('Keluar dari MyManual?'), findsNothing);
+    expect(find.byType(SearchScreen), findsOneWidget);
+    root.deleteSync(recursive: true);
+  });
+
   testWidgets('Enter on the keyboard starts a new line in Nyel AI', (tester) async {
     late AppStore store;
     final root = Directory.systemTemp.createTempSync('shell');
