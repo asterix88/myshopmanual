@@ -12,9 +12,9 @@ void main() {
     await store.setServerUrl('https://mymanual.my.id');
     print('online=${store.online} files=${store.catalog.files.length}');
     for (final q in [
-      'Apa itu spring loaded 1?',
-      'SL1',
-      'spring loaded 1',
+      'Apa itu Komatsu Smart Construction Retrofit kit?',
+      'Apa itu standar kebersihan oli ISO 4406 dan berapa target untuk oli hidrolik?',
+      'Apa itu SL1?',
     ]) {
       // Each question in a new chat, as after the new-chat button.
       final chat = AiChat(store: store, client: http.Client(), endpoint: Uri.parse('http://127.0.0.1:8787/chat'));
