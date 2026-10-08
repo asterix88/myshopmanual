@@ -1,12 +1,7 @@
-Traceback (most recent call last):
-  File "/home/runner/work/myshopmanual/myshopmanual/tts/stt.py", line 8, in <module>
-    raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', f, '-f', 'f32le', '-ac', '1', '-ar', '16000', '-'], capture_output=True).stdout
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/subprocess.py", line 548, in run
-    with Popen(*popenargs, **kwargs) as process:
-         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/subprocess.py", line 1026, in __init__
-    self._execute_child(args, executable, preexec_fn, close_fds,
-  File "/opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/subprocess.py", line 1955, in _execute_child
-    raise child_exception_type(errno_num, err_msg, err_filename)
-FileNotFoundError: [Errno 2] No such file or directory: 'ffmpeg'
+tts/maha/m-1.f32 Kenalkan My Manual, manual book alat berat di Saku Mechanik.
+tts/maha/m-2.f32 Shop Manual, OMM, dan Partsbook semua ada di satu aplikasi.
+tts/maha/m-3.f32 Kamu bisa baca online sebuah dokumen, atau undur sekali agar bisa membaca tanpa pake data jaringan.
+tts/maha/m-4.f32 cari part number atau kata kunci lainnya dengan mudah ke semua dokumen
+tts/maha/m-5.f32 bingung soal kerusakan tanya nyel AI jawabannya langsung merujuk ke halaman shop manual
+tts/maha/m-6.f32 Standard Torsi, Kapasitas Oli, Standard Value, dan Service Chart, sekali sentuh.
+tts/maha/m-7.f32 My manual. Manual lebih mudah didapat, kerja jadi lebih cepat.
