@@ -28,7 +28,7 @@ for i, line in enumerate(lines, 1):
         'text': line,
         'model_id': 'eleven_multilingual_v2',
         'language_code': 'id',
-        'voice_settings': {'stability': 0.3, 'similarity_boost': 0.85, 'style': 0.65, 'use_speaker_boost': True, 'speed': 1.1},
+        'voice_settings': {'stability': 0.2 if i == len(lines) else 0.3, 'similarity_boost': 0.85, 'style': 0.9 if i == len(lines) else 0.65, 'use_speaker_boost': True, 'speed': 1.12},
     })
     if audio:
         open(f'tts/eleven/v-{i}.mp3', 'wb').write(audio)
