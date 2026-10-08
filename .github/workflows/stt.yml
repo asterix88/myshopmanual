@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -q faster-whisper && python tts/stt.py
+      - run: pip install -q faster-whisper > tts/maha/pip.txt 2>&1; python tts/stt.py
       - if: always()
         run: |
           git config user.name probe; git config user.email probe@users.noreply.github.com
