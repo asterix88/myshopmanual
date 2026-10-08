@@ -31,19 +31,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(shownOpacity(tester, ChatScreen), 1);
 
-    await tester.tap(find.text('Unit').last);
+    await tester.tap(find.text('Home').last);
     await tester.pumpAndSettle();
     expect(shownOpacity(tester, ChatScreen), 0);
 
     await tester.tap(find.text('Cari').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Unit').last);
+    await tester.tap(find.text('Home').last);
     await tester.pumpAndSettle();
     expect(shownOpacity(tester, SearchScreen), 0);
     root.deleteSync(recursive: true);
   });
 
-  testWidgets('back goes to Unit first, then leaves the app from Unit', (tester) async {
+  testWidgets('back goes to Home first, then leaves the app from Home', (tester) async {
     late AppStore store;
     final root = Directory.systemTemp.createTempSync('shell');
     await tester.runAsync(() async {
@@ -54,12 +54,12 @@ void main() {
 
     await tester.tap(find.text('Cari').last);
     await tester.pumpAndSettle();
-    // Handled in the app: the Unit tab shows again.
+    // Handled in the app: the Home tab shows again.
     expect(await tester.binding.handlePopRoute(), isTrue);
     await tester.pumpAndSettle();
     expect(shownOpacity(tester, SearchScreen), 0);
 
-    // On Unit the app no longer holds back, so Android closes it.
+    // On Home the app no longer holds back, so Android closes it.
     expect(await tester.binding.handlePopRoute(), isFalse);
     expect(find.byType(AlertDialog), findsNothing);
     root.deleteSync(recursive: true);
