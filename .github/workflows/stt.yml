@@ -1,0 +1,20 @@
+name: STT check (diag)
+on:
+  push:
+    branches: [diag/tts]
+    paths: [tts/stt.py, .github/workflows/stt.yml]
+permissions:
+  contents: write
+jobs:
+  stt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q faster-whisper && python tts/stt.py
+      - if: always()
+        run: |
+          git config user.name probe; git config user.email probe@users.noreply.github.com
+          git add -A tts && (git commit -m "stt output" && git push || true)
