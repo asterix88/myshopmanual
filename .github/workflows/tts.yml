@@ -2,7 +2,8 @@ name: TTS voice-over (diag)
 on:
   push:
     branches: [diag/tts]
-    paths: [tts/lines.txt, .github/workflows/tts.yml]
+    paths: [tts/lines.txt, tts/eleven.py, tts/voice.txt, .github/workflows/tts.yml]
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
@@ -13,20 +14,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install edge-tts==7.2.8
-      - name: Synthesize each line with two voices
+      - name: ElevenLabs voice-over
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
         run: |
-          mkdir -p tts/out
-          for voice in id-ID-ArdiNeural id-ID-GadisNeural; do
-            n=0
-            while IFS= read -r line; do
-              n=$((n+1))
-              edge-tts --voice "$voice" --rate=+18% --text "$line" --write-media "tts/out/${voice}-${n}.mp3" >> tts/out/log.txt 2>&1 || echo "FAIL $voice $n" >> tts/out/log.txt
-            done < tts/lines.txt
-          done
-          ls -la tts/out
+          export ELEVEN_VOICE="$(cat tts/voice.txt 2>/dev/null || true)"
+          python tts/eleven.py 2>&1 | tee tts/eleven-log.txt
       - name: Commit output
         if: always()
         run: |
           git config user.name probe; git config user.email probe@users.noreply.github.com
-          git add tts/out && git commit -m "tts output" && git push
+          git add -A tts && (git commit -m "tts output" && git push || true)
