@@ -141,9 +141,9 @@ void main() {
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pumpAndSettle();
 
-    expect(find.text('Manual book'), findsOneWidget);
+    expect(find.text('MANUAL BOOK'), findsOneWidget);
     await tester.scrollUntilVisible(find.byType(CetokCard), 200, scrollable: find.byType(Scrollable).first);
-    await tester.tap(find.text('Cetok Online').last);
+    await tester.tap(find.text('CETOK ONLINE').last);
     await tester.pumpAndSettle();
     for (var i = 0; i < 5 && find.text('CARTRIDGE').evaluate().isEmpty; i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));

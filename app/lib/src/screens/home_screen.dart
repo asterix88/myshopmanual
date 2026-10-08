@@ -262,34 +262,34 @@ class _ContinueReading extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(top: 10),
       color: AppColors.surface,
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             'Lanjutkan membaca',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.muted),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Material(
             color: AppColors.navy,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
               onTap: () => openViewer(context, file, page: lastRead.page),
               child: Padding(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 child: Row(
                   children: [
                     // The unit's machine picture, like in its folder.
                     Container(
-                      width: 72,
-                      height: 56,
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                      child: UnitIcon(unitId: file.unitId, width: 64, height: 48),
+                      width: 48,
+                      height: 36,
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
+                      child: UnitIcon(unitId: file.unitId, width: 42, height: 30),
                     ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -298,20 +298,20 @@ class _ContinueReading extends StatelessWidget {
                             file.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
                           ),
                           Text(
                             [store.unitNameOf(file), if (lastRead.section != null) lastRead.section!, 'hlm ${lastRead.page}'].join(' · '),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Color(0xFFC9D3E3), fontSize: 12),
+                            style: const TextStyle(color: Color(0xFFC9D3E3), fontSize: 11),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 5),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(2),
                             child: LinearProgressIndicator(
                               value: progress,
-                              minHeight: 4,
+                              minHeight: 3,
                               color: AppColors.orange,
                               backgroundColor: const Color(0xFF3A5582),
                             ),
@@ -351,8 +351,8 @@ class _MachineFolders extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SectionLabel(
-            'Manual book',
+          _HomeLabel(
+            'MANUAL BOOK',
             trailing: Text(
               '${formatSize(store.usedBytes)} di HP',
               style: TextStyle(fontSize: 12, color: AppColors.muted),
@@ -382,13 +382,39 @@ class _MachineFolders extends StatelessWidget {
               ),
             ),
           const SizedBox(height: 12),
-          const SectionLabel('Cetok Online'),
+          const _HomeLabel('CETOK ONLINE'),
           const CetokCard(),
         ],
       ),
     );
   }
 }
+
+/// A Home section title in the same type as the EXCAVATOR / BULLDOZER folders.
+class _HomeLabel extends StatelessWidget {
+  const _HomeLabel(this.text, {this.trailing});
+
+  final String text;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(child: Text(text, style: homeTitleStyle)),
+          ?trailing,
+        ],
+      ),
+    );
+  }
+}
+
+/// The type of the Home folder names (EXCAVATOR, BULLDOZER) and section titles.
+TextStyle get homeTitleStyle =>
+    TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.navy, letterSpacing: 0.5);
 
 class _FolderCard extends StatelessWidget {
   const _FolderCard({required this.machine, required this.units, required this.store});
@@ -425,15 +451,7 @@ class _FolderCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  machine.label,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.navy,
-                    letterSpacing: 0.5,
-                  ),
-                ),
+                Text(machine.label, style: homeTitleStyle),
                 Text(
                   units.isEmpty ? 'belum ada model' : '${units.length} model unit',
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
