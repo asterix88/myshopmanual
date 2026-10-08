@@ -1,0 +1,31 @@
+name: TTS voice-over (diag)
+on:
+  push:
+    branches: [diag/tts]
+    paths: [tts/lines.txt, .github/workflows/tts.yml]
+permissions:
+  contents: write
+jobs:
+  tts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install edge-tts==7.0.2
+      - name: Synthesize each line with two voices
+        run: |
+          mkdir -p tts/out
+          for voice in id-ID-ArdiNeural id-ID-GadisNeural; do
+            n=0
+            while IFS= read -r line; do
+              n=$((n+1))
+              edge-tts --voice "$voice" --rate=+5% --text "$line" --write-media "tts/out/${voice}-${n}.mp3"
+            done < tts/lines.txt
+          done
+          ls -la tts/out
+      - name: Commit output
+        run: |
+          git config user.name probe; git config user.email probe@users.noreply.github.com
+          git add tts/out && git commit -m "tts output" && git push
