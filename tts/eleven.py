@@ -23,6 +23,18 @@ voices = json.loads(call('https://api.elevenlabs.io/v1/voices') or b'{"voices":[
 named = [v for v in voices if want and v['name'].lower().startswith(want.lower())]
 voice_id = named[0]['voice_id'] if named else want
 lines = [l.strip() for l in open('tts/lines.txt') if l.strip()]
+# tts/takes.txt: "line|name|stability|style|speed" per row -> extra takes v-<line><name>.mp3 only.
+if os.path.exists('tts/takes.txt'):
+    for row in open('tts/takes.txt'):
+        if not row.strip(): continue
+        n, name, stab, style, speed = row.strip().split('|')
+        audio = call(f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}?output_format=mp3_44100_128", {
+            'text': lines[int(n) - 1], 'model_id': 'eleven_multilingual_v2', 'language_code': 'id',
+            'voice_settings': {'stability': float(stab), 'similarity_boost': 0.85, 'style': float(style),
+                               'use_speaker_boost': True, 'speed': float(speed)}})
+        if audio:
+            open(f'tts/eleven/v-{n}{name}.mp3', 'wb').write(audio)
+    print('takes done', voice_id); sys.exit(0)
 for i, line in enumerate(lines, 1):
     audio = call(f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}?output_format=mp3_44100_128", {
         'text': line,
