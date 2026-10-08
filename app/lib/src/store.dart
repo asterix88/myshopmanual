@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'cetok.dart';
 import 'models.dart';
 
 /// Server address: the R2 bucket's custom domain (r2.dev is blocked by some
@@ -180,6 +181,9 @@ class AppStore extends ChangeNotifier {
 
   /// Where the Nyel AI conversation is kept between app starts.
   String get chatHistoryPath => p.join(_root.path, 'chat.json');
+
+  /// Cetok Online's parts stock (its own server), opened from the Home tab.
+  late final Cetok cetok = Cetok(cachePath: p.join(_root.path, 'cetok.json'), client: _client);
 
   Timer? _saveTimer;
 

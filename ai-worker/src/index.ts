@@ -248,7 +248,7 @@ export default {
       : [];
     const context = manuals.length
       ? `Manuals in the app (all can be searched; pass unit when the question is about one unit model, so only its manuals are searched):\n${manuals.join("\n")}`
-      : "The app has no manual list yet (it has not reached the server), so search_manuals finds nothing. Tell the user to connect to the internet and open the Unit tab first.";
+      : "The app has no manual list yet (it has not reached the server), so search_manuals finds nothing. Tell the user to connect to the internet and open the Home tab first.";
 
     // MODEL is a list tried in order: when one model is full, out of credit
     // or retired, the same request goes to the next one. "deepseek:<model>"

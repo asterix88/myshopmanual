@@ -9,6 +9,7 @@ import '../widgets/common.dart';
 import 'shell.dart';
 import '../widgets/machine_icon.dart';
 import '../widgets/unit_icon.dart';
+import 'cetok_screen.dart';
 import 'machine_screen.dart';
 import 'report_screen.dart';
 import 'updates_screen.dart';
@@ -351,7 +352,7 @@ class _MachineFolders extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionLabel(
-            'Jenis alat',
+            'Manual book',
             trailing: Text(
               '${formatSize(store.usedBytes)} di HP',
               style: TextStyle(fontSize: 12, color: AppColors.muted),
@@ -380,6 +381,9 @@ class _MachineFolders extends StatelessWidget {
                 style: TextStyle(fontSize: 13, color: AppColors.muted),
               ),
             ),
+          const SizedBox(height: 12),
+          const SectionLabel('Cetok Online'),
+          const CetokCard(),
         ],
       ),
     );

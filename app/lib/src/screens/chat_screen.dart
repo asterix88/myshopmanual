@@ -355,7 +355,7 @@ class _Intro extends StatelessWidget {
               if (!hasManuals) ...[
                 const SizedBox(height: 12),
                 Text(
-                  'Daftar manual belum termuat. Sambungkan ke internet lalu buka tab Unit.',
+                  'Daftar manual belum termuat. Sambungkan ke internet lalu buka tab Home.',
                   style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.orangeText),
                 ),
               ],

@@ -21,7 +21,7 @@ class StoreScope extends InheritedNotifier<AppStore> {
       context.getInheritedWidgetOfExactType<StoreScope>()!.notifier!;
 }
 
-/// Bottom navigation: Unit, Cari, Nyel AI (raised, in the middle), Spek,
+/// Bottom navigation: Home, Cari, Nyel AI (raised, in the middle), Spek,
 /// Servis.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -45,7 +45,7 @@ class _HomeShellState extends State<HomeShell> {
       _tab = chatTab;
     }
     return PopScope(
-      // Back on another tab goes to Unit first; on Unit it closes the app.
+      // Back on another tab goes to Home first; on Home it closes the app.
       canPop: _tab == 0,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) setState(() => _tab = 0);
@@ -113,7 +113,7 @@ class _NavBar extends StatelessWidget {
   final ValueChanged<int> onSelect;
 
   static const _items = [
-    (Icons.folder_outlined, Icons.folder, 'Unit'),
+    (Icons.home_outlined, Icons.home, 'Home'),
     (Icons.search, Icons.search, 'Cari'),
     (Icons.auto_awesome, Icons.auto_awesome, 'Nyel AI'),
     (Icons.fact_check_outlined, Icons.fact_check, 'Spek'),
