@@ -21,7 +21,7 @@ class StoreScope extends InheritedNotifier<AppStore> {
       context.getInheritedWidgetOfExactType<StoreScope>()!.notifier!;
 }
 
-/// Bottom navigation: Home, Cari, Nyel AI (raised, in the middle), Spek,
+/// Bottom navigation: Home, Cari, Nyel AI (raised, in the middle), Standard,
 /// Servis.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -116,7 +116,7 @@ class _NavBar extends StatelessWidget {
     (Icons.home_outlined, Icons.home, 'Home'),
     (Icons.search, Icons.search, 'Cari'),
     (Icons.auto_awesome, Icons.auto_awesome, 'Nyel AI'),
-    (Icons.fact_check_outlined, Icons.fact_check, 'Spek'),
+    (Icons.fact_check_outlined, Icons.fact_check, 'Standard'),
     (Icons.event_note_outlined, Icons.event_note, 'Servis'),
   ];
 

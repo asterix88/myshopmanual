@@ -88,7 +88,7 @@ void main() {
     });
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Spek').last);
+    await tester.tap(find.text('Standard').last);
     await settle(tester);
 
     expect(find.text('TEST1-1'), findsWidgets);
@@ -115,7 +115,7 @@ void main() {
 
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Spek').last);
+    await tester.tap(find.text('Standard').last);
     await settle(tester);
     expect(find.text('Standard tightening torque table'), findsOneWidget);
     expect(find.text('OMM Test Unit · hlm 40'), findsOneWidget);

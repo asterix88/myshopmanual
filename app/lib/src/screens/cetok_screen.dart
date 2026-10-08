@@ -7,6 +7,7 @@ import '../search.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import 'shell.dart';
+import 'home_screen.dart' show homeTitleStyle;
 import 'viewer_screen.dart';
 
 /// Opens Cetok Online; with [search] the search box gets the keyboard.
@@ -42,8 +43,7 @@ class CetokCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Cetok Online',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.navy)),
+                      Text('CETOK ONLINE', style: homeTitleStyle),
                       Text('Cek, ambil, dan input stok part', style: TextStyle(fontSize: 12, color: AppColors.muted)),
                     ],
                   ),

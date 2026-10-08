@@ -63,7 +63,7 @@ void main() {
 
     expect(find.byType(UnitRow), findsNWidgets(5));
     // A model with a picture shows it whatever its suffix (PC500 -> PC500LC-10 too).
-    final pictures = tester.widgetList<Image>(find.byType(Image)).map((i) => (i.image as AssetImage).assetName);
+    final pictures = tester.widgetList<Image>(find.descendant(of: find.byType(UnitRow), matching: find.byType(Image))).map((i) => (i.image as AssetImage).assetName);
     expect(pictures, [
       'assets/units/pc2000.png',
       'assets/units/pc1250.png',
