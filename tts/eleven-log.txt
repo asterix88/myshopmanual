@@ -1,1 +1,3 @@
-ELEVENLABS_API_KEY secret is not set
+done Roger - Laid-Back, Casual, Resonant
+done Charlie - Deep, Confident, Energetic
+done Sarah - Mature, Reassuring, Confident
