@@ -2,7 +2,7 @@ name: TTS voice-over (diag)
 on:
   push:
     branches: [diag/tts]
-    paths: [tts/lines.txt, tts/eleven.py, tts/voice.txt, tts/run.txt, .github/workflows/tts.yml]
+    paths: [tts/lines.txt, tts/eleven.py, tts/voice.txt, tts/music.txt, tts/run.txt, .github/workflows/tts.yml]
   workflow_dispatch:
 permissions:
   contents: write

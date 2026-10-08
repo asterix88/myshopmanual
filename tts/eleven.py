@@ -1,6 +1,7 @@
-"""Voice-over lines through ElevenLabs. Needs ELEVENLABS_API_KEY; the voice
-is ELEVEN_VOICE (a voice id or a name from the account's voice list)."""
-import json, os, sys, urllib.request
+"""Voice-over lines and background music through ElevenLabs. Needs
+ELEVENLABS_API_KEY. tts/voice.txt holds a voice id (or a name from the
+account's list); tts/music.txt holds the music prompt."""
+import json, os, sys, urllib.request, urllib.error
 
 KEY = os.environ.get('ELEVENLABS_API_KEY', '')
 if not KEY:
@@ -10,30 +11,38 @@ os.makedirs('tts/eleven', exist_ok=True)
 def call(url, body=None):
     req = urllib.request.Request(url, data=json.dumps(body).encode() if body else None,
                                  headers={'xi-api-key': KEY, 'content-type': 'application/json'})
-    with urllib.request.urlopen(req, timeout=120) as r:
-        return r.read()
+    try:
+        with urllib.request.urlopen(req, timeout=300) as r:
+            return r.read()
+    except urllib.error.HTTPError as e:
+        print('HTTP', e.code, url.split('?')[0], e.read()[:400])
+        return None
 
-voices = json.loads(call('https://api.elevenlabs.io/v1/voices'))['voices']
-with open('tts/eleven/voices.txt', 'w') as f:
-    for v in voices:
-        labels = v.get('labels') or {}
-        f.write(f"{v['voice_id']}\t{v['name']}\t{labels.get('gender','')}\t{labels.get('accent','')}\t{v.get('category','')}\n")
-
-want = os.environ.get('ELEVEN_VOICE', '').strip()
-picked = [v for v in voices if want and (v['voice_id'] == want or v['name'].lower().startswith(want.lower()))]
-if want and not picked:
-    print(f'voice {want!r} not found'); sys.exit(1)
-targets = picked or [v for v in voices if (v.get('labels') or {}).get('gender') == 'male'][:2] + \
-          [v for v in voices if (v.get('labels') or {}).get('gender') == 'female'][:1]
+want = open('tts/voice.txt').read().strip() if os.path.exists('tts/voice.txt') else ''
+voices = json.loads(call('https://api.elevenlabs.io/v1/voices') or b'{"voices":[]}')['voices']
+named = [v for v in voices if want and v['name'].lower().startswith(want.lower())]
+voice_id = named[0]['voice_id'] if named else want
 lines = [l.strip() for l in open('tts/lines.txt') if l.strip()]
-for v in targets:
-    slug = v['name'].split()[0].lower()
-    for i, line in enumerate(lines, 1):
-        audio = call(f"https://api.elevenlabs.io/v1/text-to-speech/{v['voice_id']}?output_format=mp3_44100_128", {
-            'text': line,
-            'model_id': 'eleven_multilingual_v2',
-            'language_code': 'id',
-            'voice_settings': {'stability': 0.45, 'similarity_boost': 0.8, 'style': 0.3, 'speed': 1.08},
-        })
-        open(f'tts/eleven/{slug}-{i}.mp3', 'wb').write(audio)
-    print('done', v['name'])
+for i, line in enumerate(lines, 1):
+    audio = call(f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}?output_format=mp3_44100_128", {
+        'text': line,
+        'model_id': 'eleven_multilingual_v2',
+        'language_code': 'id',
+        'voice_settings': {'stability': 0.3, 'similarity_boost': 0.85, 'style': 0.65, 'use_speaker_boost': True, 'speed': 1.1},
+    })
+    if audio:
+        open(f'tts/eleven/v-{i}.mp3', 'wb').write(audio)
+print('voice lines done', voice_id)
+
+if os.path.exists('tts/music.txt'):
+    prompt = open('tts/music.txt').read().strip()
+    music = call('https://api.elevenlabs.io/v1/music?output_format=mp3_44100_128',
+                 {'prompt': prompt, 'music_length_ms': 33000, 'force_instrumental': True})
+    if music:
+        open('tts/eleven/music.mp3', 'wb').write(music); print('music done')
+    else:
+        for n in (1, 2):
+            fx = call('https://api.elevenlabs.io/v1/sound-generation?output_format=mp3_44100_128',
+                      {'text': prompt, 'duration_seconds': 22, 'prompt_influence': 0.5})
+            if fx:
+                open(f'tts/eleven/music-fx{n}.mp3', 'wb').write(fx); print('sound-generation music done', n)
