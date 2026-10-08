@@ -21,7 +21,7 @@ jobs:
             n=0
             while IFS= read -r line; do
               n=$((n+1))
-              edge-tts --voice "$voice" --rate=+5% --text "$line" --write-media "tts/out/${voice}-${n}.mp3" >> tts/out/log.txt 2>&1 || echo "FAIL $voice $n" >> tts/out/log.txt
+              edge-tts --voice "$voice" --rate=+18% --text "$line" --write-media "tts/out/${voice}-${n}.mp3" >> tts/out/log.txt 2>&1 || echo "FAIL $voice $n" >> tts/out/log.txt
             done < tts/lines.txt
           done
           ls -la tts/out
