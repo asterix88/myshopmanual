@@ -78,7 +78,14 @@ class _SpecsScreenState extends State<SpecsScreen> {
     if (listed != null) {
       return [
         for (final p in listed)
-          (fileKey: '${unit.id}/${p.fileId}', group: p.group, title: p.title, page: p.page, count: p.count),
+          (
+            fileKey: '${unit.id}/${p.fileId}',
+            group: p.group,
+            title: p.title,
+            page: p.page,
+            count: p.count,
+            marks: p.marks,
+          ),
       ];
     }
     return _partsFor == unit.id ? _parts ?? const [] : const [];
@@ -87,8 +94,21 @@ class _SpecsScreenState extends State<SpecsScreen> {
   void _openPart(PartPage part) {
     final file = StoreScope.read(context).fileByKey(part.fileKey);
     if (file == null) return;
-    openViewer(context, file, page: part.page, torquePages: (part.page, part.page + part.count - 1));
+    openViewer(
+      context,
+      file,
+      page: part.page,
+      torque: (
+        first: part.page,
+        last: part.page + part.count - 1,
+        // A scanned manual has no text: the viewer says to read the page.
+        marks: file.searchable ? part.marks ?? _allPages(part) : null,
+      ),
+    );
   }
+
+  /// Older catalogs list no torque pages: look through the whole chapter.
+  static List<int> _allPages(PartPage part) => [for (var n = part.page; n < part.page + part.count; n++) n];
 
   /// The Torsi tab: the standard torque pages as the first group (open),
   /// then the components' remove & install chapters under the shop

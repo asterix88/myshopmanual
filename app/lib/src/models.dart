@@ -156,6 +156,7 @@ class SpecPart {
     required this.page,
     required this.count,
     this.torque,
+    this.marks,
   });
 
   factory SpecPart.fromJson(Map<String, dynamic> json) => SpecPart(
@@ -165,6 +166,7 @@ class SpecPart {
         page: json['page'] as int,
         count: json['count'] as int? ?? 1,
         torque: json['torque'] as int?,
+        marks: (json['marks'] as List?)?.cast<int>(),
       );
 
   /// "Undercarriage and frame"; empty when the chapter has no parent bookmark.
@@ -176,8 +178,12 @@ class SpecPart {
   final int page;
   final int count;
 
-  /// Torque values printed in the chapter (null in older catalogs).
+  /// Lines with a torque value in the chapter (null in older catalogs or a
+  /// scanned manual).
   final int? torque;
+
+  /// The pages holding those lines.
+  final List<int>? marks;
 }
 
 /// A maintenance schedule page in spek.pdf: the schedule chart ([hours] 0),

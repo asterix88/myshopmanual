@@ -264,7 +264,8 @@ def part_ranges(toc: list[list], page_count: int, texts: list[str] | None = None
     """The remove & install chapters in [toc], grouped the way the manual
     groups them (the title of the bookmark one level up): one entry per
     group and component, in manual order. With the page [texts], "torque"
-    counts the lines with a torque value in the chapter."""
+    counts the lines with a torque value in the chapter and "marks" lists
+    the pages that hold them (the app reads only those)."""
     found, seen = [], set()
     for i, (level, title, page) in enumerate(toc):
         title = " ".join(title.split())
@@ -286,7 +287,9 @@ def part_ranges(toc: list[list], page_count: int, texts: list[str] | None = None
         last = max(page, last)
         entry = {"group": group, "name": name, "title": title, "page": page, "last": last}
         if texts is not None:
-            entry["torque"] = sum(len(torque_lines(texts[n - 1])) for n in range(page, last + 1) if n <= len(texts))
+            counts = {n: len(torque_lines(texts[n - 1])) for n in range(page, min(last, len(texts)) + 1)}
+            entry["torque"] = sum(counts.values())
+            entry["marks"] = [n for n, c in counts.items() if c]
         found.append(entry)
     return found
 
@@ -430,12 +433,14 @@ def build_spec_pack(sources: list[tuple], target: Path,
     entries, service, runs, parts = [], [], [], []
     for file_id, pdf, toc, page_count, *rest in sources:
         texts = rest[0] if rest else None
+        if texts is not None and not any(t.strip() for t in texts):
+            texts = None  # scanned: no text to find torque values in
         for p in part_ranges(toc, page_count, texts):
             # A line may name the component, its bookmark, or a whole group.
             if kept(p["name"]) and kept(p["title"]) and (not p["group"] or kept(p["group"])):
                 parts.append({"group": p["group"], "title": p["name"], "file": file_id,
                               "page": p["page"], "count": p["last"] - p["page"] + 1,
-                              **({"torque": p["torque"]} if "torque" in p else {})})
+                              **({"torque": p["torque"], "marks": p["marks"]} if "torque" in p else {})})
         ranges = [r for r in spec_ranges(toc, page_count) if kept(r[1])]
         svc = [e for e in service_ranges(toc, page_count, texts) if kept(e["title"])]
         if not ranges and not svc:

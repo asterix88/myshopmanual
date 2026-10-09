@@ -32,6 +32,16 @@ void main() {
     expect(partName('Disassembly and assembly of idler'), isNull);
     expect(partName('REMOVE AND INSTALL SUPPLY PUMP ASSEMBLY (RIGHT BANK)'), 'SUPPLY PUMP');
 
+    // With the page text, each chapter lists the pages holding a torque value.
+    final texts = {403: 'Mounting bolt: 98 – 123 Nm {10 – 12.5 kgm}', 404: 'Torque wrench\n5 to 50 Nm'};
+    final marked = partPages('sm', toc, textOf: (n) => texts[n]);
+    expect(marked.map((e) => e.marks), [
+      [403],
+      <int>[],
+      <int>[],
+    ]);
+    expect(parts.first.marks, isNull);
+
     // Older manuals: the component alone, REMOVAL and INSTALLATION under it.
     final old = partPages('sm', [
       (level: 1, title: '30 DISASSEMBLY AND ASSEMBLY', page: 457),
@@ -63,7 +73,7 @@ void main() {
     final unit = (catalog['units'] as List).single as Map<String, dynamic>;
     (unit['spec'] as Map<String, dynamic>)['parts'] = [
       {'group': 'Undercarriage and frame', 'title': 'Track roller', 'file': 'OMM_Test_Unit', 'page': 402, 'count': 4},
-      {'group': 'Undercarriage and frame', 'title': 'Carrier roller', 'file': 'OMM_Test_Unit', 'page': 406, 'count': 3},
+      {'group': 'Undercarriage and frame', 'title': 'Carrier roller', 'file': 'OMM_Test_Unit', 'page': 406, 'count': 3, 'torque': 0, 'marks': []},
       {'group': 'Engine and cooling system', 'title': 'Engine', 'file': 'OMM_Test_Unit', 'page': 431, 'count': 5},
     ];
     late AppStore store;
@@ -100,7 +110,22 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     final viewer = tester.widget<ViewerScreen>(find.byType(ViewerScreen));
-    expect(viewer.torquePages, (431, 435));
+    expect((viewer.torque!.first, viewer.torque!.last), (431, 435));
+    // An older catalog lists no torque pages: the whole chapter is read.
+    expect(viewer.torque!.marks, [431, 432, 433, 434, 435]);
+    expect(find.text('Mencari angka torsi…'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    // A chapter without torque values says so right away.
+    await tester.tap(find.text('Undercarriage and frame'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Carrier roller'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Carrier roller'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Tidak ada standar torque khusus pada komponen ini'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     root.deleteSync(recursive: true);
   });

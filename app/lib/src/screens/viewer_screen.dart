@@ -9,6 +9,7 @@ import '../diagnostics.dart';
 import '../models.dart';
 import '../page_image.dart';
 import '../search.dart';
+import '../specs.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -16,46 +17,13 @@ import 'shell.dart';
 
 /// Opens a manual, optionally at [page] and with [query] highlighted. A
 /// downloaded manual opens from the phone; any other is read from the server.
-/// With [torquePages] (first, last) the torque values on those pages are
-/// marked, as on a component's remove & install chapter.
-Future<void> openViewer(BuildContext context, ManualFile file, {int? page, String? query, (int, int)? torquePages}) {
+/// With [torque] the torque values of a component's remove & install
+/// chapter are marked.
+Future<void> openViewer(BuildContext context, ManualFile file, {int? page, String? query, TorqueScan? torque}) {
   Diagnostics.log('open ${file.key} p${page ?? 1}');
   return Navigator.of(context).push(MaterialPageRoute(
-    builder: (_) => ViewerScreen(fileKey: file.key, initialPage: page, initialQuery: query, torquePages: torquePages),
+    builder: (_) => ViewerScreen(fileKey: file.key, initialPage: page, initialQuery: query, torque: torque),
   ));
-}
-
-/// A torque value as manuals print it: "824 – 1,030 Nm {84 – 105 kgm}",
-/// "98 N·m", "70 lb ft".
-final torqueValue = RegExp(
-  r'\d[\d.,]*\s*(?:[-–~]\s*\d[\d.,]*\s*)?(?:N\s*[·.•]?\s*m|kgf?\s*[·.•]?\s*m|lbf?\s*[·.•]?\s*ft)(?![a-z])',
-  caseSensitive: false,
-);
-
-/// A line with only a bare range like "5 to 50 Nm": a torque wrench in the
-/// tools table, not a tightening torque.
-final _toolRange = RegExp(r'^[\d.,]+\s*(?:to|[-–~])\s*[\d.,]+\s*N\s*[·.•]?\s*m$', caseSensitive: false);
-
-/// The lines of [text] holding a torque value, as (start, end) indexes;
-/// each line once, a very long line only around the value.
-List<(int, int)> torqueLines(String text) {
-  final found = <(int, int)>[];
-  for (final m in torqueValue.allMatches(text)) {
-    var start = text.lastIndexOf('\n', m.start) + 1;
-    var end = text.indexOf('\n', m.end);
-    if (end < 0) end = text.length;
-    if (end - start > 160) (start, end) = (m.start, m.end);
-    while (start < end && text[start].trim().isEmpty) {
-      start++;
-    }
-    while (end > start && text[end - 1].trim().isEmpty) {
-      end--;
-    }
-    if (found.isNotEmpty && found.last.$2 >= start) continue;
-    if (_toolRange.hasMatch(text.substring(start, end))) continue;
-    found.add((start, end));
-  }
-  return found;
 }
 
 /// A handle on the right edge that shows the page number; dragging it
@@ -81,14 +49,14 @@ Widget pageScrollThumb(PdfViewerController controller) => PdfViewerScrollThumb(
     );
 
 class ViewerScreen extends StatefulWidget {
-  const ViewerScreen({super.key, required this.fileKey, this.initialPage, this.initialQuery, this.torquePages});
+  const ViewerScreen({super.key, required this.fileKey, this.initialPage, this.initialQuery, this.torque});
 
   final String fileKey;
   final int? initialPage;
   final String? initialQuery;
 
-  /// Pages (first, last) whose torque values are marked.
-  final (int, int)? torquePages;
+  /// The chapter whose torque values are marked.
+  final TorqueScan? torque;
 
   @override
   State<ViewerScreen> createState() => _ViewerScreenState();
@@ -104,7 +72,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   bool _searching = false;
 
-  /// Torque lines marked on [ViewerScreen.torquePages], in page order;
+  /// Torque lines marked on [ViewerScreen.torque], in page order;
   /// null while they are being read.
   List<PdfPageTextRange>? _torque;
   int _torqueAt = -1;
@@ -125,6 +93,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
     super.initState();
     _page = widget.initialPage ?? 1;
     _resumeServerDrawing = pauseServerDrawing();
+    // Known beforehand: no torque value in the chapter, or no text to find
+    // one in (a scanned manual). Say so without waiting for the document.
+    final marks = widget.torque?.marks;
+    if (widget.torque != null && (marks == null || marks.isEmpty)) _torque = const [];
     final query = widget.initialQuery?.trim();
     if (query != null && query.isNotEmpty) {
       _searching = true;
@@ -187,7 +159,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
         if (_toc.isEmpty) _toc = _tocFromOutline(outline);
       });
     });
-    if (widget.torquePages != null) _markTorque(document);
+    if (widget.torque != null) _markTorque(document);
     final query = _searchField.text.trim();
     if (query.isNotEmpty) {
       // Opened from "Cari": stay on the page from the search result, but
@@ -197,9 +169,13 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   Future<void> _markTorque(PdfDocument document) async {
-    final (first, last) = widget.torquePages!;
+    final marks = widget.torque!.marks;
+    if (marks == null || marks.isEmpty) return;
     final found = <PdfPageTextRange>[];
-    for (var n = first; n <= last && n <= document.pages.length; n++) {
+    // Only the pages the pipeline found torque values on, so the marks
+    // appear quickly even in a long chapter read online.
+    for (final n in marks) {
+      if (n > document.pages.length) continue;
       try {
         // An online manual loads its pages progressively; reading a page
         // before it has loaded returns no text, so wait for it.
@@ -216,16 +192,27 @@ class _ViewerScreenState extends State<ViewerScreen> {
         Diagnostics.log('torque p$n: $e');
       }
       if (!mounted) return;
+      if (found.isNotEmpty && _torque == null) {
+        // Show the first marks right away and go to them; later pages add more.
+        setState(() => _torque = [...found]);
+        _goToTorque(0);
+      }
     }
     setState(() => _torque = found);
+  }
+
+  void _goToTorque(int at) {
+    final torque = _torque;
+    if (torque == null || at >= torque.length) return;
+    setState(() => _torqueAt = at);
+    final range = torque[at];
+    _controller.goToRectInsidePage(pageNumber: range.pageNumber, rect: range.bounds, anchor: PdfPageAnchor.center);
   }
 
   void _nextTorque() {
     final torque = _torque;
     if (torque == null || torque.isEmpty) return;
-    setState(() => _torqueAt = (_torqueAt + 1) % torque.length);
-    final range = torque[_torqueAt];
-    _controller.goToRectInsidePage(pageNumber: range.pageNumber, rect: range.bounds, anchor: PdfPageAnchor.center);
+    _goToTorque((_torqueAt + 1) % torque.length);
   }
 
   void _paintTorque(Canvas canvas, Rect pageRect, PdfPage page) {
@@ -270,9 +257,11 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 child: Text(
                   torque == null
                       ? 'Mencari angka torsi…'
-                      : count == 0
-                          ? 'Angka torsi tidak ditemukan di bagian ini'
-                          : 'angka torsi ditandai',
+                      : count > 0
+                          ? 'angka torsi ditandai'
+                          : widget.torque!.marks?.isEmpty ?? false
+                              ? 'Tidak ada standar torque khusus pada komponen ini'
+                              : 'Torsi tidak terbaca, silakan langsung cek dokumen',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 13, color: Colors.white),
@@ -378,7 +367,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
         ],
         bottom: _searching
             ? _searchBar()
-            : widget.torquePages != null
+            : widget.torque != null
                 ? _torqueBar()
                 : null,
       ),
