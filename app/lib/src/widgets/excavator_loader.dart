@@ -8,7 +8,7 @@ import '../theme.dart';
 /// in a loop. Used instead of the spinning circle while data comes from the
 /// server.
 class ExcavatorLoader extends StatefulWidget {
-  const ExcavatorLoader({super.key, this.label, this.width = 150});
+  const ExcavatorLoader({super.key, this.label, this.width = 96});
 
   final String? label;
   final double width;
