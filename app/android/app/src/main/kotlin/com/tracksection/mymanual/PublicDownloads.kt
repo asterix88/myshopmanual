@@ -25,6 +25,7 @@ object PublicDownloads {
     private const val FOLDER = "MyManual"
     private const val CHANNEL = "saves"
     private const val NOTIFICATION = 7302
+    private const val PREFS = "public_downloads"
 
     val supported get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
@@ -32,6 +33,20 @@ object PublicDownloads {
      *  or deleted from the Download folder since). */
     fun find(context: Context, name: String): Uri? {
         if (!supported) return null
+        // The copy saved by this app: look it up by the address MediaStore gave
+        // it, which doesn't depend on how the phone stores names and folders.
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        prefs.getString(name, null)?.let { saved ->
+            val uri = Uri.parse(saved)
+            val there = try {
+                context.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns._ID), null, null, null)
+                    ?.use { it.moveToFirst() } ?: false
+            } catch (e: Exception) {
+                false
+            }
+            if (there) return uri
+            prefs.edit().remove(name).apply()
+        }
         // Match on the name only and check the folder here: phones differ in
         // how they store RELATIVE_PATH, and an exact match missed saved copies.
         val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL)
@@ -98,6 +113,7 @@ object PublicDownloads {
         try {
             resolver.openOutputStream(uri)!!.use { out -> pump(context, source, out, name, total) }
             resolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(name, uri.toString()).apply()
         } catch (e: Exception) {
             resolver.delete(uri, null, null)
             throw e

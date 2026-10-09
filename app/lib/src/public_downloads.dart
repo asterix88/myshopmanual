@@ -54,6 +54,7 @@ class PublicDownloads extends ChangeNotifier with WidgetsBindingObserver {
     } finally {
       _checking.remove(name);
     }
+    Diagnostics.log('downloads exists "$name": $result');
     if (generation != _generation) return;
     _exists[name] = result;
     notifyListeners();

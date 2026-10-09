@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models.dart';
@@ -407,7 +409,7 @@ class _FileCard extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await downloads.save(store.pdfPath(file), name);
-      messenger.showSnackBar(SnackBar(
+      final shown = messenger.showSnackBar(SnackBar(
         content: Text('Tersimpan di Download/MyManual/$name'),
         // A snackbar with an action stays until closed unless told otherwise.
         duration: const Duration(seconds: 2),
@@ -421,6 +423,13 @@ class _FileCard extends StatelessWidget {
           },
         ),
       ));
+      // Some phones keep a snackbar with a button up (accessibility
+      // settings); close it ourselves after the 2 seconds.
+      var open = true;
+      shown.closed.then((_) => open = false);
+      Timer(const Duration(seconds: 2), () {
+        if (open) shown.close();
+      });
     } catch (e) {
       if (context.mounted) showError(context, e);
     }
