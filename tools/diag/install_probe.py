@@ -22,16 +22,16 @@ for u in cat["units"]:
         db.close()
         n = f["pages"]
         tl = [texts.get(i + 1, "") for i in range(n)]
+        old = {(p["group"], p["name"]): p for p in bp.part_ranges(toc, n, None)}
         parts = bp.part_ranges(toc, n, tl)
         if not parts:
             continue
         print(f"\n=== {u['id']} {f['title']} ({len(parts)} chapters)")
         for p in parts:
-            hits = []
-            for pg in range(p["page"], p["last"] + 1):
-                for line in tl[pg - 1].splitlines():
-                    if CAND.match(line):
-                        hits.append((pg, line.strip()[:50]))
-            stats["found" if hits else "none"] += 1
-            print(f"- {p['name']} p{p['page']}-{p['last']} marks={p.get('marks')} :: {hits[:4]}")
+            o = old[(p["group"], p["name"])]
+            inst = p["page"]
+            how = "same" if inst == o["page"] else "moved"
+            stats[how] += 1
+            head = [l.strip()[:60] for l in tl[inst - 1].splitlines() if l.strip()][:3]
+            print(f"- {p['name']} chapter p{o['page']}-{p['last']} -> install p{inst} ({how}) marks={p['marks']} top={head}")
 print(stats)

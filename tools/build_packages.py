@@ -95,6 +95,14 @@ PART_TITLE = [
 # INSTALLATION bookmarks under it.
 PART_STEP = re.compile(r"^(?:removal|installation|insyallation)$", re.I)
 MAX_PART_PAGES = 40
+# Where a chapter's Installation part starts: a heading "Installation", an
+# upper-case "INSTALL TRAVEL MOTOR ASSEMBLY", or else the first page with more
+# "Install ..." steps than "Remove ..." steps. Torsi opens there and marks
+# only the torque values from there on (Anas, 9 Oct 2026).
+INSTALL_HEADING = re.compile(r"(?:\d+[.)]?\s*)?installation:?", re.I)
+INSTALL_UPPER = re.compile(r"INSTALL(?:ATION)?(?: [A-Z0-9][A-Z0-9 ,()/&.\-]*)?")
+INSTALL_STEP = re.compile(r"^\s*(?:\d+[.)]\s*)?install\b", re.I)
+REMOVE_STEP = re.compile(r"^\s*(?:\d+[.)]\s*)?(?:remove|disconnect|lift off|sling)\b", re.I)
 # A torque value as manuals print it: "824 – 1,030 Nm {84 – 105 kgm}",
 # "98 N·m", "70 lbf ft" (same as torqueValue in the app's viewer). A line
 # with only a bare range like "5 to 50 Nm" is a torque wrench in the tools
@@ -285,6 +293,11 @@ def part_ranges(toc: list[list], page_count: int, texts: list[str] | None = None
         seen.add((group.lower(), name.lower()))
         last = min(_section_end(toc, i, page_count), page + MAX_PART_PAGES - 1)
         last = max(page, last)
+        install = _install_bookmark(toc, i, page, last)
+        if install is None and texts is not None:
+            install = install_start(texts, page, last)
+        if install is not None:
+            page = install
         entry = {"group": group, "name": name, "title": title, "page": page, "last": last}
         if texts is not None:
             counts = {n: len(torque_lines(texts[n - 1])) for n in range(page, min(last, len(texts)) + 1)}
@@ -292,6 +305,35 @@ def part_ranges(toc: list[list], page_count: int, texts: list[str] | None = None
             entry["marks"] = [n for n, c in counts.items() if c]
         found.append(entry)
     return found
+
+
+def _install_bookmark(toc: list[list], i: int, first: int, last: int) -> int | None:
+    """Page of an "Installation" bookmark under chapter i (older manuals)."""
+    level = toc[i][0]
+    for child_level, child_title, child_page in toc[i + 1:]:
+        if child_level <= level:
+            break
+        if child_level == level + 1 and re.match(r"^ins[ty]allation$", child_title.strip(), re.I) \
+                and first <= child_page <= last:
+            return child_page
+    return None
+
+
+def install_start(texts: list[str], first: int, last: int) -> int | None:
+    """First page of the Installation part of pages [first]..[last]."""
+    pages = range(first, min(last, len(texts)) + 1)
+    for n in pages:
+        for line in texts[n - 1].splitlines():
+            line = " ".join(line.split())
+            if INSTALL_HEADING.fullmatch(line) or (len(line) <= 80 and INSTALL_UPPER.fullmatch(line)):
+                return n
+    for n in pages:
+        lines = texts[n - 1].splitlines()
+        installs = sum(1 for line in lines if INSTALL_STEP.match(line))
+        removes = sum(1 for line in lines if REMOVE_STEP.match(line))
+        if installs and installs >= removes:
+            return n
+    return None
 
 
 def _section_end(toc: list[list], i: int, page_count: int) -> int:
