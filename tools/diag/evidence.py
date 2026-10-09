@@ -57,3 +57,4 @@ json.dump(result, open(f"{OUT}/evidence.json", "w"), ensure_ascii=False, indent=
 print("images MB", round(total / 1e6, 1))
 for k, v in result.items():
     print(k, len(v["parts"]), sum(1 for p in v["parts"] if p["torque"]))
+# v2
