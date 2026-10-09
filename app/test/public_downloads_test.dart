@@ -64,5 +64,9 @@ void main() {
     expect(find.text('BUKA'), findsOneWidget);
     // The copy is there now, so the card no longer offers it.
     expect(find.text('Simpan ke Download'), findsNothing);
+    // The message goes away by itself.
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.text('BUKA'), findsNothing);
   });
 }

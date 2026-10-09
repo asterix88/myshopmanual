@@ -23,7 +23,7 @@ class MainActivity : FlutterActivity() {
             val name = call.argument<String>("name") ?: ""
             when (call.method) {
                 "supported" -> result.success(PublicDownloads.supported)
-                "exists" -> result.success(PublicDownloads.supported && PublicDownloads.find(this, name) != null)
+                "exists" -> result.success(PublicDownloads.exists(this, name))
                 "save" -> PublicDownloads.save(this, call.argument<String>("path")!!, name) { error ->
                     if (error == null) result.success(null) else result.error("save", error, null)
                 }

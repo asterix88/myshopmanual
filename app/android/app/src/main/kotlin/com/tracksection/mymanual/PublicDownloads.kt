@@ -31,20 +31,38 @@ object PublicDownloads {
     /** The saved copy named [name], or null when there is none (never saved,
      *  or deleted from the Download folder since). */
     fun find(context: Context, name: String): Uri? {
-        if (supported) {
-            val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL)
-            context.contentResolver.query(
-                collection,
-                arrayOf(MediaStore.MediaColumns._ID),
-                "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND ${MediaStore.MediaColumns.RELATIVE_PATH} = ? " +
-                    "AND ${MediaStore.MediaColumns.IS_PENDING} = 0",
-                arrayOf(name, "${Environment.DIRECTORY_DOWNLOADS}/$FOLDER/"),
-                null,
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) return Uri.withAppendedPath(collection, cursor.getLong(0).toString())
+        if (!supported) return null
+        // Match on the name only and check the folder here: phones differ in
+        // how they store RELATIVE_PATH, and an exact match missed saved copies.
+        val collection = MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL)
+        context.contentResolver.query(
+            collection,
+            arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.RELATIVE_PATH, MediaStore.MediaColumns.IS_PENDING),
+            "${MediaStore.MediaColumns.DISPLAY_NAME} = ?",
+            arrayOf(name),
+            null,
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val path = cursor.getString(1)?.trim('/')?.lowercase() ?: ""
+                if (cursor.getInt(2) == 0 && path.endsWith("/${FOLDER.lowercase()}")) {
+                    return Uri.withAppendedPath(collection, cursor.getLong(0).toString())
+                }
             }
         }
         return null
+    }
+
+    /** Whether the copy is there: in MediaStore, or as a plain file. */
+    fun exists(context: Context, name: String): Boolean {
+        if (!supported) return false
+        if (find(context, name) != null) return true
+        @Suppress("DEPRECATION")
+        val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        return try {
+            File(File(dir, FOLDER), name).exists()
+        } catch (e: SecurityException) {
+            false
+        }
     }
 
     /** Copies [source] in the background, with a progress notification, then

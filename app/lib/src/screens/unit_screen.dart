@@ -409,7 +409,9 @@ class _FileCard extends StatelessWidget {
       await downloads.save(store.pdfPath(file), name);
       messenger.showSnackBar(SnackBar(
         content: Text('Tersimpan di Download/MyManual/$name'),
-        duration: const Duration(seconds: 6),
+        // A snackbar with an action stays until closed unless told otherwise.
+        duration: const Duration(seconds: 2),
+        persist: false,
         action: SnackBarAction(
           label: 'BUKA',
           onPressed: () async {

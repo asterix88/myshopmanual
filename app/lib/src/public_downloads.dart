@@ -18,6 +18,10 @@ class PublicDownloads extends ChangeNotifier with WidgetsBindingObserver {
   final _exists = <String, bool>{};
   final _checking = <String>{};
 
+  /// Bumped by each save and lifecycle reset, so a check that started
+  /// before them doesn't overwrite the newer answer.
+  int _generation = 0;
+
   /// File names being copied right now.
   final saving = <String>{};
 
@@ -35,19 +39,23 @@ class PublicDownloads extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _check(String name) async {
     if (!_checking.add(name)) return;
+    final generation = _generation;
+    bool result;
     try {
       final exists = await _channel.invokeMethod<bool>('exists', {'name': name});
       // A phone without support says nothing exists but can't save either.
       final supported = await _channel.invokeMethod<bool>('supported') ?? false;
-      _exists[name] = !supported || (exists ?? true);
+      result = !supported || (exists ?? true);
     } on MissingPluginException {
-      _exists[name] = true;
+      result = true;
     } catch (e) {
       Diagnostics.log('downloads exists: $e');
-      _exists[name] = true;
+      result = true;
     } finally {
       _checking.remove(name);
     }
+    if (generation != _generation) return;
+    _exists[name] = result;
     notifyListeners();
   }
 
@@ -58,6 +66,7 @@ class PublicDownloads extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
     try {
       await _channel.invokeMethod<void>('save', {'path': path, 'name': name});
+      _generation++;
       _exists[name] = true;
     } on PlatformException catch (e) {
       throw Exception('Gagal menyimpan ke Download: ${e.message ?? e.code}');
@@ -90,6 +99,7 @@ class PublicDownloads extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _exists.isNotEmpty) {
+      _generation++;
       _exists.clear();
       notifyListeners();
     }
