@@ -185,21 +185,58 @@ List<PartPage> partPages(
       }
     }
     last = last.clamp(page, page + maxPartPages - 1);
+    // Torsi opens at the Installation part and marks torque from there on.
+    final first = _installBookmark(toc, i, page, last) ?? (textOf == null ? null : installStart(textOf, page, last)) ?? page;
     found.add((
       fileKey: fileKey,
       group: group,
       title: name,
-      page: page,
-      count: last - page + 1,
+      page: first,
+      count: last - first + 1,
       marks: textOf == null
           ? null
           : [
-              for (var n = page; n <= last; n++)
+              for (var n = first; n <= last; n++)
                 if (torqueLines(textOf(n) ?? '').isNotEmpty) n,
             ],
     ));
   }
   return found;
+}
+
+int? _installBookmark(List<({int level, String title, int page})> toc, int i, int first, int last) {
+  final level = toc[i].level;
+  for (final child in toc.skip(i + 1)) {
+    if (child.level <= level) break;
+    if (child.level == level + 1 &&
+        RegExp(r'^ins[ty]allation$', caseSensitive: false).hasMatch(child.title.trim()) &&
+        child.page >= first &&
+        child.page <= last) {
+      return child.page;
+    }
+  }
+  return null;
+}
+
+// Same headings as INSTALL_* in tools/build_packages.py. Install steps alone
+// don't count: removal steps say "Install the plug ..." too.
+final _installHeading = RegExp(r'^(?:\d+[.)]?\s*)?installation:?$', caseSensitive: false);
+final _installUpper = RegExp(r'^(?:INSTALL(?:ATION)?|METHOD FOR INSTALLING)(?: [A-Z0-9][A-Z0-9 ,()/&.\-]*)?$');
+final _installReverse = RegExp(r'^carry out installation in the reverse order', caseSensitive: false);
+
+/// First page of the Installation part of pages [first]..[last].
+int? installStart(String? Function(int page) textOf, int first, int last) {
+  for (var n = first; n <= last; n++) {
+    for (var line in (textOf(n) ?? '').split('\n')) {
+      line = line.replaceAll(RegExp(r'\s+'), ' ').trim();
+      if (_installHeading.hasMatch(line) ||
+          _installReverse.hasMatch(line) ||
+          (line.length <= 80 && _installUpper.hasMatch(line))) {
+        return n;
+      }
+    }
+  }
+  return null;
 }
 
 /// [partPages] of the given manuals ({fileKey: path to .sqlite index}), on
