@@ -80,7 +80,11 @@ final _partTitles = [
   RegExp(r'^(?<name>.+?)\s*[-–]\s*remove\s+(?:and|&)\s+install\b.*$', caseSensitive: false),
 ];
 
-const maxPartPages = 12;
+/// Older manuals (D85) name the component alone, with REMOVAL and
+/// INSTALLATION bookmarks under it.
+final _partStep = RegExp(r'^(?:removal|installation|insyallation)$', caseSensitive: false);
+
+const maxPartPages = 40;
 
 /// 'Removal and installation of track roller assembly' -> 'Track roller'.
 String? partName(String title) {
@@ -106,7 +110,14 @@ List<PartPage> partPages(String fileKey, List<({int level, String title, int pag
   for (var i = 0; i < toc.length; i++) {
     final (:level, :title, :page) = toc[i];
     final clean = title.replaceAll(RegExp(r'\s+'), ' ').trim();
-    final name = partName(clean);
+    var name = partName(clean);
+    if (name == null &&
+        i + 1 < toc.length &&
+        toc[i + 1].level == level + 1 &&
+        _partStep.hasMatch(toc[i + 1].title.trim()) &&
+        clean.isNotEmpty) {
+      name = clean == clean.toUpperCase() ? clean[0] + clean.substring(1).toLowerCase() : clean;
+    }
     if (name == null) continue;
     var group = '';
     for (var j = i - 1; j >= 0; j--) {

@@ -30,6 +30,22 @@ void main() {
       ('Engine and cooling system', 'Engine', 431, maxPartPages),
     ]);
     expect(partName('Disassembly and assembly of idler'), isNull);
+
+    // Older manuals: the component alone, REMOVAL and INSTALLATION under it.
+    final old = partPages('sm', [
+      (level: 1, title: '30 DISASSEMBLY AND ASSEMBLY', page: 457),
+      (level: 2, title: 'SPECIAL TOOL LIST', page: 462),
+      (level: 2, title: 'STARTING MOTOR', page: 467),
+      (level: 3, title: 'REMOVAL', page: 467),
+      (level: 3, title: 'INSTALLATION', page: 467),
+      (level: 2, title: 'CYLINDER HEAD', page: 479),
+      (level: 3, title: 'REMOVAL', page: 479),
+      (level: 2, title: 'ENGINE FRONT SEAL', page: 489),
+    ]);
+    expect(old.map((e) => (e.group, e.title, e.page, e.count)), [
+      ('DISASSEMBLY AND ASSEMBLY', 'Starting motor', 467, 12),
+      ('DISASSEMBLY AND ASSEMBLY', 'Cylinder head', 479, 10),
+    ]);
   });
 
   test('each line with a torque value is marked once', () {
@@ -64,9 +80,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Standard tightening torque table'), findsOneWidget);
-    expect(find.byType(PartGroupCard), findsNWidgets(2));
-    // The first group starts open, the others closed.
-    expect(find.text('Track roller'), findsOneWidget);
+    expect(find.byType(GroupCard), findsNWidgets(3));
+    // Standard tightening torque comes first as its own group, open; the
+    // shop manual's groups start closed.
+    expect(find.text('Standard tightening torque'), findsOneWidget);
+    expect(find.text('OMM Test Unit · hlm 40'), findsOneWidget);
+    expect(find.text('Track roller'), findsNothing);
     expect(find.text('Engine'), findsNothing);
     await tester.tap(find.text('Engine and cooling system'));
     await tester.pumpAndSettle();

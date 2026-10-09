@@ -90,19 +90,35 @@ class _SpecsScreenState extends State<SpecsScreen> {
     openViewer(context, file, page: part.page, torquePages: (part.page, part.page + part.count - 1));
   }
 
-  List<Widget> _partGroups(List<PartPage> parts) {
+  /// The Torsi tab: the standard torque pages as the first group (open),
+  /// then the components' remove & install chapters under the shop
+  /// manual's own sections.
+  List<Widget> _torqueGroups(Unit unit, List<PageRow> standard, List<PartPage> parts) {
     final groups = <String, List<PartPage>>{};
     for (final p in parts) {
       groups.putIfAbsent(p.group, () => []).add(p);
     }
     return [
+      if (standard.isNotEmpty)
+        GroupCard(
+          key: const ValueKey('part-group/standard'),
+          title: 'Standard tightening torque',
+          open: true,
+          items: [
+            for (final r in standard)
+              (
+                title: r.title,
+                subtitle: [?r.file?.title, 'hlm ${r.page}'].join(' · '),
+                onTap: () => openPageRow(context, unit, r),
+              ),
+          ],
+        ),
       for (final (i, MapEntry(key: group, value: list)) in groups.entries.indexed)
-        PartGroupCard(
+        GroupCard(
           key: ValueKey('part-group/$group'),
           title: group.isEmpty ? 'Lainnya' : group,
-          parts: list,
-          onOpen: _openPart,
-          open: i == 0,
+          open: standard.isEmpty && i == 0,
+          items: [for (final p in list) (title: p.title, subtitle: null, onTap: () => _openPart(p))],
         ),
     ];
   }
@@ -158,12 +174,12 @@ class _SpecsScreenState extends State<SpecsScreen> {
         for (final (i, list) in (rows ?? List.filled(_tabs.length, const <PageRow>[])).indexed)
           rows == null
               ? const Center(child: CircularProgressIndicator())
+              : i == 0
+              ? PageRowList(rows: const [], onOpen: (_) {}, after: _torqueGroups(unit!, list, parts))
               : PageRowList(
                   rows: list,
                   hint: '${list.length} halaman dari bookmark manual ${unit!.name}',
                   onOpen: (r) => openPageRow(context, unit, r),
-                  // Torsi: the components' remove & install chapters follow.
-                  after: i == 0 ? _partGroups(parts) : const [],
                 ),
       ],
     );

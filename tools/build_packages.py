@@ -91,7 +91,14 @@ PART_TITLE = [
                r"\s+(?:of\s+)?(?:the\s+)?(?P<name>.+)$", re.I),
     re.compile(r"^(?P<name>.+?)\s*[-–]\s*remove\s+(?:and|&)\s+install\b.*$", re.I),
 ]
-MAX_PART_PAGES = 12
+# Older manuals (D85) name the component alone, with REMOVAL and
+# INSTALLATION bookmarks under it.
+PART_STEP = re.compile(r"^(?:removal|installation|insyallation)$", re.I)
+MAX_PART_PAGES = 40
+# A torque value as manuals print it: "824 – 1,030 Nm {84 – 105 kgm}",
+# "98 N·m", "70 lbf ft" (same as torqueValue in the app's viewer).
+TORQUE_VALUE = re.compile(r"\d[\d.,]*\s*(?:[-–~]\s*\d[\d.,]*\s*)?"
+                          r"(?:N\s*[·.•]?\s*m|kgf?\s*[·.•]?\s*m|lbf?\s*[·.•]?\s*ft)(?![a-z])", re.I)
 # Servis tab: bookmarks of the maintenance schedule. "EVERY 500 HOURS
 # SERVICE" opens a tab HM 500 listing the items under it; the schedule chart
 # itself shows on every tab.
@@ -229,14 +236,17 @@ def _part_name(title: str) -> str | None:
     return None
 
 
-def part_ranges(toc: list[list], page_count: int) -> list[dict]:
+def part_ranges(toc: list[list], page_count: int, texts: list[str] | None = None) -> list[dict]:
     """The remove & install chapters in [toc], grouped the way the manual
     groups them (the title of the bookmark one level up): one entry per
-    group and component, in manual order."""
+    group and component, in manual order. With the page [texts], "torque"
+    counts the torque values printed in the chapter."""
     found, seen = [], set()
     for i, (level, title, page) in enumerate(toc):
         title = " ".join(title.split())
         name = _part_name(title)
+        if not name and i + 1 < len(toc) and toc[i + 1][0] == level + 1 and PART_STEP.match(toc[i + 1][1].strip()):
+            name = title[:1].upper() + title[1:].lower() if title.isupper() else title
         if not name or page < 1 or page > page_count:
             continue
         group = ""
@@ -249,7 +259,12 @@ def part_ranges(toc: list[list], page_count: int) -> list[dict]:
             continue
         seen.add((group.lower(), name.lower()))
         last = min(_section_end(toc, i, page_count), page + MAX_PART_PAGES - 1)
-        found.append({"group": group, "name": name, "title": title, "page": page, "last": max(page, last)})
+        last = max(page, last)
+        entry = {"group": group, "name": name, "title": title, "page": page, "last": last}
+        if texts is not None:
+            entry["torque"] = sum(len(TORQUE_VALUE.findall(texts[n - 1] or "")) for n in range(page, last + 1)
+                                  if n <= len(texts))
+        found.append(entry)
     return found
 
 
@@ -392,11 +407,12 @@ def build_spec_pack(sources: list[tuple], target: Path,
     entries, service, runs, parts = [], [], [], []
     for file_id, pdf, toc, page_count, *rest in sources:
         texts = rest[0] if rest else None
-        for p in part_ranges(toc, page_count):
+        for p in part_ranges(toc, page_count, texts):
             # A line may name the component, its bookmark, or a whole group.
             if kept(p["name"]) and kept(p["title"]) and (not p["group"] or kept(p["group"])):
                 parts.append({"group": p["group"], "title": p["name"], "file": file_id,
-                              "page": p["page"], "count": p["last"] - p["page"] + 1})
+                              "page": p["page"], "count": p["last"] - p["page"] + 1,
+                              **({"torque": p["torque"]} if "torque" in p else {})})
         ranges = [r for r in spec_ranges(toc, page_count) if kept(r[1])]
         svc = [e for e in service_ranges(toc, page_count, texts) if kept(e["title"])]
         if not ranges and not svc:

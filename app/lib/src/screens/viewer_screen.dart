@@ -196,7 +196,14 @@ class _ViewerScreenState extends State<ViewerScreen> {
     final found = <PdfPageTextRange>[];
     for (var n = first; n <= last && n <= document.pages.length; n++) {
       try {
-        final text = await document.pages[n - 1].loadStructuredText();
+        // An online manual loads its pages progressively; reading a page
+        // before it has loaded returns no text, so wait for it.
+        final page = await document.pages[n - 1].waitForLoaded(timeout: const Duration(seconds: 40));
+        if (page == null) {
+          Diagnostics.log('torque p$n: not loaded');
+          continue;
+        }
+        final text = await page.loadStructuredText();
         for (final (start, end) in torqueLines(text.fullText)) {
           found.add(PdfPageTextRange(pageText: text, start: start, end: end));
         }
