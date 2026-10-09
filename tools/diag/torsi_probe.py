@@ -22,7 +22,7 @@ cat = json.loads(get("catalog.json"))
 summary = []
 for u in cat["units"]:
     for f in u["files"]:
-        if f["type"] != "sm":
+        if f["type"] == "partsbook":
             continue
         name = f"{u['id']}-{f['id']}"[:80]
         idx = f"probe/{name}.sqlite"
@@ -39,6 +39,10 @@ for u in cat["units"]:
             if lvl <= 3:
                 w.write(f"{'  ' * (lvl - 1)}{t}  [p{p}]\n")
         pdf = None
+        if not parts:
+            w.close()
+            summary.append(f"{name} ({f['type']}): no parts")
+            continue
         try:
             path = f"probe/{name}.pdf"
             open(path, "wb").write(get(f["pdf"]["path"]))
