@@ -33,7 +33,11 @@ MockClient fixtureServer({Map<String, dynamic>? catalog, Set<String>? corrupt}) 
 void main() {
   late Directory root;
 
-  setUp(() => root = Directory.systemTemp.createTempSync('mymanual'));
+  setUp(() {
+    root = Directory.systemTemp.createTempSync('mymanual');
+    // Give up on the first dropped connection unless a test says otherwise.
+    AppStore.retryDelays = const [];
+  });
   tearDown(() => root.deleteSync(recursive: true));
 
   group('catalog', () {
@@ -228,6 +232,38 @@ void main() {
       expect(store.isDownloaded(file.key), isTrue);
       expect(File(store.pdfPath(file)).readAsBytesSync(), pdfBytes);
       expect(store.partialBytes(file), 0);
+      store.dispose();
+    });
+
+    test('a dropped connection is retried by itself from where it stopped', () async {
+      AppStore.retryDelays = const [Duration.zero];
+      final pdfPath = 'units/TEST1/OMM_Test_Unit.pdf';
+      final pdfBytes = File('${fixtures.path}/$pdfPath').readAsBytesSync();
+      final ranges = <String?>[];
+      final client = MockClient.streaming((request, _) async {
+        final path = request.url.path.replaceFirst(RegExp(r'^/'), '');
+        if (path != pdfPath) {
+          return fixtureServer().send(http.Request(request.method, request.url));
+        }
+        ranges.add(request.headers['Range']);
+        if (ranges.length == 1) {
+          Stream<List<int>> body() async* {
+            yield pdfBytes.sublist(0, pdfBytes.length ~/ 2);
+            throw const SocketException('Network is unreachable');
+          }
+          return http.StreamedResponse(body(), 200);
+        }
+        final from = int.parse(RegExp(r'bytes=(\d+)-').firstMatch(request.headers['Range']!)!.group(1)!);
+        return http.StreamedResponse(Stream.value(pdfBytes.sublist(from)), 206);
+      });
+      final store = await AppStore.open(root: root, client: client);
+      await store.setServerUrl('https://example.test');
+      final file = store.catalog.files.single;
+
+      await store.download(file, unitName: 'TEST1-1');
+      expect(ranges, [null, 'bytes=${pdfBytes.length ~/ 2}-']);
+      expect(store.isDownloaded(file.key), isTrue);
+      expect(File(store.pdfPath(file)).readAsBytesSync(), pdfBytes);
       store.dispose();
     });
 

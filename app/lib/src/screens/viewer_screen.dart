@@ -173,14 +173,25 @@ class _ViewerScreenState extends State<ViewerScreen> {
     final marks = widget.torque!.marks;
     if (marks == null || marks.isEmpty) return;
     final found = <PdfPageTextRange>[];
+    final wanted = [for (final n in marks) if (n <= document.pages.length) n];
+    // A long manual loads only the pages near the screen, so torque pages
+    // further down the chapter would wait until scrolled to. Load the pages
+    // around the torque pages now, and stop once they are all in.
+    bool waiting() => mounted && wanted.any((n) => !document.pages[n - 1].isLoaded);
+    if (waiting()) {
+      unawaited(
+        document
+            .loadPagesProgressively(startPageNumber: wanted.first, onPageLoadProgress: (_, _, _) => waiting())
+            .catchError((Object e) => Diagnostics.log('torque load: $e')),
+      );
+    }
     // Only the pages the pipeline found torque values on, so the marks
     // appear quickly even in a long chapter read online.
-    for (final n in marks) {
-      if (n > document.pages.length) continue;
+    for (final n in wanted) {
       try {
-        // An online manual loads its pages progressively; reading a page
-        // before it has loaded returns no text, so wait for it.
+        // Reading a page before it has loaded returns no text, so wait for it.
         final page = await document.pages[n - 1].waitForLoaded(timeout: const Duration(seconds: 40));
+        if (!mounted) return;
         if (page == null) {
           Diagnostics.log('torque p$n: not loaded');
           continue;
@@ -199,7 +210,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
         _goToTorque(0);
       }
     }
-    setState(() => _torque = found);
+    if (mounted) setState(() => _torque = found);
   }
 
   void _goToTorque(int at) {

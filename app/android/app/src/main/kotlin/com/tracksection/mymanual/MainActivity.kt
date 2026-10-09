@@ -3,6 +3,7 @@ package com.tracksection.mymanual
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -15,6 +16,20 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "exits" -> result.success(exits())
                 "memory" -> result.success(memory())
+                else -> result.notImplemented()
+            }
+        }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mymanual/keepalive").setMethodCallHandler { call, result ->
+            // Stop goes through the service too: it arrives after start, so the
+            // service always reaches startForeground before it ends.
+            val intent = Intent(this, KeepAliveService::class.java)
+            when (call.method) {
+                "start", "stop" -> {
+                    intent.putExtra("text", call.argument<String>("text"))
+                    intent.putExtra("stop", call.method == "stop")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }

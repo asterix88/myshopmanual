@@ -42,6 +42,22 @@ void main() {
     ]);
     expect(parts.first.marks, isNull);
 
+    // The Installation part: the chapter opens there, torque before it is
+    // removal and is not marked.
+    final install = partPages('sm', toc, textOf: (n) => {
+          402: 'Removal\nNut: 98 Nm',
+          403: '5. Remove the roller.\nINSTALL TRACK ROLLER ASSEMBLY\n1. Install the roller.\nBolt: 245 Nm',
+          406: '1. Install the plug to the hose.',
+          431: 'Removal',
+          433: 'Carry out installation in the reverse order to re-\nmoval.\nBolt: 59 Nm',
+        }[n]);
+    expect(install.map((e) => (e.page, e.count)), [(403, 3), (406, 3), (433, maxPartPages - 2)]);
+    expect(install.map((e) => e.marks), [
+      [403],
+      <int>[],
+      [433],
+    ]);
+
     // Older manuals: the component alone, REMOVAL and INSTALLATION under it.
     final old = partPages('sm', [
       (level: 1, title: '30 DISASSEMBLY AND ASSEMBLY', page: 457),

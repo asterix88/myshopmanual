@@ -10,6 +10,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'cetok.dart';
+import 'diagnostics.dart';
+import 'keep_alive.dart';
 import 'models.dart';
 
 /// Server address: the R2 bucket's custom domain (r2.dev is blocked by some
@@ -393,9 +395,14 @@ class AppStore extends ChangeNotifier {
     downloads[file.key] = progress;
     notifyListeners();
     final targets = {file.index: indexPath(file), file.pdf: pdfPath(file)};
+    // Keeps the app alive with a notification while it downloads, so moving
+    // to another app does not stop it.
+    if (downloads.length == 1) unawaited(KeepAlive.start('Mengunduh manual'));
     try {
+      var done = 0;
       for (final e in targets.entries) {
-        await _fetch(e.key, e.value, progress);
+        await _fetchRetrying(e.key, e.value, progress, done);
+        done += e.key.size;
       }
       // Swap both in only once both arrived intact, so an update that fails
       // halfway leaves the old version usable.
@@ -424,9 +431,43 @@ class AppStore extends ChangeNotifier {
       throw DownloadInterrupted();
     } finally {
       downloads.remove(file.key);
+      if (downloads.isEmpty) unawaited(KeepAlive.stop());
       notifyListeners();
     }
   }
+
+  /// [_fetch], continuing from what arrived when the connection drops (a
+  /// phone switching networks or waking up), before giving up.
+  Future<void> _fetchRetrying(RemoteFile remote, String target, DownloadProgress progress, int done) async {
+    for (var attempt = 0;; attempt++) {
+      progress.received = done;
+      try {
+        return await _fetch(remote, target, progress);
+      } on Exception catch (e) {
+        final network = e is SocketException ||
+            e is HandshakeException ||
+            e is TimeoutException ||
+            e is http.ClientException;
+        if (!network || attempt >= retryDelays.length) rethrow;
+        Diagnostics.log('download ${remote.path}: $e, retry ${attempt + 1}');
+        final until = DateTime.now().add(retryDelays[attempt]);
+        while (DateTime.now().isBefore(until)) {
+          if (progress.cancelled) throw DownloadCancelled();
+          await Future<void>.delayed(const Duration(milliseconds: 250));
+        }
+      }
+    }
+  }
+
+  /// Waits between tries of a dropped download.
+  @visibleForTesting
+  static List<Duration> retryDelays = const [
+    Duration(seconds: 2),
+    Duration(seconds: 4),
+    Duration(seconds: 8),
+    Duration(seconds: 15),
+    Duration(seconds: 30),
+  ];
 
   /// Stops a download but keeps what arrived, to continue later.
   void pauseDownload(String key) {
