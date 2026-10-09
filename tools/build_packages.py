@@ -119,6 +119,9 @@ SERVICE_ITEM_STOP = re.compile(r"^(?:WARNING|NOTICE|CAUTION|DANGER|REMARK|NOTE)\
 # Bookmark titles listed in this file in a unit folder (one per line, any part
 # of the title) are left out of that unit's Spek and Servis tabs.
 SPEC_EXCLUDE_FILE = "spek-hapus.txt"
+# Components left out of the Torsi tab, per unit folder: {"PC210-1OMO":
+# ["Group|Component", ...]}, as chosen on the Torsi checklist page.
+TORSI_HIDDEN_FILE = Path(__file__).with_name("torsi-pilihan.json")
 
 # A matched bookmark takes its pages up to the next bookmark at its level or
 # above, but never more than this many.
@@ -231,22 +234,39 @@ def _part_name(title: str) -> str | None:
     for pattern in PART_TITLE:
         m = pattern.match(title)
         if m:
-            name = re.sub(r"\s+(assembly|assy)$", "", m.group("name").strip(" .:"), flags=re.I).strip()
-            return name[:1].upper() + name[1:] if name else None
+            return _clean_part_name(m.group("name"))
     return None
+
+
+def _clean_part_name(name: str) -> str | None:
+    """'SUPPLY PUMP ASSEMBLY (RIGHT BANK)' -> 'SUPPLY PUMP': one entry for
+    both banks, without "assembly"."""
+    name = re.sub(r"\s*\((?:left|right)\s+bank\)", "", name.strip(" .:"), flags=re.I)
+    name = re.sub(r"\s+(assembly|assy)$", "", name.strip(), flags=re.I).strip()
+    return name[:1].upper() + name[1:] if name else None
+
+
+def torque_lines(text: str) -> list[str]:
+    """The lines of [text] holding a torque value, each once (as the app
+    marks them)."""
+    found = []
+    for line in (text or "").splitlines():
+        if TORQUE_VALUE.search(line) and line.strip() not in found:
+            found.append(line.strip())
+    return found
 
 
 def part_ranges(toc: list[list], page_count: int, texts: list[str] | None = None) -> list[dict]:
     """The remove & install chapters in [toc], grouped the way the manual
     groups them (the title of the bookmark one level up): one entry per
     group and component, in manual order. With the page [texts], "torque"
-    counts the torque values printed in the chapter."""
+    counts the lines with a torque value in the chapter."""
     found, seen = [], set()
     for i, (level, title, page) in enumerate(toc):
         title = " ".join(title.split())
         name = _part_name(title)
         if not name and i + 1 < len(toc) and toc[i + 1][0] == level + 1 and PART_STEP.match(toc[i + 1][1].strip()):
-            name = title[:1].upper() + title[1:].lower() if title.isupper() else title
+            name = _clean_part_name(title[:1].upper() + title[1:].lower() if title.isupper() else title)
         if not name or page < 1 or page > page_count:
             continue
         group = ""
@@ -262,8 +282,7 @@ def part_ranges(toc: list[list], page_count: int, texts: list[str] | None = None
         last = max(page, last)
         entry = {"group": group, "name": name, "title": title, "page": page, "last": last}
         if texts is not None:
-            entry["torque"] = sum(len(TORQUE_VALUE.findall(texts[n - 1] or "")) for n in range(page, last + 1)
-                                  if n <= len(texts))
+            entry["torque"] = sum(len(torque_lines(texts[n - 1])) for n in range(page, last + 1) if n <= len(texts))
         found.append(entry)
     return found
 
@@ -483,6 +502,15 @@ def file_entry(path: Path, rel: str) -> dict:
     return {"path": rel, "size": path.stat().st_size, "sha256": sha256_of(path)}
 
 
+def read_torsi_hidden(unit_id: str) -> set[str]:
+    """The "group|component" pairs (lower case) hidden from unit_id's Torsi tab."""
+    if not TORSI_HIDDEN_FILE.exists():
+        return set()
+    data = json.loads(TORSI_HIDDEN_FILE.read_text(encoding="utf-8"))
+    rows = next((v for k, v in data.items() if k.lower() == unit_id.lower()), [])
+    return {" ".join(r.split()).lower() for r in rows}
+
+
 def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
                previous: dict, now: str) -> dict:
     unit_id = unit_dir.name
@@ -551,6 +579,10 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
     if excludes:
         print(f"  {SPEC_EXCLUDE_FILE}: {len(excludes)} judul tidak dimasukkan ke Spek/Servis")
     spec_pages, service_pages, parts = build_spec_pack(spec_sources, spec_path, excludes)
+    hidden = read_torsi_hidden(unit_id)
+    if hidden:
+        parts = [p for p in parts if f"{p['group']}|{p['title']}".lower() not in hidden]
+        print(f"  {TORSI_HIDDEN_FILE.name}: {len(hidden)} komponen tidak tampil di Torsi")
     has_spec = bool(spec_pages or service_pages)
     if has_spec:
         spec = {**file_entry(spec_path, f"units/{unit_id}/spek.pdf"), "pages": spec_pages, "service": service_pages,

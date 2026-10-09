@@ -11,8 +11,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - run: pip install -q pymupdf pypdfium2
-      - run: python3 tools/diag/d85_text.py > tools/diag/probe.txt 2>&1 || true
+      - run: pip install -q pymupdf
+      - run: python3 tools/diag/evidence.py > tools/diag/probe.txt 2>&1 || true
       - run: |
           git config user.name probe; git config user.email probe@users.noreply.github.com
           git add tools/diag && git commit -m "probe output" && git push
