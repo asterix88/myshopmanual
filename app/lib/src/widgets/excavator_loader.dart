@@ -88,7 +88,8 @@ class ExcavatorPainter extends CustomPainter {
 
   static const _yellow = Color(0xFFF2B300);
   static const _yellowDark = Color(0xFFC98F00);
-  static const _steel = Color(0xFF3B4046);
+  // Steel parts get lighter at night so they stand out from the dark page.
+  Color get _steel => Color(dark ? 0xFF6A717A : 0xFF3B4046);
   static const _rod = Color(0xFFC9CDD2);
   static const _glass = Color(0xFF8FB6D9);
   static const _dirt = Color(0xFF8A5A2B);
@@ -141,7 +142,7 @@ class ExcavatorPainter extends CustomPainter {
 
   void _paintGround(Canvas canvas, double t) {
     final line = Paint()
-      ..color = (dark ? Colors.white : Colors.black).withValues(alpha: .12)
+      ..color = (dark ? Colors.white : Colors.black).withValues(alpha: dark ? .22 : .12)
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
     canvas.drawLine(const Offset(8, _ground), const Offset(width - 8, _ground), line);
@@ -162,7 +163,7 @@ class ExcavatorPainter extends CustomPainter {
     canvas.drawRRect(track, Paint()..color = _steel);
     canvas.drawRRect(
       track.deflate(4),
-      Paint()..color = dark ? const Color(0xFF555B63) : const Color(0xFF5E646B),
+      Paint()..color = dark ? const Color(0xFF8A9199) : const Color(0xFF5E646B),
     );
     final roller = Paint()..color = _steel;
     for (final x in [38.0, 122.0]) {
@@ -199,7 +200,7 @@ class ExcavatorPainter extends CustomPainter {
     for (var i = 0; i < 3; i++) {
       final p = (t * 3 + i / 3) % 1;
       final strength = (t > .28 && t < .62) ? 1.0 : .35;
-      puffs.color = (dark ? Colors.white : const Color(0xFF6B7178)).withValues(alpha: (1 - p) * .28 * strength);
+      puffs.color = (dark ? Colors.white : const Color(0xFF6B7178)).withValues(alpha: (1 - p) * (dark ? .4 : .28) * strength);
       canvas.drawCircle(Offset(46 - p * 8, 52 - p * 18), 2.5 + p * 4, puffs);
     }
   }
