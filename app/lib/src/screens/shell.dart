@@ -21,7 +21,7 @@ class StoreScope extends InheritedNotifier<AppStore> {
       context.getInheritedWidgetOfExactType<StoreScope>()!.notifier!;
 }
 
-/// Bottom navigation: Home, Cari, Nyel AI (raised, in the middle), Standar,
+/// Bottom navigation: Home, Cari, nyel AI (raised, in the middle), Standar,
 /// Servis.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -40,7 +40,7 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     if (store.aiAsks != _aiAsks) {
-      // "Tanya Nyel AI" on a page: show the chat with the question in it.
+      // "Tanya nyel AI" on a page: show the chat with the question in it.
       _aiAsks = store.aiAsks;
       _tab = chatTab;
     }
@@ -115,12 +115,12 @@ class _NavBar extends StatelessWidget {
   static const _items = [
     (Icons.home_outlined, Icons.home, 'Home'),
     (Icons.search, Icons.search, 'Cari'),
-    (Icons.auto_awesome, Icons.auto_awesome, 'Nyel AI'),
+    (Icons.auto_awesome, Icons.auto_awesome, 'nyel AI'),
     (Icons.fact_check_outlined, Icons.fact_check, 'Standar'),
     (Icons.event_note_outlined, Icons.event_note, 'Servis'),
   ];
 
-  /// How far the Nyel AI button rises above the bar.
+  /// How far the nyel AI button rises above the bar.
   static const _rise = 24.0;
   static const _barHeight = 66.0;
 
@@ -180,7 +180,7 @@ class _NavBar extends StatelessWidget {
   }
 }
 
-/// The raised round Nyel AI button in the middle of the bar.
+/// The raised round nyel AI button in the middle of the bar.
 class _AiButton extends StatelessWidget {
   const _AiButton({required this.item, required this.active, required this.onTap});
 

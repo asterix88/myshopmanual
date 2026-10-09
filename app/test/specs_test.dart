@@ -150,7 +150,7 @@ void main() {
     root.deleteSync(recursive: true);
   });
 
-  testWidgets('Servis lists each interval, and Tanya Nyel AI fills the chat', (tester) async {
+  testWidgets('Servis lists each interval, and Tanya nyel AI fills the chat', (tester) async {
     Pdfrx.pdfiumModulePath ??= File('build/native_assets/linux/libpdfium.so').absolute.path;
     Pdfrx.cacheDirectoryPath ??= Directory.systemTemp.createTempSync('pdfcache').path;
     late AppStore store;
@@ -177,7 +177,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(tester.widget<SpecViewerScreen>(find.byType(SpecViewerScreen)).page, 3);
-    await tester.tap(find.text('Tanya Nyel AI'));
+    await tester.tap(find.text('Tanya nyel AI'));
     await tester.pumpAndSettle();
     expect(find.byType(SpecViewerScreen), findsNothing);
     final input = tester.widget<EditableText>(

@@ -12,7 +12,7 @@ import '../widgets/common.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
 
-/// Nyel AI: answers from the manuals downloaded on the phone, citing the
+/// nyel AI: answers from the manuals downloaded on the phone, citing the
 /// pages it used. Needs internet; the search itself runs on the phone.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key, this.client});
@@ -93,7 +93,7 @@ class _ChatScreenState extends State<ChatScreen> {
       answer = ChatEntry.assistant(e.message, failed: true);
     } catch (e, stack) {
       // Never leave the chat stuck on its status line.
-      debugPrint('Nyel AI failed: $e\n$stack');
+      debugPrint('nyel AI failed: $e\n$stack');
       answer = ChatEntry.assistant('Terjadi kesalahan di aplikasi saat mencari jawaban. Coba lagi.', failed: true);
     }
     if (!mounted) return;
@@ -179,7 +179,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     if (store.pendingAiQuestion != null) {
-      // "Tanya Nyel AI" on a page: put the question in the box to edit or send.
+      // "Tanya nyel AI" on a page: put the question in the box to edit or send.
       final question = store.takeAiQuestion()!;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _input.value = TextEditingValue(
@@ -216,7 +216,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Nyel AI',
+                        'nyel AI',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navy),
                       ),
                       Text(
@@ -343,11 +343,11 @@ class _Intro extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Tanya soal teknis ke Nyel AI', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              const Text('Tanya soal teknis ke nyel AI', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               Text(
-                'Nyel AI mencari di semua manual, termasuk yang belum diunduh, dan bisa melihat gambar seperti wiring '
-                'atau hydraulic diagram. Kalau manual tidak membahasnya, Nyel AI menjawab dari ilmu elektrik, '
+                'nyel AI mencari di semua manual, termasuk yang belum diunduh, dan bisa melihat gambar seperti wiring '
+                'atau hydraulic diagram. Kalau manual tidak membahasnya, nyel AI menjawab dari ilmu elektrik, '
                 'hidrolik dan mekanis, ditandai "Secara umum". Isi dari manual diberi sumber; ketuk sumber untuk '
                 'membuka halamannya. Butuh internet.',
                 style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.inkSoft),

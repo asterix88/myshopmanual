@@ -3,6 +3,7 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../models.dart';
 import '../page_image.dart';
+import '../specs.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -166,16 +167,26 @@ typedef PageRow = ({String title, ManualFile? file, int page, int? at, bool head
 
 /// The rows of one tab; [onOpen] opens a row's page.
 class PageRowList extends StatelessWidget {
-  const PageRowList({super.key, required this.rows, required this.onOpen, this.hint, this.emptyTitle});
+  const PageRowList({
+    super.key,
+    required this.rows,
+    required this.onOpen,
+    this.hint,
+    this.emptyTitle,
+    this.after = const [],
+  });
 
   final List<PageRow> rows;
   final ValueChanged<PageRow> onOpen;
   final String? hint;
   final String? emptyTitle;
 
+  /// Shown below the rows (the Torsi tab's component groups).
+  final List<Widget> after;
+
   @override
   Widget build(BuildContext context) {
-    if (rows.isEmpty) {
+    if (rows.isEmpty && after.isEmpty) {
       return EmptyState(
         icon: Icons.search_off,
         title: emptyTitle ?? 'Tidak ditemukan di bookmark manual unit ini',
@@ -185,9 +196,11 @@ class PageRowList extends StatelessWidget {
     final hint = this.hint;
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-      itemCount: rows.length + (hint == null ? 0 : 1),
+      itemCount: rows.length + (hint == null ? 0 : 1) + after.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, i) {
+        final afterAt = i - rows.length - (hint == null ? 0 : 1);
+        if (afterAt >= 0) return after[afterAt];
         if (hint != null && i == 0) {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -512,13 +525,85 @@ class _SpecViewerScreenState extends State<SpecViewerScreen> {
                     ),
                     onPressed: _askAi,
                     icon: const Icon(Icons.auto_awesome, size: 18),
-                    label: const Text('Tanya Nyel AI'),
+                    label: const Text('Tanya nyel AI'),
                   ),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// One of the shop manual's groups on the Torsi tab ("Undercarriage and
+/// frame"): a header that opens and closes the list of its components.
+class PartGroupCard extends StatefulWidget {
+  const PartGroupCard({super.key, required this.title, required this.parts, required this.onOpen, this.open = false});
+
+  final String title;
+  final List<PartPage> parts;
+  final ValueChanged<PartPage> onOpen;
+  final bool open;
+
+  @override
+  State<PartGroupCard> createState() => _PartGroupCardState();
+}
+
+class _PartGroupCardState extends State<PartGroupCard> {
+  late bool _open = widget.open;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _open = !_open),
+            child: Container(
+              color: _open ? AppColors.field : null,
+              padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      widget.title,
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.navy),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                    decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(10)),
+                    child: Text('${widget.parts.length}', style: TextStyle(fontSize: 11, color: AppColors.muted)),
+                  ),
+                  const Spacer(),
+                  Icon(_open ? Icons.expand_less : Icons.expand_more, color: AppColors.muted),
+                ],
+              ),
+            ),
+          ),
+          if (_open)
+            for (final part in widget.parts)
+              InkWell(
+                onTap: () => widget.onOpen(part),
+                child: Container(
+                  decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.line))),
+                  padding: const EdgeInsets.fromLTRB(16, 13, 12, 13),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(part.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
+                      Icon(Icons.chevron_right, color: AppColors.faint),
+                    ],
+                  ),
+                ),
+              ),
+        ],
       ),
     );
   }

@@ -27,7 +27,7 @@ void main() {
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Nyel AI').last);
+    await tester.tap(find.text('nyel AI').last);
     await tester.pumpAndSettle();
     expect(shownOpacity(tester, ChatScreen), 1);
 
@@ -65,7 +65,7 @@ void main() {
     root.deleteSync(recursive: true);
   });
 
-  testWidgets('Enter on the keyboard starts a new line in Nyel AI', (tester) async {
+  testWidgets('Enter on the keyboard starts a new line in nyel AI', (tester) async {
     late AppStore store;
     final root = Directory.systemTemp.createTempSync('shell');
     await tester.runAsync(() async {
@@ -73,7 +73,7 @@ void main() {
     });
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Nyel AI').last);
+    await tester.tap(find.text('nyel AI').last);
     await tester.pumpAndSettle();
 
     // Questions are sent with the send button, so Enter only adds a line.
@@ -101,7 +101,7 @@ void main() {
     });
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Nyel AI').last);
+    await tester.tap(find.text('nyel AI').last);
     // The saved conversation is read from the phone.
     for (var i = 0; i < 20 && find.byType(SelectableText).evaluate().isEmpty; i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));

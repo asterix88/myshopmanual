@@ -16,11 +16,41 @@ import 'shell.dart';
 
 /// Opens a manual, optionally at [page] and with [query] highlighted. A
 /// downloaded manual opens from the phone; any other is read from the server.
-Future<void> openViewer(BuildContext context, ManualFile file, {int? page, String? query}) {
+/// With [torquePages] (first, last) the torque values on those pages are
+/// marked, as on a component's remove & install chapter.
+Future<void> openViewer(BuildContext context, ManualFile file, {int? page, String? query, (int, int)? torquePages}) {
   Diagnostics.log('open ${file.key} p${page ?? 1}');
   return Navigator.of(context).push(MaterialPageRoute(
-    builder: (_) => ViewerScreen(fileKey: file.key, initialPage: page, initialQuery: query),
+    builder: (_) => ViewerScreen(fileKey: file.key, initialPage: page, initialQuery: query, torquePages: torquePages),
   ));
+}
+
+/// A torque value as manuals print it: "824 – 1,030 Nm {84 – 105 kgm}",
+/// "98 N·m", "70 lb ft".
+final torqueValue = RegExp(
+  r'\d[\d.,]*\s*(?:[-–~]\s*\d[\d.,]*\s*)?(?:N\s*[·.•]?\s*m|kgf?\s*[·.•]?\s*m|lbf?\s*[·.•]?\s*ft)(?![a-z])',
+  caseSensitive: false,
+);
+
+/// The lines of [text] holding a torque value, as (start, end) indexes;
+/// each line once, a very long line only around the value.
+List<(int, int)> torqueLines(String text) {
+  final found = <(int, int)>[];
+  for (final m in torqueValue.allMatches(text)) {
+    var start = text.lastIndexOf('\n', m.start) + 1;
+    var end = text.indexOf('\n', m.end);
+    if (end < 0) end = text.length;
+    if (end - start > 160) (start, end) = (m.start, m.end);
+    while (start < end && text[start].trim().isEmpty) {
+      start++;
+    }
+    while (end > start && text[end - 1].trim().isEmpty) {
+      end--;
+    }
+    if (found.isNotEmpty && found.last.$2 >= start) continue;
+    found.add((start, end));
+  }
+  return found;
 }
 
 /// A handle on the right edge that shows the page number; dragging it
@@ -46,11 +76,14 @@ Widget pageScrollThumb(PdfViewerController controller) => PdfViewerScrollThumb(
     );
 
 class ViewerScreen extends StatefulWidget {
-  const ViewerScreen({super.key, required this.fileKey, this.initialPage, this.initialQuery});
+  const ViewerScreen({super.key, required this.fileKey, this.initialPage, this.initialQuery, this.torquePages});
 
   final String fileKey;
   final int? initialPage;
   final String? initialQuery;
+
+  /// Pages (first, last) whose torque values are marked.
+  final (int, int)? torquePages;
 
   @override
   State<ViewerScreen> createState() => _ViewerScreenState();
@@ -65,6 +98,11 @@ class _ViewerScreenState extends State<ViewerScreen> {
   final _searchFocus = FocusNode();
 
   bool _searching = false;
+
+  /// Torque lines marked on [ViewerScreen.torquePages], in page order;
+  /// null while they are being read.
+  List<PdfPageTextRange>? _torque;
+  int _torqueAt = -1;
   int _page = 1;
   int _pageCount = 0;
   Timer? _saveTimer;
@@ -144,12 +182,102 @@ class _ViewerScreenState extends State<ViewerScreen> {
         if (_toc.isEmpty) _toc = _tocFromOutline(outline);
       });
     });
+    if (widget.torquePages != null) _markTorque(document);
     final query = _searchField.text.trim();
     if (query.isNotEmpty) {
       // Opened from "Cari": stay on the page from the search result, but
       // highlight every match so next/previous work right away.
       _searcher!.startTextSearch(query, goToFirstMatch: widget.initialPage == null, searchImmediately: true);
     }
+  }
+
+  Future<void> _markTorque(PdfDocument document) async {
+    final (first, last) = widget.torquePages!;
+    final found = <PdfPageTextRange>[];
+    for (var n = first; n <= last && n <= document.pages.length; n++) {
+      try {
+        final text = await document.pages[n - 1].loadStructuredText();
+        for (final (start, end) in torqueLines(text.fullText)) {
+          found.add(PdfPageTextRange(pageText: text, start: start, end: end));
+        }
+      } catch (e) {
+        Diagnostics.log('torque p$n: $e');
+      }
+      if (!mounted) return;
+    }
+    setState(() => _torque = found);
+  }
+
+  void _nextTorque() {
+    final torque = _torque;
+    if (torque == null || torque.isEmpty) return;
+    setState(() => _torqueAt = (_torqueAt + 1) % torque.length);
+    final range = torque[_torqueAt];
+    _controller.goToRectInsidePage(pageNumber: range.pageNumber, rect: range.bounds, anchor: PdfPageAnchor.center);
+  }
+
+  void _paintTorque(Canvas canvas, Rect pageRect, PdfPage page) {
+    final torque = _torque;
+    if (torque == null) return;
+    for (final (i, range) in torque.indexed) {
+      if (range.pageNumber != page.pageNumber) continue;
+      final rect = range.bounds
+          .toRect(page: page, scaledPageSize: pageRect.size)
+          .translate(pageRect.left, pageRect.top)
+          .inflate(1.5);
+      canvas.drawRect(
+        rect,
+        Paint()..color = (i == _torqueAt ? const Color(0xFFF08A1C) : const Color(0xFFFFD500)).withAlpha(110),
+      );
+    }
+  }
+
+  PreferredSizeWidget _torqueBar() {
+    final torque = _torque;
+    final count = torque?.length ?? 0;
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(46),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        child: Container(
+          height: 38,
+          padding: const EdgeInsets.only(left: 14, right: 4),
+          decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(19)),
+          child: Row(
+            children: [
+              if (torque != null && count > 0) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                  decoration: BoxDecoration(color: const Color(0xFFFFD500), borderRadius: BorderRadius.circular(8)),
+                  child: Text('$count',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF1B2333))),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Text(
+                  torque == null
+                      ? 'Mencari angka torsi…'
+                      : count == 0
+                          ? 'Angka torsi tidak ditemukan di bagian ini'
+                          : 'angka torsi ditandai',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 13, color: Colors.white),
+                ),
+              ),
+              if (count > 0)
+                TextButton.icon(
+                  style: TextButton.styleFrom(foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
+                  onPressed: _nextTorque,
+                  icon: const Icon(Icons.arrow_downward, size: 16),
+                  label: const Text('berikutnya'),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   static List<TocEntry> _tocFromOutline(List<PdfOutlineNode> outline) {
@@ -236,7 +364,11 @@ class _ViewerScreenState extends State<ViewerScreen> {
             icon: const Icon(Icons.toc),
           ),
         ],
-        bottom: _searching ? _searchBar() : null,
+        bottom: _searching
+            ? _searchBar()
+            : widget.torquePages != null
+                ? _torqueBar()
+                : null,
       ),
       body: _online
           ? PdfViewer.uri(
@@ -280,6 +412,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
         viewerOverlayBuilder: (context, size, handleLinkTap) => [pageScrollThumb(_controller)],
         pagePaintCallbacks: [
           (canvas, pageRect, page) => _searcher?.pageTextMatchPaintCallback(canvas, pageRect, page),
+          _paintTorque,
         ],
         loadingBannerBuilder: (context, bytesDownloaded, totalBytes) => Center(
           child: Column(
