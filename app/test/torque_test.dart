@@ -54,6 +54,8 @@ void main() {
     final lines = [for (final (s, e) in torqueLines(text)) text.substring(s, e)];
     expect(lines, ['824 – 1,030 Nm {84 – 105 kgm}', 'Nut: 98 N·m', 'Bolt 70 lbf ft']);
     expect(torqueLines('Pressure 34.3 MPa\nNumber 3 m'), isEmpty);
+    // A torque wrench's range in the tools table is not a tightening torque.
+    expect(torqueLines('Torque wrench\n5 to 50 Nm\n20 to 200 Nm'), isEmpty);
   });
 
   testWidgets('Torsi lists the components in collapsible groups', (tester) async {

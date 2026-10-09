@@ -32,6 +32,10 @@ final torqueValue = RegExp(
   caseSensitive: false,
 );
 
+/// A line with only a bare range like "5 to 50 Nm": a torque wrench in the
+/// tools table, not a tightening torque.
+final _toolRange = RegExp(r'^[\d.,]+\s*(?:to|[-–~])\s*[\d.,]+\s*N\s*[·.•]?\s*m$', caseSensitive: false);
+
 /// The lines of [text] holding a torque value, as (start, end) indexes;
 /// each line once, a very long line only around the value.
 List<(int, int)> torqueLines(String text) {
@@ -48,6 +52,7 @@ List<(int, int)> torqueLines(String text) {
       end--;
     }
     if (found.isNotEmpty && found.last.$2 >= start) continue;
+    if (_toolRange.hasMatch(text.substring(start, end))) continue;
     found.add((start, end));
   }
   return found;
