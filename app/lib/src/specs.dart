@@ -91,12 +91,18 @@ String? partName(String title) {
   for (final pattern in _partTitles) {
     final m = pattern.firstMatch(title);
     if (m == null) continue;
-    var name = m.namedGroup('name')!.trim();
-    name = name.replaceAll(RegExp(r'^[ .:]+|[ .:]+$'), '');
-    name = name.replaceFirst(RegExp(r'\s+(assembly|assy)$', caseSensitive: false), '').trim();
-    return name.isEmpty ? null : name[0].toUpperCase() + name.substring(1);
+    return _cleanPartName(m.namedGroup('name')!);
   }
   return null;
+}
+
+/// 'SUPPLY PUMP ASSEMBLY (RIGHT BANK)' -> 'SUPPLY PUMP': one entry for both
+/// banks, without "assembly".
+String? _cleanPartName(String name) {
+  name = name.trim().replaceAll(RegExp(r'^[ .:]+|[ .:]+$'), '');
+  name = name.replaceAll(RegExp(r'\s*\((?:left|right)\s+bank\)', caseSensitive: false), '').trim();
+  name = name.replaceFirst(RegExp(r'\s+(assembly|assy)$', caseSensitive: false), '').trim();
+  return name.isEmpty ? null : name[0].toUpperCase() + name.substring(1);
 }
 
 /// One remove & install chapter found in a manual's bookmarks.
@@ -116,7 +122,7 @@ List<PartPage> partPages(String fileKey, List<({int level, String title, int pag
         toc[i + 1].level == level + 1 &&
         _partStep.hasMatch(toc[i + 1].title.trim()) &&
         clean.isNotEmpty) {
-      name = clean == clean.toUpperCase() ? clean[0] + clean.substring(1).toLowerCase() : clean;
+      name = _cleanPartName(clean == clean.toUpperCase() ? clean[0] + clean.substring(1).toLowerCase() : clean);
     }
     if (name == null) continue;
     var group = '';

@@ -30,6 +30,7 @@ void main() {
       ('Engine and cooling system', 'Engine', 431, maxPartPages),
     ]);
     expect(partName('Disassembly and assembly of idler'), isNull);
+    expect(partName('REMOVE AND INSTALL SUPPLY PUMP ASSEMBLY (RIGHT BANK)'), 'SUPPLY PUMP');
 
     // Older manuals: the component alone, REMOVAL and INSTALLATION under it.
     final old = partPages('sm', [
