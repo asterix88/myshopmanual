@@ -96,9 +96,12 @@ PART_TITLE = [
 PART_STEP = re.compile(r"^(?:removal|installation|insyallation)$", re.I)
 MAX_PART_PAGES = 40
 # A torque value as manuals print it: "824 – 1,030 Nm {84 – 105 kgm}",
-# "98 N·m", "70 lbf ft" (same as torqueValue in the app's viewer).
+# "98 N·m", "70 lbf ft" (same as torqueValue in the app's viewer). A line
+# with only a bare range like "5 to 50 Nm" is a torque wrench in the tools
+# table, not a tightening torque.
 TORQUE_VALUE = re.compile(r"\d[\d.,]*\s*(?:[-–~]\s*\d[\d.,]*\s*)?"
                           r"(?:N\s*[·.•]?\s*m|kgf?\s*[·.•]?\s*m|lbf?\s*[·.•]?\s*ft)(?![a-z])", re.I)
+TOOL_RANGE = re.compile(r"^[\d.,]+\s*(?:to|[-–~])\s*[\d.,]+\s*N\s*[·.•]?\s*m$", re.I)
 # Servis tab: bookmarks of the maintenance schedule. "EVERY 500 HOURS
 # SERVICE" opens a tab HM 500 listing the items under it; the schedule chart
 # itself shows on every tab.
@@ -251,8 +254,9 @@ def torque_lines(text: str) -> list[str]:
     marks them)."""
     found = []
     for line in (text or "").splitlines():
-        if TORQUE_VALUE.search(line) and line.strip() not in found:
-            found.append(line.strip())
+        line = line.strip()
+        if TORQUE_VALUE.search(line) and not TOOL_RANGE.match(line) and line not in found:
+            found.append(line)
     return found
 
 
