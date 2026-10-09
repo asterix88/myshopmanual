@@ -10,6 +10,11 @@ u = next(u for u in cat["units"] if u["id"].startswith("D85"))
 f = next(f for f in u["files"] if f["type"] == "shop_manual")
 open("/tmp/d.sqlite", "wb").write(get(f["index"]["path"]))
 db = sqlite3.connect("/tmp/d.sqlite")
-for page, text in db.execute("SELECT page, text FROM pages WHERE page IN (467,468,471,472,479,480,481,482)"):
+print("searchable", f.get("searchable"), "pages", f["pages"])
+rows = list(db.execute("SELECT page, text FROM pages"))
+print("rows", len(rows), "nonempty", sum(1 for _, t in rows if t and t.strip()))
+for page, text in rows:
+    if int(page) not in (467, 468, 471, 472, 479, 480, 481, 482):
+        continue
     print(f"==== p{page}")
     print(text[:2500])
