@@ -1,0 +1,697 @@
+D155A-6 | Shop Manual D155A-6 85001 UP | pages 1345 | bookmarks 527 | parts 33
+
+=== BOOKMARKS (levels 1-3) ===
+COVER  [p1]
+00 Index and foreword  [p-1]
+  Index  [p3]
+    Composition of shop manual  [p4]
+    Table of contents1  [p6]
+  Foreword and general information  [p17]
+    Safety notice  [p18]
+    How to read the shop manual  [p23]
+    Explanation of terms for maintenance standard  [p25]
+    Handling of electric equipment and hydraulic component  [p27]
+    Handling of connectors newly used for engines  [p36]
+    How to read electric wire code  [p39]
+    Precautions when carrying out operation  [p42]
+    Method of disassembling and connecting push-pull type coupler  [p45]
+    Standard tightening torque table  [p48]
+    Conversion table  [p52]
+01 Specification  [p-1]
+  Specification and technical data  [p59]
+    Specification dimension drawings  [p60]
+    Specifications  [p61]
+    Weight table  [p67]
+    Table of fuel, coolant and lubricants  [p70]
+10 Structure, function and maintenance standard  [p-1]
+  Engine and cooling system  [p73]
+    Radiator, oil cooler  [p74]
+    Engine mount  [p81]
+    Cooling fan pump  [p82]
+    Cooling fan motor  [p90]
+  Power train, Part 1  [p97]
+    Power train skeleton  [p98]
+    Overall drawing of power train unit  [p100]
+    Power train hydraulic piping drawing  [p102]
+    Damper, universal joint  [p104]
+    Torque converter, PTO  [p106]
+    Transmission  [p114]
+    Transmission ECMV  [p130]
+    Main relief valve and torque converter relief valve  [p136]
+    Lubricating oil relief valve  [p138]
+    Scavenging pump  [p140]
+    Power train and steering lubrication pump  [p142]
+  Power train, Part 2  [p145]
+    Work equipment pump  [p146]
+    Work equipment cooler bypass valve  [p159]
+    Steering, brake control  [p160]
+    Steering unit  [p162]
+    Steering control valve  [p176]
+    Steering clutch ECMV, steering brake ECMV  [p178]
+    Parking brake solenoid valve  [p184]
+    Sudden stop prevention valve  [p186]
+    Final drive  [p189]
+    Sprocket  [p194]
+  Undercarriage and frame  [p197]
+    Track frame  [p198]
+    Recoil spring  [p200]
+    Idler  [p202]
+    Track roller  [p204]
+    Carrier roller  [p206]
+    Track shoe  [p208]
+    Main frame  [p214]
+    Suspension  [p216]
+  Hydraulic system  [p219]
+    Work equipment hydraulic piping diagram  [p220]
+    Work equipment control piping diagram  [p224]
+    Work equipment control  [p226]
+    Hydraulic tank and filter  [p228]
+    Accumulator  [p230]
+    PPC valve  [p231]
+    Work equipment lock valve  [p244]
+    Control valve  [p246]
+    Work equipment cylinder  [p268]
+    Piston valve  [p270]
+    Quick drop valve  [p272]
+    Self pressure reducing valve  [p273]
+  Work equipment  [p281]
+    Cylinder stay  [p282]
+    Blade  [p284]
+    Cutting edge, end bit  [p286]
+    Ripper  [p288]
+  Cab and its attachments  [p293]
+    Cab mount + ROPS pin  [p294]
+    ROPS cab  [p295]
+    ROPS floor  [p296]
+    Air conditioner  [p297]
+  Electrical system  [p299]
+    Engine control  [p300]
+    Engine control system  [p301]
+    Deceleration potentiometer  [p302]
+    Monitor system  [p304]
+    Sensors  [p323]
+    Palm command control system  [p326]
+    KOMTRAX system  [p329]
+20 Standard value table  [p-1]
+  Standard service value table  [p333]
+    Standard value table for engine  [p334]
+    Standard value table for machine  [p335]
+30 Testing and adjusting  [p-1]
+  Testing and adjusting, Part 1  [p345]
+    Tools for testing, adjusting, and troubleshooting  [p347]
+    Sketches of special tools  [p351]
+    Measuring engine speed  [p352]
+    Measuring intake air pressure (boost pressure)  [p354]
+    Measuring exhaust temperature  [p356]
+    Measuring exhaust gas color  [p358]
+    Adjusting valve clearance  [p359]
+    Measuring compression pressure  [p360]
+    Measuring blow-by pressure  [p362]
+    Measuring engine oil pressure  [p363]
+    Handling fuel system parts  [p364]
+    Releasing residual pressure from fuel system  [p364]
+    Measuring fuel pressure  [p365]
+    Measuring fuel return rate and fuel leakage  [p366]
+    Bleeding air from fuel circuit  [p370]
+    Measuring fuel circuit for leakage  [p372]
+    Testing and adjusting alternator belt tension  [p373]
+    Testing and adjusting air conditioner compressor belt tension  [p374]
+    Measuring fan speed  [p375]
+    Measuring fan circuit oil pressure  [p377]
+    Bleeding air from fan pump  [p378]
+    Bleeding air from work equipment pump  [p379]
+    Adjusting fuel control dial and decelerator pedal  [p380]
+  Testing and adjusting, Part 2  [p383]
+    Measuring power train oil pressure  [p385]
+    Adjusting transmission output shaft speed sensor  [p393]
+    Simple test procedure for brake performance  [p394]
+    Adjusting brake pedal  [p395]
+    Adjusting parking brake lever  [p397]
+    Emergency escape method when power train has trouble  [p399]
+    Adjusting idler clearance  [p402]
+    Testing and adjusting track shoe tension  [p404]
+    Measuring and adjusting work equipment oil pressure  [p405]
+    Measuring control circuit basic pressure  [p408]
+    Measuring work equipment lock solenoid valve output pressure (PPC valve basic pressure)  [p409]
+    Measuring PPC valve output pressure  [p410]
+    Adjusting work equipment PPC valve play  [p412]
+    Measuring ripper pin puller solenoid valve output pressure  [p414]
+    Testing parts which cause hydraulic drift of blade and ripper  [p415]
+    Measuring internal leakage of work equipment cylinder  [p416]
+    Releasing residual pressure from work equipment cylinder  [p417]
+    Bleeding air from work equipment cylinder  [p417]
+    Adjusting work equipment lock lever  [p418]
+    Adjusting blade  [p419]
+    Adjusting operator's cab  [p421]
+  Testing and adjusting, Part 3  [p427]
+    Special functions of machine monitor (EMMS)  [p428]
+  Testing and adjusting, Part 4  [p489]
+    Handling of power supply circuit of engine controller  [p490]
+    Preparation work for troubleshooting of electrical system  [p491]
+    Pm Clinic  [p493]
+40 Troubleshooting  [p-1]
+  Failure code table and fuse locations  [p505]
+    Failure codes table  [p506]
+    Fuse locations  [p512]
+  General information on troubleshooting  [p517]
+    Points to remember when troubleshooting  [p518]
+    Sequence of events in troubleshooting  [p519]
+    Check before troubleshooting  [p520]
+    Classification and procedures for troubleshooting  [p521]
+    Information in troubleshooting table  [p524]
+    CConnection table for connector pin numbers  [p526]
+    T- branch box and T- branch adapter table  [p562]
+  Troubleshooting by failure and error codes, Part 1  [p567]
+    Failure code [1500L0] Transmission clutch: Abnormal  [p569]
+    Failure code [15SAL1] Forward clutch: Fill high  [p570]
+    Failure code [15SALH] Forward clutch: Fill low  [p571]
+    Failure code [15SBL1] Reverse clutch: Fill high  [p572]
+    Failure code [15SBLH] Reverse clutch: Fill low  [p573]
+    Failure code [15SEL1] Speed 1st clutch: Fill high  [p574]
+    Failure code [15SELH] Speed 1st clutch: Fill low  [p575]
+    Failure code [15SFL1] Speed 2nd clutch: Fill high  [p576]
+    Failure code [15SFLH] Speed 2nd clutch: Fill low  [p577]
+    Failure code [15SGL1] Speed 3rd clutch: Fill high  [p578]
+    Failure code [15SGLH] Speed 3rd clutch: Fill low  [p579]
+    Failure code [2201L1] When right steering clutch oil pressure command current is OFF, fill signal is ON  [p580]
+    Failure code [2201LH] When right steering clutch oil pressure command current is ON, fill signal is OFF  [p582]
+    Failure code [2202L1] When left steering clutch oil pressure command current is OFF, fill signal is ON  [p584]
+    Failure code [2202LH] When left steering clutch oil pressure command current is ON, fill signal is OFF  [p586]
+    Failure code [2300KM] Stall in 1st gear speed  [p588]
+    Failure code [2301L1] Right brake: Fill high  [p589]
+    Failure code [2301LH] Right brake: Fill low  [p590]
+    Failure code [2302L1] Left brake: Fill high  [p591]
+    Failure code [2302LH] Left brake: Fill low  [p592]
+    Failure code [7RFAKA] ECM HOLD RELAY: Disconnection  [p594]
+    Failure code [AA10NX] Air Cleaner Clogging  [p596]
+    Failure code [AB00MA] Battery Charge Abnormal  [p598]
+    Failure code [B@BAZG] Eng Oil Press Low  [p600]
+    Failure code [B@BCNS] Eng Water Overheat  [p600]
+    Failure code [B@BCZK] Eng Water Level Low  [p601]
+    Failure code [B@CENS] T/C Oil Overheat  [p601]
+    Failure code [B@HANS] Hyd Oil Overheat  [p602]
+    Failure code [CA111] EMC Critical Internal Failure  [p604]
+    Failure code [CA115] Eng Ne and Bkup Speed Sens Error  [p606]
+    Failure code [CA122] Chg (boost) Air Press Sensor High Error  [p608]
+    Failure code [CA123] Chg (boost) Air Press Sensor Low Error  [p610]
+    Failure code [CA131] Throttle Sensor High Error  [p612]
+    Failure code [CA132] Throttle Sensor Low Error  [p614]
+    Failure code [CA135] Eng Oil Press Sensor High Error  [p616]
+    Failure code [CA141] Eng Oil Press Sensor Low Error  [p618]
+    Failure code [CA144] Coolant Temp Sens High Error  [p620]
+    Failure code [CA145] Coolant Temp Sens Low Error  [p622]
+    Failure code [CA153] Chg (boost) Air Temp Sensor High Error  [p624]
+    Failure code [CA154] Chg (boost) Air Temp Sensor Low Error  [p626]
+    Failure code [CA187] Sens Supply 2 Volt Low Error  [p626]
+    Failure code [CA221] Ambient Press Sens High Error  [p628]
+    Failure code [CA222] Ambient Press Sens Low Error  [p630]
+    Failure code [CA227] Sens Supply 2 Volt High Error  [p632]
+  Troubleshooting by failure and error codes, Part 2  [p635]
+    Failure code [CA234] Eng Overspeed  [p637]
+    Failure code [CA238] Ne Speed Sens Supply Volt Error  [p638]
+    Failure code [CA263] Fuel Temp Sensor High Error  [p640]
+    Failure code [CA265] Fuel Temp Sensor Low Error  [p642]
+    Failure code [CA271] PCV1 Short Error  [p643]
+    Failure code [CA272] PCV1 Open Error  [p644]
+    Failure code [CA273] PCV2 Short Error  [p645]
+    Failure code [CA274] PCV2 Open Error  [p646]
+    Failure code [CA322] Inj #1 Open/Short Error  [p648]
+    Failure code [CA323] Inj #5 Open/Short Error  [p650]
+    Failure code [CA324] Inj #3 Open/Short Error  [p652]
+    Failure code [CA325] Inj #6 Open/Short Error  [p654]
+    Failure code [CA331] Inj #2 Open/Short Error  [p656]
+    Failure code [CA332] Inj #4 Open/Short Error  [p658]
+    Failure code [CA342] Calibration Code Incompatibility  [p660]
+    Failure code [CA351] Injectors Drive Circuit Error  [p662]
+    Failure code [CA352] Sense Supply 1 Volt Low Error  [p664]
+    Failure code [CA386] Sense Supply 1 Volt High Error  [p666]
+    Failure code [CA441] Battery Voltage Low Error  [p668]
+    Failure code [CA442] Battery Voltage High Error  [p668]
+    Failure code [CA449] Rail Press Very High Error  [p669]
+    Failure code [CA451] Rail Press Sensor High Error  [p670]
+    Failure code [CA452] Rail Press Sensor Low Error  [p672]
+    Failure code [CA553] Rail Press High Error  [p672]
+    Failure code [CA554] Rail Press Sensor In Range Error  [p673]
+    Failure code [CA559] Rail Press Low Error  [p674]
+    Failure code [CA689] Eng Ne Speed Sensor Error  [p678]
+    Failure code [CA731] Eng Bkup Speed Sens Phase Error  [p680]
+    Failure code [CA757] All Continuous Data Lost Error  [p680]
+    Failure code [CA778] Eng Bkup Speed Sensor Error  [p682]
+    Failure code [CA1633] KOMNET Datalink Timeout Error  [p684]
+    Failure code [CA2185] Throt Sens Sup Volt High Error  [p686]
+    Failure code [CA2186] Throt Sens Sup Volt Low Error  [p688]
+    Failure code [CA2249] Rail Press Very Low Error  [p688]
+    Failure code [CA2555] Grid Htr Relay Volt Low Error  [p689]
+    Failure code [CA2556] Grid Htr Relay Volt High Error  [p690]
+    Failure code [D110KA] Battery relay: Disconnection  [p692]
+    Failure code [D110KB] Battery Relay: Drive Short Circuit  [p694]
+    Failure code [D130KA] Neutral relay: Disconnection  [p696]
+    Failure code [D130KB] Neutral relay: Short circuit  [p698]
+    Failure code [D161KA] Back-up alarm relay: Disconnection  [p700]
+    Failure code [D161KB] Back-up alarm relay: Short circuit  [p702]
+    Failure code [D190KA] ACC signal relay: Disconnection  [p704]
+    Failure code [D190KB] ACC signal relay: Short circuit  [p706]
+  Troubleshooting by failure and error codes, Part 3  [p709]
+    Failure code [D5ZKKX] Throttle Dial: Out of normal range  [p712]
+    Failure code [DAFRKR] CAN Disconnection (Monitor)  [p714]
+    Failure code [DB2RKR] CAN Disconnection (Engine controller)  [p716]
+    Failure code [DB90KR] PT controller: Can communication lost  [p718]
+    Failure code [DBE0KK] PT controller: Source voltage reduction  [p720]
+    Failure code [DBE0KT] PT controller: Abnormality in controller  [p722]
+    Failure code [DBE6KK] PT controller: Source voltage reduction  [p724]
+    Failure code [DBE7KK] PT controller: Source voltage reduction  [p726]
+    Failure code [DBE9KQ] PT controller: Type select signal  [p728]
+    Failure code [DD12KA] Shift up Sw: Disconnection  [p730]
+    Failure code [DD12KB] Shift up Sw: Short circuit  [p732]
+    Failure code [DD13KA] Shift down Sw: Disconnection  [p734]
+    Failure code [DD13KB] Shift down Sw: Short circuit  [p736]
+    Failure code [DD14KA] Parking lever Sw: Disconnection  [p738]
+    Failure code [DD14KB] Parking lever Sw: Short circuit  [p740]
+    Failure code [DDDDKA] Back up brake Sw: Disconnection  [p742]
+    Failure code [DDDDKB] Back up brake Sw: Short circuit  [p744]
+    Failure code [DDDDKX] Back up brake Sw: Signal mismatch  [p746]
+    Failure code [DGT1KA] T/C oil temp sensor: Abnormal  [p748]
+    Failure code [DGT1KX] T/C oil temp sensor: Abnormal  [p750]
+    Failure code [DH21KA] Weq pressure sensor: Disconnection  [p752]
+    Failure code [DH21KB] Weq pressure sensor: Short circuit  [p754]
+    Failure code [DK10KX] Fuel control Dial: Out of normal range  [p756]
+    Failure code [DK30KA] ST lever 1: Disconnection  [p758]
+    Failure code [DK30KB] ST lever 1: Short circuit  [p760]
+    Failure code [DK30KX] ST lever 1: Out of normal range  [p762]
+    Failure code [DK30KZ] RL lever: Disconnection or short circuit  [p762]
+    Failure code [DK30L8] ST lever: Signal mismatch  [p763]
+    Failure code [DK31KA] ST lever 2: Disconnection  [p764]
+    Failure code [DK31KB] ST lever 2: Short circuit  [p766]
+    Failure code [DK40KA] Brake potentiometer: Disconnection  [p768]
+    Failure code [DK40KB] Brake potentiometer: Short circuit  [p770]
+    Failure code [DK55KX] FR lever: Out of normal range  [p772]
+    Failure code [DK55KZ] FR lever: Disconnection or short circuit  [p772]
+    Failure code [DK55L8] FR lever: Signal mismatch  [p773]
+    Failure code [DK56KA] FR lever 1: Disconnection  [p774]
+    Failure code [DK56KB] FR lever 1: Short circuit  [p776]
+  Troubleshooting by failure and error codes, Part 4  [p779]
+    Failure code [DK57KA] FR lever 2: Disconnection  [p782]
+    Failure code [DK57KB] FR lever 2: Short circuit  [p784]
+    Failure code [DKH1KA] Pitch angle sensor: Disconnection  [p786]
+    Failure code [DKH1KB] Pitch angle sensor: Short circuit  [p788]
+    Failure code [DLT3KA] T/M out-speed sensor: Disconnection  [p790]
+    Failure code [DLT3KB] T/M out-speed sensor: Abnormal  [p791]
+    Failure code [DW7BKA] Fan rev EPC: Disconnection  [p792]
+    Failure code [DW7BKB] Fan rev EPC: Short circuit  [p793]
+    Failure code [DWN3KA] Ssp solenoid: Disconnection  [p794]
+    Failure code [DWN3KB] Ssp solenoid: Short circuit  [p796]
+    Failure code [DWN3KY] Ssp solenoid: Short circuit  [p798]
+    Failure code [DWN5KA] Fan pump solenoid: Disconnection  [p800]
+    Failure code [DWN5KB] Fan pump solenoid: Short circuit  [p801]
+    Failure code [DXH4KA] 1st clutch ECMV: Disconnection  [p802]
+    Failure code [DXH4KB] 1st clutch ECMV: Short circuit  [p803]
+    Failure code [DXH4KY] 1st clutch ECMV: Short circuit  [p804]
+    Failure code [DXH5KA] 2nd clutch ECMV: Disconnection  [p805]
+    Failure code [DXH5KB] 2nd clutch ECMV: Short circuit  [p806]
+    Failure code [DXH5KY] 2nd clutch ECMV: Short circuit  [p807]
+    Failure code [DXH6KA] 3rd clutch ECMV: Disconnection  [p808]
+    Failure code [DXH6KB] 3rd clutch ECMV: Short circuit  [p809]
+    Failure code [DXH6KY] 3rd clutch ECMV: Short circuit  [p810]
+    Failure code [DXH7KA] R clutch ECMV: Disconnection  [p811]
+    Failure code [DXH7KB] R clutch ECMV: Short circuit  [p812]
+    Failure code [DXH7KY] R clutch ECMV: Short circuit  [p813]
+    Failure code [DXH8KA] F clutch ECMV: Disconnection  [p814]
+    Failure code [DXH8KB] F clutch ECMV: Short circuit  [p815]
+    Failure code [DXH8KY] F clutch ECMV: Short circuit  [p816]
+    Failure code [DXH9KA] Right steering clutch ECMV disconnection  [p818]
+    Failure code [DXH9KB] Right steering clutch ECMV short circuit  [p820]
+    Failure code [DXH9KY] Right steering clutch ECMV hot short  [p822]
+    Failure code [DXHAKA] Left steering clutch ECMV disconnection  [p824]
+    Failure code [DXHAKB] Left steering clutch ECMV short circuit  [p826]
+    Failure code [DXHAKY] Left steering clutch ECMV hot short  [p828]
+    Failure code [DXHBKA] Right brake ECMV: Disconnection  [p830]
+    Failure code [DXHBKB] Right brake ECMV: Short circuit  [p832]
+    Failure code [DXHBKY] Right brake ECMV: Short circuit  [p834]
+    Failure code [DXHCKA] Left brake ECMV: Disconnection  [p836]
+    Failure code [DXHCKB] Left brake ECMV: Short circuit  [p838]
+    Failure code [DXHCKY] Left brake ECMV: Short circuit  [p840]
+    Failure code [DXJ4KA] Weq lock Sol.: Disconnection  [p842]
+    Failure code [DXJ4KB] Weq lock Sol.: Short circuit  [p843]
+  Troubleshooting of electrical system (E-mode)  [p845]
+    Before carrying out troubleshooting for electrical system  [p847]
+    Information in troubleshooting table  [p851]
+    E-1 When starting switch turned ON, machine monitor displays nothing  [p852]
+    E-2 When starting switch turned ON (before starting engine), basic check item lights up  [p854]
+    E-3 Engine does not start (Engine does not turn)  [p856]
+    E-4 Preheater does not operate  [p859]
+    E-5 Precaution item lights up while engine is running  [p862]
+    E-6 Emergency stop item lights up while engine is running  [p864]
+    E-7 Engine coolant temperature gauge does not indicate normally  [p866]
+    E-8 Fuel level gauge does not indicate normally  [p867]
+    E-9 Power train oil temperature gauge (multi-gauge) does not indicate normally  [p869]
+    E-10 Hydraulic temperature gauge (multi-gauge) does not indicate normally  [p870]
+    E-11 Contents of display by machine monitor are different from applicable machine  [p872]
+    E-12 Machine monitor does not display some items  [p872]
+    E-13 Function switch does not work  [p872]
+    E-14 Operation mode does not change  [p873]
+    E-15 Gearshift mode does not change  [p873]
+    E-16 Customize function does not operate normally  [p874]
+    E-17 Customize memory function does not normally  [p874]
+    E-18 Alarm buzzer cannot be stopped  [p875]
+    E-19 Air conditioner does not operate normally (including air conditioner fault history)  [p876]
+    E-20 When starting switch is turned OFF, service meter is not displayed  [p890]
+    E-21 Machine monitor cannot be set in service mode  [p890]
+    E-22 Ripper pin puller cylinder does not operate  [p892]
+    E-23 Backup alarm does not sound or does not stop  [p894]
+    E-24 Headlamp, rear lamp, and ripper point lamp do not light up  [p896]
+    E-25 Windshield wiper and window washer do not operate  [p901]
+    E-26 KOMTRAX terminal does not operate normally  [p917]
+    E-27 Fan does not reverse  [p918]
+    E-28 Gear cannot be shifted  [p920]
+    E-29 Electric priming pump does not operate or does not stop automatically  [p922]
+  Troubleshooting of hydraulic and mechanical system (H-mode)  [p925]
+    Information in troubleshooting table  [p927]
+    H-1 Power is low (Drawbar pull is low)  [p928]
+    H-2 Machine does not travel (at 2nd or 3rd gear speed)  [p929]
+    H-3 Machine does not start at any gear speed  [p930]
+    H-4 Machine can travel only forward or in reverse  [p931]
+    H-5 When gear speed or travel direction is changed, time lag is large  [p932]
+    H-6 Steering is not possible  [p933]
+    H-7 Steering is possible only on one side  [p934]
+    H-8 Steering overrun occurs  [p935]
+    H-9 Brake does not work  [p936]
+    H-10 Power train oil is overheated  [p937]
+    H-11 Speed of all work equipment is low  [p938]
+    H-12 No work equipment moves  [p939]
+    H-13 Blade lift speed or power is low  [p940]
+    H-14 Blade tilt speed or power is low  [p941]
+    H-15 Ripper lift speed or power is low  [p942]
+    H-16 Ripper tilt speed or power is low  [p943]
+    H-17 Hydraulic drift of blade lift is large  [p943]
+    H-18 Hydraulic drift of blade tilt is large  [p944]
+    H-19 Hydraulic drift of ripper lift is large  [p944]
+    H-20 Ripper pin puller cylinder does not operate  [p945]
+    H-21 Abnormal sound comes out from around work equipment pump  [p946]
+    H-22 Fan speed is abnormal (Sound and/or vibration are abnormally large or engine over heats)  [p947]
+  Troubleshooting of engine (S-mode)  [p949]
+    Method of using troubleshooting chart  [p951]
+    S-1  Starting performance of engine is poor  [p954]
+    S-2  Engine does not start  [p955]
+    S-3  Engine does not pick up smoothly  [p958]
+    S-4  Engine stops during operation  [p959]
+    S-5  Engine does not rotate smoothly  [p960]
+    S-6  Engine lack output (or lacks power)  [p961]
+    S-7  Exhaust gas is black (incomplete combustion)  [p962]
+    S-8  Oil consumption is excessive (or exhaust gas is blue)  [p963]
+    S-9  Oil becomes dirty quickly  [p964]
+    S-10  Fuel consumption is excessive  [p965]
+    S-11  Oil is in coolant (or coolant spurts back or coolant level goes down)  [p966]
+    S-12  Oil pressure drops  [p967]
+    S-13  Oil level rises (Entry of coolant or fuel)  [p968]
+    S-14  Coolant temperature becomes too high (Overheating)  [p969]
+    S-15  Abnormal noise is made  [p970]
+    S-16  Vibration is excessive  [p971]
+    S-17  Air cannot be bled from fuel circuit  [p972]
+50 Disassembly and assembly  [p-1]
+  General information on disassembly and assembly  [p975]
+    How to read this manual  [p976]
+    Coating materials list  [p978]
+    Special tool list  [p981]
+    Sketches of special tools  [p987]
+  Engine and cooling system  [p997]
+    Removal and installation of fuel supply pump assembly  [p998]
+    Removal and installation of fuel injector assembly  [p1003]
+    Removal and installation of cylinder head assembly  [p1009]
+    Removal and installation of radiator assembly  [p1020]
+    Removal and installation of aftercooler assembly  [p1023]
+    Removal and installation of engine assembly  [p1026]
+    Removal and installation of engine hood assembly  [p1031]
+    Removal and installation of engine front seal  [p1033]
+    Removal and installation of engine rear seal  [p1037]
+    Removal and installation of fuel tank assembly  [p1042]
+    Removal and installation of fan drive assembly  [p1044]
+    Removal and installation of fan motor assembly  [p1045]
+  Power train, Part 1  [p1047]
+    Removal and installation of damper assembly  [p1048]
+    Disassembly and assembly of damper assembly  [p1051]
+    Removal and installation of power train unit assembly  [p1057]
+    Disconnection and connection of power train unit assembly  [p1062]
+  Power train, Part 2  [p1069]
+    Disassembly and assembly of PTO assembly  [p1070]
+    Disassembly and assembly of torque converter assembly  [p1077]
+    Disassembly and assembly of transmission assembly  [p1082]
+    Disassembly and assembly of steering case assembly  [p1099]
+  Power train, Part 3  [p1115]
+    Removal and installation of final drive assembly  [p1116]
+    Disassembly and assembly of final drive assembly  [p1118]
+  Undercarriage and frame  [p1133]
+    Removal and installation of track frame assembly  [p1135]
+    Removal and installation of idler assembly  [p1138]
+    Disassembly and assembly of idler assembly  [p1139]
+    Removal and installation of recoil spring assembly  [p1143]
+    Disassembly and assembly of recoil spring assembly  [p1144]
+    Removal and installation of track roller assembly  [p1149]
+    Disassembly and assembly of track roller assembly  [p1150]
+    Removal and installation of carrier roller assembly  [p1152]
+    Disassembly and assembly of carrier roller assembly  [p1153]
+    Removal and installation of pivot shaft assembly  [p1157]
+    Spreading and installation of track shoe assembly  [p1159]
+    General disassembly and assembly of track shoe  [p1162]
+    Disassembly and assembly of 1 link in field  [p1176]
+    Disassembly and assembly of master link  [p1180]
+    Removal and installation of equalizer bar assembly  [p1183]
+    Disassembly and assembly of equalizer bar assembly  [p1185]
+    Removal and installation of segment teeth  [p1187]
+  Hydraulic system  [p1189]
+    Removal and installation of hydraulic tank assembly  [p1190]
+    Removal and installation of hydraulic pump assembly  [p1192]
+    Disassembly and assembly of hydraulic cylinder assembly  [p1195]
+  Work equipment  [p1205]
+    Removal and installation of blade assembly  [p1206]
+    Disassembly and assembly of multi-shank ripper  [p1208]
+  Cab and its attachments  [p1213]
+    Removal and installation of operator’s cab assembly  [p1214]
+    Removal and installation of operator’s cab glass (Stuck glass)  [p1216]
+    Removal and installation of operator’s cab and floor frame assembly  [p1225]
+  Electrical system  [p1231]
+    Removal and installation of air conditioner unit assembly  [p1232]
+    Removal and installation of engine controller assembly  [p1234]
+    Removal and installation of power train controller assembly  [p1235]
+    Removal and installation of KOMTRAX assembly  [p1235]
+60 Air conditioner  [p-1]
+  Structure, function, testing, adjusting, and troubleshooting  [p1237]
+    Structure and function  [p1239]
+    Testing, adjusting and troubleshooting  [p1253]
+90 Diagrams and drawings  [p-1]
+  Hydraulic diagrams and drawings  [p1319]
+    Power train hydraulic circuit diagram  [p1321]
+    Hydraulic circuit diagram Serial No.: 85001 - 85024  [p1322]
+    Hydraulic circuit diagram Serial No.: 85025 and up  [p1323]
+  Electrical diagrams and drawings  [p1326]
+    Electrical circuit diagram  [p1328]
+    Electrical circuit diagram for inside cab  [p1342]
+    Connectors table and arrangement drawing  [p1343]
+
+=== REMOVE & INSTALL CHAPTERS ===
+
+[Engine and cooling system] Fuel supply pump  p998-1002  <- 'Removal and installation of fuel supply pump assembly'
+   torque matches: 40
+     + p1001: '39.2 – 58.8 Nm'
+     + p1001: '4 – 6 kgm'
+     + p1001: '39.2 – 49 Nm'
+     + p1001: '4 – 5 kgm'
+     + p1001: '19.6 – 29.4 Nm'
+     + p1001: '2.0 – 3.0 kgm'
+     ? p1000: 'and tighten the center bolt of tool A1 to remove'
+
+[Engine and cooling system] Fuel injector  p1003-1008  <- 'Removal and installation of fuel injector assembly'
+   torque matches: 28
+     + p1006: '58.8 – 73.5 Nm'
+     + p1006: '6 – 7.5 kgm'
+     + p1006: '39.2 – 49 Nm'
+     + p1006: '4 – 5 kgm'
+     + p1007: '1 Nm'
+     + p1007: '0.1 kgm'
+     ? p1005: 'a Tighten nuts alternately.'
+
+[Engine and cooling system] Cylinder head  p1009-1019  <- 'Removal and installation of cylinder head assembly'
+   torque matches: 48
+     + p1016: '137 – 157 Nm'
+     + p1016: '14 – 16 kgm'
+     + p1016: '284 – 294 Nm'
+     + p1016: '29.0 – 30.0 kgm'
+     + p1016: '7.4 Nm'
+     + p1016: '0.8 kgm'
+     ? p1015: 'q Bolt tightening should be 5 times or'
+
+[Engine and cooling system] Radiator  p1020-1022  <- 'Removal and installation of radiator assembly'
+   torque matches: 2
+     + p1021: '0.5 Nm'
+     + p1021: '0.5 Nm'
+
+[Engine and cooling system] Aftercooler  p1023-1025  <- 'Removal and installation of aftercooler assembly'
+   torque matches: 6
+     + p1024: '98 – 123 Nm'
+     + p1024: '10 – 12.5 kgm'
+     + p1025: '98 – 123 Nm'
+     + p1025: '10 – 12.5 kgm'
+     + p1025: '5 Nm'
+     + p1025: '0.5 kgm'
+
+[Engine and cooling system] Engine  p1026-1030  <- 'Removal and installation of engine assembly'
+   torque matches: 15
+     + p1029: '12 – 15 Nm'
+     + p1029: '1.2 – 1.5 kgm'
+     + p1029: '20 – 25 Nm'
+     + p1029: '2.0 – 2.5 kgm'
+     + p1029: '30 – 35 Nm'
+     + p1029: '3.0 – 3.5 kgm'
+
+[Engine and cooling system] Engine hood  p1031-1032  <- 'Removal and installation of engine hood assembly'
+   torque matches: 1
+     + p1032: '0.5 Nm'
+
+[Engine and cooling system] Engine front seal  p1033-1036  <- 'Removal and installation of engine front seal'
+   torque matches: 2
+     + p1036: '245 – 309 Nm'
+     + p1036: '25 – 31.5 kgm'
+     ? p1035: '4) Tighten tool C2 until the bolts (55 mm)'
+     ? p1035: '5) Tighten tool C2 with the bolts (35 mm)'
+     ? p1035: '(8) to the end of crankshaft (5) and tighten'
+
+[Engine and cooling system] Engine rear seal  p1037-1041  <- 'Removal and installation of engine rear seal'
+   torque matches: 2
+     + p1040: '4.9 Nm'
+     + p1040: '0.5 kgm'
+     ? p1039: '4) Tighten the 3 bolts evenly to press fit rear'
+     ? p1039: 'a Tighten tool C4 (for press fitting the'
+     ? p1039: 'and then tighten with 2 washers'
+     ? p1041: 'a After tightening, make 1 punch mark (9)'
+     ? p1041: 'of tightening time.'
+
+[Engine and cooling system] Fuel tank  p1042-1043  <- 'Removal and installation of fuel tank assembly'
+   torque matches: 0
+     raw p1042: 'SEN03367-02 50 Disassembly and assembly\r\n46 D155A-6\r\nRemoval and installation of fuel \r\ntank assembly 1\r\nRemoval\r\nk Disconnect the cable from the negative (–)\r\nterminal of the battery.\r\n1. Open the water separator inspection cover and\r\nturn the fuel drain lever (1) in the direction of\r\n(L) to drain the fuel.\r\n2. Remove line filter assembly (2).\r\n3. Remove pin puller drive hose mounting bracket\r\n(3). (Machine with giant ripper)\r\n4. Remove cover (4).\r\n5. Remove fuel hoses (5), (6) and (7).\r\n6. Sling water separator storage box (8) and\r\nremove 5 mounting bolts (9).\r\n7. Lift off water separator storage box (8).\r\n8. Open the inspection cover and disconnect wir\ufffeing harness connector (10).'
+
+[Engine and cooling system] Fan drive  p1044-1044  <- 'Removal and installation of fan drive assembly'
+   torque matches: 0
+     raw p1044: 'SEN03367-02 50 Disassembly and assembly\r\n48 D155A-6\r\nRemoval and installation of fan \r\ndrive assembly 1\r\nRemoval\r\nk Disconnect the cable from the negative (–)\r\nterminal of the battery.\r\n1. Drain the hydraulic oil.\r\n6 Hydraulic tank: Approx. 85 l\r\n2. Remove 4 mounting bolts (1) and open mask\r\n(2).\r\n3. Remove 4 mounting bolts (3) and remove\r\nguard (4).\r\n4. Disconnect wiring harness connector FAR (5)\r\nand remove wiring harness clamp.\r\n5. Disconnect fan motor hoses (6), (7) and (8).\r\na Plug the hoses so that foreign matter will\r\nnot enter them.\r\n6. Using eyebolts [1], sling fan drive assembly (9)\r\nand remove mounting bolts (10).\r\n7. Lift off fan drive assembly (9).\r\n4 Fan drive assembly: 125 kg\r\nInstallation\r\nq Carry out installation in the reverse order to\r\nremoval.\r\nq Refilling with oil\r\nAdd oil through the oil filler to the specified\r\nlevel. Run the engine to circulate the oil\r\nthrough th'
+
+[Engine and cooling system] Fan motor  p1045-1046  <- 'Removal and installation of fan motor assembly'
+   torque matches: 2
+     + p1045: '441 – 539 Nm'
+     + p1045: '45 – 55 kgm'
+
+[Power train, Part 1] Damper  p1048-1050  <- 'Removal and installation of damper assembly'
+   torque matches: 8
+     + p1049: '123 Nm'
+     + p1049: '12.5 kgm'
+     + p1049: '122.6 Nm'
+     + p1049: '12.5 kgm'
+     + p1050: '122.6 Nm'
+     + p1050: '12.5 kgm'
+
+[Power train, Part 1] Power train unit  p1057-1061  <- 'Removal and installation of power train unit assembly'
+   torque matches: 6
+     + p1061: '123 Nm'
+     + p1061: '12.5 kgm'
+     + p1061: '309 Nm'
+     + p1061: '31.5 kgm'
+     + p1061: '1,030 Nm'
+     + p1061: '105 kgm'
+     ? p1059: 'push the yoke into the torque converter'
+
+[Power train, Part 3] Final drive  p1116-1117  <- 'Removal and installation of final drive assembly'
+   torque matches: 2
+     + p1117: '1,440 Nm'
+     + p1117: '147 kgm'
+
+[Undercarriage and frame] Track frame  p1135-1137  <- 'Removal and installation of track frame assembly'
+   torque matches: 0
+     raw p1135: '50 Disassembly and assembly SEN03371-00\r\nD155A-6 3\r\nRemoval and installation of track \r\nframe assembly 1\r\nRemoval\r\n1. Remove blade assembly. For details, see\r\n"Removal and installation of blade assembly".\r\n2. Spread track shoe assembly. For details, see\r\n"Spreading and installation of track shoe\r\nassembly".\r\n3. Jacking up chassis machine according to the\r\nfollowing procedure\r\nk 1) Using hydraulic jack (686 kN {70 ton}) \r\n[2] and ripper of machine, jack up\r\nmachine and set stands [1] under\r\nsteering case on left and right.\r\n2) Set stands [3] on left and right under\r\nmain frame at front of machine. \r\n3) Set blocks under front of raised track\r\nframe to ensure safety during opera\ufffetion. \r\na After setting stands [1] and [3], set the\r\nhydraulic jack and ripper again to act\r\nas extra support.\r\n4. Disconnection of equalizer bar \r\n1) Sling track frame assembly, and 2 bolts (1)\r\nand remove cover (2'
+
+[Undercarriage and frame] Idler  p1138-1138  <- 'Removal and installation of idler assembly'
+   torque matches: 2
+     + p1138: '829 Nm'
+     + p1138: '84.5kgm'
+
+[Undercarriage and frame] Recoil spring  p1143-1143  <- 'Removal and installation of recoil spring assembly'
+   torque matches: 0
+     raw p1143: '50 Disassembly and assembly SEN03371-00\r\nD155A-6 11\r\nRemoval and installation of recoil \r\nspring assembly 1\r\nRemoval\r\n1. Remove the idler assembly. For details, see\r\n"Removal and installation of idler assembly".\r\n2. Pull out the recoil spring assembly (1) forward\r\nto remove.\r\n4 Recoil spring assembly: 450 kg\r\nInstallation\r\nq Carry out installation in the reverse order to\r\nremoval.\r\na While checking the recoil spring assembly\r\nthrough the lubricator adjustment window,\r\ninstall in the track frame.'
+
+[Undercarriage and frame] Track roller  p1149-1149  <- 'Removal and installation of track roller assembly'
+   torque matches: 8
+     + p1149: '565 Nm'
+     + p1149: '58 kgm'
+     + p1149: '565 Nm'
+     + p1149: '58 kgm'
+     + p1149: '981 Nm'
+     + p1149: '100kgm'
+
+[Undercarriage and frame] Carrier roller  p1152-1152  <- 'Removal and installation of carrier roller assembly'
+   torque matches: 0
+     raw p1152: 'SEN03371-00 50 Disassembly and assembly\r\n20 D155A-6\r\nRemoval and installation of \r\ncarrier roller assembly 1\r\nRemoval\r\n1. Remove the track frame top cover and loosen\r\nlubricator (1) to lower the track tension.\r\nk Since the internal pressure of the recoil\r\nspring cylinder is very high, do not\r\nloosen the lubricator more than 1 turn.\r\nIf the grease does not come out suffi\ufffeciently after the lubricator is loosened,\r\nmove the machine forward and in\r\nreverse.\r\n2. Using hydraulic jacks [1], raise the track shoe.\r\n3. Remove mounting bolts (2).\r\n4. Pass rope [2] through the link hole and wind it\r\nonto carrier roller (3) and stretch it. Loosen the\r\nrope gradually to pull out carrier roller (3) from\r\nsupport (4). [*1]\r\n4 Carrier roller: 45 kg\r\nInstallation\r\nq Carry out installation in the reverse order to\r\nremoval.\r\n[*1]\r\nWhen installing the carrier roller to the support,\r\nmake clearance (a) shown '
+
+[Undercarriage and frame] Pivot shaft  p1157-1158  <- 'Removal and installation of pivot shaft assembly'
+   torque matches: 2
+     + p1158: '981 Nm'
+     + p1158: '100 kgm'
+
+[Undercarriage and frame] Equalizer bar  p1183-1184  <- 'Removal and installation of equalizer bar assembly'
+   torque matches: 2
+     + p1184: '981 Nm'
+     + p1184: '100 kgm'
+
+[Undercarriage and frame] Segment teeth  p1187-1188  <- 'Removal and installation of segment teeth'
+   torque matches: 2
+     + p1187: '98 Nm'
+     + p1187: '10 kgm'
+
+[Hydraulic system] Hydraulic tank  p1190-1191  <- 'Removal and installation of hydraulic tank assembly'
+   torque matches: 0
+     raw p1190: 'SEN03372-01 50 Disassembly and assembly\r\n2 D155A-6\r\nRemoval and installation of \r\nhydraulic tank assembly 1\r\nRemoval\r\nk Lower the work equipment to the ground \r\nand release the residual pressure in the \r\npiping, referring to Testing and adjusting, \r\n"Releasing residual pressure in hydraulic \r\ncircuit". Then, loosen the hydraulic tank \r\ncap gradually to release the internal pres\ufffesure of the hydraulic tank.\r\n1. Drain the oil from the hydraulic tank.\r\n6 Hydraulic tank: Approx. 85 l\r\n2. Remove the fuel tank assembly. For details, \r\nsee "Removal and installation of fuel tank \r\nassembly".\r\n3. Remove control valve cover (1).\r\n4. Disconnect hose (2) between the control \r\nvalves from the hydraulic tank.\r\n5. Disconnect clamp of oil level gauge (3).\r\n6. Disconnect clamp of oil filler pipe (4).\r\n7. Disconnect hoses (5) – (8).\r\n8. Disconnect suction tube (9).\r\n9. Remove the 4 mounting bolts at the hy'
+
+[Hydraulic system] Hydraulic pump  p1192-1194  <- 'Removal and installation of hydraulic pump assembly'
+   torque matches: 0
+     raw p1192: 'SEN03372-01 50 Disassembly and assembly\r\n4 D155A-6\r\nRemoval and installation of \r\nhydraulic pump assembly 1\r\nRemoval\r\nk Lower the work equipment to the ground \r\nand release the residual pressure in the \r\npiping, referring to Testing and adjusting, \r\n"Releasing residual pressure in hydraulic \r\ncircuit". Then, loosen the hydraulic tank \r\ncap gradually to release the internal pres\ufffesure of the hydraulic tank.\r\nk Disconnect the cable from the negative (–) \r\nterminal of the battery.\r\n1. Drain the oil from the hydraulic tank and power \r\ntrain case.\r\n6 Hydraulic tank: Approx. 85 l\r\n6 Power train case: Approx. 90 l\r\n2. Remove the floor frame assembly. For details, \r\nsee "Removal and installation of floor frame \r\nassembly".\r\na Remove the floor frame assembly only \r\nwhen removing the work equipment and \r\nHSS pump assembly and power train and \r\nlubricating oil pump assembly.\r\nq Removal of work equip'
+
+[Work equipment] Blade  p1206-1207  <- 'Removal and installation of blade assembly'
+   torque matches: 0
+     raw p1206: 'SEN03373-01 50 Disassembly and assembly\r\n2 D155A-6\r\nRemoval and installation of blade \r\nassembly 1\r\nRemoval\r\nk Lower the work equipment to a level place \r\nand set blocks [1] under the right and left \r\nstraight frames securely.\r\na When lowering the work equipment to the \r\nground, pitch back the blade to the stroke end \r\nfor dual tilt specification, and set the blade at \r\nthe flat position for single tilt specification.\r\n1. Remove cap (1) of the lift cylinder assembly. \r\n[*1]\r\na Check the quantity and thickness of the \r\nshims.\r\n2. Sling lift cylinder assembly (2). Run the engine \r\nand retract the piston fully. Install the cylinder \r\nfixing device and fix the lift cylinder assembly \r\nto the radiator guard.\r\na Bind the piston rod with wires etc. so that \r\nit will not come out.\r\nq Similarly, disconnect the cylinder on the \r\nopposite side from the blade.\r\nk Release the residual pressure in the'
+
+[Cab and its attachments] Operator’s cab  p1214-1215  <- 'Removal and installation of operator’s cab assembly'
+   torque matches: 8
+     + p1215: '0.28 Nm'
+     + p1215: '0.028 kgm'
+     + p1215: '27.9 Nm'
+     + p1215: '2.8 kgm'
+     + p1215: '29.4 Nm'
+     + p1215: '3.0 kgm'
+
+[Cab and its attachments] Operator’s cab glass (Stuck glass)  p1216-1224  <- 'Removal and installation of operator’s cab glass (Stuck glass)'
+   torque matches: 0
+     raw p1216: "SEN03375-00 50 Disassembly and assembly\r\n4 D155A-6\r\nRemoval and installation of operator's cab glass (Stuck glass) 1\r\n* Among the panes of window glass of the opera\ufffetor's cab, the 3 panes of (1) and (2) on both\r\nsides are stuck. In this section, the procedure\r\nfor replacing the stuck glass is explained.\r\n(1): Front window glass\r\n(2): Left door window glass\r\n: Right door window glass\r\n(3): Both-sided adhesive tape\r\n(4): Trim seal\r\n(5): Door handle"
+
+[Cab and its attachments] Operator’s cab and floor frame  p1225-1230  <- 'Removal and installation of operator’s cab and floor frame assembly'
+   torque matches: 8
+     + p1228: '0.28 Nm'
+     + p1228: '0.028 kgm'
+     + p1228: '1,030 Nm'
+     + p1228: '105 kgm'
+     + p1228: '190 Nm'
+     + p1228: '19.5 kgm'
+     ? p1227: '19. Sling pin (36), tighten the bolt to pull out pin'
+
+[Electrical system] Air conditioner unit  p1232-1233  <- 'Removal and installation of air conditioner unit assembly'
+   torque matches: 0
+     raw p1232: 'SEN03376-01 50 Disassembly and assembly\r\n2 D155A-6\r\nRemoval and installation of air \r\nconditioner unit assembly 1\r\nRemoval\r\n1. Collect the air conditioner refrigerant (R134a)\r\nfrom air conditioner circuit in advance. [*1]\r\na Ask professional traders for collecting and\r\nfilling operation of refrigerant.\r\na Never release the refrigerant to the atmo\ufffesphere.\r\nk If refrigerant gets in your eyes, you\r\nmay lose your sight. Accordingly, put\r\non protective goggles, gloves and\r\nworking suits with long sleeves while\r\nyou are collecting the refrigerant or fill\ufffeing the air conditioner circuit with the\r\nrefrigerant. Collecting and filling work\r\nmust be conducted by a qualified per\ufffeson.\r\n2. Remove the operator\'s cab assembly. For\r\ndetails, see "Removal and installation of opera\ufffetor\'s cab".\r\n3. Remove the cover at the right lower part of the\r\noperator\'s seat.\r\n4. Lift off operator\'s seat assembly (1).\r\n'
+
+[Electrical system] Engine controller  p1234-1234  <- 'Removal and installation of engine controller assembly'
+   torque matches: 2
+     + p1234: '2.82 Nm'
+     + p1234: '0.288 kgm'
+
+[Electrical system] Power train controller  p1235-1236  <- 'Removal and installation of power train controller assembly'
+   torque matches: 2
+     + p1235: '2.82 Nm'
+     + p1235: '0.288 kgm'
+
+[Electrical system] KOMTRAX  p1235-1236  <- 'Removal and installation of KOMTRAX assembly'
+   torque matches: 2
+     + p1235: '2.82 Nm'
+     + p1235: '0.288 kgm'
