@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -61,8 +62,29 @@ class _ChatScreenState extends State<ChatScreen> {
     'Interval penggantian oli engine D85?',
   ];
 
+  // The daily count starts again at midnight: redraw then, in case the
+  // chat stays open across it.
+  Timer? _midnight;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleMidnight();
+  }
+
+  void _scheduleMidnight() {
+    final now = DateTime.now();
+    final next = DateTime(now.year, now.month, now.day + 1);
+    _midnight = Timer(next.difference(now) + const Duration(seconds: 1), () {
+      if (!mounted) return;
+      setState(() {});
+      _scheduleMidnight();
+    });
+  }
+
   @override
   void dispose() {
+    _midnight?.cancel();
     if (widget.client == null) _client.close();
     _input.dispose();
     _searchInput.dispose();
@@ -348,8 +370,7 @@ class _Intro extends StatelessWidget {
               Text(
                 'nyel AI mencari di semua manual, termasuk yang belum diunduh, dan bisa melihat gambar seperti wiring '
                 'atau hydraulic diagram. Kalau manual tidak membahasnya, nyel AI menjawab dari ilmu elektrik, '
-                'hidrolik dan mekanis, ditandai "Secara umum". Isi dari manual diberi sumber; ketuk sumber untuk '
-                'membuka halamannya. Butuh internet.',
+                'hidrolik, dan mekanik secara umum.',
                 style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.inkSoft),
               ),
               if (!hasManuals) ...[

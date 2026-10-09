@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models.dart';
+import '../public_downloads.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -10,13 +13,16 @@ import 'viewer_screen.dart';
 /// A unit's folder: its subfolders first, each opened on its own page, then
 /// one card per manual, each downloaded on its own.
 class UnitScreen extends StatefulWidget {
-  const UnitScreen({super.key, required this.unitId, this.folder = const []});
+  const UnitScreen({super.key, required this.unitId, this.folder = const [], this.focus});
 
   final String unitId;
 
   /// The subfolder shown, as its path inside the unit folder (empty: the
   /// unit folder itself).
   final List<String> folder;
+
+  /// A manual to scroll to (from the download notification).
+  final String? focus;
 
   @override
   State<UnitScreen> createState() => _UnitScreenState();
@@ -26,6 +32,20 @@ class _UnitScreenState extends State<UnitScreen> {
   bool _editing = false;
   final Set<String> _selected = {};
   final _filter = TextEditingController();
+  final _focusKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.focus != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final target = _focusKey.currentContext;
+        if (target != null) {
+          Scrollable.ensureVisible(target, alignment: 0.2, duration: const Duration(milliseconds: 300));
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -121,6 +141,7 @@ class _UnitScreenState extends State<UnitScreen> {
               ),
             for (final file in files)
               Padding(
+                key: file.key == widget.focus ? _focusKey : null,
                 padding: const EdgeInsets.only(bottom: 10),
                 child: _editing
                     ? _SelectableFile(
@@ -354,9 +375,82 @@ class _FileCard extends StatelessWidget {
                 Pill('Diunduh', background: AppColors.greySoft, foreground: AppColors.ink),
               ],
             ),
+          if (downloaded && progress == null)
+            // Hidden once the copy is in Download; back if it gets deleted.
+            ListenableBuilder(
+              listenable: PublicDownloads.instance,
+              builder: (context, _) {
+                final name = PublicDownloads.fileName(file.title);
+                if (!PublicDownloads.instance.canSave(name)) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 32),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                        side: BorderSide(color: AppColors.navy, width: 1.2),
+                        foregroundColor: AppColors.navy,
+                        shape: const StadiumBorder(),
+                      ),
+                      onPressed: () => _saveToDownloads(context, store, name),
+                      icon: const Icon(Icons.download, size: 15),
+                      label: const Text(
+                        'Simpan ke Download',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );
+  }
+
+  Future<void> _saveToDownloads(BuildContext context, AppStore store, String name) async {
+    final downloads = PublicDownloads.instance;
+    final size = store.localManual(file.key)?.file.pdf.size ?? file.pdf.size;
+    final free = await downloads.freeSpace();
+    if (!context.mounted) return;
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: AppColors.surface,
+      builder: (context) => _SaveSheet(name: name, size: size, free: free),
+    );
+    if (ok != true || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await downloads.save(store.pdfPath(file), name);
+      final shown = messenger.showSnackBar(SnackBar(
+        content: Text('Tersimpan di Download/MyManual/$name'),
+        // A snackbar with an action stays until closed unless told otherwise.
+        duration: const Duration(seconds: 2),
+        persist: false,
+        action: SnackBarAction(
+          label: 'BUKA',
+          onPressed: () async {
+            if (!await downloads.open(name)) {
+              messenger.showSnackBar(const SnackBar(content: Text('Tidak ada aplikasi untuk membuka PDF')));
+            }
+          },
+        ),
+      ));
+      // Some phones keep a snackbar with a button up (accessibility
+      // settings); close it ourselves after the 2 seconds.
+      var open = true;
+      shown.closed.then((_) => open = false);
+      Timer(const Duration(seconds: 2), () {
+        if (open) shown.close();
+      });
+    } catch (e) {
+      if (context.mounted) showError(context, e);
+    }
   }
 
   Future<void> _download(BuildContext context, AppStore store) async {
@@ -521,4 +615,73 @@ bool _sameList(List<String> a, List<String> b) {
     if (a[i] != b[i]) return false;
   }
   return true;
+}
+
+/// "Simpan ke folder Download?": what gets copied where, and its cost in space.
+class _SaveSheet extends StatelessWidget {
+  const _SaveSheet({required this.name, required this.size, required this.free});
+
+  final String name;
+  final int size;
+  final int? free;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('Simpan ke folder Download?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(12)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                  Text('Download/MyManual/', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                  Text(
+                    free == null
+                        ? formatSize(size)
+                        : '${formatSize(size)} · ruang kosong di HP ${formatSize(free!)}',
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Salinan ini memakai ruang ${formatSize(size)} lagi.',
+              style: TextStyle(fontSize: 12.5, color: AppColors.muted),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.navy, width: 1.2),
+                    foregroundColor: AppColors.navy,
+                    shape: const StadiumBorder(),
+                  ),
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Batal'),
+                ),
+                const SizedBox(width: 10),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: AppColors.navy, shape: const StadiumBorder()),
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Simpan'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
