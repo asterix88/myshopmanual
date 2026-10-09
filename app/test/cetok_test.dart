@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -126,7 +125,7 @@ void main() {
     );
   });
 
-  testWidgets('Home shows Cetok Online; a part opens its details', (tester) async {
+  testWidgets('the C button on Home opens Cetok Online; a part opens its details', (tester) async {
     late AppStore store;
     final manuals = fixtureServer();
     final client = MockClient((request) async {
@@ -142,8 +141,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('MANUAL BOOK'), findsOneWidget);
-    await tester.scrollUntilVisible(find.byType(CetokCard), 200, scrollable: find.byType(Scrollable).first);
-    await tester.tap(find.text('CETOK ONLINE').last);
+    expect(find.text('CETOK ONLINE'), findsNothing);
+    await tester.tap(find.byType(CetokButton));
     await tester.pumpAndSettle();
     for (var i = 0; i < 5 && find.text('CARTRIDGE').evaluate().isEmpty; i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));

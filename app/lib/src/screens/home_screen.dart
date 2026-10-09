@@ -55,6 +55,7 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          const CetokButton(),
           IconButton(
             tooltip: updateCount == 0 ? 'Update manual' : 'Update manual, $updateCount baru',
             onPressed: () => Navigator.of(context).push(
@@ -106,7 +107,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  /// The admin code lifts the daily Nyel AI limit on this phone; the AI
+  /// The admin code lifts the daily nyel AI limit on this phone; the AI
   /// server checks it, so it is not stored in the app.
   Future<void> _chooseTheme(BuildContext context, AppStore store) async {
     final mode = await showDialog<String>(
@@ -145,7 +146,7 @@ class HomeScreen extends StatelessWidget {
           children: [
             Text(
               store.aiOwner
-                  ? 'HP ini sudah tanpa batas pertanyaan Nyel AI.'
+                  ? 'HP ini sudah tanpa batas pertanyaan nyel AI.'
                   : 'Masukkan kode admin agar HP ini tanpa batas ${AppStore.aiDailyLimit} pertanyaan per hari.',
               style: const TextStyle(fontSize: 13),
             ),
@@ -175,7 +176,7 @@ class HomeScreen extends StatelessWidget {
     try {
       final ok = await checkOwnerCode(client, code.trim());
       if (ok) store.setAiOwner(true);
-      message = ok ? 'Kode benar. Nyel AI tanpa batas di HP ini.' : 'Kode salah.';
+      message = ok ? 'Kode benar. nyel AI tanpa batas di HP ini.' : 'Kode salah.';
     } on AiException catch (e) {
       message = e.message;
     } finally {
@@ -381,9 +382,6 @@ class _MachineFolders extends StatelessWidget {
                 style: TextStyle(fontSize: 13, color: AppColors.muted),
               ),
             ),
-          const SizedBox(height: 12),
-          const _HomeLabel('CETOK ONLINE'),
-          const CetokCard(),
         ],
       ),
     );

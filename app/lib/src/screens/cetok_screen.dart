@@ -7,7 +7,6 @@ import '../search.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import 'shell.dart';
-import 'home_screen.dart' show homeTitleStyle;
 import 'viewer_screen.dart';
 
 /// Opens Cetok Online; with [search] the search box gets the keyboard.
@@ -15,66 +14,49 @@ Future<void> openCetok(BuildContext context, {bool search = false}) => Navigator
       MaterialPageRoute(builder: (_) => CetokScreen(focusSearch: search)),
     );
 
-/// The Cetok Online card on the Home tab: a title and a search box. Either
-/// opens the Cetok Online screen.
-class CetokCard extends StatelessWidget {
-  const CetokCard({super.key});
+/// The Cetok Online button in the Home top bar, next to the bell: a small
+/// warehouse box with a C, so Home stays about the manuals. Long press shows
+/// its name.
+class CetokButton extends StatelessWidget {
+  const CetokButton({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => openCetok(context),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(12)),
-                  child: Icon(Icons.inventory_2_outlined, color: AppColors.orangeText),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('CETOK ONLINE', style: homeTitleStyle),
-                      Text('Cek, ambil, dan input stok part', style: TextStyle(fontSize: 12, color: AppColors.muted)),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right, color: AppColors.faint),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          Material(
-            color: AppColors.field,
-            borderRadius: BorderRadius.circular(22),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(22),
-              onTap: () => openCetok(context, search: true),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                child: Row(
-                  children: [
-                    Icon(Icons.search, size: 18, color: AppColors.faint),
-                    const SizedBox(width: 8),
-                    Text('Cari part number atau nama part', style: TextStyle(fontSize: 13, color: AppColors.faint)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    return IconButton(
+      tooltip: 'Cetok Online',
+      onPressed: () => openCetok(context),
+      icon: CustomPaint(size: const Size.square(24), painter: CetokIconPainter(AppColors.navy)),
     );
   }
+}
+
+/// A box with a lid and a bold C on its front, drawn in [color].
+class CetokIconPainter extends CustomPainter {
+  CetokIconPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = size.width / 24;
+    final line = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2 * u;
+    canvas.drawRRect(RRect.fromLTRBR(3 * u, 3 * u, 21 * u, 8 * u, Radius.circular(1.5 * u)), line);
+    canvas.drawRRect(RRect.fromLTRBR(4 * u, 8 * u, 20 * u, 21 * u, Radius.circular(1.5 * u)), line);
+    final c = TextPainter(
+      text: TextSpan(
+        text: 'C',
+        style: TextStyle(color: color, fontSize: 11 * u, fontWeight: FontWeight.w800, height: 1),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    c.paint(canvas, Offset(12 * u - c.width / 2, 14.6 * u - c.height / 2));
+  }
+
+  @override
+  bool shouldRepaint(CetokIconPainter old) => old.color != color;
 }
 
 /// Cetok Online inside MyManual: Stok (look up and open a part), Ambil and

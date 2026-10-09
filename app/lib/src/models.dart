@@ -121,7 +121,7 @@ class ManualFile {
 /// A unit's spec pages (bolt torque, capacities, standard values) cut from
 /// its manuals into one small PDF, `spek.pdf`, kept on the phone.
 class SpecPack {
-  const SpecPack({required this.file, required this.pages, this.service = const []});
+  const SpecPack({required this.file, required this.pages, this.service = const [], this.parts});
 
   factory SpecPack.fromJson(Map<String, dynamic> json) => SpecPack(
         file: RemoteFile.fromJson(json),
@@ -129,6 +129,10 @@ class SpecPack {
         service: [
           for (final e in json['service'] as List? ?? const []) ServicePage.fromJson(e as Map<String, dynamic>),
         ],
+        parts: switch (json['parts']) {
+          final List list => [for (final e in list) SpecPart.fromJson(e as Map<String, dynamic>)],
+          _ => null,
+        },
       );
 
   final RemoteFile file;
@@ -136,6 +140,33 @@ class SpecPack {
 
   /// The maintenance schedule, in manual order.
   final List<ServicePage> service;
+
+  /// The shop manuals' remove & install chapters; null in catalogs built
+  /// before the pipeline listed them.
+  final List<SpecPart>? parts;
+}
+
+/// A remove & install chapter of a manual (where a component's mounting
+/// bolt torques are written), under the manual's own group for it.
+class SpecPart {
+  const SpecPart({required this.group, required this.title, required this.fileId, required this.page, required this.count});
+
+  factory SpecPart.fromJson(Map<String, dynamic> json) => SpecPart(
+        group: json['group'] as String? ?? '',
+        title: json['title'] as String,
+        fileId: json['file'] as String,
+        page: json['page'] as int,
+        count: json['count'] as int? ?? 1,
+      );
+
+  /// "Undercarriage and frame"; empty when the chapter has no parent bookmark.
+  final String group;
+
+  /// "Track roller".
+  final String title;
+  final String fileId;
+  final int page;
+  final int count;
 }
 
 /// A maintenance schedule page in spek.pdf: the schedule chart ([hours] 0),

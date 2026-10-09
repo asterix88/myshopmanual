@@ -35,7 +35,11 @@ catalog's unit "spec" lists those pages). The bookmark titles are matched
 with SPEC_SECTIONS below. Service items without bookmarks of their own are
 read from the upper-case lines on the interval's pages. A spek-hapus.txt in
 the unit folder lists titles (or parts of titles, one per line) to leave
-out of that unit's Spek and Servis tabs.
+out of that unit's Spek and Servis tabs. The Torsi tab also lists the
+shop manuals' remove & install chapters (track roller, engine, ...) under
+the manual's own groups; those open in the manual itself. A line hides only a title written
+exactly the same (upper/lower case and extra spaces do not matter); end a
+line with * to hide every title starting with it.
 
 PDFs with little or no text layer (scans, wiring and hydraulic diagrams)
 are shipped too, marked as not searchable: they open and keep their
@@ -78,6 +82,16 @@ SPEC_SECTIONS = [
     ),
 ]
 SPEC_SECTION_TITLES = ["Torsi baut", "Kapasitas oli & cairan", "Nilai standar & tekanan"]
+
+# Remove & install chapters of a shop manual: their pages carry the mounting
+# bolt torques of that component. "Removal and installation of track roller
+# assembly" (Komatsu) or "Track Roller - Remove and Install" (CAT).
+PART_TITLE = [
+    re.compile(r"^(?:removal\s+(?:and|&)\s+installation|remove\s+(?:and|&)\s+install|removing\s+and\s+installing)"
+               r"\s+(?:of\s+)?(?:the\s+)?(?P<name>.+)$", re.I),
+    re.compile(r"^(?P<name>.+?)\s*[-–]\s*remove\s+(?:and|&)\s+install\b.*$", re.I),
+]
+MAX_PART_PAGES = 12
 # Servis tab: bookmarks of the maintenance schedule. "EVERY 500 HOURS
 # SERVICE" opens a tab HM 500 listing the items under it; the schedule chart
 # itself shows on every tab.
@@ -205,6 +219,40 @@ def spec_ranges(toc: list[list], page_count: int) -> list[tuple[int, str, int, i
     return found
 
 
+def _part_name(title: str) -> str | None:
+    """'Removal and installation of track roller assembly' -> 'Track roller'."""
+    for pattern in PART_TITLE:
+        m = pattern.match(title)
+        if m:
+            name = re.sub(r"\s+(assembly|assy)$", "", m.group("name").strip(" .:"), flags=re.I).strip()
+            return name[:1].upper() + name[1:] if name else None
+    return None
+
+
+def part_ranges(toc: list[list], page_count: int) -> list[dict]:
+    """The remove & install chapters in [toc], grouped the way the manual
+    groups them (the title of the bookmark one level up): one entry per
+    group and component, in manual order."""
+    found, seen = [], set()
+    for i, (level, title, page) in enumerate(toc):
+        title = " ".join(title.split())
+        name = _part_name(title)
+        if not name or page < 1 or page > page_count:
+            continue
+        group = ""
+        for up_level, up_title, _ in reversed(toc[:i]):
+            if up_level < level:
+                # "50 Undercarriage and frame" -> "Undercarriage and frame"
+                group = re.sub(r"^[\d\s.\-]+(?=[A-Za-z])", "", " ".join(up_title.split()))
+                break
+        if (group.lower(), name.lower()) in seen:
+            continue
+        seen.add((group.lower(), name.lower()))
+        last = min(_section_end(toc, i, page_count), page + MAX_PART_PAGES - 1)
+        found.append({"group": group, "name": name, "title": title, "page": page, "last": max(page, last)})
+    return found
+
+
 def _section_end(toc: list[list], i: int, page_count: int) -> int:
     """Last page of bookmark i: the page before the next bookmark at its
     level or above (or the end of the PDF)."""
@@ -310,7 +358,8 @@ def service_ranges(toc: list[list], page_count: int, texts: list[str] | None = N
 
 
 def read_excludes(unit_dir: Path) -> list[str]:
-    """Lower-case title parts from the unit's spek-hapus.txt (# = comment)."""
+    """Lower-case titles from the unit's spek-hapus.txt (# = comment); a
+    trailing * makes the line a title prefix."""
     path = unit_dir / SPEC_EXCLUDE_FILE
     if not path.exists():
         return []
@@ -319,19 +368,35 @@ def read_excludes(unit_dir: Path) -> list[str]:
 
 
 def build_spec_pack(sources: list[tuple], target: Path,
-                    exclude: list[str] | None = None) -> tuple[list[dict], list[dict]]:
+                    exclude: list[str] | None = None) -> tuple[list[dict], list[dict], list[dict]]:
     """Copies the spec and maintenance schedule pages of [sources] (file id,
     PDF, bookmarks, page count, optional page texts) into [target] and
-    returns where each one landed: (spec pages, service pages). Titles
-    containing any of [exclude] (lower case) are left out. Nothing is
-    written when no manual bookmarks either."""
+    returns where each one landed: (spec pages, service pages, parts). The
+    parts (remove & install chapters) stay in their manual and are not
+    copied. Titles
+    equal to one of [exclude] (lower case; "x*" = starting with x) are left
+    out. Nothing is written when no manual bookmarks either."""
+    used = set()
+
+    def hides(rule: str, low: str) -> bool:
+        if rule.endswith("*"):
+            return low.startswith(rule[:-1].rstrip())
+        return low == rule
+
     def kept(title: str) -> bool:
         low = " ".join(title.split()).lower()
-        return not any(x in low for x in exclude or [])
+        hit = [x for x in exclude or [] if hides(x, low)]
+        used.update(hit)
+        return not hit
 
-    entries, service, runs = [], [], []
+    entries, service, runs, parts = [], [], [], []
     for file_id, pdf, toc, page_count, *rest in sources:
         texts = rest[0] if rest else None
+        for p in part_ranges(toc, page_count):
+            # A line may name the component, its bookmark, or a whole group.
+            if kept(p["name"]) and kept(p["title"]) and (not p["group"] or kept(p["group"])):
+                parts.append({"group": p["group"], "title": p["name"], "file": file_id,
+                              "page": p["page"], "count": p["last"] - p["page"] + 1})
         ranges = [r for r in spec_ranges(toc, page_count) if kept(r[1])]
         svc = [e for e in service_ranges(toc, page_count, texts) if kept(e["title"])]
         if not ranges and not svc:
@@ -340,10 +405,13 @@ def build_spec_pack(sources: list[tuple], target: Path,
         pages = sorted({n for _, _, first, last in ranges for n in range(first, last + 1)}
                        | {n for e in svc for n in range(e["page"], e["last"] + 1)})
         runs.append((file_id, pdf, pages, ranges, svc))
+    for rule in exclude or []:
+        if rule not in used:
+            print(f"  {SPEC_EXCLUDE_FILE}: tidak ada judul yang persis '{rule}'")
     if not runs:
         if target.exists():
             target.unlink()
-        return [], []
+        return [], [], parts
 
     pack = pymupdf.open()
     at = {}
@@ -392,7 +460,7 @@ def build_spec_pack(sources: list[tuple], target: Path,
     pack.set_toc(toc)
     pack.save(target, garbage=4, deflate=True)
     pack.close()
-    return entries, service
+    return entries, service, parts
 
 
 def file_entry(path: Path, rel: str) -> dict:
@@ -466,12 +534,13 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
     excludes = read_excludes(unit_dir)
     if excludes:
         print(f"  {SPEC_EXCLUDE_FILE}: {len(excludes)} judul tidak dimasukkan ke Spek/Servis")
-    spec_pages, service_pages = build_spec_pack(spec_sources, spec_path, excludes)
+    spec_pages, service_pages, parts = build_spec_pack(spec_sources, spec_path, excludes)
     has_spec = bool(spec_pages or service_pages)
     if has_spec:
-        spec = {**file_entry(spec_path, f"units/{unit_id}/spek.pdf"), "pages": spec_pages, "service": service_pages}
+        spec = {**file_entry(spec_path, f"units/{unit_id}/spek.pdf"), "pages": spec_pages, "service": service_pages,
+                "parts": parts}
         intervals = sorted({e["hours"] for e in service_pages if e["hours"]})
-        print(f"  spek.pdf      {len(spec_pages):4} spec pages, service HM {intervals or '-'}, "
+        print(f"  spek.pdf      {len(spec_pages):4} spec pages, {len(parts)} remove & install, service HM {intervals or '-'}, "
               f"{spec['size'] / 1e6:.1f} MB")
     else:
         print("  spek.pdf      no spec or maintenance bookmarks found")

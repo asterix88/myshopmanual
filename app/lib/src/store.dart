@@ -135,7 +135,7 @@ class AppStore extends ChangeNotifier {
     }
   }
 
-  /// Questions to Nyel AI per day on this phone, to keep the AI bill small.
+  /// Questions to nyel AI per day on this phone, to keep the AI bill small.
   static const aiDailyLimit = 10;
 
   /// The admin's phone (unlocked with the admin code) has no daily limit.
@@ -179,7 +179,7 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Where the Nyel AI conversation is kept between app starts.
+  /// Where the nyel AI conversation is kept between app starts.
   String get chatHistoryPath => p.join(_root.path, 'chat.json');
 
   /// Cetok Online's parts stock (its own server), opened from the Home tab.
@@ -557,7 +557,7 @@ class AppStore extends ChangeNotifier {
 
   /// Index files of every downloaded, searchable manual: {fileKey: path}.
   /// Whether a successful [refresh] fetches the search index of every manual
-  /// in the background, so Nyel AI never waits for one. The app turns it on;
+  /// in the background, so nyel AI never waits for one. The app turns it on;
   /// tests leave it off.
   bool autoFetchAiIndexes = false;
 
@@ -566,7 +566,7 @@ class AppStore extends ChangeNotifier {
   AiIndexProgress? get aiIndexProgress => _aiIndexRun;
   AiIndexProgress? _aiIndexRun;
 
-  /// Fetches every missing search index for Nyel AI (indexes only, never
+  /// Fetches every missing search index for nyel AI (indexes only, never
   /// PDFs), a few at a time, and deletes cached indexes of manuals no longer
   /// on the server. A failed index is skipped; after several failures in a
   /// row (offline) it stops and tries again on the next refresh.
@@ -623,12 +623,12 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// A question waiting to be put in Nyel AI's input box (from "Tanya Nyel
+  /// A question waiting to be put in nyel AI's input box (from "Tanya nyel
   /// AI" on a page); the chat takes it with [takeAiQuestion].
   String? get pendingAiQuestion => _pendingAiQuestion;
   String? _pendingAiQuestion;
 
-  /// Counts [askAi] calls, so the tab bar switches to Nyel AI once per ask.
+  /// Counts [askAi] calls, so the tab bar switches to nyel AI once per ask.
   int aiAsks = 0;
 
   void askAi(String question) {
@@ -695,11 +695,11 @@ class AppStore extends ChangeNotifier {
   }
 
   /// Where the search index of a manual that is not downloaded is kept for
-  /// Nyel AI; the version is in the name so an update fetches it afresh.
+  /// nyel AI; the version is in the name so an update fetches it afresh.
   String cachedIndexPath(ManualFile f) =>
       p.join(_root.path, 'index-cache', f.unitId, '${f.id}-${f.index.sha256.substring(0, 12)}.sqlite');
 
-  /// Search indexes for Nyel AI over every manual on the server, by file
+  /// Search indexes for nyel AI over every manual on the server, by file
   /// key: a downloaded manual uses its own index; for any other only the small
   /// index is fetched (not the PDF) and kept. [where] narrows the manuals, so
   /// a question about one unit only fetches that unit's indexes. A manual
@@ -772,7 +772,7 @@ class AppStore extends ChangeNotifier {
 
   /// Search indexes for the Cari tab, by file key: every manual whose index
   /// is on the phone, downloaded or not (the small indexes of the others are
-  /// fetched in the background for Nyel AI).
+  /// fetched in the background for nyel AI).
   Map<String, String> searchableIndexes({DocType? type}) => {
         for (final file in catalog.files.followedBy(local.values.map((m) => m.file)))
           if (file.searchable && (type == null || file.type == type))
