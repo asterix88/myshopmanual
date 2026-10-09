@@ -93,10 +93,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Standard tightening torque table'), findsOneWidget);
-    expect(find.byType(GroupCard), findsNWidgets(3));
-    // Standard tightening torque comes first as its own group, open; the
-    // shop manual's groups start closed.
-    expect(find.text('Standard tightening torque'), findsOneWidget);
+    expect(find.byType(GroupCard), findsNWidgets(2));
+    // The standard torque table is a card of its own above the groups,
+    // which start closed.
+    expect(find.byType(ItemCard), findsOneWidget);
+    expect(find.text('Standard tightening torque'), findsNothing);
     expect(find.text('OMM Test Unit · hlm 40'), findsOneWidget);
     expect(find.text('Track roller'), findsNothing);
     expect(find.text('Engine'), findsNothing);

@@ -7,6 +7,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import 'shell.dart';
+import '../widgets/excavator_loader.dart';
 import '../widgets/machine_icon.dart';
 import '../widgets/unit_icon.dart';
 import 'cetok_screen.dart';
@@ -369,13 +370,16 @@ class _MachineFolders extends StatelessWidget {
                 store: store,
               ),
             ),
-          if (units.isEmpty)
+          if (units.isEmpty && store.online == null)
+            const Padding(
+              padding: EdgeInsets.only(top: 24),
+              child: ExcavatorLoader(label: 'Memuat daftar unit…'),
+            )
+          else if (units.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 16),
               child: Text(
-                store.online == null
-                    ? 'Memuat daftar unit…'
-                    : store.online == false
+                store.online == false
                         ? 'Sambungkan HP ke internet sekali untuk mengambil daftar manual.'
                         : 'Belum ada manual di server.',
                 textAlign: TextAlign.center,

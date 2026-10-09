@@ -6,6 +6,7 @@ import '../models.dart';
 import '../search.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/excavator_loader.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
 
@@ -302,9 +303,12 @@ class _StockTabState extends State<_StockTab> with AutomaticKeepAliveClientMixin
                 ? ListView(
                     padding: const EdgeInsets.all(32),
                     children: [
+                      if (cetok.parts.isEmpty && cetok.loading)
+                        const ExcavatorLoader(label: 'Memuat stok…')
+                      else
                       Text(
                         cetok.parts.isEmpty
-                            ? (cetok.loading ? 'Memuat stok…' : 'Belum ada data stok.')
+                            ? 'Belum ada data stok.'
                             : query.isNotEmpty
                                 ? 'Tidak ada part number atau nama yang cocok dengan "$query".'
                                 : 'Tidak ada part dengan filter ini.',
