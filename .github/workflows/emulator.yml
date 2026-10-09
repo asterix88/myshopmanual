@@ -12,7 +12,7 @@ on:
 jobs:
   emulator:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -40,20 +40,24 @@ jobs:
           flutter pub get
           python3 integration_test/make_fixtures.py
 
-      - name: Run tests on an Android 14 emulator
+      - name: Run tests on an Android 13 emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 33
           target: google_apis
           arch: x86_64
           disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           working-directory: app
-          # On failure, keep a screenshot of the emulator screen.
-          script: flutter test integration_test -d emulator-5554 || (adb exec-out screencap -p > ../failure.png; exit 1)
+          # A hang fails after 15 minutes instead of using up the job. On
+          # failure, keep a screenshot and the phone's log.
+          script: timeout 900 flutter test integration_test -d emulator-5554 -r expanded || (adb exec-out screencap -p > ../failure.png; adb logcat -d -t 600 > ../logcat.txt; exit 1)
 
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: emulator-failure
-          path: failure.png
+          path: |
+            failure.png
+            logcat.txt
           if-no-files-found: ignore
