@@ -55,6 +55,7 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          const CetokButton(),
           IconButton(
             tooltip: updateCount == 0 ? 'Update manual' : 'Update manual, $updateCount baru',
             onPressed: () => Navigator.of(context).push(
@@ -381,9 +382,6 @@ class _MachineFolders extends StatelessWidget {
                 style: TextStyle(fontSize: 13, color: AppColors.muted),
               ),
             ),
-          const SizedBox(height: 12),
-          const _HomeLabel('CETOK ONLINE'),
-          const CetokCard(),
         ],
       ),
     );

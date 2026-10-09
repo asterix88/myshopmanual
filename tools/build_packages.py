@@ -35,7 +35,9 @@ catalog's unit "spec" lists those pages). The bookmark titles are matched
 with SPEC_SECTIONS below. Service items without bookmarks of their own are
 read from the upper-case lines on the interval's pages. A spek-hapus.txt in
 the unit folder lists titles (or parts of titles, one per line) to leave
-out of that unit's Spek and Servis tabs.
+out of that unit's Spek and Servis tabs. A line hides only a title written
+exactly the same (upper/lower case and extra spaces do not matter); end a
+line with * to hide every title starting with it.
 
 PDFs with little or no text layer (scans, wiring and hydraulic diagrams)
 are shipped too, marked as not searchable: they open and keep their
@@ -310,7 +312,8 @@ def service_ranges(toc: list[list], page_count: int, texts: list[str] | None = N
 
 
 def read_excludes(unit_dir: Path) -> list[str]:
-    """Lower-case title parts from the unit's spek-hapus.txt (# = comment)."""
+    """Lower-case titles from the unit's spek-hapus.txt (# = comment); a
+    trailing * makes the line a title prefix."""
     path = unit_dir / SPEC_EXCLUDE_FILE
     if not path.exists():
         return []
@@ -323,11 +326,20 @@ def build_spec_pack(sources: list[tuple], target: Path,
     """Copies the spec and maintenance schedule pages of [sources] (file id,
     PDF, bookmarks, page count, optional page texts) into [target] and
     returns where each one landed: (spec pages, service pages). Titles
-    containing any of [exclude] (lower case) are left out. Nothing is
-    written when no manual bookmarks either."""
+    equal to one of [exclude] (lower case; "x*" = starting with x) are left
+    out. Nothing is written when no manual bookmarks either."""
+    used = set()
+
+    def hides(rule: str, low: str) -> bool:
+        if rule.endswith("*"):
+            return low.startswith(rule[:-1].rstrip())
+        return low == rule
+
     def kept(title: str) -> bool:
         low = " ".join(title.split()).lower()
-        return not any(x in low for x in exclude or [])
+        hit = [x for x in exclude or [] if hides(x, low)]
+        used.update(hit)
+        return not hit
 
     entries, service, runs = [], [], []
     for file_id, pdf, toc, page_count, *rest in sources:
@@ -340,6 +352,9 @@ def build_spec_pack(sources: list[tuple], target: Path,
         pages = sorted({n for _, _, first, last in ranges for n in range(first, last + 1)}
                        | {n for e in svc for n in range(e["page"], e["last"] + 1)})
         runs.append((file_id, pdf, pages, ranges, svc))
+    for rule in exclude or []:
+        if rule not in used:
+            print(f"  {SPEC_EXCLUDE_FILE}: tidak ada judul yang persis '{rule}'")
     if not runs:
         if target.exists():
             target.unlink()
