@@ -1,0 +1,2848 @@
+{
+ "D155A-6": [
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Engine and cooling system",
+   "name": "Fuel supply pump",
+   "page": 998,
+   "pages": 5,
+   "torque": 40
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Engine and cooling system",
+   "name": "Fuel injector",
+   "page": 1003,
+   "pages": 6,
+   "torque": 28
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Engine and cooling system",
+   "name": "Cylinder head",
+   "page": 1009,
+   "pages": 11,
+   "torque": 48
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Engine and cooling system",
+   "name": "Radiator",
+   "page": 1020,
+   "pages": 3,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Engine and cooling system",
+   "name": "Aftercooler",
+   "page": 1023,
+   "pages": 3,
+   "torque": 6
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Engine and cooling system",
+   "name": "Engine",
+   "page": 1026,
+   "pages": 5,
+   "torque": 15
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Engine and cooling system",
+   "name": "Engine hood",
+   "page": 1031,
+   "pages": 2,
+   "torque": 1
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Engine and cooling system",
+   "name": "Engine front seal",
+   "page": 1033,
+   "pages": 4,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Engine and cooling system",
+   "name": "Engine rear seal",
+   "page": 1037,
+   "pages": 5,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Engine and cooling system",
+   "name": "Fuel tank",
+   "page": 1042,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Engine and cooling system",
+   "name": "Fan drive",
+   "page": 1044,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Engine and cooling system",
+   "name": "Fan motor",
+   "page": 1045,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Power train, Part 1",
+   "name": "Damper",
+   "page": 1048,
+   "pages": 3,
+   "torque": 8
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Power train, Part 1",
+   "name": "Power train unit",
+   "page": 1057,
+   "pages": 5,
+   "torque": 6
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Power train, Part 3",
+   "name": "Final drive",
+   "page": 1116,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Undercarriage and frame",
+   "name": "Track frame",
+   "page": 1135,
+   "pages": 3,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Undercarriage and frame",
+   "name": "Idler",
+   "page": 1138,
+   "pages": 1,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Undercarriage and frame",
+   "name": "Recoil spring",
+   "page": 1143,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Undercarriage and frame",
+   "name": "Track roller",
+   "page": 1149,
+   "pages": 1,
+   "torque": 8
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Undercarriage and frame",
+   "name": "Carrier roller",
+   "page": 1152,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Undercarriage and frame",
+   "name": "Pivot shaft",
+   "page": 1157,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Undercarriage and frame",
+   "name": "Equalizer bar",
+   "page": 1183,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Undercarriage and frame",
+   "name": "Segment teeth",
+   "page": 1187,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Hydraulic system",
+   "name": "Hydraulic tank",
+   "page": 1190,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Hydraulic system",
+   "name": "Hydraulic pump",
+   "page": 1192,
+   "pages": 3,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Work equipment",
+   "name": "Blade",
+   "page": 1206,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Cab and its attachments",
+   "name": "Operator’s cab",
+   "page": 1214,
+   "pages": 2,
+   "torque": 8
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Cab and its attachments",
+   "name": "Operator’s cab glass (Stuck glass)",
+   "page": 1216,
+   "pages": 9,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Cab and its attachments",
+   "name": "Operator’s cab and floor frame",
+   "page": 1225,
+   "pages": 6,
+   "torque": 8
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Electrical system",
+   "name": "Air conditioner unit",
+   "page": 1232,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Electrical system",
+   "name": "Engine controller",
+   "page": 1234,
+   "pages": 1,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Electrical system",
+   "name": "Power train controller",
+   "page": 1235,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D155A-6_85001_UP",
+   "group": "Electrical system",
+   "name": "KOMTRAX",
+   "page": 1235,
+   "pages": 2,
+   "torque": 2
+  }
+ ],
+ "D375-6R": [
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Fuel supply pump",
+   "page": 1260,
+   "pages": 5,
+   "torque": 34
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Fuel injector",
+   "page": 1265,
+   "pages": 5,
+   "torque": 20
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Cylinder head",
+   "page": 1270,
+   "pages": 15,
+   "torque": 86
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Radiator guard",
+   "page": 1285,
+   "pages": 5,
+   "torque": 8
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Cooling assembly (radiator, after cooler, and hydraulic oil cooler)",
+   "page": 1290,
+   "pages": 5,
+   "torque": 8
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Radiator",
+   "page": 1295,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Hydraulic oil cooler",
+   "page": 1297,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Aftercooler",
+   "page": 1298,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Engine",
+   "page": 1299,
+   "pages": 7,
+   "torque": 14
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Engine hood",
+   "page": 1306,
+   "pages": 3,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Engine front seal",
+   "page": 1309,
+   "pages": 2,
+   "torque": 6
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Engine rear seal",
+   "page": 1311,
+   "pages": 4,
+   "torque": 4
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Fan drive",
+   "page": 1315,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Fan motor",
+   "page": 1317,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Engine and cooling system",
+   "name": "Fuel tank",
+   "page": 1319,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Power train",
+   "name": "Damper",
+   "page": 1321,
+   "pages": 4,
+   "torque": 4
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Power train",
+   "name": "Power train unit",
+   "page": 1328,
+   "pages": 6,
+   "torque": 4
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Power train",
+   "name": "Power train pump and lubrication pump",
+   "page": 1401,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Power train",
+   "name": "Scavenging pump",
+   "page": 1402,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Power train",
+   "name": "Final drive",
+   "page": 1403,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Undercarriage and frame",
+   "name": "Track frame",
+   "page": 1418,
+   "pages": 5,
+   "torque": 4
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Undercarriage and frame",
+   "name": "Idler",
+   "page": 1423,
+   "pages": 1,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Undercarriage and frame",
+   "name": "Recoil spring",
+   "page": 1428,
+   "pages": 5,
+   "torque": 4
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Undercarriage and frame",
+   "name": "Track roller",
+   "page": 1435,
+   "pages": 3,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Undercarriage and frame",
+   "name": "Carrier roller",
+   "page": 1441,
+   "pages": 1,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Undercarriage and frame",
+   "name": "Bogie",
+   "page": 1446,
+   "pages": 5,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Undercarriage and frame",
+   "name": "First bogie",
+   "page": 1453,
+   "pages": 5,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Undercarriage and frame",
+   "name": "Pivot shaft",
+   "page": 1489,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Undercarriage and frame",
+   "name": "Equalizer bar",
+   "page": 1490,
+   "pages": 4,
+   "torque": 6
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Undercarriage and frame",
+   "name": "Segment tooth",
+   "page": 1496,
+   "pages": 1,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Hydraulic system",
+   "name": "Hydraulic tank",
+   "page": 1497,
+   "pages": 3,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Hydraulic system",
+   "name": "Work equipment pump",
+   "page": 1500,
+   "pages": 4,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Hydraulic system",
+   "name": "Fan pump",
+   "page": 1504,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Hydraulic system",
+   "name": "Control valve",
+   "page": 1506,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Work equipment",
+   "name": "Blade",
+   "page": 1529,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Cab and its attachments",
+   "name": "ROPS guard",
+   "page": 1538,
+   "pages": 1,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Cab and its attachments",
+   "name": "Operator's cab",
+   "page": 1539,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Cab and its attachments",
+   "name": "Floor frame",
+   "page": 1543,
+   "pages": 5,
+   "torque": 16
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Cab and its attachments",
+   "name": "Air conditioner unit",
+   "page": 1548,
+   "pages": 6,
+   "torque": 12
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Electrical system",
+   "name": "Transmission controller assembly and steering controller",
+   "page": 1554,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Electrical system",
+   "name": "Engine controller",
+   "page": 1555,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Electrical system",
+   "name": "VHMS controller",
+   "page": 1557,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D375A-6R_65001UP",
+   "group": "Electrical system",
+   "name": "Machine monitor",
+   "page": 1558,
+   "pages": 2,
+   "torque": 0
+  }
+ ],
+ "D85E-SS-2A": [
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Starting motor",
+   "page": 467,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Alternator",
+   "page": 468,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Alterator",
+   "page": 469,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Engine oil cooler core",
+   "page": 470,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Fuel injection pump",
+   "page": 471,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Water pump",
+   "page": 473,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Turbocharger",
+   "page": 475,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Nozzle holder",
+   "page": 476,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Thermostat",
+   "page": 477,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Cylinder head",
+   "page": 479,
+   "pages": 10,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Engine front seal",
+   "page": 489,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Engine rear seal",
+   "page": 491,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Air compressor",
+   "page": 495,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Air condenser",
+   "page": 496,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Fuel tank",
+   "page": 497,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Radiator",
+   "page": 501,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Hydraulic cooler",
+   "page": 503,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Engine (cab specification)",
+   "page": 504,
+   "pages": 7,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Engine (canopy specification)",
+   "page": 511,
+   "pages": 6,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Damper",
+   "page": 517,
+   "pages": 5,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Power train unit",
+   "page": 522,
+   "pages": 12,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Torque converter valve",
+   "page": 628,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Transmission control valve",
+   "page": 630,
+   "pages": 6,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Steering control valve",
+   "page": 636,
+   "pages": 5,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Reducing valve",
+   "page": 641,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Scavenging pump",
+   "page": 643,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Power tarin pump",
+   "page": 644,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Final drive",
+   "page": 645,
+   "pages": 11,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Track frame",
+   "page": 656,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Recoil spring",
+   "page": 658,
+   "pages": 8,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Idler",
+   "page": 666,
+   "pages": 8,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Track roller",
+   "page": 674,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Carrier roller",
+   "page": 678,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Track shoe",
+   "page": 682,
+   "pages": 34,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Pivot shaft",
+   "page": 716,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Equalizer bar",
+   "page": 717,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Equalizer bar side bushing",
+   "page": 719,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Segment teeth",
+   "page": 720,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Work equipment pump",
+   "page": 721,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Ppc pump",
+   "page": 722,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Main control valve",
+   "page": 724,
+   "pages": 5,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Main relief valve",
+   "page": 731,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Ppc valve",
+   "page": 732,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Ppc charge relief valve",
+   "page": 736,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Suction valve",
+   "page": 738,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Blade lift cylinder (angledozer)",
+   "page": 740,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Blade lift cylinder (straight tilt dozer)",
+   "page": 741,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Blade tilt cylinder",
+   "page": 742,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Blade (angledozer)",
+   "page": 748,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Blade (straight tilt dozer)",
+   "page": 750,
+   "pages": 6,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Rops guard",
+   "page": 756,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Cab",
+   "page": 757,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Canopy",
+   "page": 759,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Dashboard (gauge type panel)",
+   "page": 759,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Dashboard (monitor type panel)",
+   "page": 760,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Panel (gauge type panel)",
+   "page": 761,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Panel (monitor type panel)",
+   "page": 762,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Floor frame (canoy specification)",
+   "page": 763,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "Floor frame (cab specification)",
+   "page": 767,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "4-2 towing winch assembly",
+   "page": 861,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "4-3 towing winch pump assembly",
+   "page": 862,
+   "pages": 1,
+   "torque": 0
+  },
+  {
+   "file": "Shop_Manual_D85E-SS-2A_3001_UP",
+   "group": "DISASSEMBLY AND ASSEMBLY",
+   "name": "4-4 towing winch control valve assembly",
+   "page": 863,
+   "pages": 5,
+   "torque": 0
+  }
+ ],
+ "PC1250SP-11": [
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "SUPPLY PUMP",
+   "page": 1606,
+   "pages": 25,
+   "torque": 60
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "INJECTOR",
+   "page": 1631,
+   "pages": 40,
+   "torque": 83
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "CYLINDER HEAD",
+   "page": 1679,
+   "pages": 40,
+   "torque": 12
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "STARTING MOTOR",
+   "page": 1761,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ALTERNATOR BELT",
+   "page": 1763,
+   "pages": 3,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "RADIATOR",
+   "page": 1766,
+   "pages": 9,
+   "torque": 4
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "HYDRAULIC OIL COOLER",
+   "page": 1775,
+   "pages": 11,
+   "torque": 8
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AFTERCOOLER",
+   "page": 1786,
+   "pages": 12,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "COOLING FAN MOTOR",
+   "page": 1798,
+   "pages": 25,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE, PTO, AND HYDRAULIC PUMP",
+   "page": 1823,
+   "pages": 33,
+   "torque": 12
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE FRONT OIL SEAL",
+   "page": 1856,
+   "pages": 7,
+   "torque": 6
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE REAR OIL SEAL",
+   "page": 1863,
+   "pages": 5,
+   "torque": 4
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "FUEL COOLER",
+   "page": 1868,
+   "pages": 3,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE HOOD",
+   "page": 1871,
+   "pages": 11,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "FUEL TANK",
+   "page": 1882,
+   "pages": 10,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "MUFFLER",
+   "page": 1892,
+   "pages": 9,
+   "torque": 8
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "BELLOWS PIPE",
+   "page": 1901,
+   "pages": 8,
+   "torque": 6
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AIR CLEANER",
+   "page": 1909,
+   "pages": 2,
+   "torque": 4
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AIR CONDITIONER COMPRESSOR",
+   "page": 1911,
+   "pages": 3,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AIR CONDITIONER CONDENSER",
+   "page": 1914,
+   "pages": 4,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "POWER TRAIN",
+   "name": "PTO",
+   "page": 1924,
+   "pages": 5,
+   "torque": 14
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "POWER TRAIN",
+   "name": "TRAVEL MOTOR AND FINAL DRIVE",
+   "page": 1929,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "POWER TRAIN",
+   "name": "SWING MOTOR AND SWING MACHINERY",
+   "page": 1944,
+   "pages": 5,
+   "torque": 6
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "POWER TRAIN",
+   "name": "SWING CIRCLE",
+   "page": 1959,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "IDLER",
+   "page": 1961,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "TRACK ROLLER",
+   "page": 1965,
+   "pages": 3,
+   "torque": 4
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "CARRIER ROLLER",
+   "page": 1968,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "REVOLVING FRAME",
+   "page": 1993,
+   "pages": 3,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "COUNTERWEIGHT",
+   "page": 1996,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "CENTER SWIVEL JOINT",
+   "page": 2000,
+   "pages": 3,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "HYDRAULIC TANK",
+   "page": 2006,
+   "pages": 9,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "HYDRAULIC PUMP",
+   "page": 2015,
+   "pages": 21,
+   "torque": 4
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "CONTROL VALVE",
+   "page": 2036,
+   "pages": 12,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "SWING MOTOR",
+   "page": 2048,
+   "pages": 3,
+   "torque": 4
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "WORK EQUIPMENT",
+   "name": "BUCKET CYLINDER",
+   "page": 2058,
+   "pages": 3,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "WORK EQUIPMENT",
+   "name": "BUCKET CYLINDER ASSEMBLY (LOADING SHOVEL SPECIFICATION)",
+   "page": 2061,
+   "pages": 3,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "WORK EQUIPMENT",
+   "name": "ARM CYLINDER",
+   "page": 2064,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "WORK EQUIPMENT",
+   "name": "ARM CYLINDER ASSEMBLY (LOADING SHOVEL SPECIFICATION)",
+   "page": 2068,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "WORK EQUIPMENT",
+   "name": "BOOM CYLINDER",
+   "page": 2072,
+   "pages": 3,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "WORK EQUIPMENT",
+   "name": "BOOM CYLINDER ASSEMBLY (LOADING SHOVEL SPECIFICATION)",
+   "page": 2075,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "WORK EQUIPMENT",
+   "name": "BUCKET",
+   "page": 2079,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "WORK EQUIPMENT",
+   "name": "BUCKET ASSEMBLY (LOADING SHOVEL SPECIFICATION)",
+   "page": 2083,
+   "pages": 3,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "WORK EQUIPMENT",
+   "name": "ARM",
+   "page": 2086,
+   "pages": 3,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "WORK EQUIPMENT",
+   "name": "ARM ASSEMBLY (LOADING SHOVEL SPECIFICATION)",
+   "page": 2089,
+   "pages": 3,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "WORK EQUIPMENT",
+   "name": "BOOM",
+   "page": 2092,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "WORK EQUIPMENT",
+   "name": "BOOM ASSEMBLY (LOADING SHOVEL SPECIFICATION)",
+   "page": 2096,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "TOP GUARD",
+   "page": 2119,
+   "pages": 5,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "OPERATOR'S CAB",
+   "page": 2124,
+   "pages": 19,
+   "torque": 8
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "OPERATOR CAB GLASS (ADHERED GLASS)",
+   "page": 2143,
+   "pages": 12,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "FRONT WINDOW",
+   "page": 2155,
+   "pages": 9,
+   "torque": 4
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "FLOOR FRAME",
+   "page": 2164,
+   "pages": 13,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "AIR CONDITIONER UNIT",
+   "page": 2177,
+   "pages": 12,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "OPERATOR'S SEAT",
+   "page": 2189,
+   "pages": 5,
+   "torque": 12
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "SEAT BELT",
+   "page": 2194,
+   "pages": 2,
+   "torque": 4
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "FRONT WIPER",
+   "page": 2196,
+   "pages": 14,
+   "torque": 4
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "ENGINE CONTROLLER",
+   "page": 2210,
+   "pages": 5,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "PUMP CONTROLLER",
+   "page": 2215,
+   "pages": 5,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "KomVision CONTROLLER",
+   "page": 2220,
+   "pages": 2,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "MACHINE MONITOR",
+   "page": 2222,
+   "pages": 6,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "CRANKCASE PRESSURE SENSOR",
+   "page": 2228,
+   "pages": 3,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "KomVision CAMERA",
+   "page": 2231,
+   "pages": 3,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "KOMTRAX TERMINAL",
+   "page": 2234,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "KOMTRAX Plus CONTROLLER",
+   "page": 2238,
+   "pages": 4,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC1250-11_50090",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "WIRELESS LAN UNIT",
+   "page": 2242,
+   "pages": 5,
+   "torque": 4
+  }
+ ],
+ "PC2000-11R": [
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "SUPPLY PUMP ASSEMBLY (RIGHT BANK)",
+   "page": 1942,
+   "pages": 34,
+   "torque": 126
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "SUPPLY PUMP ASSEMBLY (LEFT BANK)",
+   "page": 1976,
+   "pages": 24,
+   "torque": 96
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "INJECTOR ASSEMBLY (RIGHT BANK)",
+   "page": 2000,
+   "pages": 32,
+   "torque": 86
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "INJECTOR ASSEMBLY (LEFT BANK)",
+   "page": 2032,
+   "pages": 32,
+   "torque": 90
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "CYLINDER HEAD ASSEMBLY (RIGHT BANK)",
+   "page": 2064,
+   "pages": 40,
+   "torque": 16
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "CYLINDER HEAD ASSEMBLY (LEFT BANK)",
+   "page": 2137,
+   "pages": 40,
+   "torque": 6
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "STARTING MOTOR",
+   "page": 2222,
+   "pages": 6,
+   "torque": 12
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ALTERNATOR BELT",
+   "page": 2228,
+   "pages": 6,
+   "torque": 26
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ALTERNATOR",
+   "page": 2234,
+   "pages": 10,
+   "torque": 40
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "RADIATOR",
+   "page": 2244,
+   "pages": 11,
+   "torque": 24
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "HYDRAULIC OIL COOLER",
+   "page": 2255,
+   "pages": 7,
+   "torque": 12
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AFTERCOOLER",
+   "page": 2262,
+   "pages": 11,
+   "torque": 26
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "COOLING FAN MOTOR",
+   "page": 2273,
+   "pages": 40,
+   "torque": 88
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "POWER MODULE PACKAGING",
+   "page": 2324,
+   "pages": 30,
+   "torque": 82
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE, PTO, AND HYDRAULIC PUMP",
+   "page": 2354,
+   "pages": 40,
+   "torque": 48
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE FRONT OIL SEAL",
+   "page": 2422,
+   "pages": 16,
+   "torque": 46
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE REAR OIL SEAL",
+   "page": 2438,
+   "pages": 6,
+   "torque": 6
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "FUEL COOLER",
+   "page": 2444,
+   "pages": 4,
+   "torque": 8
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE HOOD",
+   "page": 2448,
+   "pages": 11,
+   "torque": 28
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "FUEL TANK",
+   "page": 2459,
+   "pages": 7,
+   "torque": 12
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "MUFFLER",
+   "page": 2466,
+   "pages": 19,
+   "torque": 46
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "BELLOWS PIPE",
+   "page": 2485,
+   "pages": 3,
+   "torque": 6
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "TURBOCHARGER ASSEMBLY (RIGHT BANK)",
+   "page": 2488,
+   "pages": 25,
+   "torque": 80
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "TURBOCHARGER ASSEMBLY (LEFT BANK)",
+   "page": 2513,
+   "pages": 27,
+   "torque": 82
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AIR CLEANER",
+   "page": 2540,
+   "pages": 7,
+   "torque": 20
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AIR CONDITIONER COMPRESSOR",
+   "page": 2547,
+   "pages": 6,
+   "torque": 16
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AIR CONDITIONER CONDENSER",
+   "page": 2553,
+   "pages": 6,
+   "torque": 16
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "POWER TRAIN",
+   "name": "PTO",
+   "page": 2568,
+   "pages": 2,
+   "torque": 6
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "POWER TRAIN",
+   "name": "TRAVEL MOTOR AND FINAL DRIVE",
+   "page": 2570,
+   "pages": 8,
+   "torque": 18
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "POWER TRAIN",
+   "name": "SWING MOTOR AND SWING MACHINERY",
+   "page": 2594,
+   "pages": 15,
+   "torque": 68
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "POWER TRAIN",
+   "name": "SWING CIRCLE",
+   "page": 2622,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "IDLER",
+   "page": 2624,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "TRACK ROLLER",
+   "page": 2626,
+   "pages": 3,
+   "torque": 4
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "CARRIER ROLLER",
+   "page": 2629,
+   "pages": 3,
+   "torque": 4
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "REVOLVING FRAME",
+   "page": 2650,
+   "pages": 8,
+   "torque": 30
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "COUNTERWEIGHT",
+   "page": 2658,
+   "pages": 5,
+   "torque": 20
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "CENTER SWIVEL JOINT",
+   "page": 2663,
+   "pages": 6,
+   "torque": 36
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "HYDRAULIC TANK",
+   "page": 2672,
+   "pages": 16,
+   "torque": 50
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "HYDRAULIC PUMP",
+   "page": 2688,
+   "pages": 40,
+   "torque": 168
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "CONTROL VALVE",
+   "page": 2728,
+   "pages": 30,
+   "torque": 162
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "SWING MOTOR",
+   "page": 2758,
+   "pages": 12,
+   "torque": 72
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "WORK EQUIPMENT",
+   "name": "BUCKET CYLINDER",
+   "page": 2778,
+   "pages": 5,
+   "torque": 12
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "WORK EQUIPMENT",
+   "name": "ARM CYLINDER",
+   "page": 2783,
+   "pages": 5,
+   "torque": 12
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "WORK EQUIPMENT",
+   "name": "BOOM CYLINDER",
+   "page": 2788,
+   "pages": 6,
+   "torque": 12
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "WORK EQUIPMENT",
+   "name": "BUCKET",
+   "page": 2794,
+   "pages": 5,
+   "torque": 12
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "WORK EQUIPMENT",
+   "name": "ARM",
+   "page": 2799,
+   "pages": 11,
+   "torque": 22
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "WORK EQUIPMENT",
+   "name": "BOOM",
+   "page": 2810,
+   "pages": 7,
+   "torque": 12
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "OPERATOR'S CAB",
+   "page": 2826,
+   "pages": 15,
+   "torque": 38
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "CAB BASE",
+   "page": 2841,
+   "pages": 9,
+   "torque": 14
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "OPERATOR CAB GLASS (ADHERED GLASS)",
+   "page": 2850,
+   "pages": 9,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "OPERATOR'S CAB GLASS (ASSEMBLING TYPE)",
+   "page": 2859,
+   "pages": 4,
+   "torque": 6
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "AIR CONDITIONER UNIT",
+   "page": 2863,
+   "pages": 28,
+   "torque": 58
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "OPERATOR'S SEAT",
+   "page": 2891,
+   "pages": 6,
+   "torque": 6
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "SEAT BELT",
+   "page": 2897,
+   "pages": 3,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "FRONT WIPER",
+   "page": 2900,
+   "pages": 8,
+   "torque": 22
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "ENGINE CONTROLLER ASSEMBLY (RIGHT BANK)",
+   "page": 2908,
+   "pages": 4,
+   "torque": 10
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "ENGINE CONTROLLER ASSEMBLY (LEFT BANK)",
+   "page": 2912,
+   "pages": 4,
+   "torque": 10
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "PUMP CONTROLLER",
+   "page": 2916,
+   "pages": 3,
+   "torque": 4
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "KomVision CONTROLLER",
+   "page": 2919,
+   "pages": 3,
+   "torque": 8
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "MACHINE MONITOR",
+   "page": 2922,
+   "pages": 7,
+   "torque": 8
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "MASS AIR FLOW AND TEMPERATURE SENSOR",
+   "page": 2929,
+   "pages": 2,
+   "torque": 6
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "CRANKCASE PRESSURE SENSOR",
+   "page": 2931,
+   "pages": 3,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "KomVision CAMERA",
+   "page": 2934,
+   "pages": 8,
+   "torque": 16
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "KOMTRAX Plus CONTROLLER",
+   "page": 2942,
+   "pages": 3,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC2000-11R_SN30019_UP",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "WIRELESS LAN UNIT",
+   "page": 2945,
+   "pages": 4,
+   "torque": 6
+  }
+ ],
+ "PC210-1OMO": [
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "SUPPLY PUMP",
+   "page": 1755,
+   "pages": 9,
+   "torque": 30
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "INJECTOR",
+   "page": 1764,
+   "pages": 11,
+   "torque": 26
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "CYLINDER HEAD",
+   "page": 1775,
+   "pages": 27,
+   "torque": 96
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "STARTING MOTOR",
+   "page": 1802,
+   "pages": 5,
+   "torque": 18
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ALTERNATOR BELT",
+   "page": 1807,
+   "pages": 7,
+   "torque": 21
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "RADIATOR",
+   "page": 1814,
+   "pages": 6,
+   "torque": 14
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "HYDRAULIC COOLER",
+   "page": 1820,
+   "pages": 7,
+   "torque": 19
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AFTER COOLER",
+   "page": 1827,
+   "pages": 6,
+   "torque": 15
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "FAN CLUTCH",
+   "page": 1833,
+   "pages": 11,
+   "torque": 31
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "FAN",
+   "page": 1844,
+   "pages": 2,
+   "torque": 3
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE AND MAIN PUMP",
+   "page": 1846,
+   "pages": 34,
+   "torque": 110
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE FRONT OIL SEAL",
+   "page": 1880,
+   "pages": 6,
+   "torque": 10
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE REAR OIL SEAL",
+   "page": 1886,
+   "pages": 6,
+   "torque": 5
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "FUEL COOLER",
+   "page": 1892,
+   "pages": 3,
+   "torque": 7
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE HOOD",
+   "page": 1895,
+   "pages": 4,
+   "torque": 5
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "FUEL TANK",
+   "page": 1899,
+   "pages": 11,
+   "torque": 17
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AIR CLEANER",
+   "page": 1910,
+   "pages": 4,
+   "torque": 7
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AIR CONDITIONER COMPRESSOR",
+   "page": 1914,
+   "pages": 6,
+   "torque": 16
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AIR CONDITIONER CONDENSER",
+   "page": 1920,
+   "pages": 4,
+   "torque": 10
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "POWER TRAIN",
+   "name": "TRAVEL MOTOR AND FINAL DRIVE",
+   "page": 1924,
+   "pages": 5,
+   "torque": 14
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "POWER TRAIN",
+   "name": "SWIVEL MOTOR AND SWING MACHINERY",
+   "page": 1947,
+   "pages": 7,
+   "torque": 25
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "POWER TRAIN",
+   "name": "SWING CIRCLE",
+   "page": 1970,
+   "pages": 2,
+   "torque": 3
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "SPROCKET",
+   "page": 1979,
+   "pages": 2,
+   "torque": 3
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "IDLER AND IDLER CUSHION",
+   "page": 1981,
+   "pages": 3,
+   "torque": 3
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "REVOLVING FRAME",
+   "page": 2006,
+   "pages": 7,
+   "torque": 15
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "COUNTERWEIGHT",
+   "page": 2013,
+   "pages": 3,
+   "torque": 7
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "CENTER SWIVEL JOINT",
+   "page": 2016,
+   "pages": 8,
+   "torque": 17
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "HYDRAULIC TANK",
+   "page": 2028,
+   "pages": 11,
+   "torque": 41
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "MAIN PUMP",
+   "page": 2039,
+   "pages": 15,
+   "torque": 54
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "CONTROL VALVE",
+   "page": 2054,
+   "pages": 26,
+   "torque": 88
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "WORK EQUIPMENT",
+   "name": "WORK EQUIPMENT",
+   "page": 2089,
+   "pages": 7,
+   "torque": 10
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "CAB RELATED PARTS",
+   "name": "OPERATOR CAB",
+   "page": 2111,
+   "pages": 21,
+   "torque": 43
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "CAB RELATED PARTS",
+   "name": "OPERATOR CAB GLASS (ADHERED GLASS)",
+   "page": 2132,
+   "pages": 13,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "CAB RELATED PARTS",
+   "name": "FRONT WINDOW",
+   "page": 2145,
+   "pages": 10,
+   "torque": 9
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "CAB RELATED PARTS",
+   "name": "FLOOR FRAME",
+   "page": 2155,
+   "pages": 15,
+   "torque": 38
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "CAB RELATED PARTS",
+   "name": "AIR CONDITIONER UNIT",
+   "page": 2170,
+   "pages": 17,
+   "torque": 29
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "CAB RELATED PARTS",
+   "name": "OPERATOR SEAT",
+   "page": 2187,
+   "pages": 3,
+   "torque": 8
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "CAB RELATED PARTS",
+   "name": "SEATBELT",
+   "page": 2190,
+   "pages": 2,
+   "torque": 5
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "CAB RELATED PARTS",
+   "name": "FRONT WIPER",
+   "page": 2192,
+   "pages": 14,
+   "torque": 19
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "ENGINE CONTROLLER",
+   "page": 2206,
+   "pages": 4,
+   "torque": 9
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "PUMP CONTROLLER",
+   "page": 2210,
+   "pages": 6,
+   "torque": 7
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "MACHINE MONITOR",
+   "page": 2216,
+   "pages": 7,
+   "torque": 11
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "PUMP SWASH PLATE SENSOR",
+   "page": 2223,
+   "pages": 5,
+   "torque": 14
+  },
+  {
+   "file": "SM_PC210_SEN06701-C0",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "KOMTRAX TERMINAL",
+   "page": 2228,
+   "pages": 7,
+   "torque": 11
+  }
+ ],
+ "PC500LC-10": [
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "SUPPLY PUMP",
+   "page": 1809,
+   "pages": 15,
+   "torque": 49
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "INJECTOR",
+   "page": 1824,
+   "pages": 14,
+   "torque": 47
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "CYLINDER HEAD",
+   "page": 1838,
+   "pages": 24,
+   "torque": 89
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "STARTING MOTOR",
+   "page": 1862,
+   "pages": 4,
+   "torque": 9
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "METHOD FOR INSTALLING MUFFLER",
+   "name": "MUFFLER",
+   "page": 1866,
+   "pages": 2,
+   "torque": 2
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ALTERNATOR BELT",
+   "page": 1872,
+   "pages": 4,
+   "torque": 3
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "FAN BELT",
+   "page": 1876,
+   "pages": 5,
+   "torque": 5
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "RADIATOR",
+   "page": 1881,
+   "pages": 9,
+   "torque": 27
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "HYDRAULIC OIL COOLER",
+   "page": 1890,
+   "pages": 7,
+   "torque": 25
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AFTERCOOLER",
+   "page": 1897,
+   "pages": 7,
+   "torque": 20
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "FAN CLUTCH",
+   "page": 1904,
+   "pages": 10,
+   "torque": 36
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "FAN",
+   "page": 1914,
+   "pages": 1,
+   "torque": 3
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE AND MAIN PUMP",
+   "page": 1915,
+   "pages": 33,
+   "torque": 112
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE FRONT OIL SEAL",
+   "page": 1948,
+   "pages": 6,
+   "torque": 10
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE REAR OIL SEAL",
+   "page": 1954,
+   "pages": 9,
+   "torque": 12
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "ENGINE HOOD",
+   "page": 1963,
+   "pages": 8,
+   "torque": 21
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "FUEL TANK",
+   "page": 1971,
+   "pages": 10,
+   "torque": 23
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AIR CLEANER",
+   "page": 1981,
+   "pages": 4,
+   "torque": 10
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ENGINE AND COOLING SYSTEM",
+   "name": "AIR CONDITIONER CONDENSER",
+   "page": 1985,
+   "pages": 4,
+   "torque": 8
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "POWER TRAIN",
+   "name": "TRAVEL MOTOR AND FINAL DRIVE",
+   "page": 1989,
+   "pages": 5,
+   "torque": 13
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "POWER TRAIN",
+   "name": "SWING MOTOR AND SWING MACHINERY",
+   "page": 2008,
+   "pages": 5,
+   "torque": 18
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "POWER TRAIN",
+   "name": "SWING CIRCLE",
+   "page": 2026,
+   "pages": 2,
+   "torque": 3
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "SPROCKET",
+   "page": 2034,
+   "pages": 2,
+   "torque": 3
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "IDLER AND IDLER CUSHION",
+   "page": 2036,
+   "pages": 3,
+   "torque": 3
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "REVOLVING FRAME",
+   "page": 2057,
+   "pages": 7,
+   "torque": 20
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "UNDERCARRIAGE AND FRAME",
+   "name": "COUNTERWEIGHT",
+   "page": 2064,
+   "pages": 4,
+   "torque": 6
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "CENTER SWIVEL JOINT",
+   "page": 2068,
+   "pages": 7,
+   "torque": 21
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "HYDRAULIC TANK",
+   "page": 2078,
+   "pages": 13,
+   "torque": 41
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "MAIN PUMP",
+   "page": 2091,
+   "pages": 12,
+   "torque": 41
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "HYDRAULIC SYSTEM",
+   "name": "CONTROL VALVE",
+   "page": 2103,
+   "pages": 19,
+   "torque": 76
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "WORK EQUIPMENT",
+   "name": "WORK EQUIPMENT",
+   "page": 2135,
+   "pages": 9,
+   "torque": 19
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "OPERATOR'S CAB",
+   "page": 2154,
+   "pages": 16,
+   "torque": 37
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "OPERATOR CAB GLASS (ADHERED GLASS)",
+   "page": 2170,
+   "pages": 13,
+   "torque": 0
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "FRONT WINDOW",
+   "page": 2183,
+   "pages": 9,
+   "torque": 19
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "FLOOR FRAME",
+   "page": 2192,
+   "pages": 13,
+   "torque": 45
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "AIR CONDITIONER UNIT",
+   "page": 2205,
+   "pages": 13,
+   "torque": 29
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "OPERATOR'S SEAT",
+   "page": 2218,
+   "pages": 6,
+   "torque": 11
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "SEAT BELT",
+   "page": 2224,
+   "pages": 2,
+   "torque": 5
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "CAB AND ITS ATTACHMENTS",
+   "name": "FRONT WIPER",
+   "page": 2226,
+   "pages": 16,
+   "torque": 21
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "ENGINE CONTROLLER",
+   "page": 2242,
+   "pages": 3,
+   "torque": 8
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "PUMP CONTROLLER",
+   "page": 2245,
+   "pages": 6,
+   "torque": 13
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "MACHINE MONITOR",
+   "page": 2251,
+   "pages": 8,
+   "torque": 12
+  },
+  {
+   "file": "SM_PC500LC-10R",
+   "group": "ELECTRICAL SYSTEM",
+   "name": "KOMTRAX TERMINAL",
+   "page": 2259,
+   "pages": 6,
+   "torque": 11
+  }
+ ]
+}

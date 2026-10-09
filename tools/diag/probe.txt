@@ -1,71 +1,7 @@
-CAT395-Machine_System_Accumulator_-_Pilot (other): no parts
-CAT395-Machine_System_Boom_Drift_Reduction_Valve (other): no parts
-CAT395-Machine_System_Boom_Hydraulic_System (other): no parts
-CAT395-Machine_System_Boom_System (other): no parts
-CAT395-Machine_System_Bucket_System (other): no parts
-CAT395-Machine_System_Check_Valve_Load (other): no parts
-CAT395-Machine_System_Check_Valve_-_Return_Make_Up (other): no parts
-CAT395-Machine_System_Control_Valve_Straight_Travel (other): no parts
-CAT395-Machine_System_Control_Valve_-_Boom_Lowering (other): no parts
-CAT395-Machine_System_Control_Valve_-_Stick_Lowering (other): no parts
-CAT395-Machine_System_ECM (other): no parts
-CAT395-Machine_System_Electronic_Control_-_Assist_System (other): no parts
-CAT395-Machine_System_Engine_Speed_Control (other): no parts
-CAT395-Machine_System_Fan_Hydraulic_System (other): no parts
-CAT395-Machine_System_GI_-_Bucket_System (other): no parts
-CAT395-Machine_System_GI_-_Fan_Hydraulic_System (other): no parts
-CAT395-Machine_System_GI_-_Machine_System (other): no parts
-CAT395-Machine_System_GI_-_Main_Control_Valve (other): no parts
-CAT395-Machine_System_GI_-_Main_Pump_System (other): no parts
-CAT395-Machine_System_GI_-_Pilot_Hydraulic_System (other): no parts
-CAT395-Machine_System_GI_-_Return_Hydraulic_System (other): no parts
-CAT395-Machine_System_GI_-_Stick_System (other): no parts
-CAT395-Machine_System_GI_-_Swing_System (other): no parts
-CAT395-Machine_System_GI_-_Travel_System (other): no parts
-CAT395-Machine_System_Grapic_Color_Codes (other): no parts
-CAT395-Machine_System_Hydraulic_Oil_Cooler (other): no parts
-CAT395-Machine_System_Hydraulic_Tank_Filter (other): no parts
-CAT395-Machine_System_Location_of_Component_-_Machine_System (other): no parts
-CAT395-Machine_System_Main_Control_Valve (other): no parts
-CAT395-Machine_System_Main_Hydraulic_Schematic (other): no parts
-CAT395-Machine_System_Pilot_System (other): no parts
-CAT395-Machine_System_Piston_Pump_-_Pilot (other): no parts
-CAT395-Machine_System_Pump_Contro_-_Main_Pump_Regulator (other): no parts
-CAT395-Machine_System_Return_Hydraulic_System (other): no parts
-CAT395-Machine_System_Stick_Drift_Reduction_Valve (other): no parts
-CAT395-Machine_System_Stick_System (other): no parts
-CAT395-Machine_System_Swing_Drive (other): no parts
-CAT395-Machine_System_Swing_Motor (other): no parts
-CAT395-Machine_System_Swing_Parking_Brake_-_Pilot_Valve (other): no parts
-CAT395-Machine_System_Swing_Pump (other): no parts
-CAT395-Machine_System_Swing_System (other): no parts
-CAT395-Machine_System_Swivel_Joint (other): no parts
-CAT395-Machine_System_Travel_Counterbalance_Valve (other): no parts
-CAT395-Machine_System_Travel_Motor (other): no parts
-CAT395-Machine_System_Travel_Parking_Brake_Valve (other): no parts
-CAT395-Machine_System_Travel_System_-_Oil_Make_Up (other): no parts
-CAT395-Machine_System_Travel_System (other): no parts
-CAT395-System_Operation_Combined_Function_-_Manual_Relief (other): no parts
-CAT395-System_Operation_General_Information (other): no parts
-CAT395-System_Operation_Medium_Pressure_Hydraulic_System (other): no parts
-CAT395-System_Operation_Sensors (other): no parts
-CAT395-System_Operation_Switches (other): no parts
-CAT395-System_Operation_Work_Tool_Parameter_-_Control_Functions (other): no parts
-CAT395-CAT359_Hydraulic_Schematic (other): no parts
-CAT395-CAT395_Electrical_Diagram (other): no parts
-D155A-6-OMM_D155A-6_85025_UP (omm): no parts
-D155A-6-Shop_Manual_D155A-6_85001_UP: parts 33, with torque 23, without 10
-D375-6R-OMM_D375-6 (omm): no parts
-D375-6R-Shop_Manual_D375A-6R_65001UP: parts 43, with torque 27, without 16
-D85E-SS-2A-Electrical_System_DZ85ESS-2 (other): no parts
-D85E-SS-2A-OMM_D85ESS-2A_4001_UP (omm): no parts
-D85E-SS-2A-Shop_Manual_D85E-SS-2A_3001_UP (shop_manual): no parts
-PC1250SP-11-HYD_SCHEMATIC_PC1250-8_SN_30001_COLOUR (other): no parts
-PC1250SP-11-OMM_PC1250-11R (omm): no parts
-PC1250SP-11-SM_PC1250-11_50090: parts 64, with torque 32, without 32
-PC2000-11R-OMM_PC2000-11R (omm): no parts
-PC2000-11R-SM_PC2000-11R_SN30019_UP: parts 65, with torque 53, without 12
-PC210-1OMO-HYD_DIAGRAM_PC210-_10M0 (other): no parts
-PC210-1OMO-OMM_PC210 (omm): no parts
-PC210-1OMO-SM_PC210_SEN06701-C0: parts 44, with torque 43, without 1
-PC500LC-10-SM_PC500LC-10R: parts 43, with torque 42, without 1
+D155A-6 33 23
+D375-6R 43 27
+D85E-SS-2A 62 0
+PC1250SP-11 64 35
+PC2000-11R 65 64
+PC210-1OMO 44 43
+PC500LC-10 43 42
