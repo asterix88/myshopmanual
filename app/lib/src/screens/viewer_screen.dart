@@ -13,6 +13,7 @@ import '../specs.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/excavator_loader.dart';
 import 'shell.dart';
 
 /// Opens a manual, optionally at [page] and with [query] highlighted. A
@@ -415,18 +416,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
           (canvas, pageRect, page) => _searcher?.pageTextMatchPaintCallback(canvas, pageRect, page),
           _paintTorque,
         ],
-        loadingBannerBuilder: (context, bytesDownloaded, totalBytes) => Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              if (_online) ...[
-                const SizedBox(height: 14),
-                Text('Membuka dari server…', style: TextStyle(fontSize: 13, color: AppColors.muted)),
-              ],
-            ],
-          ),
-        ),
+        loadingBannerBuilder: (context, bytesDownloaded, totalBytes) =>
+            Center(child: ExcavatorLoader(label: _online ? 'Membuka dari server…' : null)),
         errorBannerBuilder: (context, error, stackTrace, documentRef) {
           Diagnostics.log('viewer error: $error');
           return EmptyState(

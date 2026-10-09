@@ -582,55 +582,93 @@ class _GroupCardState extends State<GroupCard> {
               padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
               child: Row(
                 children: [
-                  Flexible(
-                    child: Text(
-                      widget.title,
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.navy),
+                  // Title and count take all the room left of the arrow, so
+                  // the arrow lines up on every card whatever the title length.
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            widget.title,
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.navy),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                          decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(10)),
+                          child: Text('${widget.items.length}', style: TextStyle(fontSize: 11, color: AppColors.muted)),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-                    decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(10)),
-                    child: Text('${widget.items.length}', style: TextStyle(fontSize: 11, color: AppColors.muted)),
-                  ),
-                  const Spacer(),
                   Icon(_open ? Icons.expand_less : Icons.expand_more, color: AppColors.muted),
                 ],
               ),
             ),
           ),
           if (_open)
-            for (final item in widget.items)
-              InkWell(
-                onTap: item.onTap,
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border(top: BorderSide(color: AppColors.line)),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(16, 13, 12, 13),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(item.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                            if (item.subtitle case final sub?)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Text(sub, style: TextStyle(fontSize: 12, color: AppColors.muted)),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.chevron_right, color: AppColors.faint),
-                    ],
-                  ),
-                ),
-              ),
+            for (final item in widget.items) GroupItemTile(item: item),
         ],
       ),
+    );
+  }
+}
+
+/// One row of a [GroupCard], with a line above it; [ItemCard] shows one on
+/// its own.
+class GroupItemTile extends StatelessWidget {
+  const GroupItemTile({super.key, required this.item, this.line = true});
+
+  final GroupItem item;
+  final bool line;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: item.onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          border: line ? Border(top: BorderSide(color: AppColors.line)) : null,
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 13, 12, 13),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                  if (item.subtitle case final sub?)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(sub, style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                    ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: AppColors.faint),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A single [GroupItem] as its own card, lined up with the [GroupCard]s.
+class ItemCard extends StatelessWidget {
+  const ItemCard({super.key, required this.item});
+
+  final GroupItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: GroupItemTile(item: item, line: false),
     );
   }
 }

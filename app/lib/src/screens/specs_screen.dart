@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models.dart';
 import '../specs.dart';
+import '../widgets/excavator_loader.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
 import 'unit_tabs.dart';
@@ -119,25 +120,23 @@ class _SpecsScreenState extends State<SpecsScreen> {
       groups.putIfAbsent(p.group, () => []).add(p);
     }
     return [
-      if (standard.isNotEmpty)
-        GroupCard(
-          key: const ValueKey('part-group/standard'),
-          title: 'Standard tightening torque',
-          open: true,
-          items: [
-            for (final r in standard)
-              (
-                title: r.title,
-                subtitle: [?r.file?.title, 'hlm ${r.page}'].join(' · '),
-                onTap: () => openPageRow(context, unit, r),
-              ),
-          ],
+      // Only the Shop Manual's table (Anas, 9 Oct): the OMM repeats it.
+      for (final r in standard.any((r) => r.file?.type == DocType.shopManual)
+          ? standard.where((r) => r.file?.type == DocType.shopManual)
+          : standard)
+        ItemCard(
+          key: ValueKey('standard/${r.file?.key}/${r.page}'),
+          item: (
+            title: r.title,
+            subtitle: [?r.file?.title, 'hlm ${r.page}'].join(' · '),
+            onTap: () => openPageRow(context, unit, r),
+          ),
         ),
-      for (final (i, MapEntry(key: group, value: list)) in groups.entries.indexed)
+      for (final MapEntry(key: group, value: list) in groups.entries)
         GroupCard(
           key: ValueKey('part-group/$group'),
           title: group.isEmpty ? 'Lainnya' : group,
-          open: standard.isEmpty && i == 0,
+          open: false,
           items: [for (final p in list) (title: p.title, subtitle: null, onTap: () => _openPart(p))],
         ),
     ];
@@ -193,7 +192,7 @@ class _SpecsScreenState extends State<SpecsScreen> {
       views: [
         for (final (i, list) in (rows ?? List.filled(_tabs.length, const <PageRow>[])).indexed)
           rows == null
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: ExcavatorLoader(label: 'Memuat…'))
               : i == 0
               ? PageRowList(rows: const [], onOpen: (_) {}, after: _torqueGroups(unit!, list, parts))
               : PageRowList(
