@@ -51,7 +51,7 @@ jobs:
           working-directory: app
           # A hang fails after 15 minutes instead of using up the job. On
           # failure, keep a screenshot and the phone's log.
-          script: timeout 900 flutter test integration_test -d emulator-5554 -r expanded || (adb exec-out screencap -p > ../failure.png; adb logcat -d -t 600 > ../logcat.txt; exit 1)
+          script: timeout 900 flutter test integration_test -d emulator-5554 -r expanded || (adb exec-out screencap -p > ../failure.png; adb logcat -d -t 600 > ../logcat.txt; adb logcat -d -t 300 '*:W' flutter:V; exit 1)
 
       - uses: actions/upload-artifact@v4
         if: failure()
