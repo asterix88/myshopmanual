@@ -131,7 +131,10 @@ class AppStore extends ChangeNotifier {
           e.key: (e.value as List).cast<int>(),
       };
       aiOwner = json['ai_owner'] as bool? ?? false;
-      themeMode = json['theme'] as String? ?? 'system';
+      // Light unless the user picked another look in the menu (Anas, 9 Oct
+      // 2026); older versions saved 'system' without asking.
+      themeChosen = json['theme_chosen'] as bool? ?? false;
+      themeMode = themeChosen ? json['theme'] as String? ?? 'light' : 'light';
       _aiDay = json['ai_day'] as String? ?? '';
       _aiAsked = json['ai_asked'] as int? ?? 0;
     }
@@ -167,10 +170,14 @@ class AppStore extends ChangeNotifier {
   }
 
   /// 'system' (follow the phone), 'light' or 'dark'.
-  String themeMode = 'system';
+  String themeMode = 'light';
+
+  /// Whether the user picked [themeMode] in the menu.
+  bool themeChosen = false;
 
   void setThemeMode(String mode) {
     themeMode = mode;
+    themeChosen = true;
     _scheduleSave();
     notifyListeners();
   }
@@ -211,6 +218,7 @@ class AppStore extends ChangeNotifier {
       'bookmarks': bookmarks,
       'ai_owner': aiOwner,
       'theme': themeMode,
+      'theme_chosen': themeChosen,
       'ai_day': _aiDay,
       'ai_asked': _aiAsked,
     };

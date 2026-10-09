@@ -10,8 +10,24 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+    companion object {
+        const val OPEN = "open"
+        const val OPEN_DOWNLOADS = "downloads"
+    }
+
+    private var keepAlive: MethodChannel? = null
+
+    /** The download notification started the app; Dart asks once it runs. */
+    private var openDownloads = false
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getStringExtra(OPEN) == OPEN_DOWNLOADS) keepAlive?.invokeMethod("openDownloads", null)
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        openDownloads = intent?.getStringExtra(OPEN) == OPEN_DOWNLOADS
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mymanual/diagnostics").setMethodCallHandler { call, result ->
             when (call.method) {
                 "exits" -> result.success(exits())
@@ -32,7 +48,8 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mymanual/keepalive").setMethodCallHandler { call, result ->
+        keepAlive = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mymanual/keepalive")
+        keepAlive!!.setMethodCallHandler { call, result ->
             // Stop goes through the service too: it arrives after start, so the
             // service always reaches startForeground before it ends.
             val intent = Intent(this, KeepAliveService::class.java)
@@ -42,6 +59,10 @@ class MainActivity : FlutterActivity() {
                     intent.putExtra("stop", call.method == "stop")
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
                     result.success(null)
+                }
+                "takeOpen" -> {
+                    result.success(openDownloads)
+                    openDownloads = false
                 }
                 else -> result.notImplemented()
             }

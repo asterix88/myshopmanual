@@ -13,13 +13,16 @@ import 'viewer_screen.dart';
 /// A unit's folder: its subfolders first, each opened on its own page, then
 /// one card per manual, each downloaded on its own.
 class UnitScreen extends StatefulWidget {
-  const UnitScreen({super.key, required this.unitId, this.folder = const []});
+  const UnitScreen({super.key, required this.unitId, this.folder = const [], this.focus});
 
   final String unitId;
 
   /// The subfolder shown, as its path inside the unit folder (empty: the
   /// unit folder itself).
   final List<String> folder;
+
+  /// A manual to scroll to (from the download notification).
+  final String? focus;
 
   @override
   State<UnitScreen> createState() => _UnitScreenState();
@@ -29,6 +32,20 @@ class _UnitScreenState extends State<UnitScreen> {
   bool _editing = false;
   final Set<String> _selected = {};
   final _filter = TextEditingController();
+  final _focusKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.focus != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final target = _focusKey.currentContext;
+        if (target != null) {
+          Scrollable.ensureVisible(target, alignment: 0.2, duration: const Duration(milliseconds: 300));
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -124,6 +141,7 @@ class _UnitScreenState extends State<UnitScreen> {
               ),
             for (final file in files)
               Padding(
+                key: file.key == widget.focus ? _focusKey : null,
                 padding: const EdgeInsets.only(bottom: 10),
                 child: _editing
                     ? _SelectableFile(

@@ -19,6 +19,21 @@ class KeepAlive {
     }
   }
 
+  /// Calls [onOpen] when the user taps the download notification, also when
+  /// that tap started the app.
+  static Future<void> listen(void Function() onOpen) async {
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'openDownloads') onOpen();
+    });
+    try {
+      if (await _channel.invokeMethod<bool>('takeOpen') ?? false) onOpen();
+    } on MissingPluginException {
+      // Tests and platforms without the service.
+    } catch (e) {
+      Diagnostics.log('keepalive takeOpen: $e');
+    }
+  }
+
   static Future<void> stop() async {
     try {
       await _channel.invokeMethod<void>('stop');

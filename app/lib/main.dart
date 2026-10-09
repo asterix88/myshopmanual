@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide KeepAlive;
 import 'package:path_provider/path_provider.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import 'src/diagnostics.dart';
+import 'src/keep_alive.dart';
+import 'src/screens/unit_screen.dart';
 import 'src/screens/shell.dart';
 import 'src/screens/updates_screen.dart';
 import 'src/store.dart';
@@ -25,6 +27,15 @@ Future<void> main() async {
       MaterialPageRoute(builder: (_) => UpdatesScreen()),
     ),
   ));
+  // Tapping the download notification shows the manual being downloaded.
+  unawaited(KeepAlive.listen(() {
+    final key = store.downloads.keys.firstOrNull;
+    final file = key == null ? null : store.fileByKey(key);
+    if (file == null) return;
+    _navigator.currentState?.push(MaterialPageRoute(
+      builder: (_) => UnitScreen(unitId: file.unitId, folder: file.folder, focus: file.key),
+    ));
+  }));
   // Check the server in the background; the app works offline meanwhile.
   store.refresh();
 }

@@ -31,8 +31,10 @@ class KeepAliveService : Service() {
         }
         val open = PendingIntent.getActivity(
             this, 0,
-            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-            PendingIntent.FLAG_IMMUTABLE,
+            Intent(this, MainActivity::class.java)
+                .putExtra(MainActivity.OPEN, MainActivity.OPEN_DOWNLOADS)
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, CHANNEL)
