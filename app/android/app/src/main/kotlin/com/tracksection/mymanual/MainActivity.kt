@@ -19,6 +19,19 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mymanual/downloads").setMethodCallHandler { call, result ->
+            val name = call.argument<String>("name") ?: ""
+            when (call.method) {
+                "supported" -> result.success(PublicDownloads.supported)
+                "exists" -> result.success(PublicDownloads.supported && PublicDownloads.find(this, name) != null)
+                "save" -> PublicDownloads.save(this, call.argument<String>("path")!!, name) { error ->
+                    if (error == null) result.success(null) else result.error("save", error, null)
+                }
+                "open" -> result.success(PublicDownloads.open(this, name))
+                "free" -> result.success(android.os.StatFs(android.os.Environment.getExternalStorageDirectory().path).availableBytes)
+                else -> result.notImplemented()
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mymanual/keepalive").setMethodCallHandler { call, result ->
             // Stop goes through the service too: it arrives after start, so the
             // service always reaches startForeground before it ends.
