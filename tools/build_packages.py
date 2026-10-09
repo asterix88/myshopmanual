@@ -91,7 +91,17 @@ PART_TITLE = [
                r"\s+(?:of\s+)?(?:the\s+)?(?P<name>.+)$", re.I),
     re.compile(r"^(?P<name>.+?)\s*[-–]\s*remove\s+(?:and|&)\s+install\b.*$", re.I),
 ]
-MAX_PART_PAGES = 12
+# Older manuals (D85) name the component alone, with REMOVAL and
+# INSTALLATION bookmarks under it.
+PART_STEP = re.compile(r"^(?:removal|installation|insyallation)$", re.I)
+MAX_PART_PAGES = 40
+# A torque value as manuals print it: "824 – 1,030 Nm {84 – 105 kgm}",
+# "98 N·m", "70 lbf ft" (same as torqueValue in the app's viewer). A line
+# with only a bare range like "5 to 50 Nm" is a torque wrench in the tools
+# table, not a tightening torque.
+TORQUE_VALUE = re.compile(r"\d[\d.,]*\s*(?:[-–~]\s*\d[\d.,]*\s*)?"
+                          r"(?:N\s*[·.•]?\s*m|kgf?\s*[·.•]?\s*m|lbf?\s*[·.•]?\s*ft)(?![a-z])", re.I)
+TOOL_RANGE = re.compile(r"^[\d.,]+\s*(?:to|[-–~])\s*[\d.,]+\s*N\s*[·.•]?\s*m$", re.I)
 # Servis tab: bookmarks of the maintenance schedule. "EVERY 500 HOURS
 # SERVICE" opens a tab HM 500 listing the items under it; the schedule chart
 # itself shows on every tab.
@@ -112,6 +122,9 @@ SERVICE_ITEM_STOP = re.compile(r"^(?:WARNING|NOTICE|CAUTION|DANGER|REMARK|NOTE)\
 # Bookmark titles listed in this file in a unit folder (one per line, any part
 # of the title) are left out of that unit's Spek and Servis tabs.
 SPEC_EXCLUDE_FILE = "spek-hapus.txt"
+# Components left out of the Torsi tab, per unit folder: {"PC210-1OMO":
+# ["Group|Component", ...]}, as chosen on the Torsi checklist page.
+TORSI_HIDDEN_FILE = Path(__file__).with_name("torsi-pilihan.json")
 
 # A matched bookmark takes its pages up to the next bookmark at its level or
 # above, but never more than this many.
@@ -224,19 +237,41 @@ def _part_name(title: str) -> str | None:
     for pattern in PART_TITLE:
         m = pattern.match(title)
         if m:
-            name = re.sub(r"\s+(assembly|assy)$", "", m.group("name").strip(" .:"), flags=re.I).strip()
-            return name[:1].upper() + name[1:] if name else None
+            return _clean_part_name(m.group("name"))
     return None
 
 
-def part_ranges(toc: list[list], page_count: int) -> list[dict]:
+def _clean_part_name(name: str) -> str | None:
+    """'SUPPLY PUMP ASSEMBLY (RIGHT BANK)' -> 'SUPPLY PUMP': one entry for
+    both banks, without "assembly"."""
+    name = re.sub(r"\s*\((?:left|right)\s+bank\)", "", name.strip(" .:"), flags=re.I)
+    name = re.sub(r"\s+(assembly|assy)$", "", name.strip(), flags=re.I).strip()
+    return name[:1].upper() + name[1:] if name else None
+
+
+def torque_lines(text: str) -> list[str]:
+    """The lines of [text] holding a torque value, each once (as the app
+    marks them)."""
+    found = []
+    for line in (text or "").splitlines():
+        line = line.strip()
+        if TORQUE_VALUE.search(line) and not TOOL_RANGE.match(line) and line not in found:
+            found.append(line)
+    return found
+
+
+def part_ranges(toc: list[list], page_count: int, texts: list[str] | None = None) -> list[dict]:
     """The remove & install chapters in [toc], grouped the way the manual
     groups them (the title of the bookmark one level up): one entry per
-    group and component, in manual order."""
+    group and component, in manual order. With the page [texts], "torque"
+    counts the lines with a torque value in the chapter and "marks" lists
+    the pages that hold them (the app reads only those)."""
     found, seen = [], set()
     for i, (level, title, page) in enumerate(toc):
         title = " ".join(title.split())
         name = _part_name(title)
+        if not name and i + 1 < len(toc) and toc[i + 1][0] == level + 1 and PART_STEP.match(toc[i + 1][1].strip()):
+            name = _clean_part_name(title[:1].upper() + title[1:].lower() if title.isupper() else title)
         if not name or page < 1 or page > page_count:
             continue
         group = ""
@@ -249,7 +284,13 @@ def part_ranges(toc: list[list], page_count: int) -> list[dict]:
             continue
         seen.add((group.lower(), name.lower()))
         last = min(_section_end(toc, i, page_count), page + MAX_PART_PAGES - 1)
-        found.append({"group": group, "name": name, "title": title, "page": page, "last": max(page, last)})
+        last = max(page, last)
+        entry = {"group": group, "name": name, "title": title, "page": page, "last": last}
+        if texts is not None:
+            counts = {n: len(torque_lines(texts[n - 1])) for n in range(page, min(last, len(texts)) + 1)}
+            entry["torque"] = sum(counts.values())
+            entry["marks"] = [n for n, c in counts.items() if c]
+        found.append(entry)
     return found
 
 
@@ -392,11 +433,14 @@ def build_spec_pack(sources: list[tuple], target: Path,
     entries, service, runs, parts = [], [], [], []
     for file_id, pdf, toc, page_count, *rest in sources:
         texts = rest[0] if rest else None
-        for p in part_ranges(toc, page_count):
+        if texts is not None and not any(t.strip() for t in texts):
+            texts = None  # scanned: no text to find torque values in
+        for p in part_ranges(toc, page_count, texts):
             # A line may name the component, its bookmark, or a whole group.
             if kept(p["name"]) and kept(p["title"]) and (not p["group"] or kept(p["group"])):
                 parts.append({"group": p["group"], "title": p["name"], "file": file_id,
-                              "page": p["page"], "count": p["last"] - p["page"] + 1})
+                              "page": p["page"], "count": p["last"] - p["page"] + 1,
+                              **({"torque": p["torque"], "marks": p["marks"]} if "torque" in p else {})})
         ranges = [r for r in spec_ranges(toc, page_count) if kept(r[1])]
         svc = [e for e in service_ranges(toc, page_count, texts) if kept(e["title"])]
         if not ranges and not svc:
@@ -467,6 +511,15 @@ def file_entry(path: Path, rel: str) -> dict:
     return {"path": rel, "size": path.stat().st_size, "sha256": sha256_of(path)}
 
 
+def read_torsi_hidden(unit_id: str) -> set[str]:
+    """The "group|component" pairs (lower case) hidden from unit_id's Torsi tab."""
+    if not TORSI_HIDDEN_FILE.exists():
+        return set()
+    data = json.loads(TORSI_HIDDEN_FILE.read_text(encoding="utf-8"))
+    rows = next((v for k, v in data.items() if k.lower() == unit_id.lower()), [])
+    return {" ".join(r.split()).lower() for r in rows}
+
+
 def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
                previous: dict, now: str) -> dict:
     unit_id = unit_dir.name
@@ -535,6 +588,10 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
     if excludes:
         print(f"  {SPEC_EXCLUDE_FILE}: {len(excludes)} judul tidak dimasukkan ke Spek/Servis")
     spec_pages, service_pages, parts = build_spec_pack(spec_sources, spec_path, excludes)
+    hidden = read_torsi_hidden(unit_id)
+    if hidden:
+        parts = [p for p in parts if f"{p['group']}|{p['title']}".lower() not in hidden]
+        print(f"  {TORSI_HIDDEN_FILE.name}: {len(hidden)} komponen tidak tampil di Torsi")
     has_spec = bool(spec_pages or service_pages)
     if has_spec:
         spec = {**file_entry(spec_path, f"units/{unit_id}/spek.pdf"), "pages": spec_pages, "service": service_pages,

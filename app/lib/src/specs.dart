@@ -80,33 +80,94 @@ final _partTitles = [
   RegExp(r'^(?<name>.+?)\s*[-–]\s*remove\s+(?:and|&)\s+install\b.*$', caseSensitive: false),
 ];
 
-const maxPartPages = 12;
+/// Older manuals (D85) name the component alone, with REMOVAL and
+/// INSTALLATION bookmarks under it.
+final _partStep = RegExp(r'^(?:removal|installation|insyallation)$', caseSensitive: false);
+
+const maxPartPages = 40;
 
 /// 'Removal and installation of track roller assembly' -> 'Track roller'.
 String? partName(String title) {
   for (final pattern in _partTitles) {
     final m = pattern.firstMatch(title);
     if (m == null) continue;
-    var name = m.namedGroup('name')!.trim();
-    name = name.replaceAll(RegExp(r'^[ .:]+|[ .:]+$'), '');
-    name = name.replaceFirst(RegExp(r'\s+(assembly|assy)$', caseSensitive: false), '').trim();
-    return name.isEmpty ? null : name[0].toUpperCase() + name.substring(1);
+    return _cleanPartName(m.namedGroup('name')!);
   }
   return null;
 }
 
-/// One remove & install chapter found in a manual's bookmarks.
-typedef PartPage = ({String fileKey, String group, String title, int page, int count});
+/// 'SUPPLY PUMP ASSEMBLY (RIGHT BANK)' -> 'SUPPLY PUMP': one entry for both
+/// banks, without "assembly".
+String? _cleanPartName(String name) {
+  name = name.trim().replaceAll(RegExp(r'^[ .:]+|[ .:]+$'), '');
+  name = name.replaceAll(RegExp(r'\s*\((?:left|right)\s+bank\)', caseSensitive: false), '').trim();
+  name = name.replaceFirst(RegExp(r'\s+(assembly|assy)$', caseSensitive: false), '').trim();
+  return name.isEmpty ? null : name[0].toUpperCase() + name.substring(1);
+}
+
+/// A torque value as manuals print it: "824 – 1,030 Nm {84 – 105 kgm}",
+/// "98 N·m", "70 lb ft".
+final torqueValue = RegExp(
+  r'\d[\d.,]*\s*(?:[-–~]\s*\d[\d.,]*\s*)?(?:N\s*[·.•]?\s*m|kgf?\s*[·.•]?\s*m|lbf?\s*[·.•]?\s*ft)(?![a-z])',
+  caseSensitive: false,
+);
+
+/// A line with only a bare range like "5 to 50 Nm": a torque wrench in the
+/// tools table, not a tightening torque.
+final _toolRange = RegExp(r'^[\d.,]+\s*(?:to|[-–~])\s*[\d.,]+\s*N\s*[·.•]?\s*m$', caseSensitive: false);
+
+/// The lines of [text] holding a torque value, as (start, end) indexes;
+/// each line once, a very long line only around the value.
+List<(int, int)> torqueLines(String text) {
+  final found = <(int, int)>[];
+  for (final m in torqueValue.allMatches(text)) {
+    var start = text.lastIndexOf('\n', m.start) + 1;
+    var end = text.indexOf('\n', m.end);
+    if (end < 0) end = text.length;
+    if (end - start > 160) (start, end) = (m.start, m.end);
+    while (start < end && text[start].trim().isEmpty) {
+      start++;
+    }
+    while (end > start && text[end - 1].trim().isEmpty) {
+      end--;
+    }
+    if (found.isNotEmpty && found.last.$2 >= start) continue;
+    if (_toolRange.hasMatch(text.substring(start, end))) continue;
+    found.add((start, end));
+  }
+  return found;
+}
+
+/// One remove & install chapter found in a manual's bookmarks. [marks]
+/// lists the pages holding a torque value; null when the manual has no text
+/// to look in (scanned).
+typedef PartPage = ({String fileKey, String group, String title, int page, int count, List<int>? marks});
+
+/// A chapter whose torque values the viewer marks: pages [first]..[last],
+/// torque values on [marks] (empty: the chapter has none; null: the manual
+/// has no readable text).
+typedef TorqueScan = ({int first, int last, List<int>? marks});
 
 /// The remove & install chapters of [toc] (one manual), each under the title
 /// of the bookmark one level up, once per group and component.
-List<PartPage> partPages(String fileKey, List<({int level, String title, int page})> toc) {
+List<PartPage> partPages(
+  String fileKey,
+  List<({int level, String title, int page})> toc, {
+  String? Function(int page)? textOf,
+}) {
   final found = <PartPage>[];
   final seen = <String>{};
   for (var i = 0; i < toc.length; i++) {
     final (:level, :title, :page) = toc[i];
     final clean = title.replaceAll(RegExp(r'\s+'), ' ').trim();
-    final name = partName(clean);
+    var name = partName(clean);
+    if (name == null &&
+        i + 1 < toc.length &&
+        toc[i + 1].level == level + 1 &&
+        _partStep.hasMatch(toc[i + 1].title.trim()) &&
+        clean.isNotEmpty) {
+      name = _cleanPartName(clean == clean.toUpperCase() ? clean[0] + clean.substring(1).toLowerCase() : clean);
+    }
     if (name == null) continue;
     var group = '';
     for (var j = i - 1; j >= 0; j--) {
@@ -123,7 +184,20 @@ List<PartPage> partPages(String fileKey, List<({int level, String title, int pag
         break;
       }
     }
-    found.add((fileKey: fileKey, group: group, title: name, page: page, count: last.clamp(page, page + maxPartPages - 1) - page + 1));
+    last = last.clamp(page, page + maxPartPages - 1);
+    found.add((
+      fileKey: fileKey,
+      group: group,
+      title: name,
+      page: page,
+      count: last - page + 1,
+      marks: textOf == null
+          ? null
+          : [
+              for (var n = page; n <= last; n++)
+                if (torqueLines(textOf(n) ?? '').isNotEmpty) n,
+            ],
+    ));
   }
   return found;
 }
@@ -140,7 +214,12 @@ Future<List<PartPage>> findPartPages(Map<String, String> indexes) => Isolate.run
               for (final row in db.select('SELECT level, title, page FROM toc ORDER BY seq'))
                 (level: row['level'] as int, title: row['title'] as String, page: row['page'] as int),
             ];
-            found.addAll(partPages(entry.key, toc));
+            // A scanned manual's index has no page text: its marks stay null.
+            final texts = <int, String>{
+              for (final row in db.select('SELECT CAST(page AS INTEGER) AS page, text FROM pages'))
+                row['page'] as int: row['text'] as String,
+            };
+            found.addAll(partPages(entry.key, toc, textOf: texts.isEmpty ? null : (n) => texts[n]));
           } finally {
             db.close();
           }

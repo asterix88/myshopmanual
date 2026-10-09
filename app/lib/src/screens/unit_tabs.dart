@@ -3,7 +3,6 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../models.dart';
 import '../page_image.dart';
-import '../specs.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -91,13 +90,21 @@ class UnitTabsPage extends StatelessWidget {
                                           children: [
                                             Text(
                                               _capitalized(unit.machine.label),
-                                              style: TextStyle(fontSize: 11, color: AppColors.muted, letterSpacing: 0.6),
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: AppColors.muted,
+                                                letterSpacing: 0.6,
+                                              ),
                                             ),
                                             Text(
                                               unit.name,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, height: 1.15),
+                                              style: const TextStyle(
+                                                fontSize: 19,
+                                                fontWeight: FontWeight.w700,
+                                                height: 1.15,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -142,8 +149,8 @@ class UnitTabsPage extends StatelessWidget {
                       message: 'Sambungkan ke internet sebentar agar daftar manual diambil.',
                     )
                   : showTabs
-                      ? TabBarView(children: views)
-                      : empty ?? const SizedBox.shrink(),
+                  ? TabBarView(children: views)
+                  : empty ?? const SizedBox.shrink(),
             ),
           ],
         ),
@@ -251,10 +258,7 @@ class PageRowList extends StatelessWidget {
                       [?file?.title, 'hlm ${row.page}'].join(' · '),
                       style: TextStyle(fontSize: 12, color: AppColors.muted),
                     ),
-                    if (file != null) ...[
-                      const SizedBox(height: 5),
-                      Pill.docType(file.type),
-                    ],
+                    if (file != null) ...[const SizedBox(height: 5), Pill.docType(file.type)],
                   ],
                 ),
               ),
@@ -274,16 +278,18 @@ void openPageRow(BuildContext context, Unit unit, PageRow row) {
   final path = store.readySpecPath(unit);
   final at = row.at;
   if (path != null && at != null) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => SpecViewerScreen(
-        path: path,
-        page: at,
-        title: row.title,
-        unitName: unit.name,
-        file: row.file,
-        sourcePage: row.page,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SpecViewerScreen(
+          path: path,
+          page: at,
+          title: row.title,
+          unitName: unit.name,
+          file: row.file,
+          sourcePage: row.page,
+        ),
       ),
-    ));
+    );
   } else if (row.file != null) {
     openViewer(context, row.file!, page: row.page);
   }
@@ -297,13 +303,13 @@ class PageThumb extends StatelessWidget {
   Widget build(BuildContext context) {
     const grey = Color(0xFFC9CED6);
     Widget bar(double widthFactor, {Color color = grey, double height = 3}) => FractionallySizedBox(
-          alignment: Alignment.centerLeft,
-          widthFactor: widthFactor,
-          child: Container(
-            height: height,
-            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
-          ),
-        );
+      alignment: Alignment.centerLeft,
+      widthFactor: widthFactor,
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+      ),
+    );
     return Container(
       width: 50,
       height: 66,
@@ -324,7 +330,10 @@ class PageThumb extends StatelessWidget {
           const SizedBox(height: 5),
           Expanded(
             child: Container(
-              decoration: BoxDecoration(border: Border.all(color: grey), borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(
+                border: Border.all(color: grey),
+                borderRadius: BorderRadius.circular(2),
+              ),
               child: Column(
                 children: [
                   for (var i = 0; i < 4; i++)
@@ -537,21 +546,24 @@ class _SpecViewerScreenState extends State<SpecViewerScreen> {
   }
 }
 
-/// One of the shop manual's groups on the Torsi tab ("Undercarriage and
-/// frame"): a header that opens and closes the list of its components.
-class PartGroupCard extends StatefulWidget {
-  const PartGroupCard({super.key, required this.title, required this.parts, required this.onOpen, this.open = false});
+/// One row inside a [GroupCard].
+typedef GroupItem = ({String title, String? subtitle, VoidCallback onTap});
+
+/// A group on the Torsi tab (Standard tightening torque, or one of the shop
+/// manual's own sections such as "Undercarriage and frame"): a header that
+/// opens and closes the list of its rows.
+class GroupCard extends StatefulWidget {
+  const GroupCard({super.key, required this.title, required this.items, this.open = false});
 
   final String title;
-  final List<PartPage> parts;
-  final ValueChanged<PartPage> onOpen;
+  final List<GroupItem> items;
   final bool open;
 
   @override
-  State<PartGroupCard> createState() => _PartGroupCardState();
+  State<GroupCard> createState() => _GroupCardState();
 }
 
-class _PartGroupCardState extends State<PartGroupCard> {
+class _GroupCardState extends State<GroupCard> {
   late bool _open = widget.open;
 
   @override
@@ -580,7 +592,7 @@ class _PartGroupCardState extends State<PartGroupCard> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
                     decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(10)),
-                    child: Text('${widget.parts.length}', style: TextStyle(fontSize: 11, color: AppColors.muted)),
+                    child: Text('${widget.items.length}', style: TextStyle(fontSize: 11, color: AppColors.muted)),
                   ),
                   const Spacer(),
                   Icon(_open ? Icons.expand_less : Icons.expand_more, color: AppColors.muted),
@@ -589,15 +601,29 @@ class _PartGroupCardState extends State<PartGroupCard> {
             ),
           ),
           if (_open)
-            for (final part in widget.parts)
+            for (final item in widget.items)
               InkWell(
-                onTap: () => widget.onOpen(part),
+                onTap: item.onTap,
                 child: Container(
-                  decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.line))),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: AppColors.line)),
+                  ),
                   padding: const EdgeInsets.fromLTRB(16, 13, 12, 13),
                   child: Row(
                     children: [
-                      Expanded(child: Text(part.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                            if (item.subtitle case final sub?)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(sub, style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                              ),
+                          ],
+                        ),
+                      ),
                       Icon(Icons.chevron_right, color: AppColors.faint),
                     ],
                   ),

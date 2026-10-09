@@ -149,7 +149,15 @@ class SpecPack {
 /// A remove & install chapter of a manual (where a component's mounting
 /// bolt torques are written), under the manual's own group for it.
 class SpecPart {
-  const SpecPart({required this.group, required this.title, required this.fileId, required this.page, required this.count});
+  const SpecPart({
+    required this.group,
+    required this.title,
+    required this.fileId,
+    required this.page,
+    required this.count,
+    this.torque,
+    this.marks,
+  });
 
   factory SpecPart.fromJson(Map<String, dynamic> json) => SpecPart(
         group: json['group'] as String? ?? '',
@@ -157,6 +165,8 @@ class SpecPart {
         fileId: json['file'] as String,
         page: json['page'] as int,
         count: json['count'] as int? ?? 1,
+        torque: json['torque'] as int?,
+        marks: (json['marks'] as List?)?.cast<int>(),
       );
 
   /// "Undercarriage and frame"; empty when the chapter has no parent bookmark.
@@ -167,6 +177,13 @@ class SpecPart {
   final String fileId;
   final int page;
   final int count;
+
+  /// Lines with a torque value in the chapter (null in older catalogs or a
+  /// scanned manual).
+  final int? torque;
+
+  /// The pages holding those lines.
+  final List<int>? marks;
 }
 
 /// A maintenance schedule page in spek.pdf: the schedule chart ([hours] 0),
