@@ -119,6 +119,9 @@ SERVICE_ITEM_STOP = re.compile(r"^(?:WARNING|NOTICE|CAUTION|DANGER|REMARK|NOTE)\
 # Bookmark titles listed in this file in a unit folder (one per line, any part
 # of the title) are left out of that unit's Spek and Servis tabs.
 SPEC_EXCLUDE_FILE = "spek-hapus.txt"
+# Components left out of the Torsi tab, per unit folder: {"PC210-1OMO":
+# ["Group|Component", ...]}, as chosen on the Torsi checklist page.
+TORSI_HIDDEN_FILE = Path(__file__).with_name("torsi-pilihan.json")
 
 # A matched bookmark takes its pages up to the next bookmark at its level or
 # above, but never more than this many.
@@ -483,6 +486,15 @@ def file_entry(path: Path, rel: str) -> dict:
     return {"path": rel, "size": path.stat().st_size, "sha256": sha256_of(path)}
 
 
+def read_torsi_hidden(unit_id: str) -> set[str]:
+    """The "group|component" pairs (lower case) hidden from unit_id's Torsi tab."""
+    if not TORSI_HIDDEN_FILE.exists():
+        return set()
+    data = json.loads(TORSI_HIDDEN_FILE.read_text(encoding="utf-8"))
+    rows = next((v for k, v in data.items() if k.lower() == unit_id.lower()), [])
+    return {" ".join(r.split()).lower() for r in rows}
+
+
 def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
                previous: dict, now: str) -> dict:
     unit_id = unit_dir.name
@@ -551,6 +563,10 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
     if excludes:
         print(f"  {SPEC_EXCLUDE_FILE}: {len(excludes)} judul tidak dimasukkan ke Spek/Servis")
     spec_pages, service_pages, parts = build_spec_pack(spec_sources, spec_path, excludes)
+    hidden = read_torsi_hidden(unit_id)
+    if hidden:
+        parts = [p for p in parts if f"{p['group']}|{p['title']}".lower() not in hidden]
+        print(f"  {TORSI_HIDDEN_FILE.name}: {len(hidden)} komponen tidak tampil di Torsi")
     has_spec = bool(spec_pages or service_pages)
     if has_spec:
         spec = {**file_entry(spec_path, f"units/{unit_id}/spek.pdf"), "pages": spec_pages, "service": service_pages,
