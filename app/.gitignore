@@ -46,6 +46,3 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
-
-# Built by integration_test/make_fixtures.py
-integration_test/fixtures.g.dart

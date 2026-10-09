@@ -1,8 +1,9 @@
 """Writes integration_test/fixtures.g.dart from test/fixtures.
 
 Tests on a phone or emulator can't read files from the repository, so the
-tiny test manual is embedded in the test app. Run from app/ before
-`flutter test integration_test` (the emulator workflow does).
+tiny test manual is embedded in the test app. The output is committed (so
+`flutter analyze` finds it); run this from app/ after changing
+test/fixtures. The emulator workflow runs it too.
 """
 
 import base64
