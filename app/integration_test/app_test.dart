@@ -83,10 +83,14 @@ void main() {
     step('leave and come back');
     // Leaving the app and coming back checks the Download folder again:
     // the copy is there, so the button stays hidden (bug seen on 9 Oct).
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-    await wait(tester, const Duration(seconds: 1));
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    // No frames are drawn while paused, so wait without pumping there.
+    for (final state in [AppLifecycleState.inactive, AppLifecycleState.hidden, AppLifecycleState.paused]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
+    await Future<void>.delayed(const Duration(seconds: 1));
+    for (final state in [AppLifecycleState.hidden, AppLifecycleState.inactive, AppLifecycleState.resumed]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
     await wait(tester, const Duration(seconds: 3));
     expect(find.text('Simpan ke Download'), findsNothing);
     step('done');
