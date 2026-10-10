@@ -1,0 +1,63 @@
+name: Android emulator tests
+
+# Runs the app's Android parts on a virtual phone (integration_test/), so a
+# bug that only shows on a real phone is caught before the APK reaches one.
+on:
+  pull_request:
+    paths:
+      - "app/**"
+      - ".github/workflows/emulator.yml"
+  workflow_dispatch:
+
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      # The emulator needs hardware acceleration on the runner.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.6"
+          channel: stable
+          cache: true
+
+      - name: Prepare test manual
+        working-directory: app
+        run: |
+          flutter pub get
+          python3 integration_test/make_fixtures.py
+
+      - name: Run tests on an Android 13 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          working-directory: app
+          # A hang fails after 15 minutes instead of using up the job. On
+          # failure, keep a screenshot and the phone's log.
+          script: timeout 900 flutter test integration_test -d emulator-5554 -r expanded || (adb exec-out screencap -p > ../failure.png; adb logcat -d -t 600 > ../logcat.txt; adb logcat -d -t 300 '*:W' flutter:V; exit 1)
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: emulator-failure
+          path: |
+            failure.png
+            logcat.txt
+          if-no-files-found: ignore
