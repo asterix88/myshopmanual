@@ -58,97 +58,7 @@ SM PC1250-11 50090 p722 rank=-8.05 section=CONTENTS
 
 
 ######## ASK: DKULKB
---- AI model=deepseek-v4-flash web=0 calls=[{"index":0,"id":"call_00_TJwWAZHh0KMa8ROEDD5K8978","type":"function","function":{"name":"search_manuals","arguments":"{\"query\": \"DKULKB\", \"unit\": \"\"}"}},{"index":1,"id":"call_01_2Pk8kxRhLR9rI4w166Ls9126","type":"function","function":{"name":"search_manuals","arguments":"{\"query\": \"DKULKB fault code\", \"unit\": \"\"}"}}]
---- TOOL RESULT (2831 chars)
-Note: 21 manual(s) are still being prepared on the phone and were not searched.
-
-[S5] PC1250SP-11 · SM PC1250-11 50090 · page 1250 · section: FAILURE CODE [DKULKB]
-FAILURE CODE [DKULKB] 
-Action level
-Failure code
-Failure
-PPC Lock Relay Short Circuit
-(pump controller system)
-L03
-DKULKB
-Detail of fail-
-ure
-Short circuit was detected because abnormal current is carried when outputting 24 V in the primary
-(coil) circuit of the PPC lock relay.
-Action of
-controller
-•
-Stops 24 V output to PPC lock relay primary circuit (coil side).
-•
-Even if cause of failure disappears, machine does not become normal until starting switch
-is turned to OFF position.
-Phenomenon
-on machine
-•
-The work equipment is not operable because PPC remains locked.
-Related
-information
-•
-The troubleshooting for this failure code is performed on the primary side of the relay and
-not on the secondary side.
-•
-After repairing, check if the failure code is cleared by the following procedure.
-Procedure: Turn starting switch to ON position and set PPC lock lever to FREE position.
-No.
-Cause
-Procedure, measuring location, criteria and remarks
-1
-Defective battery cut re-
-lay R48
-1.
-Turn starting switch to OFF position.
-2.
-Disconnect connector R48, and connect T-adapter to male side.
-Resistance
-Between R48 (male) (1) and (2)
-200 to
-600 Ω
-Between R48 (male) (1) and ground
-Min. 1 MΩ
-2
-Ground fa…
-
-[S6] PC1250SP-11 · SM PC1250-11 50090 · page 1251 · section: FAILURE CODE [DKULKB]
-Circuit diagram related to PPC lock switch
-40 TROUBLESHOOTING
-FAILURE CODE [DKULKB]
-PC1250-11R, PC1250SP-11R
-40-535
-
-[S7] PC1250SP-11 · OMM PC1250-11R · page 492 · section: CAUSE OF TROUBLE AND ACTIONS
-3.
-Push the L.H. button (d) and R.H. button (e), and “Error re-
-cord Delete 1_3” is shown. Push the button (b), and “dEL”
-is shown, then the error record is deleted.
-(D): Error record Delete 1_3
-(E): dEL Error Delete
-CAUSE OF TROUBLE AND ACTIONS 
-If the movable diesel preheater does not operate normally, check the error code by the method that follows, and
-consult your Komatsu distributor.
-1.
-Push the button (b), and let the start screen be shown on
-the control panel.
-(A): Start screen
-2.
-Push the L.H. button (d) and R.H. button (e) at the same
-time for longer than 5 seconds to show the screen shown
-in the right figure.
-3.
-Push the button (b), and “Error code” is shown.
-(B): Error display 1_1
-Error code list
-Error code display
-Explanation of errors
-ATTACHMENTS AND OPTIONS
-HANDLE MOVABLE DIESEL PREHEATER
-6-59
-
-[S8] PC1250SP-11 · OMM PC12
+--- AI model=deepseek-v4-flash web=0 calls=[{"index":0,"id":"call_00_33NcRaFNJUo6x0G8tlQU4564","type":"function","function":{"name":"search_manuals","arguments":"{\"query\": \"DKULKB\", \"unit\": \"\"}"}}]
 --- TOOL RESULT (4121 chars)
 Note: 21 manual(s) are still being prepared on the phone and were not searched.
 
@@ -276,87 +186,83 @@ DKR2KA
 Return Filter Bypass Valve
 --- AI model=deepseek-v4-flash web=0 calls=null
 --- ANSWER
-**DKULKB adalah kode kegagalan "PPC Lock Relay Short Circuit" pada sistem pump controller PC1250-11R / PC1250SP-11R, dengan action level L03** [S2].
+**DKULKB adalah failure code pada PC1250-11R / PC1250SP-11R: "PPC Lock Relay Short Circuit" (sistem pump controller), action level L03.** [S2]
 
-Apa yang dilaporkan controller:
-- Controller mendeteksi arus tidak normal saat mengeluarkan 24 V ke rangkaian primer (sisi coil) relay PPC lock — jadi ini korsleting di sisi coil, bukan di sisi kontak (sekunder) [S2].
-- Tindakan controller: menghentikan output 24 V ke rangkaian primer relay PPC lock. **Meskipun penyebabnya hilang, mesin tidak kembali normal sampai starting switch diputar ke posisi OFF** [S2].
-- Gejala pada mesin: work equipment tidak bisa dioperasikan karena PPC tetap terkunci (locked) [S2].
+Apa yang dideteksi dan apa yang dilakukan controller:
+- Short circuit terdeteksi karena arus abnormal mengalir saat controller mengeluarkan 24 V pada rangkaian primer (sisi coil) PPC lock relay. [S2]
+- Controller menghentikan output 24 V ke rangkaian primer (coil) PPC lock relay. [S2]
+- Meskipun penyebabnya hilang, mesin tidak kembali normal sampai starting switch diputar ke posisi OFF. [S2]
+- Gejala pada unit: work equipment tidak bisa dioperasikan karena PPC tetap terkunci (locked). [S2]
 
-Catatan penting: troubleshooting untuk kode ini dilakukan pada sisi primer relay, bukan sisi sekunder [S2].
+Catatan penting: troubleshooting failure code ini dilakukan pada sisi primer relay, bukan sisi sekunder. [S2] Setelah perbaikan, cek apakah failure code terhapus dengan prosedur: putar starting switch ke ON dan set PPC lock lever ke posisi FREE. [S2]
 
-Langkah pemeriksaan menurut manual [S2]:
-1. Periksa relay battery cut R48 (dicurigai rusak). Putar starting switch ke OFF, lepas connector R48, pasang T-adapter pada sisi male. Ukur tahanan: antara R48 (male) (1) dan (2) harus **200 sampai 600 Ω**; antara R48 (male) (1) dan ground **minimal 1 MΩ** [S2].
-2. Periksa kemungkinan ground fault (hubungan singkat ke massa) pada rangkaian — lanjutan tabel ada di halaman berikutnya [S2].
+Langkah pemeriksaan yang tercantum di manual (halaman troubleshooting):
+1. Battery cut relay R48 diduga rusak. Putar starting switch ke OFF, lepas connector R48, pasang T-adapter pada sisi male. Ukur tahanan: antara R48 (male) (1) dan (2) harus **200 sampai 600 Ω**; antara R48 (male) (1) dan ground **min. 1 MΩ**. [S2]
+2. Kemungkinan berikutnya ground fault (hubungan singkat ke massa) pada rangkaian — lanjutan prosedurnya ada di halaman berikutnya. [S2]
 
-Setelah perbaikan, kode dihapus dengan cara: putar starting switch ke ON dan set PPC lock lever ke posisi FREE [S2].
-
-Secara umum (pengetahuan umum): relay PPC lock adalah relay yang memberi/memutus suplai ke solenoid PPC lock. Selama PPC lock lever di posisi LOCK, solenoid tidak dialiri arus sehingga pilot pressure ke control valve tertutup dan seluruh fungsi attachment mati. Karena itu korsleting pada coil relay membuat controller memutus output 24 V sebagai proteksi, dan efeknya persis seperti lever masih di LOCK. Yang paling sering ditemukan di lapangan: coil relay short ke massa (tahanan coil jauh di bawah 200 Ω atau mendekati 0 Ω), kabel harness dari controller ke relay terkelupas/terjepit ke massa, atau relay terisi air/kotoran. Relay yang coil-nya short biasanya juga panas saat dipegang setelah starting switch ON.
+Secara umum, logika kode ini: relay PPC lock memutus/menghubungkan suplai ke solenoid PPC lock. Kalau coil relay atau kabelnya short ke massa, arus yang ditarik jauh lebih besar dari normal, dan driver output di controller mendeteksinya sebagai short circuit lalu memproteksi diri dengan mematikan output. Karena output mati, PPC lock tetap terkunci — jadi jangan langsung ganti controller; periksa dulu coil relay, konektor, dan kabel yang tergores/terjepit ke massa. Nilai tahanan coil yang wajar untuk relay 24 V jenis ini memang ratusan ohm (200–600 Ω sesuai manual), sedangkan 0 Ω atau mendekati 0 Ω berarti short.
 
 [Gambar S2]
-[Gambar S6]
-######## FINAL: **DKULKB adalah kode kegagalan "PPC Lock Relay Short Circuit" pada sistem pump controller PC1250-11R / PC1250SP-11R, dengan action level L03** [1].
+######## FINAL: **DKULKB adalah failure code pada PC1250-11R / PC1250SP-11R: "PPC Lock Relay Short Circuit" (sistem pump controller), action level L03.** [1]
 
-Apa yang dilaporkan controller:
-- Controller mendeteksi arus tidak normal saat mengeluarkan 24 V ke rangkaian primer (sisi coil) relay PPC lock — jadi ini korsleting di sisi coil, bukan di sisi kontak (sekunder) [1].
-- Tindakan controller: menghentikan output 24 V ke rangkaian primer relay PPC lock. **Meskipun penyebabnya hilang, mesin tidak kembali normal sampai starting switch diputar ke posisi OFF** [1].
-- Gejala pada mesin: work equipment tidak bisa dioperasikan karena PPC tetap terkunci (locked) [1].
+Apa yang dideteksi dan apa yang dilakukan controller:
+- Short circuit terdeteksi karena arus abnormal mengalir saat controller mengeluarkan 24 V pada rangkaian primer (sisi coil) PPC lock relay. [1]
+- Controller menghentikan output 24 V ke rangkaian primer (coil) PPC lock relay. [1]
+- Meskipun penyebabnya hilang, mesin tidak kembali normal sampai starting switch diputar ke posisi OFF. [1]
+- Gejala pada unit: work equipment tidak bisa dioperasikan karena PPC tetap terkunci (locked). [1]
 
-Catatan penting: troubleshooting untuk kode ini dilakukan pada sisi primer relay, bukan sisi sekunder [1].
+Catatan penting: troubleshooting failure code ini dilakukan pada sisi primer relay, bukan sisi sekunder. [1] Setelah perbaikan, cek apakah failure code terhapus dengan prosedur: putar starting switch ke ON dan set PPC lock lever ke posisi FREE. [1]
 
-Langkah pemeriksaan menurut manual [1]:
-1. Periksa relay battery cut R48 (dicurigai rusak). Putar starting switch ke OFF, lepas connector R48, pasang T-adapter pada sisi male. Ukur tahanan: antara R48 (male) (1) dan (2) harus **200 sampai 600 Ω**; antara R48 (male) (1) dan ground **minimal 1 MΩ** [1].
-2. Periksa kemungkinan ground fault (hubungan singkat ke massa) pada rangkaian — lanjutan tabel ada di halaman berikutnya [1].
+Langkah pemeriksaan yang tercantum di manual (halaman troubleshooting):
+1. Battery cut relay R48 diduga rusak. Putar starting switch ke OFF, lepas connector R48, pasang T-adapter pada sisi male. Ukur tahanan: antara R48 (male) (1) dan (2) harus **200 sampai 600 Ω**; antara R48 (male) (1) dan ground **min. 1 MΩ**. [1]
+2. Kemungkinan berikutnya ground fault (hubungan singkat ke massa) pada rangkaian — lanjutan prosedurnya ada di halaman berikutnya. [1]
 
-Setelah perbaikan, kode dihapus dengan cara: putar starting switch ke ON dan set PPC lock lever ke posisi FREE [1].
-
-Secara umum (pengetahuan umum): relay PPC lock adalah relay yang memberi/memutus suplai ke solenoid PPC lock. Selama PPC lock lever di posisi LOCK, solenoid tidak dialiri arus sehingga pilot pressure ke control valve tertutup dan seluruh fungsi attachment mati. Karena itu korsleting pada coil relay membuat controller memutus output 24 V sebagai proteksi, dan efeknya persis seperti lever masih di LOCK. Yang paling sering ditemukan di lapangan: coil relay short ke massa (tahanan coil jauh di bawah 200 Ω atau mendekati 0 Ω), kabel harness dari controller ke relay terkelupas/terjepit ke massa, atau relay terisi air/kotoran. Relay yang coil-nya short biasanya juga panas saat dipegang setelah starting switch ON.
+Secara umum, logika kode ini: relay PPC lock memutus/menghubungkan suplai ke solenoid PPC lock. Kalau coil relay atau kabelnya short ke massa, arus yang ditarik jauh lebih besar dari normal, dan driver output di controller mendeteksinya sebagai short circuit lalu memproteksi diri dengan mematikan output. Karena output mati, PPC lock tetap terkunci — jadi jangan langsung ganti controller; periksa dulu coil relay, konektor, dan kabel yang tergores/terjepit ke massa. Nilai tahanan coil yang wajar untuk relay 24 V jenis ini memang ratusan ohm (200–600 Ω sesuai manual), sedangkan 0 Ω atau mendekati 0 Ω berarti short.
 
 
 ######## ASK: error DKULKB PC1250
 --- AI model=deepseek-v4-flash web=0 calls=null
 --- ANSWER
-**DKULKB pada PC1250 (PC1250-11R / PC1250SP-11R) adalah kode kegagalan "PPC Lock Relay Short Circuit" pada sistem pump controller, action level L03** [S2].
+**DKULKB pada PC1250 (PC1250-11R / PC1250SP-11R) adalah failure code "PPC Lock Relay Short Circuit" pada sistem pump controller, action level L03.** [S2]
 
-Detail kegagalan:
-- Controller mendeteksi arus abnormal saat mengeluarkan 24 V ke rangkaian primer (sisi coil) relay PPC lock — jadi korsleting ada di sisi coil, bukan di sisi kontak/sekunder [S2].
-- Tindakan controller: menghentikan output 24 V ke rangkaian primer relay PPC lock. **Meski penyebabnya hilang, mesin tidak kembali normal sampai starting switch diputar ke OFF** [S2].
-- Gejala pada mesin: work equipment tidak bisa dioperasikan karena PPC tetap terkunci (locked) [S2].
-- Troubleshooting kode ini dilakukan pada sisi primer relay, bukan sisi sekunder [S2].
+Apa yang terjadi:
+- Short circuit terdeteksi karena arus abnormal mengalir saat controller mengeluarkan 24 V pada rangkaian primer (sisi coil) PPC lock relay. [S2]
+- Controller menghentikan output 24 V ke rangkaian primer (coil) PPC lock relay. [S2]
+- Meskipun penyebabnya hilang, unit tidak kembali normal sampai starting switch diputar ke posisi OFF. [S2]
+- Gejala di lapangan: work equipment tidak bisa dioperasikan karena PPC tetap terkunci (locked). [S2]
 
-Langkah pemeriksaan menurut manual [S2]:
-1. Periksa relay battery cut R48 (dicurigai rusak). Putar starting switch ke OFF, lepas connector R48, pasang T-adapter pada sisi male. Ukur tahanan: antara R48 (male) (1) dan (2) harus **200 sampai 600 Ω**; antara R48 (male) (1) dan ground **minimal 1 MΩ** [S2].
-2. Periksa ground fault pada rangkaian (lanjutan tabel ada di halaman berikutnya) [S2].
+Penting: troubleshooting kode ini hanya pada sisi primer relay, bukan sisi sekunder. [S2] Setelah perbaikan, cek apakah kode terhapus dengan cara: putar starting switch ke ON dan set PPC lock lever ke posisi FREE. [S2]
 
-Setelah perbaikan, hapus kode dengan cara: putar starting switch ke ON dan set PPC lock lever ke posisi FREE [S2].
+Prosedur pemeriksaan menurut manual:
+1. Battery cut relay R48 diduga rusak. Putar starting switch ke OFF, lepas connector R48, pasang T-adapter pada sisi male. Ukur tahanan: antara R48 (male) (1) dan (2) harus **200 sampai 600 Ω**; antara R48 (male) (1) dan ground **min. 1 MΩ**. [S2]
+2. Kemungkinan kedua adalah ground fault pada rangkaian; prosedurnya berlanjut di halaman berikutnya. [S2]
 
-Secara umum (pengetahuan umum): relay PPC lock memberi/memutus suplai ke solenoid PPC lock. Selama PPC lock lever di LOCK, solenoid tidak dialiri arus, pilot pressure ke control valve tertutup dan semua fungsi attachment mati — karena itu korsleting coil relay membuat controller memutus output 24 V sebagai proteksi, dan efeknya sama seperti lever masih di LOCK. Yang paling sering di lapangan: coil relay short ke massa (tahanan coil jauh di bawah 200 Ω atau mendekati 0 Ω), harness dari controller ke relay terkelupas/terjepit ke massa, atau relay kemasukan air/kotoran. Relay dengan coil short biasanya terasa panas setelah starting switch ON.
+Secara umum, cara kerja dan logika diagnosisnya: relay PPC lock menyuplai/memutus arus ke solenoid PPC lock. Kalau coil relay atau kabelnya short ke massa, arus yang ditarik jauh lebih besar dari normal, driver output di controller mendeteksi itu sebagai short circuit dan memproteksi diri dengan mematikan output 24 V. Karena output mati, PPC lock tetap terkunci sehingga attachment tidak bisa digerakkan — jadi jangan langsung ganti controller. Periksa dulu coil relay (bandingkan dengan relay sejenis), konektor R48 (air, korosi, pin bengkok), dan jalur kabel yang tergores atau terjepit ke massa. Tahanan coil relay 24 V yang wajar memang ratusan ohm (200–600 Ω sesuai manual); kalau terbaca 0 Ω atau sangat rendah, coil atau kabelnya short. Relay yang coil-nya sudah lemah (tahanan jauh di atas 600 Ω) biasanya memberi gejala berbeda, bukan kode ini.
 
 [Gambar S2]
-[Gambar S6]
-######## FINAL: **DKULKB pada PC1250 (PC1250-11R / PC1250SP-11R) adalah kode kegagalan "PPC Lock Relay Short Circuit" pada sistem pump controller, action level L03** [1].
+######## FINAL: **DKULKB pada PC1250 (PC1250-11R / PC1250SP-11R) adalah failure code "PPC Lock Relay Short Circuit" pada sistem pump controller, action level L03.** [1]
 
-Detail kegagalan:
-- Controller mendeteksi arus abnormal saat mengeluarkan 24 V ke rangkaian primer (sisi coil) relay PPC lock — jadi korsleting ada di sisi coil, bukan di sisi kontak/sekunder [1].
-- Tindakan controller: menghentikan output 24 V ke rangkaian primer relay PPC lock. **Meski penyebabnya hilang, mesin tidak kembali normal sampai starting switch diputar ke OFF** [1].
-- Gejala pada mesin: work equipment tidak bisa dioperasikan karena PPC tetap terkunci (locked) [1].
-- Troubleshooting kode ini dilakukan pada sisi primer relay, bukan sisi sekunder [1].
+Apa yang terjadi:
+- Short circuit terdeteksi karena arus abnormal mengalir saat controller mengeluarkan 24 V pada rangkaian primer (sisi coil) PPC lock relay. [1]
+- Controller menghentikan output 24 V ke rangkaian primer (coil) PPC lock relay. [1]
+- Meskipun penyebabnya hilang, unit tidak kembali normal sampai starting switch diputar ke posisi OFF. [1]
+- Gejala di lapangan: work equipment tidak bisa dioperasikan karena PPC tetap terkunci (locked). [1]
 
-Langkah pemeriksaan menurut manual [1]:
-1. Periksa relay battery cut R48 (dicurigai rusak). Putar starting switch ke OFF, lepas connector R48, pasang T-adapter pada sisi male. Ukur tahanan: antara R48 (male) (1) dan (2) harus **200 sampai 600 Ω**; antara R48 (male) (1) dan ground **minimal 1 MΩ** [1].
-2. Periksa ground fault pada rangkaian (lanjutan tabel ada di halaman berikutnya) [1].
+Penting: troubleshooting kode ini hanya pada sisi primer relay, bukan sisi sekunder. [1] Setelah perbaikan, cek apakah kode terhapus dengan cara: putar starting switch ke ON dan set PPC lock lever ke posisi FREE. [1]
 
-Setelah perbaikan, hapus kode dengan cara: putar starting switch ke ON dan set PPC lock lever ke posisi FREE [1].
+Prosedur pemeriksaan menurut manual:
+1. Battery cut relay R48 diduga rusak. Putar starting switch ke OFF, lepas connector R48, pasang T-adapter pada sisi male. Ukur tahanan: antara R48 (male) (1) dan (2) harus **200 sampai 600 Ω**; antara R48 (male) (1) dan ground **min. 1 MΩ**. [1]
+2. Kemungkinan kedua adalah ground fault pada rangkaian; prosedurnya berlanjut di halaman berikutnya. [1]
 
-Secara umum (pengetahuan umum): relay PPC lock memberi/memutus suplai ke solenoid PPC lock. Selama PPC lock lever di LOCK, solenoid tidak dialiri arus, pilot pressure ke control valve tertutup dan semua fungsi attachment mati — karena itu korsleting coil relay membuat controller memutus output 24 V sebagai proteksi, dan efeknya sama seperti lever masih di LOCK. Yang paling sering di lapangan: coil relay short ke massa (tahanan coil jauh di bawah 200 Ω atau mendekati 0 Ω), harness dari controller ke relay terkelupas/terjepit ke massa, atau relay kemasukan air/kotoran. Relay dengan coil short biasanya terasa panas setelah starting switch ON.
+Secara umum, cara kerja dan logika diagnosisnya: relay PPC lock menyuplai/memutus arus ke solenoid PPC lock. Kalau coil relay atau kabelnya short ke massa, arus yang ditarik jauh lebih besar dari normal, driver output di controller mendeteksi itu sebagai short circuit dan memproteksi diri dengan mematikan output 24 V. Karena output mati, PPC lock tetap terkunci sehingga attachment tidak bisa digerakkan — jadi jangan langsung ganti controller. Periksa dulu coil relay (bandingkan dengan relay sejenis), konektor R48 (air, korosi, pin bengkok), dan jalur kabel yang tergores atau terjepit ke massa. Tahanan coil relay 24 V yang wajar memang ratusan ohm (200–600 Ω sesuai manual); kalau terbaca 0 Ω atau sangat rendah, coil atau kabelnya short. Relay yang coil-nya sudah lemah (tahanan jauh di atas 600 Ω) biasanya memberi gejala berbeda, bukan kode ini.
 
 
 ######## ASK: CA234
---- AI model=deepseek-v4-flash web=0 calls=[{"index":0,"id":"call_00_qvNfJU3YFYx7ddvIe8ux0902","type":"function","function":{"name":"search_manuals","arguments":"{\"query\": \"CA234\", \"unit\": \"\"}"}},{"index":1,"id":"call_01_bgtSO0tZghg5bdcHEG2j9588","type":"function","function":{"name":"search_manuals","arguments":"{\"query\": \"CA234 failure code\", \"unit\": \"\"}"}}]
---- TOOL RESULT (4746 chars)
+--- AI model=deepseek-v4-flash web=0 calls=[{"index":0,"id":"call_00_LmvAmMLjR0XuO6999XUG3462","type":"function","function":{"name":"search_manuals","arguments":"{\"query\": \"CA234\", \"unit\": \"\"}"}}]
+--- TOOL RESULT (5127 chars)
 Note: 21 manual(s) are still being prepared on the phone and were not searched.
 
-[S13] PC1250SP-11 · SM PC1250-11 50090 · page 925 · section: FAILURE CODE [CA234]
+[S5] PC1250SP-11 · SM PC1250-11 50090 · page 925 · section: FAILURE CODE [CA234]
 FAILURE CODE [CA234] 
 Action level
 Failure code
@@ -403,88 +309,7 @@ FAILURE CODE [CA234]
 PC1250-11R, PC1250SP-11R
 40-209
 
-[S14] PC1250SP-11 · OMM PC1250-11R · page 492 · section: CAUSE OF TROUBLE AND ACTIONS
-3.
-Push the L.H. button (d) and R.H. button (e), and “Error re-
-cord Delete 1_3” is shown. Push the button (b), and “dEL”
-is shown, then the error record is deleted.
-(D): Error record Delete 1_3
-(E): dEL Error Delete
-CAUSE OF TROUBLE AND ACTIONS 
-If the movable diesel preheater does not operate normally, check the error code by the method that follows, and
-consult your Komatsu distributor.
-1.
-Push the button (b), and let the start screen be shown on
-the control panel.
-(A): Start screen
-2.
-Push the L.H. button (d) and R.H. button (e) at the same
-time for longer than 5 seconds to show the screen shown
-in the right figure.
-3.
-Push the button (b), and “Error code” is shown.
-(B): Error display 1_1
-Error code list
-Error code display
-Explanation of errors
-ATTACHMENTS AND OPTIONS
-HANDLE MOVABLE DIESEL PREHEATER
-6-59
-
-[S15] PC1250SP-11 · SM PC1250-11 50090 · page 8 · section: INDEX
-FAILURE CODE [CA141]..............................................................................................................40-190
-FAILURE CODE [CA144].........................................................................
---- TOOL RESULT (5130 chars)
-Note: 21 manual(s) are still being prepared on the phone and were not searched.
-
-[S9] PC1250SP-11 · SM PC1250-11 50090 · page 925 · section: FAILURE CODE [CA234]
-FAILURE CODE [CA234] 
-Action level
-Failure code
-Failure
-Engine Overspeed
-(Engine controller system)
-L02
-CA234
-Detail of fail-
-ure
-Engine speed exceeds operating range.
-Action of
-controller
-Restricts fuel injection rate until speed is lowered within operating range.
-Phenomenon
-on machine
-Engine speed varies.
-Related
-information
-•
-If other failure code is also displayed at the same time, perform troubleshooting for it first.
-•
-Engine speed can be checked with monitoring function. (Code: 01002)
-•
-After completion of repair, check that the failure code is cleared by the following proce-
-dure.
-Procedure: Start the engine and run it at high idle.
-No.
-Cause
-Procedure, measuring location, criteria and remarks
-1
-Incorrectly-used fuel
-Perform checks since incorrect fuel may be used.
-2
-Incorrect machine usage
-The mounted machine may be used incorrectly, instruct to use it correctly.
-3
-Defective engine control-
-ler
-If no failure is found by above checks, engine controller is defective. (Since this is
-an internal defect, troubleshooting cannot be performed.)
-40 TROUBLESHOOTING
-FAILURE CODE [CA234]
-PC1250-11R, PC1250SP-11R
-40-209
-
-[S10] PC1250SP-11 · SM PC1250-11 50090 · page 842 · section: FAILURE CODE TABLE
+[S6] PC1250SP-11 · SM PC1250-11 50090 · page 842 · section: FAILURE CODE TABLE
 Failure
 code
 Failure (Shown on screen)
@@ -584,45 +409,45 @@ Charge Air Temperature Sensor High Error
 ENG
 L03
 Electrical
-syste
+system
 --- AI model=deepseek-v4-flash web=0 calls=null
 --- ANSWER
-**CA234 pada PC1250-11R / PC1250SP-11R adalah kode kegagalan "Engine Overspeed" pada sistem engine controller, action level L02** [S9].
+**CA234 pada PC1250 (PC1250-11R / PC1250SP-11R) adalah failure code "Engine Overspeed" pada sistem engine controller, action level L02.** [S5]
 
-Detail kegagalan:
-- Putaran mesin (engine speed) melebihi rentang operasi yang diizinkan [S9].
-- Tindakan controller: membatasi (restrict) fuel injection rate sampai putaran turun kembali ke dalam rentang operasi [S9].
-- Gejala pada mesin: engine speed berubah-ubah (varies) [S9].
+Apa yang dideteksi dan apa yang dilakukan controller:
+- Putaran mesin (engine speed) melebihi operating range. [S5]
+- Controller membatasi (restricts) fuel injection rate sampai putaran turun kembali ke dalam operating range. [S5]
+- Gejala pada unit: engine speed berubah-ubah (tidak stabil). [S5]
 
-Catatan penting [S9]:
-- Jika ada kode kegagalan lain yang muncul bersamaan, lakukan troubleshooting untuk kode itu lebih dulu.
-- Engine speed bisa dipantau dengan monitoring function (Code: 01002).
-- Setelah perbaikan selesai, kode dihapus dengan cara: start engine dan jalankan pada high idle.
+Catatan penting dari manual:
+- Kalau ada failure code lain yang muncul bersamaan, lakukan troubleshooting untuk kode itu lebih dulu. [S5]
+- Engine speed bisa dipantau lewat monitoring function (code: 01002). [S5]
+- Setelah perbaikan selesai, cek apakah kode terhapus dengan prosedur: hidupkan engine dan jalankan pada high idle. [S5]
 
-Langkah pemeriksaan menurut manual [S9]:
-1. Bahan bakar tidak sesuai (incorrectly-used fuel) — lakukan pemeriksaan karena mungkin bahan bakar yang dipakai salah.
-2. Penggunaan mesin tidak benar (incorrect machine usage) — mesin yang dipasang mungkin dioperasikan dengan cara yang salah; beri instruksi penggunaan yang benar.
-3. Engine controller rusak — jika pemeriksaan di atas tidak menemukan kegagalan, engine controller yang rusak (cacat internal, troubleshooting tidak bisa dilakukan).
+Kemungkinan penyebab menurut manual:
+1. Pemakaian bahan bakar yang salah (incorrectly-used fuel) — lakukan pemeriksaan karena bisa jadi bahan bakar yang dipakai tidak sesuai. [S5]
+2. Pemakaian unit yang salah (incorrect machine usage) — unit yang terpasang mungkin dioperasikan tidak sesuai; beri instruksi cara pakai yang benar. [S5]
+3. Engine controller rusak — kalau pemeriksaan di atas tidak menemukan kegagalan, engine controller yang rusak (ini defect internal, troubleshooting tidak bisa dilakukan). [S5]
 
-Secara umum (pengetahuan umum): overspeed pada engine controller biasanya muncul saat putaran melewati batas yang diprogram (misalnya governor/rack tidak sempat menutup, atau ada suplai bahan bakar berlebih). Penyebab yang sering di lapangan: bahan bakar kotor/berair atau salah jenis (misalnya solar bercampur bensin/pelarut), filter bahan bakar tersumbat sehingga tekanan suplai tidak stabil, rack/aktuator governor macet, sensor putaran (NE) kotor atau celahnya salah, dan pada kondisi beban ringan operator menurunkan beban terlalu cepat sambil tetap menahan throttle tinggi. Karena controller hanya membatasi injection rate, mesin tidak akan mati sendiri — putaran akan naik-turun sampai penyebabnya dihilangkan. Periksa juga kode CA115 (Engine NE and Backup Speed Sensor Error) karena sensor putaran yang bermasalah bisa memberi sinyal putaran palsu ke controller.
+Secara umum, overspeed pada engine diesel biasanya bukan murni masalah elektronik. Yang perlu dicurigai di lapangan: bahan bakar yang tidak sesuai (misalnya bercampur bensin/solvent, atau kadar sulfur/oktan salah) yang membuat pembakaran tak terkendali, kebocoran oli ke ruang bakar lewat turbo seal atau ring piston (engine run-away), governor/actuator yang lambat merespons, atau sensor kecepatan yang memberi sinyal salah sehingga controller mengira putaran terlalu tinggi. Karena itu langkah pertama yang benar adalah memastikan bahan bakar dan kondisi pemakaian, baru curigai controller. Kalau putaran benar-benar naik tak terkendali, jangan tunda — hentikan engine dengan cara yang aman (tutup saluran udara masuk), karena overspeed bisa merusak komponen internal.
 
-[Gambar S9]
-######## FINAL: **CA234 pada PC1250-11R / PC1250SP-11R adalah kode kegagalan "Engine Overspeed" pada sistem engine controller, action level L02** [1].
+[Gambar S5]
+######## FINAL: **CA234 pada PC1250 (PC1250-11R / PC1250SP-11R) adalah failure code "Engine Overspeed" pada sistem engine controller, action level L02.** [1]
 
-Detail kegagalan:
-- Putaran mesin (engine speed) melebihi rentang operasi yang diizinkan [1].
-- Tindakan controller: membatasi (restrict) fuel injection rate sampai putaran turun kembali ke dalam rentang operasi [1].
-- Gejala pada mesin: engine speed berubah-ubah (varies) [1].
+Apa yang dideteksi dan apa yang dilakukan controller:
+- Putaran mesin (engine speed) melebihi operating range. [1]
+- Controller membatasi (restricts) fuel injection rate sampai putaran turun kembali ke dalam operating range. [1]
+- Gejala pada unit: engine speed berubah-ubah (tidak stabil). [1]
 
-Catatan penting [1]:
-- Jika ada kode kegagalan lain yang muncul bersamaan, lakukan troubleshooting untuk kode itu lebih dulu.
-- Engine speed bisa dipantau dengan monitoring function (Code: 01002).
-- Setelah perbaikan selesai, kode dihapus dengan cara: start engine dan jalankan pada high idle.
+Catatan penting dari manual:
+- Kalau ada failure code lain yang muncul bersamaan, lakukan troubleshooting untuk kode itu lebih dulu. [1]
+- Engine speed bisa dipantau lewat monitoring function (code: 01002). [1]
+- Setelah perbaikan selesai, cek apakah kode terhapus dengan prosedur: hidupkan engine dan jalankan pada high idle. [1]
 
-Langkah pemeriksaan menurut manual [1]:
-1. Bahan bakar tidak sesuai (incorrectly-used fuel) — lakukan pemeriksaan karena mungkin bahan bakar yang dipakai salah.
-2. Penggunaan mesin tidak benar (incorrect machine usage) — mesin yang dipasang mungkin dioperasikan dengan cara yang salah; beri instruksi penggunaan yang benar.
-3. Engine controller rusak — jika pemeriksaan di atas tidak menemukan kegagalan, engine controller yang rusak (cacat internal, troubleshooting tidak bisa dilakukan).
+Kemungkinan penyebab menurut manual:
+1. Pemakaian bahan bakar yang salah (incorrectly-used fuel) — lakukan pemeriksaan karena bisa jadi bahan bakar yang dipakai tidak sesuai. [1]
+2. Pemakaian unit yang salah (incorrect machine usage) — unit yang terpasang mungkin dioperasikan tidak sesuai; beri instruksi cara pakai yang benar. [1]
+3. Engine controller rusak — kalau pemeriksaan di atas tidak menemukan kegagalan, engine controller yang rusak (ini defect internal, troubleshooting tidak bisa dilakukan). [1]
 
-Secara umum (pengetahuan umum): overspeed pada engine controller biasanya muncul saat putaran melewati batas yang diprogram (misalnya governor/rack tidak sempat menutup, atau ada suplai bahan bakar berlebih). Penyebab yang sering di lapangan: bahan bakar kotor/berair atau salah jenis (misalnya solar bercampur bensin/pelarut), filter bahan bakar tersumbat sehingga tekanan suplai tidak stabil, rack/aktuator governor macet, sensor putaran (NE) kotor atau celahnya salah, dan pada kondisi beban ringan operator menurunkan beban terlalu cepat sambil tetap menahan throttle tinggi. Karena controller hanya membatasi injection rate, mesin tidak akan mati sendiri — putaran akan naik-turun sampai penyebabnya dihilangkan. Periksa juga kode CA115 (Engine NE and Backup Speed Sensor Error) karena sensor putaran yang bermasalah bisa memberi sinyal putaran palsu ke controller.
-00:14 +1: All tests passed!
+Secara umum, overspeed pada engine diesel biasanya bukan murni masalah elektronik. Yang perlu dicurigai di lapangan: bahan bakar yang tidak sesuai (misalnya bercampur bensin/solvent, atau kadar sulfur/oktan salah) yang membuat pembakaran tak terkendali, kebocoran oli ke ruang bakar lewat turbo seal atau ring piston (engine run-away), governor/actuator yang lambat merespons, atau sensor kecepatan yang memberi sinyal salah sehingga controller mengira putaran terlalu tinggi. Karena itu langkah pertama yang benar adalah memastikan bahan bakar dan kondisi pemakaian, baru curigai controller. Kalau putaran benar-benar naik tak terkendali, jangan tunda — hentikan engine dengan cara yang aman (tutup saluran udara masuk), karena overspeed bisa merusak komponen internal.
+00:15 +1: All tests passed!
