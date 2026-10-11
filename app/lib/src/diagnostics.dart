@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
+/// The commit this app was built from (set by the APK workflow), so a
+/// report says which test build it came from.
+const buildId = String.fromEnvironment('BUILD_ID');
+
 /// A small log of what the app was doing, kept on the phone so a force close
 /// can be explained afterwards (menu ⋮ > Laporan masalah). Each line is
 /// written straight to disk, so the last steps before a crash survive it.
@@ -55,6 +59,7 @@ class Diagnostics {
   /// Everything known about recent problems, as text to copy and send.
   static Future<String> report() async {
     final out = StringBuffer();
+    out.writeln('Versi: ${buildId.isEmpty ? 'lokal' : buildId}');
     try {
       final memory = (await _channel.invokeMapMethod<String, Object?>('memory')) ?? const {};
       out.writeln('RAM HP: ${memory['totalMb']} MB, tersedia ${memory['availMb']} MB, '

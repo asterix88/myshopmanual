@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mymanual/src/models.dart';
+import 'package:mymanual/src/screens/viewer_screen.dart';
 import 'package:mymanual/src/search.dart';
 import 'package:mymanual/src/store.dart';
 
@@ -126,6 +127,23 @@ void main() {
       final result = searchIndexesSync({'k': index}, toFtsQuery('track ten'));
       expect(result.hits.single.page, 4);
       expect(result.hits.single.section, 'Track tension');
+    });
+
+    test('the viewer finds every matching page of one manual, in page order', () {
+      final pages = searchPagesInIndexSync(index, toFtsQuery('hydraulic oil filter'), 'hydraulic oil filter');
+      // Page 2 has the words twice, page 3 once.
+      expect(pages, [(page: 2, count: 2), (page: 3, count: 1)]);
+      expect(searchPagesInIndexSync(index, toFtsQuery('zzz'), 'zzz'), isEmpty);
+    });
+
+    test('a part number matches across a dash, space or line break', () {
+      final pattern = queryPattern('01010-81640')!;
+      expect(pattern.hasMatch('BOLT 01010-81640 1'), isTrue);
+      expect(pattern.hasMatch('01010 81640'), isTrue);
+      expect(pattern.hasMatch('01010\u201081640'), isTrue);
+      expect(pattern.hasMatch('01010-81660'), isFalse);
+      expect(queryPattern('Clearance')!.allMatches('VALVE CLEARANCE, clearance').length, 2);
+      expect(queryPattern(' - '), isNull);
     });
 
     test('reads the bookmarks', () {
@@ -370,5 +388,20 @@ void main() {
       expect(store.listedUpdates.single.kind, UpdateKind.newVersion);
       store.dispose();
     });
+  });
+
+  test('outlineFromToc nests deeper bookmark rows under the one before', () {
+    final outline = outlineFromToc(const [
+      (level: 1, title: 'Index', page: 2),
+      (level: 1, title: 'Engine', page: 10),
+      (level: 2, title: 'Removal', page: 11),
+      (level: 3, title: 'Steps', page: 12),
+      (level: 2, title: 'Installation', page: 14),
+      (level: 1, title: 'Hydraulic', page: 20),
+    ]);
+    expect([for (final n in outline) n.title], ['Index', 'Engine', 'Hydraulic']);
+    expect([for (final n in outline[1].children) n.title], ['Removal', 'Installation']);
+    expect(outline[1].children.first.children.single.dest?.pageNumber, 12);
+    expect(outline[2].children, isEmpty);
   });
 }

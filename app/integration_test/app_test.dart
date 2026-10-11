@@ -11,6 +11,7 @@ import 'package:http/testing.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:mymanual/src/screens/shell.dart';
 import 'package:mymanual/src/screens/unit_screen.dart';
+import 'package:mymanual/src/screens/viewer_screen.dart';
 import 'package:mymanual/src/store.dart';
 import 'package:mymanual/src/widgets/excavator_loader.dart';
 import 'package:path_provider/path_provider.dart';
@@ -93,6 +94,50 @@ void main() {
     }
     await wait(tester, const Duration(seconds: 3));
     expect(find.text('Simpan ke Download'), findsNothing);
+    step('done');
+  }, timeout: const Timeout(Duration(minutes: 4)));
+
+  testWidgets('search in a manual starts on the search key and steps with the pill', (tester) async {
+    final root = Directory('${(await getTemporaryDirectory()).path}/it-${DateTime.now().microsecondsSinceEpoch}')
+      ..createSync(recursive: true);
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    final file = store.catalog.files.single;
+    await store.download(file, unitName: 'TEST1-1');
+
+    step('open viewer');
+    await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(home: ViewerScreen(fileKey: file.key))));
+    await pumpUntil(tester, find.text(' / 4'));
+    await tester.tap(find.byTooltip('Cari di file ini'));
+    await tester.pump();
+
+    step('type without searching');
+    await tester.enterText(find.byKey(const Key('viewer-search')), 'hydraulic oil filter');
+    await wait(tester, const Duration(seconds: 1));
+    expect(find.byKey(const Key('match-pill')), findsNothing);
+
+    step('press search');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await pumpUntil(tester, find.byKey(const Key('match-pill')));
+    // Page 2 has the words twice, page 3 once.
+    await pumpUntil(tester, find.text('1/3'));
+
+    step('next and previous');
+    await tester.tap(find.byTooltip('Hasil berikutnya'));
+    await pumpUntil(tester, find.text('2/3'));
+    await tester.tap(find.byTooltip('Hasil sebelumnya'));
+    await tester.tap(find.byTooltip('Hasil sebelumnya'));
+    await pumpUntil(tester, find.text('3/3'));
+
+    step('no match');
+    // Tapping the pill closed the keyboard, and on a device the text input
+    // does not reconnect reliably, so submit through the field itself.
+    final field = find.byKey(const Key('viewer-search'));
+    await tester.enterText(field, 'zzzz');
+    await tester.pump();
+    tester.widget<TextField>(field).onSubmitted!('zzzz');
+    await pumpUntil(tester, find.text('tidak ada'));
+    expect(find.byKey(const Key('match-pill')), findsNothing);
     step('done');
   }, timeout: const Timeout(Duration(minutes: 4)));
 }
