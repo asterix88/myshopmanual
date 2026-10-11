@@ -1,24 +1,88 @@
-units/CAT395/Machine_System_Travel_Counterbalance_Valve.pdf size=3192363 tail try1: 206 0.584931s 1024B cache=MISS age= colo=ray: a48e5f8acf616c0f
-units/CAT395/Machine_System_Travel_Counterbalance_Valve.pdf size=3192363 tail try2: 206 0.045413s 1024B cache=HIT age=0 colo=ray: a48e5f8fab47d635
-units/CAT395/Machine_System_Travel_Counterbalance_Valve.pdf size=3192363 head try1: 206 0.042141s 65536B cache=HIT age=0 colo=ray: a48e5f900d68af78
-units/CAT395/Machine_System_Travel_Counterbalance_Valve.pdf size=3192363 head try2: 206 0.041112s 65536B cache=HIT age=0 colo=ray: a48e5f906cc6500d
-units/CAT395/Machine_System_Travel_Counterbalance_Valve.pdf size=3192363 mid try1: 206 0.073716s 65536B cache=HIT age=0 colo=ray: a48e5f90da9a2d12
-units/CAT395/Machine_System_Travel_Counterbalance_Valve.pdf size=3192363 mid try2: 206 0.043942s 65536B cache=HIT age=0 colo=ray: a48e5f916d9f1d3d
-units/PC500LC-10/SM_PC500LC-10R.pdf size=115379347 tail try1: 206 0.235085s 1024B cache=HIT age= colo=ray: a48e5f91ba83e646
-units/PC500LC-10/SM_PC500LC-10R.pdf size=115379347 tail try2: 206 0.041002s 1024B cache=HIT age=317 colo=ray: a48e5f993fbfc9ac
-units/PC500LC-10/SM_PC500LC-10R.pdf size=115379347 head try1: 206 0.064847s 65536B cache=HIT age=317 colo=ray: a48e5f999ac92952
-units/PC500LC-10/SM_PC500LC-10R.pdf size=115379347 head try2: 206 0.047992s 65536B cache=HIT age=318 colo=ray: a48e5f9a1a648000
-units/PC500LC-10/SM_PC500LC-10R.pdf size=115379347 mid try1: 206 0.041772s 65536B cache=HIT age=318 colo=ray: a48e5f9a8e4be5e7
-units/PC500LC-10/SM_PC500LC-10R.pdf size=115379347 mid try2: 206 0.046924s 65536B cache=HIT age=318 colo=ray: a48e5f9aed772290
-units/PC210-1OMO/SM_PC210_SEN06701-C0.pdf size=125918313 tail try1: 206 0.533169s 1024B cache=HIT age= colo=ray: a48e5f9b5a55e5f8
-units/PC210-1OMO/SM_PC210_SEN06701-C0.pdf size=125918313 tail try2: 206 0.042951s 1024B cache=HIT age=5055 colo=ray: a48e5faabf8a7dae
-units/PC210-1OMO/SM_PC210_SEN06701-C0.pdf size=125918313 head try1: 206 0.043231s 65536B cache=HIT age=5055 colo=ray: a48e5fab1ddc07fb
-units/PC210-1OMO/SM_PC210_SEN06701-C0.pdf size=125918313 head try2: 206 0.041547s 65536B cache=HIT age=5055 colo=ray: a48e5fab8eee6a6d
-units/PC210-1OMO/SM_PC210_SEN06701-C0.pdf size=125918313 mid try1: 206 0.042135s 65536B cache=HIT age=5055 colo=ray: a48e5fabe9c0c940
-units/PC210-1OMO/SM_PC210_SEN06701-C0.pdf size=125918313 mid try2: 206 0.042492s 65536B cache=HIT age=5055 colo=ray: a48e5fac4c24d673
-units/PC2000-11R/SM_PC2000-11R_SN30019_UP.pdf size=352650970 tail try1: 206 0.244404s 1024B cache=HIT age= colo=ray: a48e5facac1d242b
-units/PC2000-11R/SM_PC2000-11R_SN30019_UP.pdf size=352650970 tail try2: 206 0.038729s 1024B cache=HIT age=5222 colo=ray: a48e5fb86bc86c0f
-units/PC2000-11R/SM_PC2000-11R_SN30019_UP.pdf size=352650970 head try1: 206 0.043788s 65536B cache=HIT age=5222 colo=ray: a48e5fb8cf2e9b36
-units/PC2000-11R/SM_PC2000-11R_SN30019_UP.pdf size=352650970 head try2: 206 0.044294s 65536B cache=HIT age=5222 colo=ray: a48e5fb92ce41d3d
-units/PC2000-11R/SM_PC2000-11R_SN30019_UP.pdf size=352650970 mid try1: 206 0.060282s 65536B cache=HIT age=5222 colo=ray: a48e5fb99ad881cf
-units/PC2000-11R/SM_PC2000-11R_SN30019_UP.pdf size=352650970 mid try2: 206 0.045502s 65536B cache=HIT age=5222 colo=ray: a48e5fba1d3a37bb
+=== Memanaskan 87 PDF di server Cloudflare ===
+siap    units/CAT395/CAT359_Hydraulic_Schematic.pdf  (0.9 s)
+siap    units/CAT395/CAT395_Electrical_Diagram.pdf  (0.7 s)
+siap    units/CAT395/Machine_System_Accumulator_-_Pilot.pdf  (0.2 s)
+siap    units/CAT395/Machine_System_Boom_Drift_Reduction_Valve.pdf  (0.7 s)
+siap    units/CAT395/Machine_System_Boom_Hydraulic_System.pdf  (0.5 s)
+siap    units/CAT395/Machine_System_Boom_System.pdf  (1.0 s)
+siap    units/CAT395/Machine_System_Bucket_System.pdf  (1.2 s)
+siap    units/CAT395/Machine_System_Check_Valve_-_Return_Make_Up.pdf  (0.6 s)
+siap    units/CAT395/Machine_System_Check_Valve_Load.pdf  (1.1 s)
+siap    units/CAT395/Machine_System_Control_Valve_-_Boom_Lowering.pdf  (0.6 s)
+siap    units/CAT395/Machine_System_Control_Valve_-_Stick_Lowering.pdf  (0.7 s)
+siap    units/CAT395/Machine_System_Control_Valve_Straight_Travel.pdf  (0.9 s)
+siap    units/CAT395/Machine_System_ECM.pdf  (1.1 s)
+siap    units/CAT395/Machine_System_Electronic_Control_-_Assist_System.pdf  (0.6 s)
+siap    units/CAT395/Machine_System_Engine_Speed_Control.pdf  (1.2 s)
+siap    units/CAT395/Machine_System_Fan_Hydraulic_System.pdf  (1.0 s)
+siap    units/CAT395/Machine_System_GI_-_Bucket_System.pdf  (0.8 s)
+siap    units/CAT395/Machine_System_GI_-_Fan_Hydraulic_System.pdf  (1.6 s)
+siap    units/CAT395/Machine_System_GI_-_Machine_System.pdf  (0.6 s)
+siap    units/CAT395/Machine_System_GI_-_Main_Control_Valve.pdf  (0.7 s)
+siap    units/CAT395/Machine_System_GI_-_Main_Pump_System.pdf  (0.6 s)
+siap    units/CAT395/Machine_System_GI_-_Pilot_Hydraulic_System.pdf  (0.9 s)
+siap    units/CAT395/Machine_System_GI_-_Return_Hydraulic_System.pdf  (0.8 s)
+siap    units/CAT395/Machine_System_GI_-_Stick_System.pdf  (0.6 s)
+siap    units/CAT395/Machine_System_GI_-_Swing_System.pdf  (0.6 s)
+siap    units/CAT395/Machine_System_GI_-_Travel_System.pdf  (0.9 s)
+siap    units/CAT395/Machine_System_Grapic_Color_Codes.pdf  (0.6 s)
+siap    units/CAT395/Machine_System_Hydraulic_Oil_Cooler.pdf  (1.0 s)
+siap    units/CAT395/Machine_System_Hydraulic_Tank_Filter.pdf  (0.8 s)
+siap    units/CAT395/Machine_System_Location_of_Component_-_Machine_System.pdf  (0.9 s)
+siap    units/CAT395/Machine_System_Main_Control_Valve.pdf  (1.2 s)
+siap    units/CAT395/Machine_System_Main_Hydraulic_Schematic.pdf  (1.6 s)
+siap    units/CAT395/Machine_System_Pilot_System.pdf  (0.6 s)
+siap    units/CAT395/Machine_System_Piston_Pump_-_Pilot.pdf  (0.6 s)
+siap    units/CAT395/Machine_System_Pump_Contro_-_Main_Pump_Regulator.pdf  (1.3 s)
+siap    units/CAT395/Machine_System_Return_Hydraulic_System.pdf  (1.0 s)
+siap    units/CAT395/Machine_System_Stick_Drift_Reduction_Valve.pdf  (1.0 s)
+siap    units/CAT395/Machine_System_Stick_System.pdf  (1.0 s)
+siap    units/CAT395/Machine_System_Swing_Drive.pdf  (0.6 s)
+siap    units/CAT395/Machine_System_Swing_Motor.pdf  (0.9 s)
+siap    units/CAT395/Machine_System_Swing_Parking_Brake_-_Pilot_Valve.pdf  (1.0 s)
+siap    units/CAT395/Machine_System_Swing_Pump.pdf  (0.7 s)
+siap    units/CAT395/Machine_System_Swing_System.pdf  (0.9 s)
+siap    units/CAT395/Machine_System_Swivel_Joint.pdf  (0.6 s)
+siap    units/CAT395/Machine_System_Travel_Counterbalance_Valve.pdf  (0.0 s)
+siap    units/CAT395/Machine_System_Travel_Motor.pdf  (0.7 s)
+siap    units/CAT395/Machine_System_Travel_Parking_Brake_Valve.pdf  (1.4 s)
+siap    units/CAT395/Machine_System_Travel_System.pdf  (3.9 s)
+siap    units/CAT395/Machine_System_Travel_System_-_Oil_Make_Up.pdf  (0.6 s)
+siap    units/CAT395/System_Operation_Combined_Function_-_Manual_Relief.pdf  (1.1 s)
+siap    units/CAT395/System_Operation_General_Information.pdf  (1.1 s)
+siap    units/CAT395/System_Operation_Medium_Pressure_Hydraulic_System.pdf  (0.5 s)
+siap    units/CAT395/System_Operation_Sensors.pdf  (0.7 s)
+siap    units/CAT395/System_Operation_Switches.pdf  (1.1 s)
+siap    units/CAT395/System_Operation_Work_Tool_Parameter_-_Control_Functions.pdf  (0.8 s)
+siap    units/D155A-6/OMM_D155A-6_85025_UP.pdf  (1.3 s)
+siap    units/D155A-6/Partbook_D155A-6R_SN_J10001-UP.pdf  (1.3 s)
+siap    units/D155A-6/Partbook_D155A-6_85001_UP.pdf  (0.8 s)
+siap    units/D155A-6/Shop_Manual_D155A-6_85001_UP.pdf  (0.6 s)
+siap    units/D155A-6/spek.pdf  (0.9 s)
+siap    units/D375-6R/OMM_D375-6.pdf  (1.8 s)
+siap    units/D375-6R/Part_Book_D375A-6R_65001_UP.pdf  (1.3 s)
+siap    units/D375-6R/Shop_Manual_D375A-6R_65001UP.pdf  (1.2 s)
+siap    units/D375-6R/spek.pdf  (0.3 s)
+siap    units/D85E-SS-2A/Electrical_System_DZ85ESS-2.pdf  (1.0 s)
+siap    units/D85E-SS-2A/OMM_D85ESS-2A_4001_UP.pdf  (0.8 s)
+siap    units/D85E-SS-2A/Parts_Book_D85ESS-2_J1188_UP.pdf  (1.5 s)
+siap    units/D85E-SS-2A/Shop_Manual_D85E-SS-2A_3001_UP.pdf  (4.1 s)
+siap    units/D85E-SS-2A/spek.pdf  (0.4 s)
+siap    units/PC1250SP-11/HYD_SCHEMATIC_PC1250-8_SN_30001_COLOUR.pdf  (1.0 s)
+siap    units/PC1250SP-11/OMM_PC1250-11R.pdf  (0.4 s)
+siap    units/PC1250SP-11/PB_PC1250SP-11_SN_J20001.pdf  (1.9 s)
+siap    units/PC1250SP-11/SM_PC1250-11_50090.pdf  (0.9 s)
+siap    units/PC1250SP-11/spek.pdf  (0.4 s)
+siap    units/PC2000-11R/OMM_PC2000-11R.pdf  (0.5 s)
+siap    units/PC2000-11R/Partbook_PC2000-11R.pdf  (1.9 s)
+siap    units/PC2000-11R/SM_PC2000-11R_SN30019_UP.pdf  (0.0 s)
+siap    units/PC2000-11R/spek.pdf  (0.4 s)
+siap    units/PC210-1OMO/HYD_DIAGRAM_PC210-_10M0.pdf  (0.8 s)
+siap    units/PC210-1OMO/OMM_PC210.pdf  (2.1 s)
+siap    units/PC210-1OMO/PB_PC210_C_SERIES.pdf  (2.1 s)
+siap    units/PC210-1OMO/PB_PC210_J_SERIES.pdf  (1.7 s)
+siap    units/PC210-1OMO/SM_PC210_SEN06701-C0.pdf  (0.0 s)
+siap    units/PC210-1OMO/spek.pdf  (0.4 s)
+siap    units/PC500LC-10/PB_PC500LC-10R_SN100003.pdf  (1.1 s)
+siap    units/PC500LC-10/SM_PC500LC-10R.pdf  (0.0 s)
+siap    units/PC500LC-10/spek.pdf  (0.3 s)
