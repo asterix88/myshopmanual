@@ -1,0 +1,236 @@
+Resolving dependencies...
+Downloading packages...
+  archive 4.3.0 (4.5.0 available)
+  cupertino_ui 1.1.1 (1.1.2 available)
+  dbus 0.7.15 (0.8.0 available)
+  jni_flutter 1.0.3 (1.0.4+1 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  material_ui 1.5.0 (1.6.0 available)
+  test_api 0.7.12 (0.7.15 available)
+  vector_math 2.4.0 (2.4.3 available)
+Got dependencies!
+8 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading /home/runner/work/myshopmanual/myshopmanual/app/test/zz_probe3_test.dart
+00:00 +0: probe DKULKB
+catalog files: 80
+PC1250 indexes: 4
+
+=== search "DKULKB"
+SM PC1250-11 50090 p1251 rank=-9.41 section=FAILURE CODE [DKULKB]
+   Circuit diagram related to PPC lock switch 40 TROUBLESHOOTING FAILURE CODE [DKULKB] PC1250-11R, PC1250SP-11R 40-535
+SM PC1250-11 50090 p1250 rank=-8.40 section=FAILURE CODE [DKULKB]
+   FAILURE CODE [DKULKB]  Action level Failure code Failure PPC Lock Relay Short Circuit (pump controller system) L03 DKULKB Detail of fail- ure Short circuit was detected because abnormal current is carried when outputting 24 V in the primary (coil) circuit of the PPC lock relay. Action of controller 
+SM PC1250-11 50090 p849 rank=-4.81 section=FAILURE CODE TABLE
+   Failure code Failure (Shown on screen) Applicable equipment Action level History cate- gory Remarks DHSAMA Swing Right PPC Pressure Sensor Defective Func- tion PUMP L01 Electrical system DHSBMA Swing Left PPC Pressure Sensor Defective Func- tion PUMP L01 Electrical system DHSCMA Arm OUT PPC Pressure
+SM PC1250-11 50090 p722 rank=-4.76 section=CONTENTS
+   FAILURE CODE [DHSAMA].................................................................................................................40-496 FAILURE CODE [DHSBMA].................................................................................................................40-499 FAILURE CODE [DHSC
+
+=== search "DKULKB fault code"
+SM PC1250-11 50090 p1250 rank=-11.75 section=FAILURE CODE [DKULKB]
+   FAILURE CODE [DKULKB]  Action level Failure code Failure PPC Lock Relay Short Circuit (pump controller system) L03 DKULKB Detail of fail- ure Short circuit was detected because abnormal current is carried when outputting 24 V in the primary (coil) circuit of the PPC lock relay. Action of controller 
+SM PC1250-11 50090 p1251 rank=-10.67 section=FAILURE CODE [DKULKB]
+   Circuit diagram related to PPC lock switch 40 TROUBLESHOOTING FAILURE CODE [DKULKB] PC1250-11R, PC1250SP-11R 40-535
+OMM PC1250-11R p492 rank=-8.52 section=CAUSE OF TROUBLE AND ACTIONS
+   3. Push the L.H. button (d) and R.H. button (e), and “Error re- cord Delete 1_3” is shown. Push the button (b), and “dEL” is shown, then the error record is deleted. (D): Error record Delete 1_3 (E): dEL Error Delete CAUSE OF TROUBLE AND ACTIONS  If the movable diesel preheater does not operate norm
+OMM PC1250-11R p494 rank=-7.23 section=CAUSE OF TROUBLE AND ACTIONS
+   Error code display Explanation of errors • Movable diesel preheater is turned OFF or voltage is not sufficient. • No communication • No diagnosis line is connected. • Interruption of temperature sensor function ATTACHMENTS AND OPTIONS HANDLE MOVABLE DIESEL PREHEATER 6-61
+
+=== search "DKULKB error code"
+OMM PC1250-11R p492 rank=-15.57 section=CAUSE OF TROUBLE AND ACTIONS
+   3. Push the L.H. button (d) and R.H. button (e), and “Error re- cord Delete 1_3” is shown. Push the button (b), and “dEL” is shown, then the error record is deleted. (D): Error record Delete 1_3 (E): dEL Error Delete CAUSE OF TROUBLE AND ACTIONS  If the movable diesel preheater does not operate norm
+OMM PC1250-11R p494 rank=-12.56 section=CAUSE OF TROUBLE AND ACTIONS
+   Error code display Explanation of errors • Movable diesel preheater is turned OFF or voltage is not sufficient. • No communication • No diagnosis line is connected. • Interruption of temperature sensor function ATTACHMENTS AND OPTIONS HANDLE MOVABLE DIESEL PREHEATER 6-61
+SM PC1250-11 50090 p1251 rank=-10.67 section=FAILURE CODE [DKULKB]
+   Circuit diagram related to PPC lock switch 40 TROUBLESHOOTING FAILURE CODE [DKULKB] PC1250-11R, PC1250SP-11R 40-535
+SM PC1250-11 50090 p1250 rank=-9.71 section=FAILURE CODE [DKULKB]
+   FAILURE CODE [DKULKB]  Action level Failure code Failure PPC Lock Relay Short Circuit (pump controller system) L03 DKULKB Detail of fail- ure Short circuit was detected because abnormal current is carried when outputting 24 V in the primary (coil) circuit of the PPC lock relay. Action of controller 
+
+=== search "DKULKB failure code"
+SM PC1250-11 50090 p1251 rank=-11.85 section=FAILURE CODE [DKULKB]
+   Circuit diagram related to PPC lock switch 40 TROUBLESHOOTING FAILURE CODE [DKULKB] PC1250-11R, PC1250SP-11R 40-535
+SM PC1250-11 50090 p1250 rank=-11.07 section=FAILURE CODE [DKULKB]
+   FAILURE CODE [DKULKB]  Action level Failure code Failure PPC Lock Relay Short Circuit (pump controller system) L03 DKULKB Detail of fail- ure Short circuit was detected because abnormal current is carried when outputting 24 V in the primary (coil) circuit of the PPC lock relay. Action of controller 
+OMM PC1250-11R p492 rank=-8.52 section=CAUSE OF TROUBLE AND ACTIONS
+   3. Push the L.H. button (d) and R.H. button (e), and “Error re- cord Delete 1_3” is shown. Push the button (b), and “dEL” is shown, then the error record is deleted. (D): Error record Delete 1_3 (E): dEL Error Delete CAUSE OF TROUBLE AND ACTIONS  If the movable diesel preheater does not operate norm
+SM PC1250-11 50090 p722 rank=-8.05 section=CONTENTS
+   FAILURE CODE [DHSAMA].................................................................................................................40-496 FAILURE CODE [DHSBMA].................................................................................................................40-499 FAILURE CODE [DHSC
+
+
+######## ASK: error DKULKB PC1250
+--- AI model=deepseek-v4-flash web=0 calls=[{"index":0,"id":"call_00_y8iSl2aG32QWoRNleOYH3572","type":"function","function":{"name":"search_manuals","arguments":"{\"query\": \"DKULKB error code\", \"unit\": \"PC1250\"}"}},{"index":1,"id":"call_01_MLXAgbzitZe1vhnecKCD4177","type":"function","function":{"name":"search_manuals","arguments":"{\"query\": \"troubleshooting code list machine monitor\", \"unit\": \"PC1250\"}"}}]
+--- TOOL RESULT (4756 chars)
+[S5] PC1250SP-11 · PB PC1250SP-11 SN J20001 · page 3 · section: FOREWORD
+2
+FOREWORD
+When ordering replacement parts, specify the part number, part name, and quantity required, and also
+specify your machine model code, machine serial number, engine serial number and the service meter
+reading of which the parts are needed. This Parts Book contains not only standard replacement parts
+but also optional equipment, tools and field repair service parts. 
+To order these items, please contact your nearest Komatsu distributor. 
+NOTE
+The illustrations, parts configuration, parts number or parts name in this publication may differ
+from your machine unit, and these are subject to change without notice for continuous product
+improvement. 
+Whenever concerns and questions arise regarding items in this publication and your machine
+unit or when you order there replacement parts, please consult your nearest Komatsu
+distributor for the latest information.
+This Parts Book contains the information and special codes as follows:
+ILLUSTRATION AND PARTS LIST
+When you open this Parts Book, you will find an illustration following its figure number (FIG.) Each
+individual
+part in the illustration is given an index number. Following the illustration, the component parts of the
+unit a…
+
+[S6] PC1250SP-11 · OMM PC1250-11R · page 492 · section: CAUSE OF TROUBLE AND ACTIONS
+3.
+Push the L.H. button (d) and R.H. button (e), and “Error re-
+cord Delete 1_3” is shown. Push the button (b), and “dEL”
+is shown, then the error record is deleted.
+(D): Error record Delete 1_3
+(E): dEL Error Delete
+CAUSE OF TROUBLE AND ACTIONS 
+If the movable diesel preheater does not operate normally, check the error code by the method that follows, and
+consult your Komatsu distributor.
+1.
+Push the button (b), and let the start screen be shown on
+the control panel.
+(A): Start screen
+2.
+Push the L.H. button (d) and R.H. button (e) at the same
+time for longer than 5 seconds to show the screen shown
+in the right figure.
+3.
+Push the button (b), and “Error code” is shown.
+(B): Error display 1_1
+Error code list
+Error code display
+Explanation of errors
+ATTACHMENTS AND OPTIONS
+HANDLE MOVABLE DIESEL PREHEATER
+6-59
+
+[S7] PC1250SP-11 · SM PC1250-11 50090 · page 602 · section: ABNORMALITY RECORD MENU
+ENG: The engine controller detects the monitoring information.
+KOM PLS: KOMTRAX Plus controller detects the monitoring information.
+PUMP: The pump controller detects the monitoring information.
+MON: The machine monitor detects the mon
+--- TOOL RESULT (2750 chars)
+[S1] PC1250SP-11 · OMM PC1250-11R · page 492 · section: CAUSE OF TROUBLE AND ACTIONS
+3.
+Push the L.H. button (d) and R.H. button (e), and “Error re-
+cord Delete 1_3” is shown. Push the button (b), and “dEL”
+is shown, then the error record is deleted.
+(D): Error record Delete 1_3
+(E): dEL Error Delete
+CAUSE OF TROUBLE AND ACTIONS 
+If the movable diesel preheater does not operate normally, check the error code by the method that follows, and
+consult your Komatsu distributor.
+1.
+Push the button (b), and let the start screen be shown on
+the control panel.
+(A): Start screen
+2.
+Push the L.H. button (d) and R.H. button (e) at the same
+time for longer than 5 seconds to show the screen shown
+in the right figure.
+3.
+Push the button (b), and “Error code” is shown.
+(B): Error display 1_1
+Error code list
+Error code display
+Explanation of errors
+ATTACHMENTS AND OPTIONS
+HANDLE MOVABLE DIESEL PREHEATER
+6-59
+
+[S2] PC1250SP-11 · OMM PC1250-11R · page 494 · section: CAUSE OF TROUBLE AND ACTIONS
+Error code display
+Explanation of errors
+•
+Movable diesel preheater is turned OFF or voltage
+is not sufficient.
+•
+No communication
+•
+No diagnosis line is connected.
+•
+Interruption of temperature sensor function
+ATTACHMENTS AND OPTIONS
+HANDLE MOVABLE DIESEL PREHEATER
+6-61
+
+[S3] PC1250SP-11 · SM PC1250-11 50090 · page 1251 · section: FAILURE CODE [DKULKB]
+Circuit diagram related to PPC lock switch
+40 TROUBLESHOOTING
+FAILURE CODE [DKULKB]
+PC1250-11R, PC1250SP-11R
+40-535
+
+[S4] PC1250SP-11 · SM PC1250-11 50090 · page 1250 · section: FAILURE CODE [DKULKB]
+FAILURE CODE [DKULKB] 
+Action level
+Failure code
+Failure
+PPC Lock Relay Short Circuit
+(pump controller system)
+L03
+DKULKB
+Detail of fail-
+ure
+Short circuit was detected because abnormal current is carried when outputting 24 V in the primary
+(coil) circuit of the PPC lock relay.
+Action of
+controller
+•
+Stops 24 V output to PPC lock relay primary circuit (coil side).
+•
+Even if cause of failure disappears, machine does not become normal until starting switch
+is turned to OFF position.
+Phenomenon
+on machine
+•
+The work equipment is not operable because PPC remains locked.
+Related
+information
+•
+The troubleshooting for this failure code is performed on the primary side of the relay and
+not on the secondary side.
+•
+After repairing, check if the failure code is cleared by the following procedure.
+Procedure: Turn starting switch to ON position and set PPC lock lever to FREE position.
+No.
+Cause
+Procedure, measuring location, criteria and remarks
+1
+Def
+--- AI model=deepseek-v4-flash web=0 calls=[{"index":0,"id":"call_00_HLulwV3bP1A3s32n9zHR3713","type":"function","function":{"name":"view_page","arguments":"{\"source\": \"S4\", \"manual\": \"M70\", \"page\": 1250, \"region\": \"full\"}"}},{"index":1,"id":"call_01_UdzM7vp8WXVbt4oIhH9j1352","type":"function","function":{"name":"view_page","arguments":"{\"source\": \"S3\", \"manual\": \"M70\", \"page\": 1251, \"region\": \"full\"}"}}]
+######## ERROR type 'String' is not a subtype of type 'Map<dynamic, dynamic>?' in type cast
+
+
+######## ASK: DKULKB
+--- AI model=deepseek-v4-flash web=0 calls=null
+--- ANSWER
+DKULKB bukan istilah yang saya kenali sebagai nama komponen atau kode standar di manual alat berat. Kemungkinan besar ini salah ketik atau singkatan yang dipakai di tempat kerja Anda.
+
+Kalau yang dimaksud adalah kode pada sistem kelistrikan atau hidraulik, tolong beri tahu konteksnya sedikit: muncul di mana kode ini (layar monitor, stiker di harness, label solenoid, atau di kertas kerja), dan unit apa yang sedang dikerjakan (D155A-6, PC2000-11R, CAT395, dan seterusnya). Dengan itu saya bisa arahkan ke komponen atau halaman manual yang tepat.
+
+Sementara ini, beberapa kemungkinan yang paling dekat secara huruf, supaya Anda bisa cek sendiri:
+
+- **DKL / DKUL** sering dipakai sebagai singkatan internal bengkel, bukan dari manual. Kalau ada di harness, biasanya itu kode sirkuit buatan sendiri (misalnya "D" untuk dump, "K" untuk kontrol).
+- **LK** pada beberapa diagram kelistrikan Komatsu berarti lamp/indicator circuit, dan **KB** bisa berarti key box atau relay box. Jadi "LK-KB" bisa menunjuk sirkuit lampu yang lewat kotak relay.
+- Kalau ini kode pada monitor, kode diagnostik Komatsu umumnya berbentuk seperti **E02, E15, CA*** dsb., bukan rangkaian huruf seperti ini.
+
+Kalau Anda bisa sebutkan unit dan di mana kode itu terbaca, saya lanjutkan dengan penjelasan komponen dan cara pengecekannya.
+######## FINAL: DKULKB bukan istilah yang saya kenali sebagai nama komponen atau kode standar di manual alat berat. Kemungkinan besar ini salah ketik atau singkatan yang dipakai di tempat kerja Anda.
+
+Kalau yang dimaksud adalah kode pada sistem kelistrikan atau hidraulik, tolong beri tahu konteksnya sedikit: muncul di mana kode ini (layar monitor, stiker di harness, label solenoid, atau di kertas kerja), dan unit apa yang sedang dikerjakan (D155A-6, PC2000-11R, CAT395, dan seterusnya). Dengan itu saya bisa arahkan ke komponen atau halaman manual yang tepat.
+
+Sementara ini, beberapa kemungkinan yang paling dekat secara huruf, supaya Anda bisa cek sendiri:
+
+- **DKL / DKUL** sering dipakai sebagai singkatan internal bengkel, bukan dari manual. Kalau ada di harness, biasanya itu kode sirkuit buatan sendiri (misalnya "D" untuk dump, "K" untuk kontrol).
+- **LK** pada beberapa diagram kelistrikan Komatsu berarti lamp/indicator circuit, dan **KB** bisa berarti key box atau relay box. Jadi "LK-KB" bisa menunjuk sirkuit lampu yang lewat kotak relay.
+- Kalau ini kode pada monitor, kode diagnostik Komatsu umumnya berbentuk seperti **E02, E15, CA*** dsb., bukan rangkaian huruf seperti ini.
+
+Kalau Anda bisa sebutkan unit dan di mana kode itu terbaca, saya lanjutkan dengan penjelasan komponen dan cara pengecekannya.
+00:10 +1: All tests passed!
