@@ -145,12 +145,12 @@ Future<List<int>> findLargeSheets(AppStore store, ManualFile file) => _oneAtATim
 /// crash inside PDFium).
 Future<PdfDocument> _open(AppStore store, ManualFile file) {
   if (store.isDownloaded(file.key)) return PdfDocument.openFile(store.pdfPath(file));
-  final key = '${file.key}@${file.pdf.sha256}';
+  final key = '${file.key}@${file.online.sha256}';
   if (_remoteKey != key) {
     _remoteKey = key;
     _remoteBlocks.clear();
   }
-  final size = file.pdf.size;
+  final size = file.online.size;
   // Pages are drawn by the same PDFium worker the PDF viewer uses, which
   // waits while a page is being fetched. So give up after a minute, and at
   // once while the user has a manual open (see [pauseServerDrawing]).

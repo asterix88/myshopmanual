@@ -404,4 +404,20 @@ void main() {
     expect(outline[1].children.first.children.single.dest?.pageNumber, 12);
     expect(outline[2].children, isEmpty);
   });
+
+  test('a manual is read online from its web copy when the catalog has one', () {
+    Map<String, dynamic> remote(String path) => {'path': path, 'size': 10, 'sha256': '0' * 64};
+    final json = {
+      'id': 'SM',
+      'title': 'SM',
+      'pages': 1,
+      'pdf': remote('units/U/SM.pdf'),
+      'index': remote('units/U/SM.sqlite'),
+    };
+    expect(ManualFile.fromJson('U', json).online.path, 'units/U/SM.pdf');
+    final withWeb = ManualFile.fromJson('U', {...json, 'web': remote('units/U/SM.web.pdf')});
+    expect(withWeb.online.path, 'units/U/SM.web.pdf');
+    expect(withWeb.pdf.path, 'units/U/SM.pdf');
+    expect(ManualFile.fromJson('U', withWeb.toJson()).web?.path, 'units/U/SM.web.pdf');
+  });
 }

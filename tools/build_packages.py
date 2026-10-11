@@ -12,6 +12,7 @@ Output layout (what gets uploaded to Cloudflare R2):
     dist/
       catalog.json                  list of units, files, sizes, hashes, versions
       units/PC210/<file>.pdf        PDFs copied as-is
+      units/PC210/<file>.web.pdf    the same PDF rewritten for reading online
       units/PC210/<file>.sqlite     that file's search index + bookmarks
 
 Every file has its own index, so a mechanic can download (and delete) one
@@ -543,6 +544,29 @@ def build_spec_pack(sources: list[tuple], target: Path,
     return entries, service, parts
 
 
+def write_web_copy(pdf: Path, target: Path, source_sha: str, before: dict | None) -> dict | None:
+    """The PDF rewritten for reading online (catalog "web").
+
+    PDFium finds page N by reading the dictionaries of pages 1..N-1 first.
+    In the original files those sit next to each page's own content, all
+    through the file, so opening page 722 of a Shop Manual online fetched
+    about 14 MB. Rewritten with object streams they are packed together and
+    the same page needs about 100 KB. Same pages, same text; the original
+    stays the download, so phones that have it see no new version.
+    """
+    try:
+        import pikepdf
+    except ImportError:
+        print("  (pikepdf not installed: no fast online copy; run pip install -r tools/requirements.txt)")
+        return None
+    rel = f"{target.parent.parent.name}/{target.parent.name}/{target.name}"
+    if before and before.get("source") == source_sha and target.exists() and sha256_of(target) == before["sha256"]:
+        return before
+    with pikepdf.open(pdf) as doc:
+        doc.save(target, object_stream_mode=pikepdf.ObjectStreamMode.generate, deterministic_id=True)
+    return {**file_entry(target, rel), "source": source_sha}
+
+
 def file_entry(path: Path, rel: str) -> dict:
     return {"path": rel, "size": path.stat().st_size, "sha256": sha256_of(path)}
 
@@ -598,6 +622,8 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
         index_info = file_entry(index_path, f"units/{unit_id}/{index_path.name}")
         before = previous_files.get(file_id)
         unchanged = before is not None and before["pdf"]["sha256"] == pdf_info["sha256"]
+        web_info = write_web_copy(pdf, unit_out / f"{file_id}.web.pdf", pdf_info["sha256"],
+                                  (before or {}).get("web"))
         files.append(
             {
                 "id": file_id,
@@ -607,6 +633,7 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
                 "bookmarks": len(toc),
                 "searchable": not scanned,
                 "pdf": pdf_info,
+                **({"web": web_info} if web_info else {}),
                 "index": index_info,
                 # What the app shows as the download size for this file.
                 "download_size": pdf_info["size"] + index_info["size"],

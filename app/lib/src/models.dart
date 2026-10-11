@@ -54,6 +54,7 @@ class ManualFile {
     required this.index,
     required this.updatedAt,
     this.group = '',
+    this.web,
   });
 
   factory ManualFile.fromJson(String unitId, Map<String, dynamic> json) => ManualFile(
@@ -67,6 +68,7 @@ class ManualFile {
         index: RemoteFile.fromJson(json['index'] as Map<String, dynamic>),
         updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? ''),
         group: json['group'] as String? ?? '',
+        web: json['web'] == null ? null : RemoteFile.fromJson(json['web'] as Map<String, dynamic>),
       );
 
   /// Order of files on a unit page: subfolders first, then the files placed
@@ -90,6 +92,14 @@ class ManualFile {
   final RemoteFile pdf;
   final RemoteFile index;
   final DateTime? updatedAt;
+
+  /// The same PDF rewritten for reading online (page dictionaries packed
+  /// together, so a far page opens without fetching the pages before it);
+  /// missing in catalogs built before it existed.
+  final RemoteFile? web;
+
+  /// What to read when the manual is not on the phone.
+  RemoteFile get online => web ?? pdf;
 
   /// The subfolder of the unit folder the PDF came from (e.g. "System
   /// Diagram", or "A / B" for a folder inside a folder), opened as its own
@@ -115,6 +125,7 @@ class ManualFile {
         'index': index.toJson(),
         'updated_at': updatedAt?.toIso8601String(),
         if (group.isNotEmpty) 'group': group,
+        if (web != null) 'web': web!.toJson(),
       };
 }
 
