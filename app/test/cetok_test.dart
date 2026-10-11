@@ -125,7 +125,7 @@ void main() {
     );
   });
 
-  testWidgets('the C button on Home opens Cetok Online; a part opens its details', (tester) async {
+  testWidgets('the Cetok Online card on Home opens Cetok Online; a part opens its details', (tester) async {
     late AppStore store;
     final manuals = fixtureServer();
     final client = MockClient((request) async {
@@ -141,8 +141,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('MANUAL BOOK'), findsOneWidget);
-    expect(find.text('CETOK ONLINE'), findsNothing);
-    await tester.tap(find.byType(CetokButton));
+    expect(find.text('CETOK ONLINE'), findsOneWidget);
+    // The small test screen has to scroll down to it.
+    await tester.ensureVisible(find.text('Check - Ambil - Catat'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Check - Ambil - Catat'));
     await tester.pumpAndSettle();
     for (var i = 0; i < 5 && find.text('CARTRIDGE').evaluate().isEmpty; i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));

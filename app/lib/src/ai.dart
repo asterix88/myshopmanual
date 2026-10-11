@@ -456,12 +456,16 @@ class AiChat {
       if (source != null && !pictures.contains(source) && pictures.length < 3) pictures.add(source);
       return '';
     }).trim();
-    final text = raw.replaceAllMapped(RegExp(r'(\s*)\[S(\d+)\]'), (m) {
-      final source = _sources[int.parse(m[2]!)];
-      if (source == null) return '';
-      if (!cited.contains(source)) cited.add(source);
-      return '${m[1]}[${cited.indexOf(source) + 1}]';
-    });
+    // [S3] (or [S3, S5]) marks where a fact came from: the page joins the
+    // sources under the answer and the mark leaves the text, which reads
+    // cleaner without numbers in it.
+    final text = raw.replaceAllMapped(RegExp(r'[ \t]*\[(S\d+(?:\s*,\s*S?\d+)*)\]'), (m) {
+      for (final id in RegExp(r'\d+').allMatches(m[1]!)) {
+        final source = _sources[int.parse(id[0]!)];
+        if (source != null && !cited.contains(source)) cited.add(source);
+      }
+      return '';
+    }).trim();
     for (final source in pictures) {
       if (!cited.contains(source)) cited.add(source);
     }
@@ -471,6 +475,10 @@ class AiChat {
 
   static String _normalize(String s) => s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
 }
+
+/// [text] without the [1], [2] source numbers older answers carried.
+String withoutSourceNumbers(String text) =>
+    text.replaceAll(RegExp(r'[ \t]*\[\d{1,2}(?:\s*,\s*\d{1,2})*\](?=[\s.,;:)!?]|$)'), '');
 
 /// Splits [text] into plain and bold runs: the AI marks emphasis Markdown-style
 /// with `**bold**` or `*bold*`, which the chat shows as bold without the stars.
