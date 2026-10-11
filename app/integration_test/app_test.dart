@@ -130,10 +130,12 @@ void main() {
     await pumpUntil(tester, find.text('3/3'));
 
     step('no match');
-    // Tapping the pill closed the keyboard; let the field reconnect first.
-    await tester.enterText(find.byKey(const Key('viewer-search')), 'zzzz');
-    await wait(tester, const Duration(milliseconds: 500));
-    await tester.testTextInput.receiveAction(TextInputAction.search);
+    // Tapping the pill closed the keyboard, and on a device the text input
+    // does not reconnect reliably, so submit through the field itself.
+    final field = find.byKey(const Key('viewer-search'));
+    await tester.enterText(field, 'zzzz');
+    await tester.pump();
+    tester.widget<TextField>(field).onSubmitted!('zzzz');
     await pumpUntil(tester, find.text('tidak ada'));
     expect(find.byKey(const Key('match-pill')), findsNothing);
     step('done');
