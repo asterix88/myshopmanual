@@ -498,18 +498,37 @@ class _ViewerScreenState extends State<ViewerScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 14),
           alignment: Alignment.center,
           decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(19)),
-          child: Text(
-            torque == null
-                ? 'Mencari angka torsi…'
-                : count > 0
-                    ? '$count angka torsi ditemukan'
-                    : widget.torque!.marks?.isEmpty ?? false
-                        ? 'Tidak ada standar torque khusus pada komponen ini'
-                        : 'Torsi tidak terbaca, silakan langsung cek dokumen',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: Colors.white),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  torque == null
+                      ? 'Mencari angka torsi…'
+                      : count > 0
+                          ? '$count angka torsi ditemukan'
+                          : widget.torque!.marks?.isEmpty ?? false
+                              ? 'Tidak ada standar torque khusus pada komponen ini'
+                              : 'Torsi tidak terbaca, silakan langsung cek dokumen',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13, color: Colors.white),
+                ),
+              ),
+              // Which value is marked orange, like the search's 3/18.
+              if (count > 0) ...[
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+                  child: Text(
+                    '${_torqueAt < 0 ? 1 : _torqueAt + 1}/$count',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),
