@@ -21,7 +21,14 @@ import 'fixtures.g.dart';
 /// The tiny test manual, served like the R2 bucket would.
 MockClient fixtureServer() => MockClient((request) async {
       final data = fixtureFiles[request.url.path.replaceFirst(RegExp(r'^/'), '')];
-      return data == null ? http.Response('not found', 404) : http.Response.bytes(base64Decode(data), 200);
+      if (data == null) return http.Response('not found', 404);
+      final bytes = base64Decode(data);
+      // Reading a manual online asks for pieces of it.
+      final range = RegExp(r'^bytes=(\d+)-(\d+)$').firstMatch(request.headers['Range'] ?? '');
+      if (range == null) return http.Response.bytes(bytes, 200);
+      final start = int.parse(range[1]!);
+      final end = (int.parse(range[2]!) + 1).clamp(start, bytes.length);
+      return http.Response.bytes(bytes.sublist(start, end), 206);
     });
 
 /// Pumps until [finder] matches, or fails after [timeout].
@@ -138,6 +145,38 @@ void main() {
     tester.widget<TextField>(field).onSubmitted!('zzzz');
     await pumpUntil(tester, find.text('tidak ada'));
     expect(find.byKey(const Key('match-pill')), findsNothing);
+    step('done');
+  }, timeout: const Timeout(Duration(minutes: 4)));
+
+  testWidgets('a manual read online shows its pages, bookmarks and search', (tester) async {
+    final root = Directory('${(await getTemporaryDirectory()).path}/it-${DateTime.now().microsecondsSinceEpoch}')
+      ..createSync(recursive: true);
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    final file = store.catalog.files.single;
+    expect(store.isDownloaded(file.key), isFalse);
+
+    step('open online');
+    await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(home: ViewerScreen(fileKey: file.key))));
+    await pumpUntil(tester, find.text(' / 4'));
+
+    step('bookmarks from the index');
+    await tester.tap(find.byTooltip('Penanda'));
+    await pumpUntil(tester, find.text('Operation'));
+    expect(find.text('Maintenance'), findsOneWidget);
+    await tester.tap(find.text('Maintenance'));
+    await wait(tester, const Duration(seconds: 1));
+
+    step('search');
+    await tester.tap(find.byTooltip('Cari di file ini'));
+    await tester.pump();
+    final field = find.byKey(const Key('viewer-search'));
+    await tester.enterText(field, 'hydraulic oil filter');
+    await tester.pump();
+    tester.widget<TextField>(field).onSubmitted!('hydraulic oil filter');
+    await pumpUntil(tester, find.text('1/3'));
+    await tester.tap(find.byTooltip('Hasil berikutnya'));
+    await pumpUntil(tester, find.text('2/3'));
     step('done');
   }, timeout: const Timeout(Duration(minutes: 4)));
 }

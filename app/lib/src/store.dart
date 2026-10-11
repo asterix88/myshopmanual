@@ -375,15 +375,11 @@ class AppStore extends ChangeNotifier {
 
   LocalManual? localManual(String key) => local[key];
 
-  /// Where a manual's PDF lives on the server, for reading it without
-  /// downloading.
-  Uri pdfUri(ManualFile f) => _url(f.pdf.path);
-
-  /// Bytes [start] to [end] (exclusive) of [f]'s PDF from the server, for
-  /// drawing a page of a manual that is not on the phone.
+  /// Bytes [start] to [end] (exclusive) of [f]'s PDF from the server, for a
+  /// manual that is not on the phone.
   Future<Uint8List> fetchPdfRange(ManualFile f, int start, int end) async {
     final response = await _client
-        .get(pdfUri(f), headers: {'Range': 'bytes=$start-${end - 1}'})
+        .get(_url(f.pdf.path), headers: {'Range': 'bytes=$start-${end - 1}'})
         .timeout(const Duration(seconds: 30));
     if (response.statusCode == 206 && response.bodyBytes.length == end - start) return response.bodyBytes;
     throw HttpException('HTTP ${response.statusCode} untuk ${f.pdf.path}');
@@ -745,6 +741,13 @@ class AppStore extends ChangeNotifier {
 
   /// Where the search index of a manual that is not downloaded is kept for
   /// nyel AI; the version is in the name so an update fetches it afresh.
+  /// Pieces of a manual read online, kept so its pages open again at once
+  /// (see [RemotePdf]).
+  String pdfBlockDir(ManualFile f) =>
+      p.join(_root.path, 'pdf-blocks', f.unitId, '${f.id}-${f.pdf.sha256.substring(0, 12)}');
+
+  String get pdfBlockRoot => p.join(_root.path, 'pdf-blocks');
+
   String cachedIndexPath(ManualFile f) =>
       p.join(_root.path, 'index-cache', f.unitId, '${f.id}-${f.index.sha256.substring(0, 12)}.sqlite');
 

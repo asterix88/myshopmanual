@@ -29,6 +29,10 @@ class _ChatScreenState extends State<ChatScreen> {
   late final http.Client _client = widget.client ?? http.Client();
   late final AiChat _chat = AiChat(store: StoreScope.read(context), client: _client);
   final List<ChatEntry> _entries = [];
+
+  /// Messages sent or answered while the chat is open: they pop in, like in
+  /// WhatsApp. Earlier ones loaded from the phone just appear.
+  final _fresh = <ChatEntry>{};
   bool _loaded = false;
 
   @override
@@ -99,7 +103,9 @@ class _ChatScreenState extends State<ChatScreen> {
     final chat = _chat;
     _input.clear();
     setState(() {
-      _entries.add(ChatEntry.user(question));
+      final entry = ChatEntry.user(question);
+      _fresh.add(entry);
+      _entries.add(entry);
       _status = 'Memahami pertanyaan…';
     });
     _scrollToEnd();
@@ -120,6 +126,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
     if (!mounted) return;
     setState(() {
+      _fresh.add(answer);
       _entries.add(answer);
       _status = null;
     });
@@ -300,6 +307,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           _Bubble(
                             key: _bubbleKey(i),
                             entry: entry,
+                            popIn: _fresh.contains(entry),
                             highlight: _searching ? _query : '',
                             current: _searching && _hits.isNotEmpty && _hits[_hit] == i,
                           ),
@@ -407,9 +415,12 @@ class _Intro extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({super.key, required this.entry, this.highlight = '', this.current = false});
+  const _Bubble({super.key, required this.entry, this.popIn = false, this.highlight = '', this.current = false});
 
   final ChatEntry entry;
+
+  /// Pops in when first shown (a message just sent or answered).
+  final bool popIn;
 
   /// Words searched for in the conversation, marked in the text.
   final String highlight;
@@ -456,6 +467,11 @@ class _Bubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bubble = _bubble(context);
+    return popIn ? _PopIn(fromRight: entry.fromUser, child: bubble) : bubble;
+  }
+
+  Widget _bubble(BuildContext context) {
     if (entry.fromUser) {
       return Align(
         alignment: Alignment.centerRight,
@@ -478,11 +494,13 @@ class _Bubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Manual pages first, like a photo sent with a message; the
+            // sources stay under the text.
+            for (final picture in entry.pictures) ...[_PagePicture(source: picture), const SizedBox(height: 12)],
             SelectableText.rich(
               TextSpan(children: _spans(boldRuns(entry.text))),
               style: TextStyle(fontSize: 14, height: 1.5, color: entry.failed ? AppColors.danger : AppColors.ink),
             ),
-            for (final picture in entry.pictures) ...[const SizedBox(height: 12), _PagePicture(source: picture)],
             if (entry.sources.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
@@ -510,6 +528,39 @@ class _Bubble extends StatelessWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Grows a new message out of its corner of the screen, like WhatsApp.
+class _PopIn extends StatefulWidget {
+  const _PopIn({required this.fromRight, required this.child});
+
+  final bool fromRight;
+  final Widget child;
+
+  @override
+  State<_PopIn> createState() => _PopInState();
+}
+
+class _PopInState extends State<_PopIn> with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 280))..forward();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: CurvedAnimation(parent: _controller, curve: const Interval(0, 0.6, curve: Curves.easeOut)),
+      child: ScaleTransition(
+        alignment: widget.fromRight ? Alignment.bottomRight : Alignment.bottomLeft,
+        scale: Tween(begin: 0.7, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack)),
+        child: widget.child,
       ),
     );
   }

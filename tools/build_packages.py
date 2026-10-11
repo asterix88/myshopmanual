@@ -11,7 +11,7 @@ Output layout (what gets uploaded to Cloudflare R2):
 
     dist/
       catalog.json                  list of units, files, sizes, hashes, versions
-      units/PC210/<file>.pdf        PDFs copied as-is
+      units/PC210/<file>.pdf        the PDFs, saved with object streams (see write_pdf)
       units/PC210/<file>.sqlite     that file's search index + bookmarks
 
 Every file has its own index, so a mechanic can download (and delete) one
@@ -51,7 +51,6 @@ import argparse
 import hashlib
 import json
 import re
-import shutil
 import sqlite3
 import sys
 import time
@@ -543,6 +542,28 @@ def build_spec_pack(sources: list[tuple], target: Path,
     return entries, service, parts
 
 
+def write_pdf(pdf: Path, target: Path, before: dict | None) -> str:
+    """Saves the source PDF as the one the app reads and downloads, with its
+    small objects packed into object streams; returns the source's sha256.
+
+    PDFium finds page N by reading the dictionaries of pages 1..N-1 first.
+    In the original files those sit next to each page's own content, all
+    through the file, so opening page 722 of a Shop Manual online fetched
+    about 14 MB. Packed together, the same page needs about 100 KB. Pages,
+    text, images and bookmarks stay exactly the same (lossless); the file
+    only loses the "Fast Web View" layout, which this app doesn't use.
+    A PDF unchanged since the last run is not rewritten.
+    """
+    import pikepdf
+
+    source_sha = sha256_of(pdf)
+    if before and before.get("source") == source_sha and target.exists() and sha256_of(target) == before["sha256"]:
+        return source_sha
+    with pikepdf.open(pdf) as doc:
+        doc.save(target, object_stream_mode=pikepdf.ObjectStreamMode.generate, deterministic_id=True)
+    return source_sha
+
+
 def file_entry(path: Path, rel: str) -> dict:
     return {"path": rel, "size": path.stat().st_size, "sha256": sha256_of(path)}
 
@@ -589,14 +610,14 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
         doc_type = guess_doc_type(pdf.name)
         target = unit_out / f"{file_id}.pdf"
         index_path = unit_out / f"{file_id}.sqlite"
-        shutil.copy2(pdf, target)
+        before = previous_files.get(file_id)
+        source_sha = write_pdf(pdf, target, (before or {}).get("pdf"))
         write_index(index_path, title, doc_type, pages, toc, not scanned)
         if doc_type != "partsbook":
             spec_sources.append((file_id, target, toc, len(pages), pages))
 
-        pdf_info = file_entry(target, f"units/{unit_id}/{target.name}")
+        pdf_info = {**file_entry(target, f"units/{unit_id}/{target.name}"), "source": source_sha}
         index_info = file_entry(index_path, f"units/{unit_id}/{index_path.name}")
-        before = previous_files.get(file_id)
         unchanged = before is not None and before["pdf"]["sha256"] == pdf_info["sha256"]
         files.append(
             {
@@ -657,6 +678,11 @@ def main() -> int:
     parser.add_argument("--skip-scanned", action="store_true",
                         help="leave out PDFs without a text layer instead of shipping them unsearchable")
     args = parser.parse_args()
+    try:
+        import pikepdf  # noqa: F401  (used by write_pdf)
+    except ImportError:
+        print("pikepdf belum terpasang: jalankan  pip install -r tools/requirements.txt", file=sys.stderr)
+        return 1
 
     unit_dirs = sorted(d for d in args.source.iterdir() if d.is_dir())
     if args.only:

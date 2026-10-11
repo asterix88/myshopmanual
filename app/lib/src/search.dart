@@ -125,6 +125,10 @@ List<TocEntry> loadToc(String indexPath) {
   }
 }
 
+/// [loadToc] on another isolate. Top-level on purpose: a closure made in a
+/// widget's method can carry the widget along, and that can't be sent.
+Future<List<TocEntry>> loadTocInBackground(String indexPath) => Isolate.run(() => loadToc(indexPath));
+
 /// One page handed to the AI as a source, with its full text.
 typedef PageText = ({String fileKey, int page, double rank, String? section, String text});
 

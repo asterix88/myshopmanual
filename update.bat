@@ -13,6 +13,9 @@ if not exist r2-keys.bat (
 )
 call r2-keys.bat
 
+echo === 0/2 Memeriksa paket Python ===
+python -m pip install --disable-pip-version-check -q -r tools\requirements.txt
+
 echo === 1/2 Membuat paket dari folder source ===
 python tools\build_packages.py source dist %*
 if errorlevel 1 goto failed
