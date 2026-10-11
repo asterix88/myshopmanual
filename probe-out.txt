@@ -57,117 +57,12 @@ SM PC1250-11 50090 p722 rank=-8.05 section=CONTENTS
    FAILURE CODE [DHSAMA].................................................................................................................40-496 FAILURE CODE [DHSBMA].................................................................................................................40-499 FAILURE CODE [DHSC
 
 
-######## ASK: error DKULKB PC1250
---- AI model=deepseek-v4-flash web=0 calls=[{"index":0,"id":"call_00_y8iSl2aG32QWoRNleOYH3572","type":"function","function":{"name":"search_manuals","arguments":"{\"query\": \"DKULKB error code\", \"unit\": \"PC1250\"}"}},{"index":1,"id":"call_01_MLXAgbzitZe1vhnecKCD4177","type":"function","function":{"name":"search_manuals","arguments":"{\"query\": \"troubleshooting code list machine monitor\", \"unit\": \"PC1250\"}"}}]
---- TOOL RESULT (4756 chars)
-[S5] PC1250SP-11 · PB PC1250SP-11 SN J20001 · page 3 · section: FOREWORD
-2
-FOREWORD
-When ordering replacement parts, specify the part number, part name, and quantity required, and also
-specify your machine model code, machine serial number, engine serial number and the service meter
-reading of which the parts are needed. This Parts Book contains not only standard replacement parts
-but also optional equipment, tools and field repair service parts. 
-To order these items, please contact your nearest Komatsu distributor. 
-NOTE
-The illustrations, parts configuration, parts number or parts name in this publication may differ
-from your machine unit, and these are subject to change without notice for continuous product
-improvement. 
-Whenever concerns and questions arise regarding items in this publication and your machine
-unit or when you order there replacement parts, please consult your nearest Komatsu
-distributor for the latest information.
-This Parts Book contains the information and special codes as follows:
-ILLUSTRATION AND PARTS LIST
-When you open this Parts Book, you will find an illustration following its figure number (FIG.) Each
-individual
-part in the illustration is given an index number. Following the illustration, the component parts of the
-unit a…
+######## ASK: DKULKB
+--- AI model=deepseek-v4-flash web=0 calls=[{"index":0,"id":"call_00_TJwWAZHh0KMa8ROEDD5K8978","type":"function","function":{"name":"search_manuals","arguments":"{\"query\": \"DKULKB\", \"unit\": \"\"}"}},{"index":1,"id":"call_01_2Pk8kxRhLR9rI4w166Ls9126","type":"function","function":{"name":"search_manuals","arguments":"{\"query\": \"DKULKB fault code\", \"unit\": \"\"}"}}]
+--- TOOL RESULT (2831 chars)
+Note: 21 manual(s) are still being prepared on the phone and were not searched.
 
-[S6] PC1250SP-11 · OMM PC1250-11R · page 492 · section: CAUSE OF TROUBLE AND ACTIONS
-3.
-Push the L.H. button (d) and R.H. button (e), and “Error re-
-cord Delete 1_3” is shown. Push the button (b), and “dEL”
-is shown, then the error record is deleted.
-(D): Error record Delete 1_3
-(E): dEL Error Delete
-CAUSE OF TROUBLE AND ACTIONS 
-If the movable diesel preheater does not operate normally, check the error code by the method that follows, and
-consult your Komatsu distributor.
-1.
-Push the button (b), and let the start screen be shown on
-the control panel.
-(A): Start screen
-2.
-Push the L.H. button (d) and R.H. button (e) at the same
-time for longer than 5 seconds to show the screen shown
-in the right figure.
-3.
-Push the button (b), and “Error code” is shown.
-(B): Error display 1_1
-Error code list
-Error code display
-Explanation of errors
-ATTACHMENTS AND OPTIONS
-HANDLE MOVABLE DIESEL PREHEATER
-6-59
-
-[S7] PC1250SP-11 · SM PC1250-11 50090 · page 602 · section: ABNORMALITY RECORD MENU
-ENG: The engine controller detects the monitoring information.
-KOM PLS: KOMTRAX Plus controller detects the monitoring information.
-PUMP: The pump controller detects the monitoring information.
-MON: The machine monitor detects the mon
---- TOOL RESULT (2750 chars)
-[S1] PC1250SP-11 · OMM PC1250-11R · page 492 · section: CAUSE OF TROUBLE AND ACTIONS
-3.
-Push the L.H. button (d) and R.H. button (e), and “Error re-
-cord Delete 1_3” is shown. Push the button (b), and “dEL”
-is shown, then the error record is deleted.
-(D): Error record Delete 1_3
-(E): dEL Error Delete
-CAUSE OF TROUBLE AND ACTIONS 
-If the movable diesel preheater does not operate normally, check the error code by the method that follows, and
-consult your Komatsu distributor.
-1.
-Push the button (b), and let the start screen be shown on
-the control panel.
-(A): Start screen
-2.
-Push the L.H. button (d) and R.H. button (e) at the same
-time for longer than 5 seconds to show the screen shown
-in the right figure.
-3.
-Push the button (b), and “Error code” is shown.
-(B): Error display 1_1
-Error code list
-Error code display
-Explanation of errors
-ATTACHMENTS AND OPTIONS
-HANDLE MOVABLE DIESEL PREHEATER
-6-59
-
-[S2] PC1250SP-11 · OMM PC1250-11R · page 494 · section: CAUSE OF TROUBLE AND ACTIONS
-Error code display
-Explanation of errors
-•
-Movable diesel preheater is turned OFF or voltage
-is not sufficient.
-•
-No communication
-•
-No diagnosis line is connected.
-•
-Interruption of temperature sensor function
-ATTACHMENTS AND OPTIONS
-HANDLE MOVABLE DIESEL PREHEATER
-6-61
-
-[S3] PC1250SP-11 · SM PC1250-11 50090 · page 1251 · section: FAILURE CODE [DKULKB]
-Circuit diagram related to PPC lock switch
-40 TROUBLESHOOTING
-FAILURE CODE [DKULKB]
-PC1250-11R, PC1250SP-11R
-40-535
-
-[S4] PC1250SP-11 · SM PC1250-11 50090 · page 1250 · section: FAILURE CODE [DKULKB]
+[S5] PC1250SP-11 · SM PC1250-11 50090 · page 1250 · section: FAILURE CODE [DKULKB]
 FAILURE CODE [DKULKB] 
 Action level
 Failure code
@@ -203,34 +98,531 @@ No.
 Cause
 Procedure, measuring location, criteria and remarks
 1
-Def
---- AI model=deepseek-v4-flash web=0 calls=[{"index":0,"id":"call_00_HLulwV3bP1A3s32n9zHR3713","type":"function","function":{"name":"view_page","arguments":"{\"source\": \"S4\", \"manual\": \"M70\", \"page\": 1250, \"region\": \"full\"}"}},{"index":1,"id":"call_01_UdzM7vp8WXVbt4oIhH9j1352","type":"function","function":{"name":"view_page","arguments":"{\"source\": \"S3\", \"manual\": \"M70\", \"page\": 1251, \"region\": \"full\"}"}}]
-######## ERROR type 'String' is not a subtype of type 'Map<dynamic, dynamic>?' in type cast
+Defective battery cut re-
+lay R48
+1.
+Turn starting switch to OFF position.
+2.
+Disconnect connector R48, and connect T-adapter to male side.
+Resistance
+Between R48 (male) (1) and (2)
+200 to
+600 Ω
+Between R48 (male) (1) and ground
+Min. 1 MΩ
+2
+Ground fa…
 
+[S6] PC1250SP-11 · SM PC1250-11 50090 · page 1251 · section: FAILURE CODE [DKULKB]
+Circuit diagram related to PPC lock switch
+40 TROUBLESHOOTING
+FAILURE CODE [DKULKB]
+PC1250-11R, PC1250SP-11R
+40-535
 
-######## ASK: DKULKB
+[S7] PC1250SP-11 · OMM PC1250-11R · page 492 · section: CAUSE OF TROUBLE AND ACTIONS
+3.
+Push the L.H. button (d) and R.H. button (e), and “Error re-
+cord Delete 1_3” is shown. Push the button (b), and “dEL”
+is shown, then the error record is deleted.
+(D): Error record Delete 1_3
+(E): dEL Error Delete
+CAUSE OF TROUBLE AND ACTIONS 
+If the movable diesel preheater does not operate normally, check the error code by the method that follows, and
+consult your Komatsu distributor.
+1.
+Push the button (b), and let the start screen be shown on
+the control panel.
+(A): Start screen
+2.
+Push the L.H. button (d) and R.H. button (e) at the same
+time for longer than 5 seconds to show the screen shown
+in the right figure.
+3.
+Push the button (b), and “Error code” is shown.
+(B): Error display 1_1
+Error code list
+Error code display
+Explanation of errors
+ATTACHMENTS AND OPTIONS
+HANDLE MOVABLE DIESEL PREHEATER
+6-59
+
+[S8] PC1250SP-11 · OMM PC12
+--- TOOL RESULT (4121 chars)
+Note: 21 manual(s) are still being prepared on the phone and were not searched.
+
+[S1] PC1250SP-11 · SM PC1250-11 50090 · page 1251 · section: FAILURE CODE [DKULKB]
+Circuit diagram related to PPC lock switch
+40 TROUBLESHOOTING
+FAILURE CODE [DKULKB]
+PC1250-11R, PC1250SP-11R
+40-535
+
+[S2] PC1250SP-11 · SM PC1250-11 50090 · page 1250 · section: FAILURE CODE [DKULKB]
+FAILURE CODE [DKULKB] 
+Action level
+Failure code
+Failure
+PPC Lock Relay Short Circuit
+(pump controller system)
+L03
+DKULKB
+Detail of fail-
+ure
+Short circuit was detected because abnormal current is carried when outputting 24 V in the primary
+(coil) circuit of the PPC lock relay.
+Action of
+controller
+•
+Stops 24 V output to PPC lock relay primary circuit (coil side).
+•
+Even if cause of failure disappears, machine does not become normal until starting switch
+is turned to OFF position.
+Phenomenon
+on machine
+•
+The work equipment is not operable because PPC remains locked.
+Related
+information
+•
+The troubleshooting for this failure code is performed on the primary side of the relay and
+not on the secondary side.
+•
+After repairing, check if the failure code is cleared by the following procedure.
+Procedure: Turn starting switch to ON position and set PPC lock lever to FREE position.
+No.
+Cause
+Procedure, measuring location, criteria and remarks
+1
+Defective battery cut re-
+lay R48
+1.
+Turn starting switch to OFF position.
+2.
+Disconnect connector R48, and connect T-adapter to male side.
+Resistance
+Between R48 (male) (1) and (2)
+200 to
+600 Ω
+Between R48 (male) (1) and ground
+Min. 1 MΩ
+2
+Ground fa…
+
+[S3] PC1250SP-11 · SM PC1250-11 50090 · page 849 · section: FAILURE CODE TABLE
+Failure
+code
+Failure (Shown on screen)
+Applicable
+equipment
+Action
+level
+History cate-
+gory
+Remarks
+DHSAMA
+Swing Right PPC Pressure Sensor Defective Func-
+tion
+PUMP
+L01
+Electrical
+system
+DHSBMA
+Swing Left PPC Pressure Sensor Defective Func-
+tion
+PUMP
+L01
+Electrical
+system
+DHSCMA Arm OUT PPC Pressure Sensor Defective Function
+PUMP
+L01
+Electrical
+system
+DHSDMA Bucket DUMP PPC Pressure Sensor Defective
+Function
+PUMP
+L01
+Electrical
+system
+DHSFMA
+Travel Forward Left PPC Pressure Sensor Defec-
+tive Function
+PUMP
+L01
+Electrical
+system
+DHSGMA Travel Forward Right PPC Pressure Sensor Defec-
+tive Function
+PUMP
+L01
+Electrical
+system
+DHSHMA Travel Reverse Left PPC Pressure Sensor Defec-
+tive Function
+PUMP
+L01
+Electrical
+system
+DHSJMA
+Travel Reverse Right PPC Pressure Sensor Defec-
+tive Function
+PUMP
+L01
+Electrical
+system
+DKR2KA
+Return Filter Bypass Valve
 --- AI model=deepseek-v4-flash web=0 calls=null
 --- ANSWER
-DKULKB bukan istilah yang saya kenali sebagai nama komponen atau kode standar di manual alat berat. Kemungkinan besar ini salah ketik atau singkatan yang dipakai di tempat kerja Anda.
+**DKULKB adalah kode kegagalan "PPC Lock Relay Short Circuit" pada sistem pump controller PC1250-11R / PC1250SP-11R, dengan action level L03** [S2].
 
-Kalau yang dimaksud adalah kode pada sistem kelistrikan atau hidraulik, tolong beri tahu konteksnya sedikit: muncul di mana kode ini (layar monitor, stiker di harness, label solenoid, atau di kertas kerja), dan unit apa yang sedang dikerjakan (D155A-6, PC2000-11R, CAT395, dan seterusnya). Dengan itu saya bisa arahkan ke komponen atau halaman manual yang tepat.
+Apa yang dilaporkan controller:
+- Controller mendeteksi arus tidak normal saat mengeluarkan 24 V ke rangkaian primer (sisi coil) relay PPC lock — jadi ini korsleting di sisi coil, bukan di sisi kontak (sekunder) [S2].
+- Tindakan controller: menghentikan output 24 V ke rangkaian primer relay PPC lock. **Meskipun penyebabnya hilang, mesin tidak kembali normal sampai starting switch diputar ke posisi OFF** [S2].
+- Gejala pada mesin: work equipment tidak bisa dioperasikan karena PPC tetap terkunci (locked) [S2].
 
-Sementara ini, beberapa kemungkinan yang paling dekat secara huruf, supaya Anda bisa cek sendiri:
+Catatan penting: troubleshooting untuk kode ini dilakukan pada sisi primer relay, bukan sisi sekunder [S2].
 
-- **DKL / DKUL** sering dipakai sebagai singkatan internal bengkel, bukan dari manual. Kalau ada di harness, biasanya itu kode sirkuit buatan sendiri (misalnya "D" untuk dump, "K" untuk kontrol).
-- **LK** pada beberapa diagram kelistrikan Komatsu berarti lamp/indicator circuit, dan **KB** bisa berarti key box atau relay box. Jadi "LK-KB" bisa menunjuk sirkuit lampu yang lewat kotak relay.
-- Kalau ini kode pada monitor, kode diagnostik Komatsu umumnya berbentuk seperti **E02, E15, CA*** dsb., bukan rangkaian huruf seperti ini.
+Langkah pemeriksaan menurut manual [S2]:
+1. Periksa relay battery cut R48 (dicurigai rusak). Putar starting switch ke OFF, lepas connector R48, pasang T-adapter pada sisi male. Ukur tahanan: antara R48 (male) (1) dan (2) harus **200 sampai 600 Ω**; antara R48 (male) (1) dan ground **minimal 1 MΩ** [S2].
+2. Periksa kemungkinan ground fault (hubungan singkat ke massa) pada rangkaian — lanjutan tabel ada di halaman berikutnya [S2].
 
-Kalau Anda bisa sebutkan unit dan di mana kode itu terbaca, saya lanjutkan dengan penjelasan komponen dan cara pengecekannya.
-######## FINAL: DKULKB bukan istilah yang saya kenali sebagai nama komponen atau kode standar di manual alat berat. Kemungkinan besar ini salah ketik atau singkatan yang dipakai di tempat kerja Anda.
+Setelah perbaikan, kode dihapus dengan cara: putar starting switch ke ON dan set PPC lock lever ke posisi FREE [S2].
 
-Kalau yang dimaksud adalah kode pada sistem kelistrikan atau hidraulik, tolong beri tahu konteksnya sedikit: muncul di mana kode ini (layar monitor, stiker di harness, label solenoid, atau di kertas kerja), dan unit apa yang sedang dikerjakan (D155A-6, PC2000-11R, CAT395, dan seterusnya). Dengan itu saya bisa arahkan ke komponen atau halaman manual yang tepat.
+Secara umum (pengetahuan umum): relay PPC lock adalah relay yang memberi/memutus suplai ke solenoid PPC lock. Selama PPC lock lever di posisi LOCK, solenoid tidak dialiri arus sehingga pilot pressure ke control valve tertutup dan seluruh fungsi attachment mati. Karena itu korsleting pada coil relay membuat controller memutus output 24 V sebagai proteksi, dan efeknya persis seperti lever masih di LOCK. Yang paling sering ditemukan di lapangan: coil relay short ke massa (tahanan coil jauh di bawah 200 Ω atau mendekati 0 Ω), kabel harness dari controller ke relay terkelupas/terjepit ke massa, atau relay terisi air/kotoran. Relay yang coil-nya short biasanya juga panas saat dipegang setelah starting switch ON.
 
-Sementara ini, beberapa kemungkinan yang paling dekat secara huruf, supaya Anda bisa cek sendiri:
+[Gambar S2]
+[Gambar S6]
+######## FINAL: **DKULKB adalah kode kegagalan "PPC Lock Relay Short Circuit" pada sistem pump controller PC1250-11R / PC1250SP-11R, dengan action level L03** [1].
 
-- **DKL / DKUL** sering dipakai sebagai singkatan internal bengkel, bukan dari manual. Kalau ada di harness, biasanya itu kode sirkuit buatan sendiri (misalnya "D" untuk dump, "K" untuk kontrol).
-- **LK** pada beberapa diagram kelistrikan Komatsu berarti lamp/indicator circuit, dan **KB** bisa berarti key box atau relay box. Jadi "LK-KB" bisa menunjuk sirkuit lampu yang lewat kotak relay.
-- Kalau ini kode pada monitor, kode diagnostik Komatsu umumnya berbentuk seperti **E02, E15, CA*** dsb., bukan rangkaian huruf seperti ini.
+Apa yang dilaporkan controller:
+- Controller mendeteksi arus tidak normal saat mengeluarkan 24 V ke rangkaian primer (sisi coil) relay PPC lock — jadi ini korsleting di sisi coil, bukan di sisi kontak (sekunder) [1].
+- Tindakan controller: menghentikan output 24 V ke rangkaian primer relay PPC lock. **Meskipun penyebabnya hilang, mesin tidak kembali normal sampai starting switch diputar ke posisi OFF** [1].
+- Gejala pada mesin: work equipment tidak bisa dioperasikan karena PPC tetap terkunci (locked) [1].
 
-Kalau Anda bisa sebutkan unit dan di mana kode itu terbaca, saya lanjutkan dengan penjelasan komponen dan cara pengecekannya.
-00:10 +1: All tests passed!
+Catatan penting: troubleshooting untuk kode ini dilakukan pada sisi primer relay, bukan sisi sekunder [1].
+
+Langkah pemeriksaan menurut manual [1]:
+1. Periksa relay battery cut R48 (dicurigai rusak). Putar starting switch ke OFF, lepas connector R48, pasang T-adapter pada sisi male. Ukur tahanan: antara R48 (male) (1) dan (2) harus **200 sampai 600 Ω**; antara R48 (male) (1) dan ground **minimal 1 MΩ** [1].
+2. Periksa kemungkinan ground fault (hubungan singkat ke massa) pada rangkaian — lanjutan tabel ada di halaman berikutnya [1].
+
+Setelah perbaikan, kode dihapus dengan cara: putar starting switch ke ON dan set PPC lock lever ke posisi FREE [1].
+
+Secara umum (pengetahuan umum): relay PPC lock adalah relay yang memberi/memutus suplai ke solenoid PPC lock. Selama PPC lock lever di posisi LOCK, solenoid tidak dialiri arus sehingga pilot pressure ke control valve tertutup dan seluruh fungsi attachment mati. Karena itu korsleting pada coil relay membuat controller memutus output 24 V sebagai proteksi, dan efeknya persis seperti lever masih di LOCK. Yang paling sering ditemukan di lapangan: coil relay short ke massa (tahanan coil jauh di bawah 200 Ω atau mendekati 0 Ω), kabel harness dari controller ke relay terkelupas/terjepit ke massa, atau relay terisi air/kotoran. Relay yang coil-nya short biasanya juga panas saat dipegang setelah starting switch ON.
+
+
+######## ASK: error DKULKB PC1250
+--- AI model=deepseek-v4-flash web=0 calls=null
+--- ANSWER
+**DKULKB pada PC1250 (PC1250-11R / PC1250SP-11R) adalah kode kegagalan "PPC Lock Relay Short Circuit" pada sistem pump controller, action level L03** [S2].
+
+Detail kegagalan:
+- Controller mendeteksi arus abnormal saat mengeluarkan 24 V ke rangkaian primer (sisi coil) relay PPC lock — jadi korsleting ada di sisi coil, bukan di sisi kontak/sekunder [S2].
+- Tindakan controller: menghentikan output 24 V ke rangkaian primer relay PPC lock. **Meski penyebabnya hilang, mesin tidak kembali normal sampai starting switch diputar ke OFF** [S2].
+- Gejala pada mesin: work equipment tidak bisa dioperasikan karena PPC tetap terkunci (locked) [S2].
+- Troubleshooting kode ini dilakukan pada sisi primer relay, bukan sisi sekunder [S2].
+
+Langkah pemeriksaan menurut manual [S2]:
+1. Periksa relay battery cut R48 (dicurigai rusak). Putar starting switch ke OFF, lepas connector R48, pasang T-adapter pada sisi male. Ukur tahanan: antara R48 (male) (1) dan (2) harus **200 sampai 600 Ω**; antara R48 (male) (1) dan ground **minimal 1 MΩ** [S2].
+2. Periksa ground fault pada rangkaian (lanjutan tabel ada di halaman berikutnya) [S2].
+
+Setelah perbaikan, hapus kode dengan cara: putar starting switch ke ON dan set PPC lock lever ke posisi FREE [S2].
+
+Secara umum (pengetahuan umum): relay PPC lock memberi/memutus suplai ke solenoid PPC lock. Selama PPC lock lever di LOCK, solenoid tidak dialiri arus, pilot pressure ke control valve tertutup dan semua fungsi attachment mati — karena itu korsleting coil relay membuat controller memutus output 24 V sebagai proteksi, dan efeknya sama seperti lever masih di LOCK. Yang paling sering di lapangan: coil relay short ke massa (tahanan coil jauh di bawah 200 Ω atau mendekati 0 Ω), harness dari controller ke relay terkelupas/terjepit ke massa, atau relay kemasukan air/kotoran. Relay dengan coil short biasanya terasa panas setelah starting switch ON.
+
+[Gambar S2]
+[Gambar S6]
+######## FINAL: **DKULKB pada PC1250 (PC1250-11R / PC1250SP-11R) adalah kode kegagalan "PPC Lock Relay Short Circuit" pada sistem pump controller, action level L03** [1].
+
+Detail kegagalan:
+- Controller mendeteksi arus abnormal saat mengeluarkan 24 V ke rangkaian primer (sisi coil) relay PPC lock — jadi korsleting ada di sisi coil, bukan di sisi kontak/sekunder [1].
+- Tindakan controller: menghentikan output 24 V ke rangkaian primer relay PPC lock. **Meski penyebabnya hilang, mesin tidak kembali normal sampai starting switch diputar ke OFF** [1].
+- Gejala pada mesin: work equipment tidak bisa dioperasikan karena PPC tetap terkunci (locked) [1].
+- Troubleshooting kode ini dilakukan pada sisi primer relay, bukan sisi sekunder [1].
+
+Langkah pemeriksaan menurut manual [1]:
+1. Periksa relay battery cut R48 (dicurigai rusak). Putar starting switch ke OFF, lepas connector R48, pasang T-adapter pada sisi male. Ukur tahanan: antara R48 (male) (1) dan (2) harus **200 sampai 600 Ω**; antara R48 (male) (1) dan ground **minimal 1 MΩ** [1].
+2. Periksa ground fault pada rangkaian (lanjutan tabel ada di halaman berikutnya) [1].
+
+Setelah perbaikan, hapus kode dengan cara: putar starting switch ke ON dan set PPC lock lever ke posisi FREE [1].
+
+Secara umum (pengetahuan umum): relay PPC lock memberi/memutus suplai ke solenoid PPC lock. Selama PPC lock lever di LOCK, solenoid tidak dialiri arus, pilot pressure ke control valve tertutup dan semua fungsi attachment mati — karena itu korsleting coil relay membuat controller memutus output 24 V sebagai proteksi, dan efeknya sama seperti lever masih di LOCK. Yang paling sering di lapangan: coil relay short ke massa (tahanan coil jauh di bawah 200 Ω atau mendekati 0 Ω), harness dari controller ke relay terkelupas/terjepit ke massa, atau relay kemasukan air/kotoran. Relay dengan coil short biasanya terasa panas setelah starting switch ON.
+
+
+######## ASK: CA234
+--- AI model=deepseek-v4-flash web=0 calls=[{"index":0,"id":"call_00_qvNfJU3YFYx7ddvIe8ux0902","type":"function","function":{"name":"search_manuals","arguments":"{\"query\": \"CA234\", \"unit\": \"\"}"}},{"index":1,"id":"call_01_bgtSO0tZghg5bdcHEG2j9588","type":"function","function":{"name":"search_manuals","arguments":"{\"query\": \"CA234 failure code\", \"unit\": \"\"}"}}]
+--- TOOL RESULT (4746 chars)
+Note: 21 manual(s) are still being prepared on the phone and were not searched.
+
+[S13] PC1250SP-11 · SM PC1250-11 50090 · page 925 · section: FAILURE CODE [CA234]
+FAILURE CODE [CA234] 
+Action level
+Failure code
+Failure
+Engine Overspeed
+(Engine controller system)
+L02
+CA234
+Detail of fail-
+ure
+Engine speed exceeds operating range.
+Action of
+controller
+Restricts fuel injection rate until speed is lowered within operating range.
+Phenomenon
+on machine
+Engine speed varies.
+Related
+information
+•
+If other failure code is also displayed at the same time, perform troubleshooting for it first.
+•
+Engine speed can be checked with monitoring function. (Code: 01002)
+•
+After completion of repair, check that the failure code is cleared by the following proce-
+dure.
+Procedure: Start the engine and run it at high idle.
+No.
+Cause
+Procedure, measuring location, criteria and remarks
+1
+Incorrectly-used fuel
+Perform checks since incorrect fuel may be used.
+2
+Incorrect machine usage
+The mounted machine may be used incorrectly, instruct to use it correctly.
+3
+Defective engine control-
+ler
+If no failure is found by above checks, engine controller is defective. (Since this is
+an internal defect, troubleshooting cannot be performed.)
+40 TROUBLESHOOTING
+FAILURE CODE [CA234]
+PC1250-11R, PC1250SP-11R
+40-209
+
+[S14] PC1250SP-11 · OMM PC1250-11R · page 492 · section: CAUSE OF TROUBLE AND ACTIONS
+3.
+Push the L.H. button (d) and R.H. button (e), and “Error re-
+cord Delete 1_3” is shown. Push the button (b), and “dEL”
+is shown, then the error record is deleted.
+(D): Error record Delete 1_3
+(E): dEL Error Delete
+CAUSE OF TROUBLE AND ACTIONS 
+If the movable diesel preheater does not operate normally, check the error code by the method that follows, and
+consult your Komatsu distributor.
+1.
+Push the button (b), and let the start screen be shown on
+the control panel.
+(A): Start screen
+2.
+Push the L.H. button (d) and R.H. button (e) at the same
+time for longer than 5 seconds to show the screen shown
+in the right figure.
+3.
+Push the button (b), and “Error code” is shown.
+(B): Error display 1_1
+Error code list
+Error code display
+Explanation of errors
+ATTACHMENTS AND OPTIONS
+HANDLE MOVABLE DIESEL PREHEATER
+6-59
+
+[S15] PC1250SP-11 · SM PC1250-11 50090 · page 8 · section: INDEX
+FAILURE CODE [CA141]..............................................................................................................40-190
+FAILURE CODE [CA144].........................................................................
+--- TOOL RESULT (5130 chars)
+Note: 21 manual(s) are still being prepared on the phone and were not searched.
+
+[S9] PC1250SP-11 · SM PC1250-11 50090 · page 925 · section: FAILURE CODE [CA234]
+FAILURE CODE [CA234] 
+Action level
+Failure code
+Failure
+Engine Overspeed
+(Engine controller system)
+L02
+CA234
+Detail of fail-
+ure
+Engine speed exceeds operating range.
+Action of
+controller
+Restricts fuel injection rate until speed is lowered within operating range.
+Phenomenon
+on machine
+Engine speed varies.
+Related
+information
+•
+If other failure code is also displayed at the same time, perform troubleshooting for it first.
+•
+Engine speed can be checked with monitoring function. (Code: 01002)
+•
+After completion of repair, check that the failure code is cleared by the following proce-
+dure.
+Procedure: Start the engine and run it at high idle.
+No.
+Cause
+Procedure, measuring location, criteria and remarks
+1
+Incorrectly-used fuel
+Perform checks since incorrect fuel may be used.
+2
+Incorrect machine usage
+The mounted machine may be used incorrectly, instruct to use it correctly.
+3
+Defective engine control-
+ler
+If no failure is found by above checks, engine controller is defective. (Since this is
+an internal defect, troubleshooting cannot be performed.)
+40 TROUBLESHOOTING
+FAILURE CODE [CA234]
+PC1250-11R, PC1250SP-11R
+40-209
+
+[S10] PC1250SP-11 · SM PC1250-11 50090 · page 842 · section: FAILURE CODE TABLE
+Failure
+code
+Failure (Shown on screen)
+Applicable
+equipment
+Action
+level
+History cate-
+gory
+Remarks
+B@BCNS Eng Water Overheat
+ENG
+L02
+Mechanical
+system
+B@BCQA Radiator Coolant Level Low
+MON
+L02
+Mechanical
+system
+B@BCZK Radiator Coolant Level Low
+MON
+L01
+Mechanical
+system
+B@CBNS PTO Temperature Abnormal Rise
+KPLUS
+-
+Mechanical
+system
+B@HAMB Hydraulic Oil Deterioration
+PUMP
+-
+Mechanical
+system
+B@HANS Hyd Oil Overheat
+PUMP
+L02
+Mechanical
+system
+CA115
+Engine NE and Backup Speed Sensor Error
+ENG
+L04
+Electrical
+system
+CA122
+Charge Air Pressure Sensor High Error
+ENG
+L03
+Electrical
+system
+CA123
+Charge Air Pressure Sensor Low Error
+ENG
+L03
+Electrical
+system
+CA131
+Throttle Sensor High Error
+ENG
+L03
+Electrical
+system
+CA132
+Throttle Sensor Low Error
+ENG
+L03
+Electrical
+system
+CA135
+Engine Oil Pressure Sensor High Error
+ENG
+L01
+Electrical
+system
+CA141
+Engine Oil Pressure Sensor Low Error
+ENG
+L01
+Electrical
+system
+CA144
+Coolant Temperature Sensor High Error
+ENG
+L01
+Electrical
+system
+CA145
+Coolant Temperature Sensor Low Error
+ENG
+L01
+Electrical
+system
+CA153
+Charge Air Temperature Sensor High Error
+ENG
+L03
+Electrical
+syste
+--- AI model=deepseek-v4-flash web=0 calls=null
+--- ANSWER
+**CA234 pada PC1250-11R / PC1250SP-11R adalah kode kegagalan "Engine Overspeed" pada sistem engine controller, action level L02** [S9].
+
+Detail kegagalan:
+- Putaran mesin (engine speed) melebihi rentang operasi yang diizinkan [S9].
+- Tindakan controller: membatasi (restrict) fuel injection rate sampai putaran turun kembali ke dalam rentang operasi [S9].
+- Gejala pada mesin: engine speed berubah-ubah (varies) [S9].
+
+Catatan penting [S9]:
+- Jika ada kode kegagalan lain yang muncul bersamaan, lakukan troubleshooting untuk kode itu lebih dulu.
+- Engine speed bisa dipantau dengan monitoring function (Code: 01002).
+- Setelah perbaikan selesai, kode dihapus dengan cara: start engine dan jalankan pada high idle.
+
+Langkah pemeriksaan menurut manual [S9]:
+1. Bahan bakar tidak sesuai (incorrectly-used fuel) — lakukan pemeriksaan karena mungkin bahan bakar yang dipakai salah.
+2. Penggunaan mesin tidak benar (incorrect machine usage) — mesin yang dipasang mungkin dioperasikan dengan cara yang salah; beri instruksi penggunaan yang benar.
+3. Engine controller rusak — jika pemeriksaan di atas tidak menemukan kegagalan, engine controller yang rusak (cacat internal, troubleshooting tidak bisa dilakukan).
+
+Secara umum (pengetahuan umum): overspeed pada engine controller biasanya muncul saat putaran melewati batas yang diprogram (misalnya governor/rack tidak sempat menutup, atau ada suplai bahan bakar berlebih). Penyebab yang sering di lapangan: bahan bakar kotor/berair atau salah jenis (misalnya solar bercampur bensin/pelarut), filter bahan bakar tersumbat sehingga tekanan suplai tidak stabil, rack/aktuator governor macet, sensor putaran (NE) kotor atau celahnya salah, dan pada kondisi beban ringan operator menurunkan beban terlalu cepat sambil tetap menahan throttle tinggi. Karena controller hanya membatasi injection rate, mesin tidak akan mati sendiri — putaran akan naik-turun sampai penyebabnya dihilangkan. Periksa juga kode CA115 (Engine NE and Backup Speed Sensor Error) karena sensor putaran yang bermasalah bisa memberi sinyal putaran palsu ke controller.
+
+[Gambar S9]
+######## FINAL: **CA234 pada PC1250-11R / PC1250SP-11R adalah kode kegagalan "Engine Overspeed" pada sistem engine controller, action level L02** [1].
+
+Detail kegagalan:
+- Putaran mesin (engine speed) melebihi rentang operasi yang diizinkan [1].
+- Tindakan controller: membatasi (restrict) fuel injection rate sampai putaran turun kembali ke dalam rentang operasi [1].
+- Gejala pada mesin: engine speed berubah-ubah (varies) [1].
+
+Catatan penting [1]:
+- Jika ada kode kegagalan lain yang muncul bersamaan, lakukan troubleshooting untuk kode itu lebih dulu.
+- Engine speed bisa dipantau dengan monitoring function (Code: 01002).
+- Setelah perbaikan selesai, kode dihapus dengan cara: start engine dan jalankan pada high idle.
+
+Langkah pemeriksaan menurut manual [1]:
+1. Bahan bakar tidak sesuai (incorrectly-used fuel) — lakukan pemeriksaan karena mungkin bahan bakar yang dipakai salah.
+2. Penggunaan mesin tidak benar (incorrect machine usage) — mesin yang dipasang mungkin dioperasikan dengan cara yang salah; beri instruksi penggunaan yang benar.
+3. Engine controller rusak — jika pemeriksaan di atas tidak menemukan kegagalan, engine controller yang rusak (cacat internal, troubleshooting tidak bisa dilakukan).
+
+Secara umum (pengetahuan umum): overspeed pada engine controller biasanya muncul saat putaran melewati batas yang diprogram (misalnya governor/rack tidak sempat menutup, atau ada suplai bahan bakar berlebih). Penyebab yang sering di lapangan: bahan bakar kotor/berair atau salah jenis (misalnya solar bercampur bensin/pelarut), filter bahan bakar tersumbat sehingga tekanan suplai tidak stabil, rack/aktuator governor macet, sensor putaran (NE) kotor atau celahnya salah, dan pada kondisi beban ringan operator menurunkan beban terlalu cepat sambil tetap menahan throttle tinggi. Karena controller hanya membatasi injection rate, mesin tidak akan mati sendiri — putaran akan naik-turun sampai penyebabnya dihilangkan. Periksa juga kode CA115 (Engine NE and Backup Speed Sensor Error) karena sensor putaran yang bermasalah bisa memberi sinyal putaran palsu ke controller.
+00:14 +1: All tests passed!

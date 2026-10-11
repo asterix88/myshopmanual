@@ -1,22 +1,36 @@
-Traceback (most recent call last):
-  File "/home/runner/work/myshopmanual/myshopmanual/tools/diag/pdf_layout.py", line 7, in <module>
-    cat = json.load(urllib.request.urlopen(BASE + 'catalog.json'))
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/urllib/request.py", line 215, in urlopen
-    return opener.open(url, data, timeout)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/urllib/request.py", line 521, in open
-    response = meth(req, response)
-               ^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/urllib/request.py", line 630, in http_response
-    response = self.parent.error(
-               ^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/urllib/request.py", line 559, in error
-    return self._call_chain(*args)
-           ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
-    result = func(*args)
-             ^^^^^^^^^^^
-  File "/usr/lib/python3.12/urllib/request.py", line 639, in http_error_default
-    raise HTTPError(req.full_url, code, msg, hdrs, fp)
-urllib.error.HTTPError: HTTP Error 403: Forbidden
+
+===== PC2000-11R · SM PC2000-11R  SN30019 UP · 354 MB · https://mymanual.my.id/units/PC2000-11R/SM_PC2000-11R_SN30019_UP.pdf
+pages 3406 linearized True pdf version 1.6
+objects uncompressed 10967 in object streams 0
+[1MB] outline items 1471 -> blocks 0
+[64KB] outline items 1471 -> blocks 0
+page 1: objects 23 -> 1MB blocks 1 [0] | 64KB blocks 2
+page 2: objects 3 -> 1MB blocks 1 [0] | 64KB blocks 1
+page 3: objects 8 -> 1MB blocks 2 [0, 138] | 64KB blocks 2
+page 4: objects 14 -> 1MB blocks 2 [0, 138] | 64KB blocks 3
+page 5: objects 14 -> 1MB blocks 2 [0, 138] | 64KB blocks 3
+page 6: objects 14 -> 1MB blocks 2 [0, 138] | 64KB blocks 3
+page 10: objects 14 -> 1MB blocks 2 [0, 138] | 64KB blocks 3
+page 50: objects 14 -> 1MB blocks 2 [0, 138] | 64KB blocks 3
+page 78: objects 17 -> 1MB blocks 2 [0, 138] | 64KB blocks 3
+page 500: objects 20 -> 1MB blocks 4 [24, 25, 138, 140] | 64KB blocks 6
+page 1500: objects 14 -> 1MB blocks 2 [49, 138] | 64KB blocks 3
+xref/trailer near end? 337 of 337
+
+===== PC1250SP-11 · SM PC1250-11 50090 · 76 MB · https://mymanual.my.id/units/PC1250SP-11/SM_PC1250-11_50090.pdf
+pages 2454 linearized True pdf version 1.6
+objects uncompressed 7720 in object streams 0
+[1MB] outline items 1248 -> blocks 0
+[64KB] outline items 1248 -> blocks 0
+page 1: objects 20 -> 1MB blocks 1 [0] | 64KB blocks 1
+page 2: objects 2 -> 1MB blocks 1 [0] | 64KB blocks 1
+page 3: objects 8 -> 1MB blocks 2 [0, 46] | 64KB blocks 2
+page 4: objects 14 -> 1MB blocks 2 [0, 46] | 64KB blocks 2
+page 5: objects 14 -> 1MB blocks 2 [0, 46] | 64KB blocks 2
+page 6: objects 14 -> 1MB blocks 2 [0, 46] | 64KB blocks 2
+page 10: objects 14 -> 1MB blocks 2 [0, 46] | 64KB blocks 2
+page 50: objects 18 -> 1MB blocks 3 [0, 46, 47] | 64KB blocks 3
+page 78: objects 16 -> 1MB blocks 2 [0, 46] | 64KB blocks 3
+page 500: objects 22 -> 1MB blocks 3 [12, 46, 47] | 64KB blocks 5
+page 1500: objects 14 -> 1MB blocks 2 [27, 46] | 64KB blocks 2
+xref/trailer near end? 72 of 72
