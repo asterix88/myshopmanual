@@ -1,0 +1,43 @@
+name: Probe 3
+on:
+  push:
+    branches: [diag/probe3]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PDF layout
+        run: |
+          sudo apt-get install -y qpdf >/dev/null
+          pip install pikepdf >/dev/null
+          python3 tools/diag/pdf_layout.py PC2000 PC1250 > pdf-out.txt 2>&1 || true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.6"
+          channel: stable
+          cache: true
+      - name: Start the AI server locally
+        working-directory: ai-worker
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        run: |
+          npm ci
+          printf 'GROQ_API_KEY=%s\nDEEPSEEK_API_KEY=%s\nTAVILY_API_KEY=%s\n' "$GROQ_API_KEY" "$DEEPSEEK_API_KEY" "$TAVILY_API_KEY" > .dev.vars
+          nohup npx wrangler dev --local --port 8787 > /tmp/wrangler.log 2>&1 &
+          for i in $(seq 1 60); do curl -s http://127.0.0.1:8787/ && break; sleep 2; done
+      - name: AI probe
+        working-directory: app
+        run: |
+          flutter pub get >/dev/null
+          flutter test test/zz_probe3_test.dart --reporter expanded > ../probe-out.txt 2>&1 || true
+      - run: |
+          git config user.name probe; git config user.email probe@users.noreply.github.com
+          git add pdf-out.txt probe-out.txt && git commit -m "probe output" && git push
