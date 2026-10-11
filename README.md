@@ -37,6 +37,7 @@ pip install boto3
 export R2_ACCOUNT_ID=... R2_ACCESS_KEY_ID=... R2_SECRET_ACCESS_KEY=... R2_BUCKET=mymanual
 python tools/upload_r2.py dist --dry-run   # lihat dulu apa yang berubah
 python tools/upload_r2.py dist             # unggah file yang berubah, catalog.json terakhir
+python tools/upload_r2.py dist --warm-all  # panaskan semua PDF di Cloudflare (tanpa upload)
 ```
 
 ### Sekali klik di Windows: `update.bat`
