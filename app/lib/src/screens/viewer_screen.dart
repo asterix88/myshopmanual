@@ -689,7 +689,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
           _paintTorque,
         ],
         loadingBannerBuilder: (context, bytesDownloaded, totalBytes) =>
-            Center(child: ExcavatorLoader(label: _online ? 'Membuka dari server…' : null)),
+            Center(child: ExcavatorLoader(label: _online ? 'Loading material…' : null)),
         errorBannerBuilder: (context, error, stackTrace, documentRef) {
           Diagnostics.log('viewer error: $error');
           return EmptyState(
