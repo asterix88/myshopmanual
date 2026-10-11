@@ -12,8 +12,11 @@ jobs:
       - name: PDF layout
         run: |
           sudo apt-get install -y qpdf >/dev/null
-          pip install pikepdf >/dev/null
-          python3 tools/diag/pdf_layout.py PC2000 PC1250 > pdf-out.txt 2>&1 || true
+          pip install pikepdf pypdfium2 >/dev/null
+          python3 tools/diag/pdfium_reads.py PC1250 PC2000 > pdf-out.txt 2>&1 || true
+          git config user.name probe; git config user.email probe@users.noreply.github.com
+          git add pdf-out.txt && git commit -m "pdf probe output" && git push
+          exit 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
