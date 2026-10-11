@@ -15,18 +15,63 @@ Future<void> openCetok(BuildContext context, {bool search = false}) => Navigator
       MaterialPageRoute(builder: (_) => CetokScreen(focusSearch: search)),
     );
 
-/// The Cetok Online button in the Home top bar, next to the bell: a small
-/// warehouse box with a C, so Home stays about the manuals. Long press shows
-/// its name.
-class CetokButton extends StatelessWidget {
-  const CetokButton({super.key});
+/// The small Cetok Online card at the bottom of the Home tab: a line that
+/// opens Cetok Online and a search box that opens it ready to type, kept
+/// small so Home stays about the manuals.
+class CetokCard extends StatelessWidget {
+  const CetokCard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: 'Cetok Online',
-      onPressed: () => openCetok(context),
-      icon: CustomPaint(size: const Size.square(24), painter: CetokIconPainter(AppColors.navy)),
+    return AppCard(
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => openCetok(context),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(9)),
+                  child: CustomPaint(painter: CetokIconPainter(AppColors.orangeText)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Check - Ambil - Catat',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.navy),
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: AppColors.faint),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Material(
+            color: AppColors.field,
+            borderRadius: BorderRadius.circular(20),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () => openCetok(context, search: true),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                child: Row(
+                  children: [
+                    Icon(Icons.search, size: 17, color: AppColors.faint),
+                    const SizedBox(width: 8),
+                    Text('Cari part number atau nama part', style: TextStyle(fontSize: 12.5, color: AppColors.faint)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

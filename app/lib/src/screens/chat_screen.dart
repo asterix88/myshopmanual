@@ -188,8 +188,9 @@ class _ChatScreenState extends State<ChatScreen> {
   void _scrollToEnd() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) {
+        // The list is anchored at the bottom (reverse), so 0 is the newest.
         _scroll.animateTo(
-          _scroll.position.maxScrollExtent,
+          0,
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
         );
@@ -297,8 +298,12 @@ class _ChatScreenState extends State<ChatScreen> {
                 ? _Intro(examples: _examples, hasManuals: hasManuals, onExample: offline ? null : _send)
                 // Every bubble is built (the chat keeps at most 60), so a
                 // search hit far up can be scrolled to.
+                // Reversed like WhatsApp: the view stays at the newest
+                // message, so a new one grows in at the bottom and pushes the
+                // rest up instead of appearing below the screen.
                 : SingleChildScrollView(
                     controller: _scroll,
+                    reverse: true,
                     padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -465,6 +470,63 @@ class _Bubble extends StatelessWidget {
     if (at < text.length) yield (text.substring(at), false);
   }
 
+  /// The answer laid out in blocks: paragraphs, short titles (a bold line or
+  /// one ending in ':'), bullet points and numbered steps with their text
+  /// indented, so a long answer reads like a tidy note.
+  Widget _answerText(String text) {
+    final style = TextStyle(fontSize: 14, height: 1.5, color: entry.failed ? AppColors.danger : AppColors.ink);
+    final blocks = <Widget>[];
+    var gap = false;
+    for (final raw in text.split('\n')) {
+      final line = raw.trimRight();
+      if (line.trim().isEmpty) {
+        gap = true;
+        continue;
+      }
+      final top = blocks.isEmpty ? 0.0 : (gap ? 10.0 : 4.0);
+      gap = false;
+      final indent = (raw.length - raw.trimLeft().length) >= 2 ? 16.0 : 0.0;
+      final bullet = RegExp(r'^\s*[-•*]\s+(.*)$').firstMatch(line);
+      final number = RegExp(r'^\s*(\d{1,2})[.)]\s+(.*)$').firstMatch(line);
+      final heading = RegExp(r'^\s*#{1,6}\s+(.*)$').firstMatch(line);
+      final plain = line.trim();
+      final Widget block;
+      if (bullet != null || number != null) {
+        block = Padding(
+          padding: EdgeInsets.only(left: indent),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: number != null ? 22 : 16,
+                child: Text(
+                  number != null ? '${number[1]}.' : '•',
+                  style: style.copyWith(fontWeight: FontWeight.w700, color: AppColors.orangeText),
+                ),
+              ),
+              Expanded(child: Text.rich(TextSpan(children: _spans(boldRuns(bullet?[1] ?? number![2]!))), style: style)),
+            ],
+          ),
+        );
+      } else if (heading != null ||
+          RegExp(r'^\*\*[^*]+\*\*:?$').hasMatch(plain) ||
+          (plain.endsWith(':') && plain.length <= 60)) {
+        final title = (heading?[1] ?? plain).replaceAll('**', '');
+        block = Padding(
+          padding: EdgeInsets.only(top: blocks.isEmpty ? 0 : 4),
+          child: Text.rich(
+            TextSpan(children: _spans([(text: title, bold: true)])),
+            style: style.copyWith(color: entry.failed ? AppColors.danger : AppColors.navy),
+          ),
+        );
+      } else {
+        block = Text.rich(TextSpan(children: _spans(boldRuns(plain))), style: style);
+      }
+      blocks.add(Padding(padding: EdgeInsets.only(top: top), child: block));
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: blocks);
+  }
+
   @override
   Widget build(BuildContext context) {
     final bubble = _bubble(context);
@@ -497,10 +559,7 @@ class _Bubble extends StatelessWidget {
             // Manual pages first, like a photo sent with a message; the
             // sources stay under the text.
             for (final picture in entry.pictures) ...[_PagePicture(source: picture), const SizedBox(height: 12)],
-            SelectableText.rich(
-              TextSpan(children: _spans(boldRuns(entry.text))),
-              style: TextStyle(fontSize: 14, height: 1.5, color: entry.failed ? AppColors.danger : AppColors.ink),
-            ),
+            SelectionArea(child: _answerText(withoutSourceNumbers(entry.text))),
             if (entry.sources.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
@@ -512,13 +571,13 @@ class _Bubble extends StatelessWidget {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  for (final (i, s) in entry.sources.indexed)
+                  for (final s in entry.sources)
                     ActionChip(
                       visualDensity: VisualDensity.compact,
                       backgroundColor: AppColors.navySoft,
                       side: BorderSide.none,
                       label: Text(
-                        '[${i + 1}] ${s.unitName} · ${s.file.type.label} · hlm ${s.page}',
+                        '${s.unitName} · ${s.file.type.label} · hlm ${s.page}',
                         style: TextStyle(fontSize: 12, color: AppColors.navy),
                       ),
                       onPressed: () => openViewer(context, s.file, page: s.page),
@@ -545,7 +604,7 @@ class _PopIn extends StatefulWidget {
 }
 
 class _PopInState extends State<_PopIn> with SingleTickerProviderStateMixin {
-  late final _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 280))..forward();
+  late final _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 260))..forward();
 
   @override
   void dispose() {
@@ -555,12 +614,19 @@ class _PopInState extends State<_PopIn> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: CurvedAnimation(parent: _controller, curve: const Interval(0, 0.6, curve: Curves.easeOut)),
-      child: ScaleTransition(
-        alignment: widget.fromRight ? Alignment.bottomRight : Alignment.bottomLeft,
-        scale: Tween(begin: 0.7, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack)),
-        child: widget.child,
+    final grow = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    // The space opens up (pushing the older messages up) while the bubble
+    // grows out of its bottom corner with a small bounce.
+    return SizeTransition(
+      sizeFactor: grow,
+      alignment: Alignment.bottomCenter,
+      child: FadeTransition(
+        opacity: CurvedAnimation(parent: _controller, curve: const Interval(0, 0.5, curve: Curves.easeOut)),
+        child: ScaleTransition(
+          alignment: widget.fromRight ? Alignment.bottomRight : Alignment.bottomLeft,
+          scale: Tween(begin: 0.3, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack)),
+          child: widget.child,
+        ),
       ),
     );
   }

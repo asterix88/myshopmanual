@@ -12,6 +12,12 @@ import 'package:mymanual/src/store.dart';
 import 'store_test.dart' show fixtureServer;
 
 void main() {
+  test('answers saved before keep no [1] numbers in their text', () {
+    expect(withoutSourceNumbers('Ganti filter [1]. Cek tekanan [2, 3].\n- Langkah [4]'),
+        'Ganti filter. Cek tekanan.\n- Langkah');
+    expect(withoutSourceNumbers('Isi [oli] mesin'), 'Isi [oli] mesin');
+  });
+
   late Directory root;
 
   setUp(() => root = Directory.systemTemp.createTempSync('mymanual'));
@@ -74,9 +80,9 @@ void main() {
     expect(result['content'], contains('HYDRAULIC OIL FILTER CLOGGING CAUTION LAMP'));
     expect(statuses, contains('Mencari di manual: hydraulic oil filter clogging lamp'));
 
-    // Citations renumbered per answer; an id that was never shown is dropped.
+    // Source marks leave the text; cited pages become sources, in order.
     expect(answer.failed, isFalse);
-    expect(answer.text, 'Lampu menyala karena **filter** tersumbat [1]. Ganti elemen [2].');
+    expect(answer.text, 'Lampu menyala karena **filter** tersumbat. Ganti elemen.');
     expect(answer.sources.map((s) => s.page), [2, 3]);
     // [Gambar S#] lines become pictures of those pages, not text.
     expect(answer.pictures.map((s) => s.page), [3]);
@@ -152,7 +158,7 @@ void main() {
     expect(statuses, contains('Melihat gambar: TEST1-1 · OMM Test Unit · hlm 2'));
 
     // The page the AI looked at is cited and shown under the answer.
-    expect(answer.text, 'Kabel 105 merah-putih [1].');
+    expect(answer.text, 'Kabel 105 merah-putih.');
     expect(answer.pictures.map((s) => s.page), [2]);
 
     // The next question no longer carries the large picture.

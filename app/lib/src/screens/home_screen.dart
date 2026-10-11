@@ -56,7 +56,6 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          const CetokButton(),
           IconButton(
             tooltip: updateCount == 0 ? 'Update manual' : 'Update manual, $updateCount baru',
             onPressed: () => Navigator.of(context).push(
@@ -97,10 +96,25 @@ class HomeScreen extends StatelessWidget {
               if (store.online == false) _OfflineBanner(store: store),
               if (store.lastRead != null) _ContinueReading(lastRead: store.lastRead!),
             ]),
-            // The machine folders sit in the middle of whatever space is left.
+            // The machine folders sit in the middle of whatever space is left;
+            // Cetok Online is small and lower down, halfway to the bottom.
             SliverFillRemaining(
               hasScrollBody: false,
-              child: Center(child: _MachineFolders(store: store)),
+              child: Column(
+                children: [
+                  const Spacer(flex: 2),
+                  _MachineFolders(store: store),
+                  const Spacer(),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [_HomeLabel('CETOK ONLINE'), CetokCard()],
+                    ),
+                  ),
+                  const Spacer(),
+                ],
+              ),
             ),
           ],
         ),
