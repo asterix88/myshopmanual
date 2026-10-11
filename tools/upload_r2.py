@@ -29,9 +29,8 @@ def catalog_paths(catalog: dict) -> dict[str, str]:
     paths = {}
     for unit in catalog["units"]:
         for f in unit["files"]:
-            for part in ("pdf", "web", "index"):
-                if part in f:
-                    paths[f[part]["path"]] = f[part]["sha256"]
+            for part in ("pdf", "index"):
+                paths[f[part]["path"]] = f[part]["sha256"]
         if "spec" in unit:
             paths[unit["spec"]["path"]] = unit["spec"]["sha256"]
     return paths

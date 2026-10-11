@@ -141,7 +141,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
     if (_online) {
       final dir = Directory(store.pdfBlockDir(_file!));
       _remote = RemotePdf(
-        size: _file!.online.size,
+        size: _file!.pdf.size,
         dir: dir,
         fetch: (start, end) => store.fetchPdfRange(_file!, start, end),
       );
@@ -644,9 +644,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 ? PdfViewer.custom(
                     // Fetch only the parts of the PDF being viewed, in small
                     // pieces, so a 350 MB manual opens in seconds.
-                    fileSize: file.online.size,
+                    fileSize: file.pdf.size,
                     read: _remote!.read,
-                    sourceName: 'remote:${file.key}@${file.online.sha256}',
+                    sourceName: 'remote:${file.key}@${file.pdf.sha256}',
                     controller: _controller,
                     initialPageNumber: widget.initialPage ?? 1,
                     params: _viewerParams,
