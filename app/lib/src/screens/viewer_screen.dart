@@ -274,14 +274,12 @@ class _ViewerScreenState extends State<ViewerScreen> {
     if (hits == null || hits.isEmpty) return;
     final run = _searchRun;
     setState(() => _hitAt = at);
-    final (page, nth) = _hitPosition(at);
+    final (page, _) = _hitPosition(at);
+    // Only turn to the page and keep the zoom (Anas: no zooming in on the
+    // word); the current match is marked orange on the page.
     if (scroll && page != _page) await _controller.goToPage(pageNumber: page);
-    final ranges = await _loadPageHits(page);
     if (!mounted || run != _searchRun || _hitAt != at) return;
-    if (scroll && nth < ranges.length) {
-      final range = ranges[nth];
-      await _controller.goToRectInsidePage(pageNumber: page, rect: range.bounds, anchor: PdfPageAnchor.center);
-    }
+    await _loadPageHits(page);
   }
 
   void _nextHit() => _goToHit((_hitAt + 1) % _hitTotal);
@@ -299,6 +297,17 @@ class _ViewerScreenState extends State<ViewerScreen> {
     if (!_pageHitsLoading.add(pageNumber)) return const [];
     final run = _searchRun;
     try {
+      // A long manual read online loads its pages in order from the top, so
+      // a match far down would stay blank until every page before it is in.
+      // Start loading at the match instead, and stop once it is there.
+      bool waiting() => mounted && run == _searchRun && !document.pages[pageNumber - 1].isLoaded;
+      if (waiting()) {
+        unawaited(
+          document
+              .loadPagesProgressively(startPageNumber: pageNumber, onPageLoadProgress: (_, _, _) => waiting())
+              .catchError((Object e) => Diagnostics.log('search load p$pageNumber: $e')),
+        );
+      }
       final page = await document.pages[pageNumber - 1].waitForLoaded(timeout: const Duration(seconds: 30));
       if (page == null) return const [];
       final text = await page.loadStructuredText();
