@@ -745,6 +745,13 @@ class AppStore extends ChangeNotifier {
 
   /// Where the search index of a manual that is not downloaded is kept for
   /// nyel AI; the version is in the name so an update fetches it afresh.
+  /// Pieces of a manual read online, kept so its pages open again at once
+  /// (see [RemotePdf]).
+  String pdfBlockDir(ManualFile f) =>
+      p.join(_root.path, 'pdf-blocks', f.unitId, '${f.id}-${f.pdf.sha256.substring(0, 12)}');
+
+  String get pdfBlockRoot => p.join(_root.path, 'pdf-blocks');
+
   String cachedIndexPath(ManualFile f) =>
       p.join(_root.path, 'index-cache', f.unitId, '${f.id}-${f.index.sha256.substring(0, 12)}.sqlite');
 

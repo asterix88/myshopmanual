@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:isolate';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -11,6 +10,7 @@ import 'package:pdfrx/pdfrx.dart';
 import '../diagnostics.dart';
 import '../models.dart';
 import '../page_image.dart';
+import '../remote_pdf.dart';
 import '../search.dart';
 import '../specs.dart';
 import '../store.dart';
@@ -111,6 +111,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   /// reading does not reload the document.
   ManualFile? _file;
   bool _online = false;
+  RemotePdf? _remote;
 
   @override
   void initState() {
@@ -137,6 +138,16 @@ class _ViewerScreenState extends State<ViewerScreen> {
     final manual = store.localManual(widget.fileKey);
     _file = manual?.file ?? store.catalog.file(widget.fileKey);
     _online = manual == null;
+    if (_online) {
+      final dir = Directory(store.pdfBlockDir(_file!));
+      _remote = RemotePdf(
+        size: _file!.pdf.size,
+        dir: dir,
+        fetch: (start, end) => store.fetchPdfRange(_file!, start, end),
+      );
+      unawaited(RemotePdf.prune(Directory(store.pdfBlockRoot), maxBytes: 400 << 20, keep: dir)
+          .catchError((Object e) => Diagnostics.log('prune pdf pieces: $e')));
+    }
     if (manual != null) _toc = loadToc(store.indexPath(manual.file));
   }
 
@@ -182,7 +193,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
     _searcher ??= PdfTextSearcher(_controller)..addListener(_onSearchChanged);
     setState(() => _pageCount = document.pages.length);
     if (_online && _file!.searchable) {
-      _loadOnlineToc(document);
+      _loadOnlineToc();
     } else {
       document.loadOutline().then((outline) {
         if (!mounted) return;
@@ -318,17 +329,16 @@ class _ViewerScreenState extends State<ViewerScreen> {
     if (!_pageHitsLoading.add(pageNumber)) return const [];
     final run = _searchRun;
     try {
-      // Online the viewer only measures the pages on screen, so load the
-      // match and 4 pages either side of it now (pdfrx goes outward from the
-      // start page), and stop once those are in.
-      final first = math.max(1, pageNumber - 4);
-      final last = math.min(document.pages.length, pageNumber + 4);
-      bool waiting() =>
-          mounted && run == _searchRun && [for (var n = first; n <= last; n++) n].any((n) => !document.pages[n - 1].isLoaded);
-      if (waiting()) {
+      final watch = Stopwatch()..start();
+      bool loaded(int n) => document.pages[n - 1].isLoaded;
+      // Load the match's page first: anything else read now would make it
+      // wait, since PDFium does one thing at a time.
+      if (!loaded(pageNumber)) {
         unawaited(
           document
-              .loadPagesProgressively(startPageNumber: pageNumber, onPageLoadProgress: (_, _, _) => waiting())
+              .loadPagesProgressively(
+                  startPageNumber: pageNumber,
+                  onPageLoadProgress: (_, _, _) => mounted && run == _searchRun && !loaded(pageNumber))
               .catchError((Object e) => Diagnostics.log('search load p$pageNumber: $e')),
         );
       }
@@ -339,6 +349,20 @@ class _ViewerScreenState extends State<ViewerScreen> {
         for (final m in pattern.allMatches(text.fullText))
           PdfPageTextRange(pageText: text, start: m.start, end: m.end),
       ];
+      if (_online) Diagnostics.log('search p$pageNumber ready in ${watch.elapsedMilliseconds} ms');
+      // Then 4 pages either side of it, outward from it, so scrolling on
+      // from the match finds them ready.
+      final first = math.max(1, pageNumber - 4);
+      final last = math.min(document.pages.length, pageNumber + 4);
+      bool waiting() =>
+          mounted && run == _searchRun && [for (var n = first; n <= last; n++) n].any((n) => !loaded(n));
+      if (waiting()) {
+        unawaited(
+          document
+              .loadPagesProgressively(startPageNumber: pageNumber, onPageLoadProgress: (_, _, _) => waiting())
+              .catchError((Object e) => Diagnostics.log('search load around p$pageNumber: $e')),
+        );
+      }
       if (mounted && run == _searchRun) setState(() => _pageHits[pageNumber] = ranges);
       return ranges;
     } catch (e) {
@@ -504,22 +528,20 @@ class _ViewerScreenState extends State<ViewerScreen> {
   /// Online, reading the PDF's bookmarks makes PDFium fetch every bookmark
   /// from the server one by one, and the pages wait behind it. The manual's
   /// index has the same bookmarks, so take them from there.
-  Future<void> _loadOnlineToc(PdfDocument document) async {
+  Future<void> _loadOnlineToc() async {
     final file = _file!;
-    final got = await _store.aiIndexes(where: (f) => f.key == file.key);
-    final index = got[file.key];
-    if (!mounted) return;
-    if (index == null) {
-      // No index to be had (offline): read the PDF's own after all.
-      final outline = await document.loadOutline();
-      if (!mounted) return;
-      _outline.value = outline;
-      setState(() => _toc = _tocFromOutline(outline));
-      return;
+    var toc = const <TocEntry>[];
+    try {
+      final got = await _store.aiIndexes(where: (f) => f.key == file.key);
+      final index = got[file.key];
+      if (index != null) toc = await loadTocInBackground(index);
+      Diagnostics.log('online toc: ${index == null ? 'no index' : '${toc.length} entries'}');
+    } catch (e) {
+      Diagnostics.log('online toc: $e');
     }
-    final toc = await Isolate.run(() => loadToc(index));
     if (!mounted) return;
-    Diagnostics.log('online toc: ${toc.length} entries');
+    // Without an index (no signal when it was needed) there are no
+    // bookmarks rather than a wait for PDFium to read them over the network.
     _outline.value = outlineFromToc(toc);
     setState(() => _toc = [...toc]..sort((a, b) => a.page.compareTo(b.page)));
   }
@@ -619,12 +641,12 @@ class _ViewerScreenState extends State<ViewerScreen> {
         children: [
           Positioned.fill(
             child: _online
-                ? PdfViewer.uri(
-                    store.pdfUri(file),
-                    // Fetch only the parts of the PDF being viewed, so a 130 MB
-                    // manual opens in seconds instead of downloading in full.
-                    preferRangeAccess: true,
-                    timeout: const Duration(seconds: 30),
+                ? PdfViewer.custom(
+                    // Fetch only the parts of the PDF being viewed, in small
+                    // pieces, so a 350 MB manual opens in seconds.
+                    fileSize: file.pdf.size,
+                    read: _remote!.read,
+                    sourceName: 'remote:${file.key}@${file.pdf.sha256}',
                     controller: _controller,
                     initialPageNumber: widget.initialPage ?? 1,
                     params: _viewerParams,
