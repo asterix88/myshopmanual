@@ -1,6 +1,5 @@
-"""Where does the Installation part start in each remove & install chapter?
-Diagnostic only; prints candidate heading lines per chapter."""
-import json, re, sqlite3, sys, urllib.request, collections
+"""Servis probe: bookmarks and service_ranges for the PC2000 OMM."""
+import json, sqlite3, sys, urllib.request
 sys.path.insert(0, "tools")
 import build_packages as bp
 BASE = "https://mymanual.my.id/"
@@ -8,12 +7,10 @@ def get(path):
     req = urllib.request.Request(BASE + path, headers={"User-Agent": "MyManual-probe/1.0"})
     with urllib.request.urlopen(req, timeout=900) as r:
         return r.read()
-CAND = re.compile(r"^\s*(?:\d+[.)]?\s*)?(?:procedure\s+for\s+)?install(?:ation|ing)?\b.{0,40}$", re.I)
 cat = json.loads(get("catalog.json"))
-stats = collections.Counter()
 for u in cat["units"]:
     for f in u["files"]:
-        if f["type"] == "partsbook" or not f.get("searchable", True):
+        if f["type"] != "omm" and "OMM" not in f["title"].upper():
             continue
         open("/tmp/x.sqlite", "wb").write(get(f["index"]["path"]))
         db = sqlite3.connect("/tmp/x.sqlite")
@@ -22,16 +19,16 @@ for u in cat["units"]:
         db.close()
         n = f["pages"]
         tl = [texts.get(i + 1, "") for i in range(n)]
-        old = {(p["group"], p["name"]): p for p in bp.part_ranges(toc, n, None)}
-        parts = bp.part_ranges(toc, n, tl)
-        if not parts:
-            continue
-        print(f"\n=== {u['id']} {f['title']} ({len(parts)} chapters)")
-        for p in parts:
-            o = old[(p["group"], p["name"])]
-            inst = p["page"]
-            how = "same" if inst == o["page"] else "moved"
-            stats[how] += 1
-            head = [l.strip()[:60] for l in tl[inst - 1].splitlines() if l.strip()][:3]
-            print(f"- {p['name']} chapter p{o['page']}-{p['last']} -> install p{inst} ({how}) marks={p['marks']} top={head}")
-print(stats)
+        print(f"\n=== {u['id']} {f['title']}")
+        if u["id"].startswith("PC2000"):
+            on = False
+            for lv, t, p in toc:
+                if "MAINTENANCE SCHEDULE" in t.upper(): on = True
+                if on: print(f"  toc L{lv} p{p} {t}")
+                if on and "9000" in t: on = False
+            for pg in (443, 444, 451, 452):
+                print(f"--- text p{pg}\n{tl[pg-1][:1500]}")
+        spec = u.get("spec") or {}
+        print("catalog service:", [(e["hours"], e["title"][:50], e["item"]) for e in spec.get("service", [])][:60])
+        for e in bp.service_ranges(toc, n, tl):
+            print(f"  svc {e['hours']} item={e['item']} p{e['page']}-{e['last']} {e['title']}")
