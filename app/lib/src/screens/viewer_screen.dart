@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -102,7 +104,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
   Timer? _saveTimer;
   late AppStore _store;
   List<TocEntry> _toc = const [];
-  List<PdfOutlineNode> _outline = const [];
+  /// The bookmarks; null while they are still being read.
+  final _outline = ValueNotifier<List<PdfOutlineNode>?>(null);
 
   /// Chosen once when the screen opens, so a download finishing while
   /// reading does not reload the document.
@@ -151,10 +154,16 @@ class _ViewerScreenState extends State<ViewerScreen> {
     _searcher?.dispose();
     _searchField.dispose();
     _searchFocus.dispose();
+    _outline.dispose();
     super.dispose();
   }
 
   void _onSearchChanged() {
+    final matches = _searcher?.matches ?? const [];
+    if (_fallbackJump && matches.isNotEmpty) {
+      _fallbackJump = false;
+      _jumpTo(matches.first.pageNumber);
+    }
     if (mounted) setState(() {});
   }
 
@@ -172,15 +181,17 @@ class _ViewerScreenState extends State<ViewerScreen> {
     _document = document;
     _searcher ??= PdfTextSearcher(_controller)..addListener(_onSearchChanged);
     setState(() => _pageCount = document.pages.length);
-    document.loadOutline().then((outline) {
-      if (!mounted) return;
-      setState(() {
-        _outline = outline;
-        // Read online there is no search index, so name sections from the
-        // PDF's own bookmarks instead.
-        if (_toc.isEmpty) _toc = _tocFromOutline(outline);
+    if (_online && _file!.searchable) {
+      _loadOnlineToc(document);
+    } else {
+      document.loadOutline().then((outline) {
+        if (!mounted) return;
+        _outline.value = outline;
+        setState(() {
+          if (_toc.isEmpty) _toc = _tocFromOutline(outline);
+        });
       });
-    });
+    }
     if (widget.torque != null) _markTorque(document);
     final query = _searchField.text.trim();
     if (query.isNotEmpty) {
@@ -223,7 +234,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
       // the viewer has loaded instead.
       Diagnostics.log('search "$query": no index, searching loaded pages');
       setState(() => _searchStatus = '');
-      _searcher?.startTextSearch(query, goToFirstMatch: fromPage == null, searchImmediately: true);
+      // Its own going to a match zooms in on the word; only turn pages.
+      _fallbackAt = 0;
+      _fallbackJump = fromPage == null;
+      _searcher?.startTextSearch(query, goToFirstMatch: false, searchImmediately: true);
       return;
     }
     final hits = await searchPagesInIndex(index, query);
@@ -250,6 +264,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   void _clearHits() {
     _searcher?.resetTextSearch();
+    _fallbackJump = false;
     _hits = null;
     _hitTotal = 0;
     _hitAt = 0;
@@ -486,6 +501,29 @@ class _ViewerScreenState extends State<ViewerScreen> {
     );
   }
 
+  /// Online, reading the PDF's bookmarks makes PDFium fetch every bookmark
+  /// from the server one by one, and the pages wait behind it. The manual's
+  /// index has the same bookmarks, so take them from there.
+  Future<void> _loadOnlineToc(PdfDocument document) async {
+    final file = _file!;
+    final got = await _store.aiIndexes(where: (f) => f.key == file.key);
+    final index = got[file.key];
+    if (!mounted) return;
+    if (index == null) {
+      // No index to be had (offline): read the PDF's own after all.
+      final outline = await document.loadOutline();
+      if (!mounted) return;
+      _outline.value = outline;
+      setState(() => _toc = _tocFromOutline(outline));
+      return;
+    }
+    final toc = await Isolate.run(() => loadToc(index));
+    if (!mounted) return;
+    Diagnostics.log('online toc: ${toc.length} entries');
+    _outline.value = outlineFromToc(toc);
+    setState(() => _toc = [...toc]..sort((a, b) => a.page.compareTo(b.page)));
+  }
+
   static List<TocEntry> _tocFromOutline(List<PdfOutlineNode> outline) {
     final entries = <TocEntry>[];
     void walk(List<PdfOutlineNode> nodes, int level) {
@@ -669,7 +707,18 @@ class _ViewerScreenState extends State<ViewerScreen> {
   /// no index.
   int get _matchCount => _hits != null ? _hitTotal : _searcher?.matches.length ?? 0;
 
-  int get _matchAt => _hits != null ? _hitAt : _searcher?.currentIndex ?? 0;
+  int get _matchAt => _hits != null ? _hitAt : _fallbackAt;
+
+  /// The match shown when searching without an index.
+  int _fallbackAt = 0;
+  bool _fallbackJump = false;
+
+  void _stepFallback(int by) {
+    final matches = _searcher?.matches ?? const [];
+    if (matches.isEmpty) return;
+    setState(() => _fallbackAt = (_fallbackAt + by + matches.length) % matches.length);
+    _jumpTo(matches[_fallbackAt].pageNumber);
+  }
 
   PreferredSizeWidget _searchBar() {
     final searcher = _searcher;
@@ -741,10 +790,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          half(Icons.chevron_left, 'Hasil sebelumnya', indexed ? _prevHit : () => _searcher?.goToPrevMatch(),
+          half(Icons.chevron_left, 'Hasil sebelumnya', indexed ? _prevHit : () => _stepFallback(-1),
               const BorderRadius.horizontal(left: Radius.circular(26))),
           Container(width: 1, height: 52, color: const Color(0x55FFFFFF)),
-          half(Icons.chevron_right, 'Hasil berikutnya', indexed ? _nextHit : () => _searcher?.goToNextMatch(),
+          half(Icons.chevron_right, 'Hasil berikutnya', indexed ? _nextHit : () => _stepFallback(1),
               const BorderRadius.horizontal(right: Radius.circular(26))),
         ],
       ),
@@ -898,7 +947,7 @@ class _BookmarksSheet extends StatefulWidget {
   });
 
   final String fileKey;
-  final List<PdfOutlineNode> outline;
+  final ValueListenable<List<PdfOutlineNode>?> outline;
   final int currentPage;
   final String? Function(int page) sectionFor;
   final void Function(PdfDest? dest, int? page) onGo;
@@ -953,8 +1002,15 @@ class _BookmarksSheetState extends State<_BookmarksSheet> {
     );
   }
 
-  Widget _outlineList(ScrollController scrollController) {
-    if (widget.outline.isEmpty) {
+  Widget _outlineList(ScrollController scrollController) => ValueListenableBuilder(
+        valueListenable: widget.outline,
+        builder: (context, outline, _) => outline == null
+            ? const Center(child: ExcavatorLoader(label: 'Memuat daftar isi…'))
+            : _outlineRows(outline, scrollController),
+      );
+
+  Widget _outlineRows(List<PdfOutlineNode> outline, ScrollController scrollController) {
+    if (outline.isEmpty) {
       return const EmptyState(icon: Icons.toc, title: 'File ini tidak punya daftar isi bawaan');
     }
     final rows = <(PdfOutlineNode, int)>[];
@@ -965,7 +1021,7 @@ class _BookmarksSheetState extends State<_BookmarksSheet> {
       }
     }
 
-    walk(widget.outline, 0);
+    walk(outline, 0);
     final currentSection = widget.sectionFor(widget.currentPage);
     return ListView.builder(
       controller: scrollController,
@@ -1145,4 +1201,30 @@ class _FixedSlotSizeDelegate implements PdfViewerSizeDelegate {
       isViewSizeChanged: isViewSizeChanged,
     );
   }
+}
+
+/// The index's bookmark rows as a tree: an entry's children are the deeper
+/// entries that follow it.
+/// The index's bookmark rows as a tree: an entry's children are the deeper
+/// entries that follow it.
+List<PdfOutlineNode> outlineFromToc(List<TocEntry> toc) {
+  List<PdfOutlineNode> level(int from, int end) {
+    final nodes = <PdfOutlineNode>[];
+    var i = from;
+    while (i < end) {
+      var next = i + 1;
+      while (next < end && toc[next].level > toc[i].level) {
+        next++;
+      }
+      nodes.add(PdfOutlineNode(
+        title: toc[i].title,
+        dest: PdfDest(toc[i].page, PdfDestCommand.fit, null),
+        children: level(i + 1, next),
+      ));
+      i = next;
+    }
+    return nodes;
+  }
+
+  return level(0, toc.length);
 }

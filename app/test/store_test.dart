@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mymanual/src/models.dart';
+import 'package:mymanual/src/screens/viewer_screen.dart';
 import 'package:mymanual/src/search.dart';
 import 'package:mymanual/src/store.dart';
 
@@ -387,5 +388,20 @@ void main() {
       expect(store.listedUpdates.single.kind, UpdateKind.newVersion);
       store.dispose();
     });
+  });
+
+  test('outlineFromToc nests deeper bookmark rows under the one before', () {
+    final outline = outlineFromToc(const [
+      (level: 1, title: 'Index', page: 2),
+      (level: 1, title: 'Engine', page: 10),
+      (level: 2, title: 'Removal', page: 11),
+      (level: 3, title: 'Steps', page: 12),
+      (level: 2, title: 'Installation', page: 14),
+      (level: 1, title: 'Hydraulic', page: 20),
+    ]);
+    expect([for (final n in outline) n.title], ['Index', 'Engine', 'Hydraulic']);
+    expect([for (final n in outline[1].children) n.title], ['Removal', 'Installation']);
+    expect(outline[1].children.first.children.single.dest?.pageNumber, 12);
+    expect(outline[2].children, isEmpty);
   });
 }
