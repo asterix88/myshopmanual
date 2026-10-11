@@ -1,36 +1,10 @@
 
-===== PC2000-11R · SM PC2000-11R  SN30019 UP · 354 MB · https://mymanual.my.id/units/PC2000-11R/SM_PC2000-11R_SN30019_UP.pdf
-pages 3406 linearized True pdf version 1.6
-objects uncompressed 10967 in object streams 0
-[1MB] outline items 1471 -> blocks 0
-[64KB] outline items 1471 -> blocks 0
-page 1: objects 23 -> 1MB blocks 1 [0] | 64KB blocks 2
-page 2: objects 3 -> 1MB blocks 1 [0] | 64KB blocks 1
-page 3: objects 8 -> 1MB blocks 2 [0, 138] | 64KB blocks 2
-page 4: objects 14 -> 1MB blocks 2 [0, 138] | 64KB blocks 3
-page 5: objects 14 -> 1MB blocks 2 [0, 138] | 64KB blocks 3
-page 6: objects 14 -> 1MB blocks 2 [0, 138] | 64KB blocks 3
-page 10: objects 14 -> 1MB blocks 2 [0, 138] | 64KB blocks 3
-page 50: objects 14 -> 1MB blocks 2 [0, 138] | 64KB blocks 3
-page 78: objects 17 -> 1MB blocks 2 [0, 138] | 64KB blocks 3
-page 500: objects 20 -> 1MB blocks 4 [24, 25, 138, 140] | 64KB blocks 6
-page 1500: objects 14 -> 1MB blocks 2 [49, 138] | 64KB blocks 3
-xref/trailer near end? 337 of 337
+===== SM PC1250-11 50090 pages 2454 top-level kids 2
+ORIGINAL ['open: 3 pieces', 'p1: +0 pieces (0 MB)', 'p10: +5 pieces (0 MB)', 'p722: +237 pieces (14 MB)', 'p849: +62 pieces (3 MB)', 'p1250: +29 pieces (1 MB)', 'p1251: +1 pieces (0 MB)', 'p2444: +232 pieces (14 MB)']
+OBJSTM size 72 -> 71 MB
+OBJSTM   ['open: 3 pieces', 'p1: +2 pieces (0 MB)', 'p10: +2 pieces (0 MB)', 'p722: +2 pieces (0 MB)', 'p849: +1 pieces (0 MB)', 'p1250: +1 pieces (0 MB)', 'p1251: +1 pieces (0 MB)', 'p2444: +2 pieces (0 MB)']
 
-===== PC1250SP-11 · SM PC1250-11 50090 · 76 MB · https://mymanual.my.id/units/PC1250SP-11/SM_PC1250-11_50090.pdf
-pages 2454 linearized True pdf version 1.6
-objects uncompressed 7720 in object streams 0
-[1MB] outline items 1248 -> blocks 0
-[64KB] outline items 1248 -> blocks 0
-page 1: objects 20 -> 1MB blocks 1 [0] | 64KB blocks 1
-page 2: objects 2 -> 1MB blocks 1 [0] | 64KB blocks 1
-page 3: objects 8 -> 1MB blocks 2 [0, 46] | 64KB blocks 2
-page 4: objects 14 -> 1MB blocks 2 [0, 46] | 64KB blocks 2
-page 5: objects 14 -> 1MB blocks 2 [0, 46] | 64KB blocks 2
-page 6: objects 14 -> 1MB blocks 2 [0, 46] | 64KB blocks 2
-page 10: objects 14 -> 1MB blocks 2 [0, 46] | 64KB blocks 2
-page 50: objects 18 -> 1MB blocks 3 [0, 46, 47] | 64KB blocks 3
-page 78: objects 16 -> 1MB blocks 2 [0, 46] | 64KB blocks 3
-page 500: objects 22 -> 1MB blocks 3 [12, 46, 47] | 64KB blocks 5
-page 1500: objects 14 -> 1MB blocks 2 [27, 46] | 64KB blocks 2
-xref/trailer near end? 72 of 72
+===== SM PC2000-11R  SN30019 UP pages 3406 top-level kids 2
+ORIGINAL ['open: 3 pieces', 'p1: +1 pieces (0 MB)', 'p10: +4 pieces (0 MB)', 'p722: +287 pieces (17 MB)', 'p849: +63 pieces (3 MB)', 'p1250: +47 pieces (2 MB)', 'p1251: +0 pieces (0 MB)', 'p3396: +468 pieces (29 MB)']
+OBJSTM size 337 -> 336 MB
+OBJSTM   ['open: 4 pieces', 'p1: +2 pieces (0 MB)', 'p10: +2 pieces (0 MB)', 'p722: +3 pieces (0 MB)', 'p849: +3 pieces (0 MB)', 'p1250: +2 pieces (0 MB)', 'p1251: +0 pieces (0 MB)', 'p3396: +1 pieces (0 MB)']
