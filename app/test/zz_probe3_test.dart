@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -29,7 +28,8 @@ class _Logging extends http.BaseClient {
     if (request.url.port != 8787) return response;
     final bytes = await response.stream.toBytes();
     final data = jsonDecode(utf8.decode(bytes)) as Map;
-    final m = data['message'] as Map?;
+    final m = data['message'] is Map ? data['message'] as Map : null;
+    if (m == null) print('--- AI ERROR ${response.statusCode} ${data['message']}');
     print('--- AI model=${data['model']} web=${data['web']} calls=${jsonEncode(m?['tool_calls'])}');
     if ((m?['tool_calls'] as List?)?.isEmpty ?? true) print('--- ANSWER\n${m?['content']}');
     return http.StreamedResponse(Stream.value(bytes), response.statusCode, headers: response.headers);
@@ -53,15 +53,16 @@ void main() {
         print('   ${p.text.substring(0, p.text.length > 300 ? 300 : p.text.length).replaceAll('\n', ' ')}');
       }
     }
-    for (final question in ['error DKULKB PC1250', 'DKULKB']) {
+    final chat = AiChat(
+      store: store,
+      client: client,
+      endpoint: Uri.parse('http://127.0.0.1:8787/chat'),
+      pageImage: (file, page, region) async => base64Decode(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII='),
+      largeSheets: (file) async => const [],
+    );
+    for (final question in ['DKULKB', 'error DKULKB PC1250', 'CA234']) {
       print('\n\n######## ASK: $question');
-      final chat = AiChat(
-        store: store,
-        client: client,
-        endpoint: Uri.parse('http://127.0.0.1:8787/chat'),
-        pageImage: (file, page, region) async => Uint8List(0),
-        largeSheets: (file) async => const [],
-      );
       try {
         final entry = await chat.ask(question);
         print('######## FINAL: ${entry.text}');

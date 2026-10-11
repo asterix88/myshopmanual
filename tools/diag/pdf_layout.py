@@ -4,7 +4,7 @@ import json, re, subprocess, sys, urllib.request
 import pikepdf
 
 BASE = 'https://mymanual.my.id/'
-cat = json.load(urllib.request.urlopen(BASE + 'catalog.json'))
+cat = json.loads(subprocess.run(['curl', '-sS', '-A', 'MyManual-probe', BASE + 'catalog.json'], capture_output=True, text=True, check=True).stdout)
 
 
 def files():
@@ -76,7 +76,7 @@ for want in sys.argv[1:]:
     u, f = hit[0]
     url = BASE + f['pdf']['path']
     print(f"\n===== {u.get('name')} · {f.get('title')} · {f['pdf'].get('size', 0)/1e6:.0f} MB · {url}")
-    subprocess.run(['curl', '-sS', '-o', '/tmp/m.pdf', url], check=True)
+    subprocess.run(['curl', '-sS', '-A', 'MyManual-probe', '-o', '/tmp/m.pdf', url], check=True)
     pdf = pikepdf.open('/tmp/m.pdf')
     print('pages', len(pdf.pages), 'linearized', pdf.is_linearized, 'pdf version', pdf.pdf_version)
     off, comp = xref_offsets('/tmp/m.pdf')
