@@ -128,7 +128,7 @@ class _SpecsScreenState extends State<SpecsScreen> {
           key: ValueKey('standard/${r.file?.key}/${r.page}'),
           item: (
             title: r.title,
-            subtitle: [?r.file?.title, 'hlm ${r.page}'].join(' · '),
+            subtitle: null,
             onTap: () => openPageRow(context, unit, r),
           ),
         ),

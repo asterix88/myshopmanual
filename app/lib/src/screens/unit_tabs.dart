@@ -235,7 +235,6 @@ class PageRowList extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Text('hlm ${row.page}', style: TextStyle(fontSize: 12, color: AppColors.muted)),
                 ],
               ),
             ),
@@ -252,12 +251,8 @@ class PageRowList extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // No file and page line under the title (Anas, 11 Oct).
                     Text(row.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, height: 1.3)),
-                    const SizedBox(height: 3),
-                    Text(
-                      [?file?.title, 'hlm ${row.page}'].join(' · '),
-                      style: TextStyle(fontSize: 12, color: AppColors.muted),
-                    ),
                     if (file != null) ...[const SizedBox(height: 5), Pill.docType(file.type)],
                   ],
                 ),

@@ -406,20 +406,20 @@ class _ViewerScreenState extends State<ViewerScreen> {
     if (marks == null || marks.isEmpty) return;
     final found = <PdfPageTextRange>[];
     final wanted = [for (final n in marks) if (n <= document.pages.length) n];
-    // A long manual loads only the pages near the screen, so torque pages
-    // further down the chapter would wait until scrolled to. Load the pages
-    // around the torque pages now, and stop once they are all in.
-    bool waiting() => mounted && wanted.any((n) => !document.pages[n - 1].isLoaded);
-    if (waiting()) {
-      unawaited(
-        document
-            .loadPagesProgressively(startPageNumber: wanted.first, onPageLoadProgress: (_, _, _) => waiting())
-            .catchError((Object e) => Diagnostics.log('torque load: $e')),
-      );
-    }
-    // Only the pages the pipeline found torque values on, so the marks
-    // appear quickly even in a long chapter read online.
+    final watch = Stopwatch()..start();
+    // Only the pages the pipeline found torque values on, one at a time like
+    // a search hit: each is loaded on its own (PDFium does one thing at a
+    // time, so loading the pages around it first would make it wait), and
+    // the first marks show as soon as their page is in.
     for (final n in wanted) {
+      bool loaded() => document.pages[n - 1].isLoaded;
+      if (!loaded()) {
+        unawaited(
+          document
+              .loadPagesProgressively(startPageNumber: n, onPageLoadProgress: (_, _, _) => mounted && !loaded())
+              .catchError((Object e) => Diagnostics.log('torque load p$n: $e')),
+        );
+      }
       try {
         // Reading a page before it has loaded returns no text, so wait for it.
         final page = await document.pages[n - 1].waitForLoaded(timeout: const Duration(seconds: 40));
@@ -438,8 +438,11 @@ class _ViewerScreenState extends State<ViewerScreen> {
       if (!mounted) return;
       if (found.isNotEmpty && _torque == null) {
         // Show the first marks right away and go to them; later pages add more.
+        if (_online) Diagnostics.log('torque p$n ready in ${watch.elapsedMilliseconds} ms');
         setState(() => _torque = [...found]);
         _goToTorque(0);
+      } else if (found.isNotEmpty) {
+        setState(() => _torque = [...found]);
       }
     }
     if (mounted) setState(() => _torque = found);
@@ -449,14 +452,22 @@ class _ViewerScreenState extends State<ViewerScreen> {
     final torque = _torque;
     if (torque == null || at >= torque.length) return;
     setState(() => _torqueAt = at);
-    final range = torque[at];
-    _controller.goToRectInsidePage(pageNumber: range.pageNumber, rect: range.bounds, anchor: PdfPageAnchor.center);
+    // Like a search hit: turn to the page and keep the zoom; the current
+    // value is marked orange.
+    final page = torque[at].pageNumber;
+    if (page != _page) _jumpTo(page);
   }
 
   void _nextTorque() {
     final torque = _torque;
     if (torque == null || torque.isEmpty) return;
     _goToTorque((_torqueAt + 1) % torque.length);
+  }
+
+  void _prevTorque() {
+    final torque = _torque;
+    if (torque == null || torque.isEmpty) return;
+    _goToTorque((_torqueAt - 1 + torque.length) % torque.length);
   }
 
   void _paintTorque(Canvas canvas, Rect pageRect, PdfPage page) {
@@ -484,41 +495,21 @@ class _ViewerScreenState extends State<ViewerScreen> {
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
         child: Container(
           height: 38,
-          padding: const EdgeInsets.only(left: 14, right: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          alignment: Alignment.center,
           decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(19)),
-          child: Row(
-            children: [
-              if (torque != null && count > 0) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-                  decoration: BoxDecoration(color: const Color(0xFFFFD500), borderRadius: BorderRadius.circular(8)),
-                  child: Text('$count',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF1B2333))),
-                ),
-                const SizedBox(width: 8),
-              ],
-              Expanded(
-                child: Text(
-                  torque == null
-                      ? 'Mencari angka torsi…'
-                      : count > 0
-                          ? 'angka torsi ditandai'
-                          : widget.torque!.marks?.isEmpty ?? false
-                              ? 'Tidak ada standar torque khusus pada komponen ini'
-                              : 'Torsi tidak terbaca, silakan langsung cek dokumen',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13, color: Colors.white),
-                ),
-              ),
-              if (count > 0)
-                TextButton.icon(
-                  style: TextButton.styleFrom(foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
-                  onPressed: _nextTorque,
-                  icon: const Icon(Icons.arrow_downward, size: 16),
-                  label: const Text('berikutnya'),
-                ),
-            ],
+          child: Text(
+            torque == null
+                ? 'Mencari angka torsi…'
+                : count > 0
+                    ? '$count angka torsi ditemukan'
+                    : widget.torque!.marks?.isEmpty ?? false
+                        ? 'Tidak ada standar torque khusus pada komponen ini'
+                        : 'Torsi tidak terbaca, silakan langsung cek dokumen',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: Colors.white),
           ),
         ),
       ),
@@ -658,7 +649,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
                     params: _viewerParams,
                   ),
           ),
-          if (_searching && _matchCount > 0) Positioned(right: 16, bottom: 16, child: _matchPill()),
+          if (_searching && _matchCount > 0)
+            Positioned(right: 16, bottom: 16, child: _matchPill())
+          else if (!_searching && (_torque?.isNotEmpty ?? false))
+            Positioned(right: 16, bottom: 16, child: _matchPill(prev: _prevTorque, next: _nextTorque)),
         ],
       ),
       bottomNavigationBar: _pageCount == 0
@@ -789,7 +783,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   /// Previous / next match, a dark pill at the bottom right like Xodo's.
-  Widget _matchPill() {
+  /// The Xodo-style < | > buttons: search matches, or with [prev] and
+  /// [next] the torque values.
+  Widget _matchPill({VoidCallback? prev, VoidCallback? next}) {
     final indexed = _hits != null;
     Widget half(IconData icon, String tooltip, VoidCallback onTap, BorderRadius radius) => Material(
           color: Colors.transparent,
@@ -812,10 +808,10 @@ class _ViewerScreenState extends State<ViewerScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          half(Icons.chevron_left, 'Hasil sebelumnya', indexed ? _prevHit : () => _stepFallback(-1),
+          half(Icons.chevron_left, 'Hasil sebelumnya', prev ?? (indexed ? _prevHit : () => _stepFallback(-1)),
               const BorderRadius.horizontal(left: Radius.circular(26))),
           Container(width: 1, height: 52, color: const Color(0x55FFFFFF)),
-          half(Icons.chevron_right, 'Hasil berikutnya', indexed ? _nextHit : () => _stepFallback(1),
+          half(Icons.chevron_right, 'Hasil berikutnya', next ?? (indexed ? _nextHit : () => _stepFallback(1)),
               const BorderRadius.horizontal(right: Radius.circular(26))),
         ],
       ),

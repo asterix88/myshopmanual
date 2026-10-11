@@ -118,7 +118,7 @@ void main() {
     await tester.tap(find.text('Standar').last);
     await settle(tester);
     expect(find.text('Standard tightening torque table'), findsOneWidget);
-    expect(find.text('OMM Test Unit · hlm 40'), findsOneWidget);
+    expect(find.textContaining('hlm'), findsNothing);
 
     await tester.tap(find.text('Kapasitas'));
     await tester.pumpAndSettle();
