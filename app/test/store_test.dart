@@ -128,6 +128,23 @@ void main() {
       expect(result.hits.single.section, 'Track tension');
     });
 
+    test('the viewer finds every matching page of one manual, in page order', () {
+      final pages = searchPagesInIndexSync(index, toFtsQuery('hydraulic oil filter'), 'hydraulic oil filter');
+      // Page 2 has the words twice, page 3 once.
+      expect(pages, [(page: 2, count: 2), (page: 3, count: 1)]);
+      expect(searchPagesInIndexSync(index, toFtsQuery('zzz'), 'zzz'), isEmpty);
+    });
+
+    test('a part number matches across a dash, space or line break', () {
+      final pattern = queryPattern('01010-81640')!;
+      expect(pattern.hasMatch('BOLT 01010-81640 1'), isTrue);
+      expect(pattern.hasMatch('01010 81640'), isTrue);
+      expect(pattern.hasMatch('01010\u201081640'), isTrue);
+      expect(pattern.hasMatch('01010-81660'), isFalse);
+      expect(queryPattern('Clearance')!.allMatches('VALVE CLEARANCE, clearance').length, 2);
+      expect(queryPattern(' - '), isNull);
+    });
+
     test('reads the bookmarks', () {
       final toc = loadToc(index);
       expect(toc.map((e) => e.title), contains('Hydraulic oil filter clogging caution lamp'));

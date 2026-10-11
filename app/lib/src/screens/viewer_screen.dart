@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -72,6 +73,25 @@ class _ViewerScreenState extends State<ViewerScreen> {
   final _searchFocus = FocusNode();
 
   bool _searching = false;
+
+  /// Pages matching the search, read from the manual's index, so a manual
+  /// read online is searched in full without fetching its pages; null
+  /// before a search, or when there is no index (then [_searcher] is used).
+  List<PageMatch>? _hits;
+  int _hitTotal = 0;
+
+  /// The match shown, counted over the whole manual.
+  int _hitAt = 0;
+  String _searchStatus = '';
+  RegExp? _hitPattern;
+
+  /// Increases with every search, so a slower earlier one is ignored.
+  int _searchRun = 0;
+
+  /// Matches drawn on each page, read from the page's text once it loads.
+  final Map<int, List<PdfPageTextRange>> _pageHits = {};
+  final Set<int> _pageHitsLoading = {};
+  PdfDocument? _document;
 
   /// Torque lines marked on [ViewerScreen.torque], in page order;
   /// null while they are being read.
@@ -149,6 +169,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   void _onViewerReady(PdfDocument document, PdfViewerController controller) {
     Diagnostics.log('viewer ready, ${document.pages.length} pages');
+    _document = document;
     _searcher ??= PdfTextSearcher(_controller)..addListener(_onSearchChanged);
     setState(() => _pageCount = document.pages.length);
     document.loadOutline().then((outline) {
@@ -165,7 +186,161 @@ class _ViewerScreenState extends State<ViewerScreen> {
     if (query.isNotEmpty) {
       // Opened from "Cari": stay on the page from the search result, but
       // highlight every match so next/previous work right away.
-      _searcher!.startTextSearch(query, goToFirstMatch: widget.initialPage == null, searchImmediately: true);
+      _runSearch(query, fromPage: widget.initialPage);
+    }
+  }
+
+  /// Searches when the mechanic presses search on the keyboard (not while
+  /// typing). Uses the manual's index: every page at once, also online.
+  Future<void> _runSearch(String text, {int? fromPage}) async {
+    final query = text.trim();
+    final run = ++_searchRun;
+    _clearHits();
+    if (query.isEmpty) {
+      setState(() {});
+      return;
+    }
+    final file = _file!;
+    if (!file.searchable) {
+      setState(() => _searchStatus = 'teks tidak terbaca');
+      return;
+    }
+    setState(() => _searchStatus = 'mencari…');
+    final local = _store.localManual(file.key);
+    String? index = local == null ? null : _store.indexPath(local.file);
+    if (index == null || !File(index).existsSync()) {
+      final got = await _store.aiIndexes(
+        where: (f) => f.key == file.key,
+        onStatus: (_) {
+          if (mounted && run == _searchRun) setState(() => _searchStatus = 'mengambil indeks…');
+        },
+      );
+      index = got[file.key];
+    }
+    if (!mounted || run != _searchRun) return;
+    if (index == null) {
+      // No index (offline before it was ever fetched): search the pages
+      // the viewer has loaded instead.
+      Diagnostics.log('search "$query": no index, searching loaded pages');
+      setState(() => _searchStatus = '');
+      _searcher?.startTextSearch(query, goToFirstMatch: fromPage == null, searchImmediately: true);
+      return;
+    }
+    final hits = await searchPagesInIndex(index, query);
+    if (!mounted || run != _searchRun) return;
+    Diagnostics.log('search "$query": ${hits.length} pages');
+    setState(() {
+      _hits = hits;
+      _hitPattern = queryPattern(query);
+      _hitTotal = hits.fold(0, (sum, h) => sum + h.count);
+      _searchStatus = hits.isEmpty ? 'tidak ada' : '';
+    });
+    if (hits.isEmpty) return;
+    var at = 0;
+    if (fromPage != null) {
+      // Start at the first match on or after the page opened from "Cari".
+      for (final h in hits) {
+        if (h.page >= fromPage) break;
+        at += h.count;
+      }
+      if (at >= _hitTotal) at = 0;
+    }
+    _goToHit(at, scroll: fromPage == null || hits.every((h) => h.page != fromPage));
+  }
+
+  void _clearHits() {
+    _searcher?.resetTextSearch();
+    _hits = null;
+    _hitTotal = 0;
+    _hitAt = 0;
+    _hitPattern = null;
+    _searchStatus = '';
+    _pageHits.clear();
+    _pageHitsLoading.clear();
+  }
+
+  /// The page of match [at] and which match on that page it is.
+  (int page, int nth) _hitPosition(int at) {
+    var left = at;
+    for (final h in _hits!) {
+      if (left < h.count) return (h.page, left);
+      left -= h.count;
+    }
+    return (_hits!.last.page, 0);
+  }
+
+  Future<void> _goToHit(int at, {bool scroll = true}) async {
+    final hits = _hits;
+    if (hits == null || hits.isEmpty) return;
+    final run = _searchRun;
+    setState(() => _hitAt = at);
+    final (page, nth) = _hitPosition(at);
+    if (scroll && page != _page) await _controller.goToPage(pageNumber: page);
+    final ranges = await _loadPageHits(page);
+    if (!mounted || run != _searchRun || _hitAt != at) return;
+    if (scroll && nth < ranges.length) {
+      final range = ranges[nth];
+      await _controller.goToRectInsidePage(pageNumber: page, rect: range.bounds, anchor: PdfPageAnchor.center);
+    }
+  }
+
+  void _nextHit() => _goToHit((_hitAt + 1) % _hitTotal);
+
+  void _prevHit() => _goToHit((_hitAt - 1 + _hitTotal) % _hitTotal);
+
+  /// Finds the matches in a page's text so they can be marked. Online the
+  /// page is fetched first; that is one page, not the whole manual.
+  Future<List<PdfPageTextRange>> _loadPageHits(int pageNumber) async {
+    final cached = _pageHits[pageNumber];
+    if (cached != null) return cached;
+    final document = _document;
+    final pattern = _hitPattern;
+    if (document == null || pattern == null || pageNumber > document.pages.length) return const [];
+    if (!_pageHitsLoading.add(pageNumber)) return const [];
+    final run = _searchRun;
+    try {
+      final page = await document.pages[pageNumber - 1].waitForLoaded(timeout: const Duration(seconds: 30));
+      if (page == null) return const [];
+      final text = await page.loadStructuredText();
+      final ranges = [
+        for (final m in pattern.allMatches(text.fullText))
+          PdfPageTextRange(pageText: text, start: m.start, end: m.end),
+      ];
+      if (mounted && run == _searchRun) setState(() => _pageHits[pageNumber] = ranges);
+      return ranges;
+    } catch (e) {
+      Diagnostics.log('search p$pageNumber: $e');
+      return const [];
+    } finally {
+      if (run == _searchRun) _pageHitsLoading.remove(pageNumber);
+    }
+  }
+
+  void _paintHits(Canvas canvas, Rect pageRect, PdfPage page) {
+    final hits = _hits;
+    if (hits == null) {
+      _searcher?.pageTextMatchPaintCallback(canvas, pageRect, page);
+      return;
+    }
+    final ranges = _pageHits[page.pageNumber];
+    if (ranges == null) {
+      // A matching page scrolled into view: read its matches to mark them.
+      if (hits.any((h) => h.page == page.pageNumber) && page.isLoaded) {
+        scheduleMicrotask(() => _loadPageHits(page.pageNumber));
+      }
+      return;
+    }
+    final (currentPage, nth) = _hitPosition(_hitAt);
+    for (final (i, range) in ranges.indexed) {
+      final rect = range.bounds
+          .toRect(page: page, scaledPageSize: pageRect.size)
+          .translate(pageRect.left, pageRect.top)
+          .inflate(1.5);
+      final current = page.pageNumber == currentPage && i == nth;
+      canvas.drawRect(
+        rect,
+        Paint()..color = (current ? const Color(0xFFF08A1C) : const Color(0xFFFFD500)).withAlpha(current ? 140 : 110),
+      );
     }
   }
 
@@ -329,7 +504,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
       _searchFocus.requestFocus();
     } else {
       _searchField.clear();
-      _searcher?.resetTextSearch();
+      _searchRun++;
+      _clearHits();
     }
   }
 
@@ -383,23 +559,30 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 ? _torqueBar()
                 : null,
       ),
-      body: _online
-          ? PdfViewer.uri(
-              store.pdfUri(file),
-              // Fetch only the parts of the PDF being viewed, so a 130 MB
-              // manual opens in seconds instead of downloading in full.
-              preferRangeAccess: true,
-              timeout: const Duration(seconds: 30),
-              controller: _controller,
-              initialPageNumber: widget.initialPage ?? 1,
-              params: _viewerParams,
-            )
-          : PdfViewer.file(
-              store.pdfPath(file),
-              controller: _controller,
-              initialPageNumber: widget.initialPage ?? 1,
-              params: _viewerParams,
-            ),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: _online
+                ? PdfViewer.uri(
+                    store.pdfUri(file),
+                    // Fetch only the parts of the PDF being viewed, so a 130 MB
+                    // manual opens in seconds instead of downloading in full.
+                    preferRangeAccess: true,
+                    timeout: const Duration(seconds: 30),
+                    controller: _controller,
+                    initialPageNumber: widget.initialPage ?? 1,
+                    params: _viewerParams,
+                  )
+                : PdfViewer.file(
+                    store.pdfPath(file),
+                    controller: _controller,
+                    initialPageNumber: widget.initialPage ?? 1,
+                    params: _viewerParams,
+                  ),
+          ),
+          if (_searching && _matchCount > 0) Positioned(right: 16, bottom: 16, child: _matchPill()),
+        ],
+      ),
       bottomNavigationBar: _pageCount == 0
           ? null
           : _PageBar(
@@ -424,7 +607,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
         onPageChanged: _onPageChanged,
         viewerOverlayBuilder: (context, size, handleLinkTap) => [pageScrollThumb(_controller)],
         pagePaintCallbacks: [
-          (canvas, pageRect, page) => _searcher?.pageTextMatchPaintCallback(canvas, pageRect, page),
+          _paintHits,
           _paintTorque,
         ],
         loadingBannerBuilder: (context, bytesDownloaded, totalBytes) =>
@@ -464,57 +647,88 @@ class _ViewerScreenState extends State<ViewerScreen> {
     return PdfPageLayout(pageLayouts: rects, documentSize: Size(slotWidth + margin * 2, y));
   }
 
+  /// Matches found: by the index, or by pdfrx on loaded pages when there is
+  /// no index.
+  int get _matchCount => _hits != null ? _hitTotal : _searcher?.matches.length ?? 0;
+
+  int get _matchAt => _hits != null ? _hitAt : _searcher?.currentIndex ?? 0;
+
   PreferredSizeWidget _searchBar() {
     final searcher = _searcher;
-    final matches = searcher?.matches.length ?? 0;
-    final current = searcher?.currentIndex;
+    final count = _matchCount;
     final String status;
-    if (searcher == null || _searchField.text.trim().isEmpty) {
-      status = '';
-    } else if (searcher.isSearching) {
-      status = matches == 0 ? 'mencari…' : '${(current ?? 0) + 1}/$matches+';
+    if (count > 0) {
+      status = '${_matchAt + 1}/$count${_hits == null && (searcher?.isSearching ?? false) ? '+' : ''}';
+    } else if (_hits == null && searcher != null && searcher.isSearching) {
+      status = 'mencari…';
+    } else if (_hits == null && searcher != null && searcher.hasMatches == false && searcher.pattern != null) {
+      status = 'tidak ada';
     } else {
-      status = matches == 0 ? 'tidak ada' : '${(current ?? 0) + 1}/$matches';
+      status = _searchStatus;
     }
     return PreferredSize(
       preferredSize: const Size.fromHeight(56),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 4, 8),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _searchField,
-                focusNode: _searchFocus,
-                textInputAction: TextInputAction.search,
-                onChanged: (text) => _searcher?.startTextSearch(text.trim()),
-                onSubmitted: (text) => _searcher?.startTextSearch(text.trim(), searchImmediately: true),
-                style: const TextStyle(fontSize: 14),
-                decoration: InputDecoration(
-                  isDense: true,
-                  filled: true,
-                  fillColor: AppColors.field,
-                  // Online, only pages already shown have been measured and can be searched.
-                  hintText: _online ? 'Cari di halaman yang sudah dimuat' : 'Cari kata di file ini',
-                  prefixIcon: Icon(Icons.search, size: 18, color: AppColors.muted),
-                  suffixText: status,
-                  suffixStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                ),
-              ),
-            ),
-            IconButton(
-              tooltip: 'Hasil sebelumnya',
-              onPressed: matches == 0 ? null : searcher!.goToPrevMatch,
-              icon: const Icon(Icons.keyboard_arrow_up),
-            ),
-            IconButton(
-              tooltip: 'Hasil berikutnya',
-              onPressed: matches == 0 ? null : searcher!.goToNextMatch,
-              icon: const Icon(Icons.keyboard_arrow_down),
-            ),
-          ],
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        child: TextField(
+          key: const Key('viewer-search'),
+          controller: _searchField,
+          focusNode: _searchFocus,
+          textInputAction: TextInputAction.search,
+          // Searching starts on the keyboard's search key, not while typing.
+          onChanged: (text) {
+            if (text.trim().isEmpty && (_hits != null || _searchStatus.isNotEmpty || _searcher?.pattern != null)) {
+              _searchRun++;
+              setState(_clearHits);
+            }
+          },
+          onSubmitted: (text) => _runSearch(text),
+          style: const TextStyle(fontSize: 14),
+          decoration: InputDecoration(
+            isDense: true,
+            filled: true,
+            fillColor: AppColors.field,
+            hintText: 'Ketik lalu tekan cari',
+            prefixIcon: Icon(Icons.search, size: 18, color: AppColors.muted),
+            suffixText: status,
+            suffixStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+          ),
         ),
+      ),
+    );
+  }
+
+  /// Previous / next match, a dark pill at the bottom right like Xodo's.
+  Widget _matchPill() {
+    final indexed = _hits != null;
+    Widget half(IconData icon, String tooltip, VoidCallback onTap, BorderRadius radius) => Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: radius,
+            onTap: onTap,
+            child: Tooltip(
+              message: tooltip,
+              child: SizedBox(width: 56, height: 52, child: Icon(icon, color: Colors.white, size: 26)),
+            ),
+          ),
+        );
+    return Container(
+      key: const Key('match-pill'),
+      decoration: BoxDecoration(
+        color: const Color(0xF0202124),
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 3))],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          half(Icons.chevron_left, 'Hasil sebelumnya', indexed ? _prevHit : () => _searcher?.goToPrevMatch(),
+              const BorderRadius.horizontal(left: Radius.circular(26))),
+          Container(width: 1, height: 52, color: const Color(0x55FFFFFF)),
+          half(Icons.chevron_right, 'Hasil berikutnya', indexed ? _nextHit : () => _searcher?.goToNextMatch(),
+              const BorderRadius.horizontal(right: Radius.circular(26))),
+        ],
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'dart:isolate';
+import 'dart:math' as math;
 
 import 'package:sqlite3/sqlite3.dart';
 
@@ -175,4 +176,50 @@ List<PageText> searchPageTextsSync(Map<String, String> indexes, String keywords,
   }
   pages.sort((a, b) => a.rank.compareTo(b.rank));
   return pages.take(limit).toList();
+}
+
+/// Finds what the mechanic typed in a page's text the way the index matches
+/// it: case does not matter, and the words may be split by spaces, dashes or
+/// a line break ("01010-81640" also finds "01010 81640").
+RegExp? queryPattern(String text) {
+  final words = text
+      .split(RegExp(r'[^A-Za-z0-9]+'))
+      .where((w) => w.isNotEmpty)
+      .map(RegExp.escape)
+      .toList();
+  if (words.isEmpty) return null;
+  return RegExp(words.join(r'[^A-Za-z0-9]*'), caseSensitive: false);
+}
+
+/// A page of one manual that matches a search, and how often the words
+/// appear on it (at least 1: the index can match words that are apart).
+typedef PageMatch = ({int page, int count});
+
+/// Every page of one manual's index that matches [text], in page order.
+/// Used by the viewer, so a manual read online is searched in full without
+/// fetching its pages first.
+Future<List<PageMatch>> searchPagesInIndex(String indexPath, String text) {
+  final query = toFtsQuery(text);
+  if (query.isEmpty) return Future.value(const []);
+  return Isolate.run(() => searchPagesInIndexSync(indexPath, query, text));
+}
+
+List<PageMatch> searchPagesInIndexSync(String indexPath, String ftsQuery, String text) {
+  final pattern = queryPattern(text);
+  final db = sqlite3.open(indexPath, mode: OpenMode.readOnly);
+  try {
+    final rows = db.select('SELECT page, text FROM pages WHERE pages MATCH ?', [ftsQuery]);
+    final pages = [
+      for (final row in rows)
+        (
+          page: row['page'] as int,
+          count: math.max(1, pattern?.allMatches(row['text'] as String).length ?? 1),
+        ),
+    ]..sort((a, b) => a.page.compareTo(b.page));
+    return pages;
+  } on SqliteException {
+    return const [];
+  } finally {
+    db.close();
+  }
 }
