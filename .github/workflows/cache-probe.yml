@@ -1,0 +1,45 @@
+name: Cache probe
+on:
+  push:
+    branches: [diag/cache-probe]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Range timing against mymanual.my.id
+        run: |
+          UA='MyManual-probe'
+          B=https://mymanual.my.id
+          curl -s -A "$UA" $B/catalog.json -o catalog.json
+          python3 - > list.txt <<'P'
+          import json
+          c=json.load(open('catalog.json'))
+          rows=[]
+          for u in c['units']:
+              for f in u['files']:
+                  rows.append((f['pdf']['size'], f['pdf']['path']))
+          rows.sort()
+          pick=[rows[len(rows)//2], rows[-3], rows[-2], rows[-1]]
+          for s,p in pick: print(s,p)
+          P
+          {
+          while read size path; do
+            for what in tail head mid; do
+              case $what in
+                tail) r="$((size-1024))-$((size-1))";;
+                head) r="0-65535";;
+                mid) r="$((size/2))-$((size/2+65535))";;
+              esac
+              for n in 1 2; do
+                curl -s -A "$UA" -r "$r" -o /dev/null -D h.txt -w "%{http_code} %{time_starttransfer}s %{size_download}B" "$B/$path" > t.txt
+                echo "$path size=$size $what try$n: $(cat t.txt) cache=$(grep -i '^cf-cache-status' h.txt | tr -d '\r' | cut -d' ' -f2) age=$(grep -i '^age' h.txt | tr -d '\r' | cut -d' ' -f2) colo=$(grep -i '^cf-ray' h.txt | tr -d '\r' | cut -d'-' -f2)"
+              done
+            done
+          done < list.txt
+          } > cache-out.txt 2>&1
+          cat cache-out.txt
+          git config user.name probe; git config user.email probe@users.noreply.github.com
+          git add cache-out.txt && git commit -m "cache probe output" && git push
