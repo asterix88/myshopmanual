@@ -277,10 +277,16 @@ class _ViewerScreenState extends State<ViewerScreen> {
     final (page, _) = _hitPosition(at);
     // Only turn to the page and keep the zoom (Anas: no zooming in on the
     // word); the current match is marked orange on the page.
-    if (scroll && page != _page) await _controller.goToPage(pageNumber: page);
+    if (scroll && page != _page) await _jumpTo(page);
     if (!mounted || run != _searchRun || _hitAt != at) return;
     await _loadPageHits(page);
   }
+
+  /// Online, an animated jump paints every page it passes, and the viewer
+  /// fetches each of those from the server before the page asked for. So
+  /// jump straight there; offline the short slide is kept.
+  Future<void> _jumpTo(int page) =>
+      _controller.goToPage(pageNumber: page, duration: _online ? Duration.zero : const Duration(milliseconds: 200));
 
   void _nextHit() => _goToHit((_hitAt + 1) % _hitTotal);
 
@@ -297,10 +303,13 @@ class _ViewerScreenState extends State<ViewerScreen> {
     if (!_pageHitsLoading.add(pageNumber)) return const [];
     final run = _searchRun;
     try {
-      // A long manual read online loads its pages in order from the top, so
-      // a match far down would stay blank until every page before it is in.
-      // Start loading at the match instead, and stop once it is there.
-      bool waiting() => mounted && run == _searchRun && !document.pages[pageNumber - 1].isLoaded;
+      // Online the viewer only measures the pages on screen, so load the
+      // match and 4 pages either side of it now (pdfrx goes outward from the
+      // start page), and stop once those are in.
+      final first = math.max(1, pageNumber - 4);
+      final last = math.min(document.pages.length, pageNumber + 4);
+      bool waiting() =>
+          mounted && run == _searchRun && [for (var n = first; n <= last; n++) n].any((n) => !document.pages[n - 1].isLoaded);
       if (waiting()) {
         unawaited(
           document
@@ -598,7 +607,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
               page: _page,
               pageCount: _pageCount,
               section: section,
-              onJump: (page) => _controller.goToPage(pageNumber: page),
+              onJump: _jumpTo,
             ),
     );
   }
@@ -758,11 +767,11 @@ class _ViewerScreenState extends State<ViewerScreen> {
           if (dest != null && _online) {
             // Online, the page may not be measured yet, so a position inside
             // it would be off; open the page from its top instead.
-            _controller.goToPage(pageNumber: dest.pageNumber);
+            _jumpTo(dest.pageNumber);
           } else if (dest != null) {
             _controller.goToDest(dest);
           } else if (page != null) {
-            _controller.goToPage(pageNumber: page);
+            _jumpTo(page);
           }
         },
       ),
