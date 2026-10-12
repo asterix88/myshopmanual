@@ -1,3 +1,4 @@
+VERSION = ''
 """How many bytes and requests PDFium needs to open a manual at a page,
 read the way the app's RemotePdf does (64 KB pieces, 4 pieces per request)."""
 import json, os, sys, time, urllib.request
@@ -62,12 +63,12 @@ def timing(base, key, headers, label):
         h = dict(headers)
         h['Range'] = f'bytes={start*BLOCK}-{(start+n)*BLOCK-1}'
         h['User-Agent'] = 'MyManual-probe'
-        req = urllib.request.Request(f'{base}/{key}', headers=h)
+        req = urllib.request.Request(f'{base}/{key}' + (f'?v={VERSION}' if 'files' in base else ''), headers=h)
         t0 = time.time()
         try:
             with urllib.request.urlopen(req, timeout=60) as r:
                 data = r.read()
-                cs = r.headers.get('cf-cache-status')
+                cs = r.headers.get('server-timing')
             lines.append(f'  {label} blocks {start}+{n}: {(time.time()-t0)*1000:.0f} ms, {len(data)//1024} KB, cache {cs}')
         except Exception as e:
             lines.append(f'  {label} blocks {start}+{n}: error {e}')
@@ -86,10 +87,12 @@ if __name__ == '__main__':
             if f.get('type') != 'shop_manual':
                 continue
             k = next(k for k in want if code.startswith(k))
+            global VERSION
+            VERSION = f['pdf']['sha256'][:12]
             local = os.path.basename(path)
-            if not os.path.exists(local):
+            if os.environ.get('PROBE_PDF') and not os.path.exists(local):
                 os.system(f"curl -s -A MyManual-probe -o '{local}' 'https://mymanual.my.id/{path}'")
-            out.append(probe(local, want[k]))
+            out.append(probe(local, want[k])) if os.environ.get('PROBE_PDF') else None
             for wait in (0, 30, 60):
                 time.sleep(wait)
                 out.append(f'after {wait}s more:')
