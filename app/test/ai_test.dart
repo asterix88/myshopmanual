@@ -7,9 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mymanual/src/ai.dart';
+import 'package:mymanual/src/auth.dart';
 import 'package:mymanual/src/store.dart';
 
-import 'store_test.dart' show fixtureServer;
+import 'store_test.dart' show fixtureServer, testSession;
 
 void main() {
   test('answers saved before keep no [1] numbers in their text', () {
@@ -172,7 +173,7 @@ void main() {
     final store = await AppStore.open(root: root, client: fixtureServer());
     await store.setServerUrl('https://example.test');
     await store.download(store.catalog.files.single, unitName: 'TEST1-1');
-    store.setAiOwner(true);
+    await store.signIn(testSession(admin: true), refreshNow: false);
 
     final requests = <Map<String, dynamic>>[];
     final worker = MockClient((request) async {
@@ -206,7 +207,7 @@ void main() {
     store.dispose();
   });
 
-  test('each phone gets ten questions a day unless the admin code is set', () async {
+  test('each phone gets ten questions a day unless an admin is logged in', () async {
     final store = await AppStore.open(root: root, client: fixtureServer());
     await store.setServerUrl('https://example.test');
     final worker = MockClient((request) async => http.Response(
@@ -227,7 +228,7 @@ void main() {
     );
 
     // The admin's phone has no limit.
-    store.setAiOwner(true);
+    await store.signIn(testSession(admin: true), refreshNow: false);
     expect(store.aiQuestionsLeft, isNull);
     await chat.ask('Admin bebas');
     store.dispose();
@@ -235,18 +236,37 @@ void main() {
     // The count survives a restart.
     final reopened = await AppStore.open(root: root, client: fixtureServer());
     expect(reopened.aiOwner, isTrue);
-    reopened.setAiOwner(false);
+    await reopened.signOut();
     expect(reopened.aiQuestionsLeft, 0);
     reopened.dispose();
   });
 
-  test('the admin code is checked by the AI server', () async {
-    final server = MockClient((request) async {
-      final code = (jsonDecode(request.body) as Map)['code'];
-      return http.Response(jsonEncode({'ok': code == 'rahasia'}), 200);
+  test('nyel AI gets the session and swaps it once when the server says it is old', () async {
+    final store = await AppStore.open(root: root, client: MockClient((request) async {
+      if (request.url.path == '/auth/refresh') {
+        return http.Response(jsonEncode({...testSession(token: 'baru').toJson(), 'status': 'ok'}), 200);
+      }
+      return http.Response('not found', 404);
+    }));
+    await store.signIn(testSession(token: 'lama'), refreshNow: false);
+    final sent = <String?>[];
+    final worker = MockClient((request) async {
+      sent.add(request.headers[sessionHeader]);
+      if (request.headers[sessionHeader] == 'lama') {
+        return http.Response(jsonEncode({'error': 'refresh', 'message': 'Sesi perlu diperbarui.'}), 401);
+      }
+      return http.Response(
+          jsonEncode({
+            'finish_reason': 'stop',
+            'message': {'role': 'assistant', 'content': 'Oke.'},
+          }),
+          200);
     });
-    expect(await checkOwnerCode(server, 'rahasia', endpoint: Uri.parse('https://ai.test/owner')), isTrue);
-    expect(await checkOwnerCode(server, 'salah', endpoint: Uri.parse('https://ai.test/owner')), isFalse);
+    final chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'));
+    expect((await chat.ask('halo')).text, 'Oke.');
+    expect(sent, ['lama', 'baru']);
+    expect(store.session!.token, 'baru');
+    store.dispose();
   });
 
   test('a Worker error shows its message', () async {

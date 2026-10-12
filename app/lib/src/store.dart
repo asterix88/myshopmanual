@@ -9,18 +9,30 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'auth.dart';
 import 'cetok.dart';
 import 'diagnostics.dart';
 import 'keep_alive.dart';
 import 'models.dart';
 
-/// Server address: the R2 bucket's custom domain (r2.dev is blocked by some
-/// mobile operators), unless a build overrides it with
-/// `flutter build apk --dart-define=CATALOG_URL=https://pub-xxxx.r2.dev`.
+/// Server address: the Worker that serves the R2 bucket to logged-in phones
+/// (ai-worker/src/files.ts), unless a build overrides it with
+/// `flutter build apk --dart-define=CATALOG_URL=https://...`.
 const _buildServerUrl = String.fromEnvironment('CATALOG_URL');
-const defaultServerUrl = _buildServerUrl == ''
-    ? 'https://mymanual.my.id'
+const defaultServerUrl = _buildServerUrl == '' || _buildServerUrl == _publicBucketUrl
+    ? 'https://files.mymanual.my.id'
     : _buildServerUrl;
+
+/// The bucket's own public address, used before the NRP login; it is closed
+/// once every phone has the login version.
+const _publicBucketUrl = 'https://mymanual.my.id';
+
+/// Addresses saved by older versions that the app moves to [defaultServerUrl]:
+/// r2.dev is blocked by some mobile operators, and the public bucket closes.
+bool _outdatedServer(String url) {
+  final host = Uri.tryParse(url.trim())?.host ?? '';
+  return url.contains('.r2.dev') || host == 'mymanual.my.id';
+}
 
 /// How far [AppStore.fetchAllAiIndexes] has come.
 class AiIndexProgress {
@@ -62,7 +74,9 @@ class DownloadInterrupted implements Exception {
 /// Everything the app knows: the server catalog (cached for offline use),
 /// which manuals are on the phone, downloads in progress, and reading state.
 class AppStore extends ChangeNotifier {
-  AppStore._(this._root, this._client);
+  AppStore._(this._root, this._rawClient) {
+    _client = SessionClient(_rawClient, session: () => session, renew: renewSession);
+  }
 
   static Future<AppStore> open({Directory? root, http.Client? client}) async {
     root ??= await getApplicationSupportDirectory();
@@ -72,7 +86,23 @@ class AppStore extends ChangeNotifier {
   }
 
   final Directory _root;
-  final http.Client _client;
+
+  /// Without the session; for logging in and for other servers (Cetok).
+  final http.Client _rawClient;
+
+  /// Adds the session to requests for the app's servers.
+  late final http.Client _client;
+
+  /// The employee logged in on this phone (auth.json), null when nobody is.
+  Session? session;
+
+  bool get loggedIn => session != null;
+
+  /// Random id of this phone, sent with logins so the admin sees its phones.
+  String _deviceId = '';
+
+  /// Login and admin calls to the server.
+  late final AuthApi auth = AuthApi(_rawClient);
 
   Catalog catalog = Catalog.empty;
   Map<String, LocalManual> local = {};
@@ -90,6 +120,7 @@ class AppStore extends ChangeNotifier {
   final Map<String, DownloadProgress> downloads = {};
 
   File get _stateFile => File(p.join(_root.path, 'state.json'));
+  File get _sessionFile => File(p.join(_root.path, 'auth.json'));
   File get _catalogFile => File(p.join(_root.path, 'catalog.json'));
 
   String pdfPath(ManualFile f) => p.join(_root.path, 'manuals', f.unitId, '${f.id}.pdf');
@@ -115,7 +146,7 @@ class AppStore extends ChangeNotifier {
       final savedUrl = json['server'] as String?;
       // The old r2.dev address was saved by earlier builds; it is blocked by
       // some mobile operators, so move those installs to the new default.
-      if (savedUrl != null && savedUrl.isNotEmpty && !savedUrl.contains('.r2.dev')) {
+      if (savedUrl != null && savedUrl.isNotEmpty && !_outdatedServer(savedUrl)) {
         serverUrl = savedUrl;
       }
       local = {
@@ -130,7 +161,7 @@ class AppStore extends ChangeNotifier {
         for (final e in (json['bookmarks'] as Map<String, dynamic>? ?? {}).entries)
           e.key: (e.value as List).cast<int>(),
       };
-      aiOwner = json['ai_owner'] as bool? ?? false;
+      _deviceId = json['device_id'] as String? ?? '';
       // Light unless the user picked another look in the menu (Anas, 9 Oct
       // 2026); older versions saved 'system' without asking.
       themeChosen = json['theme_chosen'] as bool? ?? false;
@@ -138,13 +169,26 @@ class AppStore extends ChangeNotifier {
       _aiDay = json['ai_day'] as String? ?? '';
       _aiAsked = json['ai_asked'] as int? ?? 0;
     }
+    if (_deviceId.isEmpty) _deviceId = DeviceInfo.newId();
+    if (await _sessionFile.exists()) {
+      try {
+        session = Session.fromJson(jsonDecode(await _sessionFile.readAsString()) as Map<String, dynamic>);
+      } on Object {
+        session = null;
+      }
+      if (session?.expired ?? false) {
+        // 30 days without reaching the server: log out (Anas, 12 Oct 2026).
+        Diagnostics.log('session expired offline');
+        await signOut();
+      }
+    }
   }
 
   /// Questions to nyel AI per day on this phone, to keep the AI bill small.
   static const aiDailyLimit = 10;
 
-  /// The admin's phone (unlocked with the admin code) has no daily limit.
-  bool aiOwner = false;
+  /// Admins have no daily limit.
+  bool get aiOwner => session?.admin ?? false;
   String _aiDay = '';
   int _aiAsked = 0;
 
@@ -182,10 +226,88 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setAiOwner(bool owner) {
-    aiOwner = owner;
-    _scheduleSave();
+  Future<DeviceInfo> deviceInfo() async => DeviceInfo(_deviceId, await DeviceInfo.phoneModel());
+
+  /// Keeps [s] as this phone's login and loads the catalog with it.
+  Future<void> signIn(Session s, {bool refreshNow = true}) async {
+    session = s;
+    await _saveSession();
+    await _save();
+    Diagnostics.log('logged in ${s.nrp}');
     notifyListeners();
+    if (refreshNow) await refresh();
+  }
+
+  Future<void> _saveSession() async {
+    final s = session;
+    if (s == null) return;
+    await _root.create(recursive: true);
+    final tmp = File('${_sessionFile.path}.tmp');
+    await tmp.writeAsString(jsonEncode(s.toJson()));
+    await tmp.rename(_sessionFile.path);
+  }
+
+  /// Logs out. [revoked]: the NRP was deactivated, so the manuals on the
+  /// phone are removed too.
+  Future<void> signOut({bool revoked = false}) async {
+    session = null;
+    try {
+      if (await _sessionFile.exists()) await _sessionFile.delete();
+      // The conversation belongs to the one who logged out.
+      final chat = File(chatHistoryPath);
+      if (await chat.exists()) await chat.delete();
+    } on FileSystemException catch (e) {
+      debugPrint('logout cleanup failed: $e');
+    }
+    if (revoked) {
+      Diagnostics.log('access revoked, removing manuals');
+      for (final key in downloads.keys.toList()) {
+        cancelDownload(key);
+      }
+      for (final dir in ['manuals', 'index-cache', 'spek', 'page-thumbs']) {
+        try {
+          final d = Directory(p.join(_root.path, dir));
+          if (await d.exists()) await d.delete(recursive: true);
+        } on FileSystemException catch (e) {
+          debugPrint('removing $dir failed: $e');
+        }
+      }
+      local = {};
+      bookmarks = {};
+      lastRead = null;
+      await _save();
+    }
+    notifyListeners();
+  }
+
+  /// Logs out when the session ran out while the phone was offline.
+  Future<void> checkSessionExpiry() async {
+    if (session?.expired ?? false) await signOut();
+  }
+
+  Future<Session?>? _renewing;
+
+  /// Swaps the session for a new one (the server only accepts a day-old
+  /// one). Null when the server could not be reached or refused; a refusal
+  /// because the NRP is no longer allowed logs out.
+  Future<Session?> renewSession() {
+    return _renewing ??= () async {
+      final old = session;
+      if (old == null) return null;
+      try {
+        final fresh = await auth.refresh(old, await deviceInfo());
+        if (session == null) return null;
+        session = fresh;
+        await _saveSession();
+        notifyListeners();
+        return fresh;
+      } on AuthException catch (e) {
+        Diagnostics.log('session refresh refused: ${e.code}');
+        if (e.revoked) await signOut(revoked: e.code != 'login');
+        return null;
+      }
+    }()
+        .whenComplete(() => _renewing = null);
   }
 
   /// Where the nyel AI conversation is kept between app starts.
@@ -216,7 +338,7 @@ class AppStore extends ChangeNotifier {
       'seen_initialized': _seenInitialized,
       'last_read': lastRead?.toJson(),
       'bookmarks': bookmarks,
-      'ai_owner': aiOwner,
+      'device_id': _deviceId,
       'theme': themeMode,
       'theme_chosen': themeChosen,
       'ai_day': _aiDay,
@@ -256,6 +378,8 @@ class AppStore extends ChangeNotifier {
 
   /// Fetches catalog.json. Offline is normal: the cached catalog stays.
   Future<void> refresh() async {
+    await checkSessionExpiry();
+    if (session?.stale ?? false) await renewSession();
     if (serverUrl.isEmpty) {
       online = false;
       lastError = 'Alamat server belum diatur';

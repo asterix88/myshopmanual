@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import 'auth.dart';
 import 'diagnostics.dart';
 import 'models.dart';
 import 'page_image.dart';
@@ -18,20 +19,6 @@ const aiUrl = _buildAiUrl == '' ? 'https://ai.mymanual.my.id' : _buildAiUrl;
 
 /// Optional shared token the Worker checks (its APP_TOKEN secret).
 const _aiToken = String.fromEnvironment('AI_TOKEN');
-
-/// Asks the Worker whether [code] is the admin code (its OWNER_CODE secret),
-/// which lifts the daily question limit on this phone.
-Future<bool> checkOwnerCode(http.Client client, String code, {Uri? endpoint}) async {
-  try {
-    final response = await client
-        .post(endpoint ?? Uri.parse('$aiUrl/owner'),
-            headers: {'content-type': 'application/json'}, body: jsonEncode({'code': code}))
-        .timeout(const Duration(seconds: 20));
-    return response.statusCode == 200 && (jsonDecode(response.body) as Map)['ok'] == true;
-  } on Exception {
-    throw AiException('Tidak bisa terhubung ke server. Periksa sinyal internet.');
-  }
-}
 
 /// A manual page the AI was shown, numbered so its answer can cite it.
 class AiSource {
@@ -221,7 +208,8 @@ class AiChat {
     );
   }
 
-  Future<Map<String, dynamic>> _post(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> _post(Map<String, dynamic> body, {bool renewed = false}) async {
+    final session = store.session;
     final http.Response response;
     try {
       response = await client
@@ -230,6 +218,7 @@ class AiChat {
             headers: {
               'content-type': 'application/json',
               if (_aiToken.isNotEmpty) 'authorization': 'Bearer $_aiToken',
+              if (session != null) sessionHeader: session.token,
             },
             body: jsonEncode(body),
           )
@@ -242,6 +231,10 @@ class AiChat {
       data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     } on FormatException {
       data = null;
+    }
+    // The server takes a session for a day; swap it and ask again.
+    if (response.statusCode == 401 && session != null && !renewed) {
+      if (await store.renewSession() != null) return _post(body, renewed: true);
     }
     if (response.statusCode != 200 || data == null) {
       throw AiException(data?['message'] as String? ?? 'AI sedang bermasalah (kode ${response.statusCode}).');

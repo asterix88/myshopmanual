@@ -7,6 +7,7 @@ import 'package:pdfrx/pdfrx.dart';
 
 import 'src/diagnostics.dart';
 import 'src/keep_alive.dart';
+import 'src/screens/login_screen.dart';
 import 'src/screens/unit_screen.dart';
 import 'src/screens/shell.dart';
 import 'src/screens/updates_screen.dart';
@@ -20,7 +21,7 @@ Future<void> main() async {
   await Diagnostics.start();
   await _clearOldPdfCache();
   final store = await AppStore.open()..autoFetchAiIndexes = true;
-  runApp(MyManualApp(store: store));
+  runApp(MyManualApp(store: store, requireLogin: true));
   // Tapping an update notification opens the update list.
   unawaited(startUpdateNotifications(
     onOpenUpdates: () => _navigator.currentState?.push(
@@ -57,14 +58,19 @@ Future<void> _clearOldPdfCache() async {
   }
 }
 
-/// Replaced when the app switches light/dark, so the new app starts fresh.
+/// Replaced when the app switches light/dark or someone logs in or out, so
+/// the new app starts fresh.
 var _navigator = GlobalKey<NavigatorState>();
-bool? _navigatorDark;
+String? _navigatorLook;
 
 class MyManualApp extends StatefulWidget {
-  const MyManualApp({super.key, required this.store});
+  const MyManualApp({super.key, required this.store, this.requireLogin = false});
 
   final AppStore store;
+
+  /// Only employees who logged in with their NRP get past the login screen
+  /// (always in the real app; tests start logged in).
+  final bool requireLogin;
 
   @override
   State<MyManualApp> createState() => _MyManualAppState();
@@ -87,6 +93,12 @@ class _MyManualAppState extends State<MyManualApp> with WidgetsBindingObserver {
   @override
   void didChangePlatformBrightness() => setState(() {});
 
+  /// Back after a long time in the background: the login may have run out.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) widget.store.checkSessionExpiry();
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = widget.store;
@@ -100,18 +112,20 @@ class _MyManualAppState extends State<MyManualApp> with WidgetsBindingObserver {
             'light' => false,
             _ => WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark,
           };
+          final showLogin = widget.requireLogin && !store.loggedIn;
           // Screens read AppColors directly, so switching rebuilds the app.
-          if (_navigatorDark != dark) {
-            if (_navigatorDark != null) _navigator = GlobalKey<NavigatorState>();
-            _navigatorDark = dark;
+          final look = '$dark $showLogin';
+          if (_navigatorLook != look) {
+            if (_navigatorLook != null) _navigator = GlobalKey<NavigatorState>();
+            _navigatorLook = look;
           }
           return MaterialApp(
-            key: ValueKey(dark),
+            key: ValueKey(look),
             title: 'MyManual',
             navigatorKey: _navigator,
             debugShowCheckedModeBanner: false,
             theme: buildTheme(dark: dark),
-            home: const HomeShell(),
+            home: showLogin ? const LoginScreen() : const HomeShell(),
           );
         },
       ),

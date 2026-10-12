@@ -75,7 +75,7 @@ void updateCheckDispatcher() {
 Future<List<ManualUpdate>> updatesToAnnounce({Directory? root, http.Client? client}) async {
   final store = await AppStore.open(root: root, client: client);
   try {
-    if (!store.seenInitialized) return const [];
+    if (!store.seenInitialized || !store.loggedIn) return const [];
     final remote = await store.fetchCatalog();
     final notifiedFile = File(p.join(store.root.path, 'notified.json'));
     final notified = <String>{};

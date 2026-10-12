@@ -24,6 +24,13 @@ echo === 2/2 Mengunggah ke R2 ===
 python tools\upload_r2.py dist
 if errorlevel 1 goto failed
 
+rem The employee list, when there is one next to this file.
+if exist karyawan.xlsx (
+  echo === Daftar karyawan ===
+  python tools\upload_karyawan.py karyawan.xlsx
+  if errorlevel 1 goto failed
+)
+
 echo.
 echo Selesai. Tarik layar di aplikasi untuk melihat manual terbaru.
 pause

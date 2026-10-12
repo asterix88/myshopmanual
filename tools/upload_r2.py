@@ -16,7 +16,9 @@ Manage API tokens; never commit them):
     python tools/upload_r2.py dist --warm-all  # only warm every PDF (no upload, no keys)
 
 After uploading, every new or changed PDF is asked for once through the
-public address (R2_PUBLIC_URL, default https://mymanual.my.id). Cloudflare
+app's file address (R2_PUBLIC_URL, default https://files.mymanual.my.id),
+with the admin code ADMIN_CODE since that address only serves logged-in
+phones. Cloudflare
 copies the whole file from R2 into its nearby server on the first request,
 which for a big Shop Manual takes several seconds; doing it here means the
 first mechanic to open it does not wait for that.
@@ -48,14 +50,18 @@ def catalog_paths(catalog: dict) -> dict[str, str]:
 def warm(keys: list[str]) -> None:
     """Asks Cloudflare for the last 1 KB of each PDF in [keys], which makes
     it copy the whole file into its cache (see the note at the top)."""
-    base = os.environ.get("R2_PUBLIC_URL", "https://mymanual.my.id").rstrip("/")
+    base = os.environ.get("R2_PUBLIC_URL", "https://files.mymanual.my.id").rstrip("/")
+    code = os.environ.get("ADMIN_CODE", "").strip()
     pdfs = [k for k in keys if k.endswith(".pdf")]
+    if pdfs and not code:
+        print("Lewati pemanasan PDF: ADMIN_CODE belum diisi di r2-keys.bat.")
+        return
     if pdfs:
         print(f"=== Memanaskan {len(pdfs)} PDF di server Cloudflare ===")
     for key in pdfs:
         request = urllib.request.Request(
             f"{base}/{urllib.request.quote(key)}",
-            headers={"Range": "bytes=-1024", "User-Agent": "MyManual-update"},
+            headers={"Range": "bytes=-1024", "User-Agent": "MyManual-update", "x-admin-code": code},
         )
         start = time.monotonic()
         try:

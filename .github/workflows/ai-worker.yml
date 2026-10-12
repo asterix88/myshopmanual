@@ -4,8 +4,10 @@ name: Deploy AI server
 # on main, so nothing has to be installed or run on a PC.
 # Needs repository secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and
 # GROQ_API_KEY; DEEPSEEK_API_KEY is optional (without it DeepSeek is skipped),
-# and so are OWNER_CODE (the admin code that lifts the app's daily limit) and
-# TAVILY_API_KEY (web search; without it the AI searches Wikipedia).
+# and so is TAVILY_API_KEY (web search; without it the AI searches
+# Wikipedia). OWNER_CODE (the admin code) is needed to upload the employee
+# list from update.bat. The API token needs Workers Scripts, Workers KV
+# Storage and Workers R2 Storage (all Edit) plus Workers Routes on the zone.
 on:
   push:
     branches: [main]
@@ -45,6 +47,33 @@ jobs:
       - run: npx tsc --noEmit
         if: steps.check.outputs.ready == 'true'
         working-directory: ai-worker
+      # The employee list lives in a KV namespace; made on the first deploy.
+      - name: Set up the login storage
+        if: steps.check.outputs.ready == 'true'
+        working-directory: ai-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          find_id() {
+            npx wrangler kv namespace list | node -e '
+              let s = ""; process.stdin.on("data", d => s += d).on("end", () => {
+                const list = JSON.parse(s.slice(s.indexOf("[")));
+                const ns = list.find(n => n.title === "mymanual-auth" || n.title.endsWith("-mymanual-auth"));
+                if (ns) console.log(ns.id);
+              });'
+          }
+          ID=$(find_id)
+          if [ -z "$ID" ]; then
+            npx wrangler kv namespace create mymanual-auth
+            ID=$(find_id)
+          fi
+          if [ -z "$ID" ]; then
+            echo "::error::Could not find or create the KV namespace mymanual-auth. The Cloudflare API token needs 'Workers KV Storage: Edit'."
+            exit 1
+          fi
+          sed -i "s/AUTH_KV_ID/$ID/" wrangler.toml
+          echo "KV namespace mymanual-auth: $ID"
       - uses: cloudflare/wrangler-action@v3
         if: steps.check.outputs.ready == 'true'
         with:
