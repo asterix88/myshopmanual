@@ -1,0 +1,24 @@
+name: Open probe
+on:
+  push:
+    branches: [diag/open-probe]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pypdfium2==4.30.0
+      - name: Probe
+        env:
+          ADMIN_CODE: ${{ secrets.OWNER_CODE }}
+        run: |
+          mkdir work && cd work
+          curl -s -A MyManual-probe https://mymanual.my.id/catalog.json -o catalog.json
+          python3 -c "import json;c=json.load(open('catalog.json'));print(list(c.keys()));u=c['units'][0];print({k:(v if k!='files' else v[:1]) for k,v in u.items()})" > ../open-out.txt 2>&1 || true
+          python3 ../tools/diag/open_probe.py >> ../open-out.txt 2>&1 || true
+          cd ..
+          cat open-out.txt
+          git config user.name probe; git config user.email probe@users.noreply.github.com
+          git add open-out.txt && git commit -m "open probe output" && git push
