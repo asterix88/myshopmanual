@@ -862,6 +862,15 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Goes up whenever the nyel AI conversation is saved or cleared, so a
+  /// chat screen showing an older copy reloads it.
+  int chatRevision = 0;
+
+  void chatChanged() {
+    chatRevision++;
+    notifyListeners();
+  }
+
   String? takeAiQuestion() {
     final q = _pendingAiQuestion;
     _pendingAiQuestion = null;

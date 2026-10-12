@@ -41,16 +41,21 @@ class AiSource {
 
 /// What the user sees of one exchange.
 class ChatEntry {
-  ChatEntry.user(this.text)
+  ChatEntry.user(this.text, {this.page})
       : fromUser = true,
         sources = const [],
         pictures = const [],
         failed = false;
   ChatEntry.assistant(this.text, {this.sources = const [], this.pictures = const [], this.failed = false})
-      : fromUser = false;
+      : fromUser = false,
+        page = null;
 
   final bool fromUser;
   final String text;
+
+  /// The manual page the question was asked about (from the viewer's nyel AI
+  /// button), shown above the question.
+  final AiSource? page;
 
   /// Pages cited in [text], in order of first citation.
   final List<AiSource> sources;
@@ -63,6 +68,7 @@ class ChatEntry {
   Map<String, dynamic> toJson() => {
         'user': fromUser,
         'text': text,
+        if (page != null) 'page': page!.toJson(),
         if (sources.isNotEmpty) 'sources': [for (final s in sources) s.toJson()],
         if (pictures.isNotEmpty) 'pictures': [for (final s in pictures) s.toJson()],
         if (failed) 'failed': true,
@@ -70,7 +76,11 @@ class ChatEntry {
 
   static ChatEntry fromJson(AppStore store, Map<String, dynamic> json) {
     final text = json['text'] as String? ?? '';
-    if (json['user'] == true) return ChatEntry.user(text);
+    if (json['user'] == true) {
+      final page = json['page'];
+      return ChatEntry.user(text,
+          page: page is Map ? AiSource.fromJson(store, page.cast<String, dynamic>()) : null);
+    }
     List<AiSource> list(String key) => [
           for (final s in (json[key] as List? ?? const [])) ?AiSource.fromJson(store, (s as Map).cast<String, dynamic>()),
         ];
@@ -129,14 +139,24 @@ class AiChat {
   var _views = 0;
 
   /// Asks [question]; [onStatus] reports what is happening while it works.
-  Future<ChatEntry> ask(String question, {void Function(String status)? onStatus}) async {
+  /// With [file] and [page] the question is about that manual page (the one
+  /// open in the viewer): its text goes with the question.
+  Future<ChatEntry> ask(
+    String question, {
+    ManualFile? file,
+    int? page,
+    void Function(String status)? onStatus,
+  }) async {
     if (store.aiQuestionsLeft == 0) {
       throw AiException('Jatah ${AppStore.aiDailyLimit} pertanyaan hari ini sudah habis. Coba lagi besok.');
     }
     _dropOldPictures();
     _keepRecentQuestions();
     _views = 0;
-    _messages.add({'role': 'user', 'content': question});
+    final content = file != null && page != null
+        ? await _aboutPage(_sourceFor(file, page), question, onStatus: onStatus)
+        : question;
+    _messages.add({'role': 'user', 'content': content});
     Diagnostics.log('ask (${question.length} chars, ${_messages.length} messages)');
     // Every manual on the server can be searched, downloaded or not; manuals
     // that are only pictures (diagrams, scans) can be looked at.
@@ -340,6 +360,51 @@ class AiChat {
     return 'The picture of $label is attached in the next message.${await _sheetHint(file)}';
   }
 
+  /// The source id of [page] of [file], the one it already has if the AI saw it.
+  AiSource _sourceFor(ManualFile file, int page) {
+    final seen = _sources.values.where((s) => s.file.key == file.key && s.page == page).firstOrNull;
+    if (seen != null) return seen;
+    final id = _nextSourceId();
+    return _sources[id] = AiSource(id: id, file: file, unitName: store.unitNameOf(file), page: page);
+  }
+
+  /// Longest page text sent with a question; a full page of a manual is
+  /// usually well under this.
+  static const maxPageText = 6000;
+
+  /// [question] with the page it is about: the page's text from the manual's
+  /// index, so "translate this page" works without looking at a picture.
+  Future<String> _aboutPage(AiSource source, String question, {void Function(String status)? onStatus}) async {
+    final file = source.file;
+    ({String text, String? section})? found;
+    if (file.searchable) {
+      onStatus?.call('Membaca halaman ${source.page}…');
+      final indexes = await store.aiIndexes(where: (f) => f.key == file.key, onStatus: onStatus);
+      final path = indexes[file.key];
+      if (path != null) found = await _pageTextInBackground(path, source.page);
+    }
+    final text = found == null
+        ? null
+        : found.text.length > maxPageText
+            ? '${found.text.substring(0, maxPageText)}…'
+            : found.text;
+    final label = '[S${source.id}] ${source.unitName} · ${file.title} · page ${source.page}'
+        '${found?.section == null ? '' : ' · section: ${found!.section}'}';
+    return [
+      'The user is reading this manual page in the app and asks about it ("this page" / "halaman ini" means it): '
+          '$label',
+      if (text != null) ...[
+        'Text of the page:\n$text',
+        'For drawings or tables the text does not show well, call view_page with source "S${source.id}".',
+      ] else
+        'This page has no readable text; call view_page with source "S${source.id}" to look at it.',
+      'Question: $question',
+    ].join('\n\n');
+  }
+
+  static Future<({String text, String? section})?> _pageTextInBackground(String path, int page) =>
+      Isolate.run(() => pageTextSync(path, page));
+
   /// Tells the AI which pages of [file] are large drawing sheets, so after
   /// one look it can go straight to the drawing.
   Future<String> _sheetHint(ManualFile file) async {
@@ -388,10 +453,23 @@ class AiChat {
     final part = File('${file.path}.part');
     await part.writeAsString(json);
     await part.rename(file.path);
+    _changed();
+  }
+
+  /// [AppStore.chatRevision] when this chat last loaded or saved the
+  /// conversation; another chat screen saving makes them differ.
+  int revision = -1;
+
+  /// Tells other chat screens (the nyel AI tab and the one opened from a
+  /// manual page share one conversation) that it changed.
+  void _changed() {
+    store.chatChanged();
+    revision = store.chatRevision;
   }
 
   /// Loads the saved conversation; returns the chat bubbles to show.
   Future<List<ChatEntry>> load() async {
+    revision = store.chatRevision;
     final file = File(store.chatHistoryPath);
     try {
       if (!await file.exists()) return [];
@@ -421,6 +499,7 @@ class AiChat {
     _sources.clear();
     final file = File(store.chatHistoryPath);
     if (await file.exists()) await file.delete();
+    _changed();
   }
 
   /// Page pictures from earlier questions are dropped from the history (they

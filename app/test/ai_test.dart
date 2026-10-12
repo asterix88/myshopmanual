@@ -169,6 +169,42 @@ void main() {
     store.dispose();
   });
 
+  test('a question asked from a manual page carries the page text and keeps the page', () async {
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    await store.download(store.catalog.files.single, unitName: 'TEST1-1');
+    final file = store.catalog.files.single;
+
+    final requests = <Map<String, dynamic>>[];
+    final worker = MockClient((request) async {
+      requests.add(jsonDecode(request.body) as Map<String, dynamic>);
+      return http.Response(
+          jsonEncode({
+            'finish_reason': 'stop',
+            'message': {'role': 'assistant', 'content': 'Terjemahan halaman [S1].'},
+          }),
+          200);
+    });
+    final chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'));
+    final answer = await chat.ask('terjemahkan halaman ini', file: file, page: 2);
+
+    final question = ((requests.single['messages'] as List).single as Map)['content'] as String;
+    expect(question, contains('[S1] TEST1-1 · OMM Test Unit · page 2'));
+    expect(question, contains('HYDRAULIC OIL FILTER CLOGGING CAUTION LAMP'));
+    expect(question, endsWith('Question: terjemahkan halaman ini'));
+    expect(answer.sources.map((s) => s.page), [2]);
+
+    // The page shown above the question is kept with the conversation.
+    final page = AiSource(id: 0, file: file, unitName: 'TEST1-1', page: 2);
+    final revision = store.chatRevision;
+    await chat.save([ChatEntry.user('terjemahkan halaman ini', page: page), answer]);
+    expect(store.chatRevision, revision + 1);
+    final restored = await AiChat(store: store, client: worker).load();
+    expect(restored.first.page?.page, 2);
+    expect(restored.first.page?.file.key, file.key);
+    store.dispose();
+  });
+
   test('the chat is kept on the phone and only recent questions go to the AI', () async {
     final store = await AppStore.open(root: root, client: fixtureServer());
     await store.setServerUrl('https://example.test');
