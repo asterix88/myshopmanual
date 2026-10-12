@@ -169,7 +169,7 @@ class HomeScreen extends StatelessWidget {
                 store.themeMode == value ? Icons.radio_button_checked : Icons.radio_button_unchecked,
                 color: AppColors.navy,
               ),
-              title: Text(label),
+              title: Text(label, style: _optionStyle),
               onTap: () => Navigator.pop(context, value),
             ),
         ],
@@ -484,6 +484,11 @@ class _FolderCard extends StatelessWidget {
   }
 }
 
+/// Choices in the dialogs, written like the ⋮ menu's items (Material's
+/// default list text is larger and spaced out).
+const _optionStyle = TextStyle(fontFamily: 'Poppins', fontSize: 15, letterSpacing: 0.1);
+const _optionNote = TextStyle(fontFamily: 'Poppins', fontSize: 12.5, letterSpacing: 0, height: 1.35);
+
 /// Admins only: whether Cetok Online shows every location or hides some,
 /// for every phone at once (kept on the MyManual server, no app update).
 class _CetokDataDialog extends StatefulWidget {
@@ -539,14 +544,14 @@ class _CetokDataDialogState extends State<_CetokDataDialog> {
                 RadioListTile(
                   value: false,
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Sebagian'),
-                  subtitle: Text('LOGISTIK, FABRIKASI, LAYDOWN, TRACKINDO (seperti cetok-online)'),
+                  title: Text('Sebagian', style: _optionStyle),
+                  subtitle: Text('LOGISTIK, FABRIKASI, LAYDOWN, TRACKINDO (seperti cetok-online)', style: _optionNote),
                 ),
                 RadioListTile(
                   value: true,
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Semua lokasi'),
-                  subtitle: Text('Tanpa filter (seperti stock-spareparts)'),
+                  title: Text('Semua lokasi', style: _optionStyle),
+                  subtitle: Text('Tanpa filter (seperti stock-spareparts)', style: _optionNote),
                 ),
               ],
             ),
