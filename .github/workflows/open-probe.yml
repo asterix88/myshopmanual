@@ -16,7 +16,7 @@ jobs:
         run: |
           mkdir work && cd work
           curl -s -A MyManual-probe https://mymanual.my.id/catalog.json -o catalog.json
-          python3 -c "import json;c=json.load(open('catalog.json'));print(list(c.keys()));u=c['units'][0];print({k:(v if k!='files' else v[:1]) for k,v in u.items()})" > ../open-out.txt 2>&1 || true
+          python3 -c "import json;c=json.load(open('catalog.json'));print(sorted({f['type'] for u in c['units'] for f in u['files']}))" > ../open-out.txt 2>&1 || true
           python3 ../tools/diag/open_probe.py >> ../open-out.txt 2>&1 || true
           cd ..
           cat open-out.txt

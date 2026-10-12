@@ -78,13 +78,12 @@ if __name__ == '__main__':
     want = {'PC2000-11R': [1, 1500], 'D155A-6': [1, 1006, 1152], 'PC500LC-10': [1]}
     out = []
     for unit in catalog['units']:
-        code = unit.get('code') or unit.get('name')
+        code = unit.get('id') or ''
         for f in unit.get('files', []):
-            path = f.get('path', '')
-            title = (f.get('title') or path)
-            if not any(code and code.startswith(k) for k in want):
+            path = (f.get('pdf') or {}).get('path', '')
+            if not any(code.startswith(k) for k in want):
                 continue
-            if 'shop' not in path.lower() and not os.path.basename(path).upper().startswith('SM'):
+            if f.get('type') != 'shop':
                 continue
             k = next(k for k in want if code.startswith(k))
             local = os.path.basename(path)
