@@ -1,3 +1,25 @@
-['schema', 'generated_at', 'units']
-{'id': 'CAT395', 'name': 'CAT395', 'kind': '', 'size': 153585458, 'files': [{'id': 'Machine_System_Accumulator_-_Pilot', 'title': 'Accumulator - Pilot', 'type': 'other', 'pages': 2, 'bookmarks': 0, 'searchable': False, 'pdf': {'path': 'units/CAT395/Machine_System_Accumulator_-_Pilot.pdf', 'size': 675357, 'sha256': 'c6f58b73a34235ab9d3fe234177804334006c7377c5d55e3b2740678ebb09d8b', 'source': 'adfee874cf9e3c8e18649d7a7a669423f446b98f8877b3b776da49c8f8478b13'}, 'index': {'path': 'units/CAT395/Machine_System_Accumulator_-_Pilot.sqlite', 'size': 36864, 'sha256': 'f017b1a87eea32c9245ffed03f130e30da19223a6cb09138ced853c78bbc4cb0'}, 'download_size': 712221, 'updated_at': '2026-10-11T11:58:26+00:00', 'group': 'Machine System'}], 'skipped_scanned': []}
-
+['omm', 'other', 'partsbook', 'shop_manual']
+Traceback (most recent call last):
+  File "/home/runner/work/myshopmanual/myshopmanual/work/../tools/diag/open_probe.py", line 91, in <module>
+    urllib.request.urlretrieve('https://mymanual.my.id/' + path, local)
+  File "/usr/lib/python3.12/urllib/request.py", line 240, in urlretrieve
+    with contextlib.closing(urlopen(url, data)) as fp:
+                            ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 215, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 521, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 630, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 559, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 403: Forbidden
