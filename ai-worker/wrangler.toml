@@ -1,6 +1,8 @@
-# Cloudflare Worker behind the app's "Tanya AI" tab. It holds the Groq
-# API key so the key never ships inside the APK. GitHub Actions deploys it
-# (.github/workflows/ai-worker.yml) whenever this folder changes on main.
+# Cloudflare Worker behind the app: nyel AI (holds the AI keys so they never
+# ship inside the APK), the employee login (NRP + PIN) and, on
+# files.mymanual.my.id, the manuals for logged-in phones. GitHub Actions
+# deploys it (.github/workflows/ai-worker.yml) whenever this folder changes
+# on main.
 name = "mymanual-ai"
 main = "src/index.ts"
 compatibility_date = "2026-10-01"
@@ -8,7 +10,22 @@ compatibility_flags = ["nodejs_compat"]
 
 # Served on its own subdomain: workers.dev, like r2.dev, may be blocked by
 # mobile operators.
-routes = [{ pattern = "ai.mymanual.my.id", custom_domain = true }]
+routes = [
+  { pattern = "ai.mymanual.my.id", custom_domain = true },
+  { pattern = "files.mymanual.my.id", custom_domain = true },
+]
+
+# The manuals, read by files.mymanual.my.id (src/files.ts).
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "mymanual"
+
+# Employees, sessions' signing key and nyel AI's daily counts (src/auth.ts).
+# The deploy workflow creates the namespace "mymanual-auth" on first run and
+# puts its id here.
+[[kv_namespaces]]
+binding = "AUTH"
+id = "AUTH_KV_ID"
 
 [vars]
 # Any OpenAI-compatible chat API with tool calling works. MODEL is a list
@@ -21,6 +38,10 @@ MODEL = "deepseek:deepseek-v4-flash,openai/gpt-oss-120b,qwen/qwen3.8-27b,openai/
 # Used instead of MODEL once the AI has looked at a page picture: only these
 # models can see pictures.
 VISION_MODEL = "deepseek:deepseek-v4-flash,qwen/qwen3.8-27b"
+# "1" once every mechanic has the app version with the NRP login: nyel AI
+# then refuses phones that are not logged in. Until then older apps still
+# work.
+REQUIRE_LOGIN = "0"
 
 # Secrets, never in this file:
 #   DEEPSEEK_API_KEY  key from platform.deepseek.com, uploaded by the workflow
@@ -29,5 +50,7 @@ VISION_MODEL = "deepseek:deepseek-v4-flash,qwen/qwen3.8-27b"
 #   TAVILY_API_KEY    optional; key from app.tavily.com for the AI's web search
 #                     (free plan, 1,000 searches a month); without it, or when
 #                     those run out, the AI searches Wikipedia
+#   OWNER_CODE        the admin code; update.bat sends it (ADMIN_CODE in
+#                     r2-keys.bat) to upload karyawan.xlsx and warm manuals
 #   APP_TOKEN         optional; when set (npx wrangler secret put APP_TOKEN), the
 #                     app must send it, so also set the GitHub secret AI_TOKEN

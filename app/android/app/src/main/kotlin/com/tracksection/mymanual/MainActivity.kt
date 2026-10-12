@@ -32,6 +32,10 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "exits" -> result.success(exits())
                 "memory" -> result.success(memory())
+                // Shown to admins next to the employee using this phone.
+                "device" -> result.success(
+                    "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}",
+                )
                 else -> result.notImplemented()
             }
         }

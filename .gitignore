@@ -13,3 +13,7 @@ r2-keys.bat
 ai-worker/node_modules/
 ai-worker/.wrangler/
 ai-worker/.dev.vars
+
+# Employee list with starting PINs (update-karyawan.bat), stays on the PC
+karyawan.xlsx
+karyawan.csv

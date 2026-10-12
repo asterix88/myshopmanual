@@ -1,9 +1,13 @@
-export interface Env {
+import { countQuestion, handleAuth, requireSession, SESSION_HEADER } from "./auth";
+import { handleFiles, type FilesEnv } from "./files";
+
+export interface Env extends FilesEnv {
   GROQ_API_KEY?: string;
   DEEPSEEK_API_KEY?: string;
   APP_TOKEN?: string;
-  // The admin code that lifts the app's daily question limit on a phone.
-  OWNER_CODE?: string;
+  // "1" once every phone has the login version: /chat then refuses phones
+  // without a session (see wrangler.toml).
+  REQUIRE_LOGIN?: string;
   // Key from app.tavily.com for web_search; without it Wikipedia is used.
   TAVILY_API_KEY?: string;
   MODEL: string;
@@ -207,180 +211,212 @@ type ChatMessage = {
 };
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
-    if (request.method === "GET" && url.pathname === "/") {
-      return json({ ok: true, model: env.MODEL });
-    }
-    if (request.method === "POST" && url.pathname === "/owner") {
-      // The app asks once whether a code typed in its menu is the admin code.
-      let code = "";
-      try {
-        code = String(((await request.json()) as { code?: unknown }).code ?? "");
-      } catch {
-        return json({ error: "bad_request" }, 400);
-      }
-      return json({ ok: !!env.OWNER_CODE && code.trim() === env.OWNER_CODE.trim() });
-    }
-    if (request.method !== "POST" || url.pathname !== "/chat") {
-      return json({ error: "not_found" }, 404);
-    }
-    if (env.APP_TOKEN && request.headers.get("authorization") !== `Bearer ${env.APP_TOKEN}`) {
-      return json({ error: "unauthorized" }, 401);
-    }
-    const raw = await request.text();
-    if (raw.length > MAX_BODY_BYTES) {
-      return json({ error: "too_large", message: "Percakapan terlalu panjang. Mulai percakapan baru." }, 413);
-    }
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const counted: { undo?: () => Promise<void> } = {};
+    const response = await handle(request, env, ctx, counted);
+    // A question that got no answer does not use up the allowance.
+    if (counted.undo && response.status !== 200) await counted.undo();
+    return response;
+  },
+} satisfies ExportedHandler<Env>;
 
-    let body: { messages?: unknown; manuals?: unknown; features?: unknown };
+async function handle(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  counted: { undo?: () => Promise<void> },
+): Promise<Response> {
+  const url = new URL(request.url);
+  if (url.hostname.startsWith("files.")) return handleFiles(request, env, ctx);
+  const auth = await handleAuth(request, env, url.pathname);
+  if (auth) return auth;
+  if (request.method === "GET" && url.pathname === "/") {
+    return json({ ok: true, model: env.MODEL });
+  }
+  if (request.method === "POST" && url.pathname === "/owner") {
+    // Apps before the NRP login ask whether a code typed in their menu is
+    // the admin code.
+    let code = "";
     try {
-      body = JSON.parse(raw);
+      code = String(((await request.json()) as { code?: unknown }).code ?? "");
     } catch {
       return json({ error: "bad_request" }, 400);
     }
-    if (!Array.isArray(body.messages) || body.messages.length === 0) {
-      return json({ error: "bad_request" }, 400);
-    }
-    // Only conversation turns from the app; the system prompt is ours.
-    const messages = (body.messages as ChatMessage[]).filter(
-      (m) => m && (m.role === "user" || m.role === "assistant" || m.role === "tool"),
-    );
-    // Older app versions can't show pages to the AI.
-    const canView = Array.isArray(body.features) && body.features.includes("view_page");
-    const hasPictures = messages.some(
-      (m) => Array.isArray(m.content) && m.content.some((part) => part?.type === "image_url"),
-    );
-    const manuals = Array.isArray(body.manuals)
-      ? body.manuals.filter((m): m is string => typeof m === "string").slice(0, 200)
-      : [];
-    const context = manuals.length
-      ? `Manuals in the app (all can be searched; pass unit when the question is about one unit model, so only its manuals are searched):\n${manuals.join("\n")}`
-      : "The app has no manual list yet (it has not reached the server), so search_manuals finds nothing. Tell the user to connect to the internet and open the Home tab first.";
+    return json({ ok: !!env.OWNER_CODE && code.trim() === env.OWNER_CODE.trim() });
+  }
+  if (request.method !== "POST" || url.pathname !== "/chat") {
+    return json({ error: "not_found" }, 404);
+  }
+  if (env.APP_TOKEN && request.headers.get("authorization") !== `Bearer ${env.APP_TOKEN}`) {
+    return json({ error: "unauthorized" }, 401);
+  }
+  // Phones with the login version send their session; older ones work
+  // without until REQUIRE_LOGIN is "1".
+  let session = null;
+  if (request.headers.get(SESSION_HEADER) || env.REQUIRE_LOGIN === "1") {
+    const checked = await requireSession(env, request);
+    if (checked.error) return checked.error;
+    session = checked.session;
+  }
+  const raw = await request.text();
+  if (raw.length > MAX_BODY_BYTES) {
+    return json({ error: "too_large", message: "Percakapan terlalu panjang. Mulai percakapan baru." }, 413);
+  }
 
-    // MODEL is a list tried in order: when one model is full, out of credit
-    // or retired, the same request goes to the next one. "deepseek:<model>"
-    // goes to DeepSeek; a bare name goes to API_URL (Groq). Entries whose key
-    // is not set are skipped.
-    // Only models that can see pictures get a conversation that has some.
-    const models = (hasPictures ? env.VISION_MODEL : env.MODEL)
-      .split(",")
-      .map((m) => m.trim())
-      .filter(Boolean);
-    const system = `${canView ? `${SYSTEM}\n\n${VIEW_INSTRUCTIONS}` : SYSTEM}\n\n${WEB_INSTRUCTIONS}`;
-    const appTools = canView ? [SEARCH_TOOL, VIEW_TOOL] : [SEARCH_TOOL];
-    let lastStatus = 0;
-    let rateLimited = false;
-    let keyRejected = false;
-    models: for (const entry of models) {
-      const deepseek = entry.startsWith("deepseek:");
-      const model = deepseek ? entry.slice("deepseek:".length) : entry;
-      const key = deepseek ? env.DEEPSEEK_API_KEY : env.GROQ_API_KEY;
-      if (!key) continue;
-      const url = deepseek ? DEEPSEEK_URL : env.API_URL;
-      // DeepSeek's thinking mode wants its reasoning sent back on every tool
-      // round, which the app doesn't keep, so it's turned off; other
-      // providers may reject the field.
-      let turns: unknown[] = deepseek ? messages : messages.map(({ reasoning_content: _, ...m }) => m);
-      // web_search runs here, not in the app: its rounds are added to the
-      // request and the model is asked again.
-      let webSearches = 0;
-      const webNotes: string[] = [];
-      for (let round = 0; ; round++) {
-        let upstream: Response;
-        try {
-          upstream = await fetch(url, {
-            method: "POST",
-            headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
-            body: JSON.stringify({
-              model,
-              messages: [{ role: "system", content: `${system}\n\n${context}` }, ...turns],
-              tools: webSearches < MAX_WEB_SEARCHES ? [...appTools, WEB_TOOL] : appTools,
-              tool_choice: "auto",
-              temperature: 0.2,
-              max_tokens: 2048,
-              ...(deepseek ? { thinking: { type: "disabled" } } : {}),
-              // Less hidden reasoning means fewer tokens against the limit.
-              ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
-            }),
-          });
-        } catch (e) {
-          console.log("model unreachable", entry, String(e));
-          lastStatus = 502;
-          continue models;
-        }
-        const data = (await upstream.json().catch(() => null)) as {
-          choices?: { message?: Record<string, unknown>; finish_reason?: string }[];
-          error?: { message?: string; code?: string };
-        } | null;
-        const choice = data?.choices?.[0];
-        if (upstream.ok && choice?.message) {
-          const message = choice.message;
-          const calls = Array.isArray(message.tool_calls) ? (message.tool_calls as ToolCall[]) : [];
-          const web = calls.filter((c) => c.function?.name === "web_search");
-          const others = calls.filter((c) => c.function?.name !== "web_search");
-          // A model that keeps asking for the web after its searches are
-          // used up gets no more rounds.
-          if (web.length === 0 || others.length > 0 || round > MAX_WEB_SEARCHES) {
-            if (others.length === 0) {
-              const { tool_calls: _, ...answer } = message;
-              return json({ message: answer, finish_reason: choice.finish_reason, model, web: webSearches });
-            }
-            // The app runs the other tools but does not keep the web rounds,
-            // so what the web said rides along as this message's text (the
-            // app keeps it in the conversation but does not show it).
-            const notes = webNotes.length
-              ? `Notes from my web search for this question:\n${webNotes.join("\n\n")}`
-              : "";
-            const content = [typeof message.content === "string" ? message.content : "", notes]
-              .filter(Boolean)
-              .join("\n\n");
-            return json({ message: { ...message, content, tool_calls: others }, finish_reason: choice.finish_reason, model, web: webSearches });
-          }
-          const results = await Promise.all(
-            web.map((call) => {
-              let query = "";
-              try {
-                query = String((JSON.parse(call.function?.arguments ?? "{}") as { query?: unknown }).query ?? "").trim();
-              } catch {
-                // An unreadable call gets an empty query.
-              }
-              if (!query) return Promise.resolve("Empty query.");
-              if (webSearches++ >= MAX_WEB_SEARCHES) {
-                return Promise.resolve("No more web searches for this question. Answer with what you have.");
-              }
-              return webSearch(query, env).then((text) => {
-                webNotes.push(`Web search "${query}":\n${text}`);
-                return text;
-              });
-            }),
-          );
-          turns = [
-            ...turns,
-            { ...message, content: message.content ?? "" },
-            ...web.map((call, i) => ({ role: "tool", tool_call_id: call.id, content: results[i] })),
-          ];
-          continue;
-        }
-        lastStatus = upstream.status;
-        if (upstream.status === 429 || upstream.status === 413) rateLimited = true;
-        if (upstream.status === 401 || upstream.status === 403) keyRejected = true;
-        console.log("model failed", entry, upstream.status, data?.error?.code, data?.error?.message);
-        // 429 and 413 are rate limits, 402 is no credit left, 401/403 a bad key
-        // for that provider; 404 and 400 can mean a retired model.
-        if (![400, 401, 402, 403, 404, 413, 422, 429, 498, 500, 502, 503].includes(upstream.status)) break models;
+  let body: { messages?: unknown; manuals?: unknown; features?: unknown };
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    return json({ error: "bad_request" }, 400);
+  }
+  if (!Array.isArray(body.messages) || body.messages.length === 0) {
+    return json({ error: "bad_request" }, 400);
+  }
+  // Only conversation turns from the app; the system prompt is ours.
+  const messages = (body.messages as ChatMessage[]).filter(
+    (m) => m && (m.role === "user" || m.role === "assistant" || m.role === "tool"),
+  );
+  // A request ending with the user's message starts a new question; the
+  // rounds after it end with the app's tool results.
+  if (session && messages[messages.length - 1]?.role === "user") {
+    const count = await countQuestion(env, session);
+    if (count instanceof Response) return count;
+    counted.undo = count ?? undefined;
+  }
+  // Older app versions can't show pages to the AI.
+  const canView = Array.isArray(body.features) && body.features.includes("view_page");
+  const hasPictures = messages.some(
+    (m) => Array.isArray(m.content) && m.content.some((part) => part?.type === "image_url"),
+  );
+  const manuals = Array.isArray(body.manuals)
+    ? body.manuals.filter((m): m is string => typeof m === "string").slice(0, 200)
+    : [];
+  const context = manuals.length
+    ? `Manuals in the app (all can be searched; pass unit when the question is about one unit model, so only its manuals are searched):\n${manuals.join("\n")}`
+    : "The app has no manual list yet (it has not reached the server), so search_manuals finds nothing. Tell the user to connect to the internet and open the Home tab first.";
+
+  // MODEL is a list tried in order: when one model is full, out of credit
+  // or retired, the same request goes to the next one. "deepseek:<model>"
+  // goes to DeepSeek; a bare name goes to API_URL (Groq). Entries whose key
+  // is not set are skipped.
+  // Only models that can see pictures get a conversation that has some.
+  const models = (hasPictures ? env.VISION_MODEL : env.MODEL)
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  const system = `${canView ? `${SYSTEM}\n\n${VIEW_INSTRUCTIONS}` : SYSTEM}\n\n${WEB_INSTRUCTIONS}`;
+  const appTools = canView ? [SEARCH_TOOL, VIEW_TOOL] : [SEARCH_TOOL];
+  let lastStatus = 0;
+  let rateLimited = false;
+  let keyRejected = false;
+  models: for (const entry of models) {
+    const deepseek = entry.startsWith("deepseek:");
+    const model = deepseek ? entry.slice("deepseek:".length) : entry;
+    const key = deepseek ? env.DEEPSEEK_API_KEY : env.GROQ_API_KEY;
+    if (!key) continue;
+    const url = deepseek ? DEEPSEEK_URL : env.API_URL;
+    // DeepSeek's thinking mode wants its reasoning sent back on every tool
+    // round, which the app doesn't keep, so it's turned off; other
+    // providers may reject the field.
+    let turns: unknown[] = deepseek ? messages : messages.map(({ reasoning_content: _, ...m }) => m);
+    // web_search runs here, not in the app: its rounds are added to the
+    // request and the model is asked again.
+    let webSearches = 0;
+    const webNotes: string[] = [];
+    for (let round = 0; ; round++) {
+      let upstream: Response;
+      try {
+        upstream = await fetch(url, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: "system", content: `${system}\n\n${context}` }, ...turns],
+            tools: webSearches < MAX_WEB_SEARCHES ? [...appTools, WEB_TOOL] : appTools,
+            tool_choice: "auto",
+            temperature: 0.2,
+            max_tokens: 2048,
+            ...(deepseek ? { thinking: { type: "disabled" } } : {}),
+            // Less hidden reasoning means fewer tokens against the limit.
+            ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
+          }),
+        });
+      } catch (e) {
+        console.log("model unreachable", entry, String(e));
+        lastStatus = 502;
         continue models;
       }
+      const data = (await upstream.json().catch(() => null)) as {
+        choices?: { message?: Record<string, unknown>; finish_reason?: string }[];
+        error?: { message?: string; code?: string };
+      } | null;
+      const choice = data?.choices?.[0];
+      if (upstream.ok && choice?.message) {
+        const message = choice.message;
+        const calls = Array.isArray(message.tool_calls) ? (message.tool_calls as ToolCall[]) : [];
+        const web = calls.filter((c) => c.function?.name === "web_search");
+        const others = calls.filter((c) => c.function?.name !== "web_search");
+        // A model that keeps asking for the web after its searches are
+        // used up gets no more rounds.
+        if (web.length === 0 || others.length > 0 || round > MAX_WEB_SEARCHES) {
+          if (others.length === 0) {
+            const { tool_calls: _, ...answer } = message;
+            return json({ message: answer, finish_reason: choice.finish_reason, model, web: webSearches });
+          }
+          // The app runs the other tools but does not keep the web rounds,
+          // so what the web said rides along as this message's text (the
+          // app keeps it in the conversation but does not show it).
+          const notes = webNotes.length
+            ? `Notes from my web search for this question:\n${webNotes.join("\n\n")}`
+            : "";
+          const content = [typeof message.content === "string" ? message.content : "", notes]
+            .filter(Boolean)
+            .join("\n\n");
+          return json({ message: { ...message, content, tool_calls: others }, finish_reason: choice.finish_reason, model, web: webSearches });
+        }
+        const results = await Promise.all(
+          web.map((call) => {
+            let query = "";
+            try {
+              query = String((JSON.parse(call.function?.arguments ?? "{}") as { query?: unknown }).query ?? "").trim();
+            } catch {
+              // An unreadable call gets an empty query.
+            }
+            if (!query) return Promise.resolve("Empty query.");
+            if (webSearches++ >= MAX_WEB_SEARCHES) {
+              return Promise.resolve("No more web searches for this question. Answer with what you have.");
+            }
+            return webSearch(query, env).then((text) => {
+              webNotes.push(`Web search "${query}":\n${text}`);
+              return text;
+            });
+          }),
+        );
+        turns = [
+          ...turns,
+          { ...message, content: message.content ?? "" },
+          ...web.map((call, i) => ({ role: "tool", tool_call_id: call.id, content: results[i] })),
+        ];
+        continue;
+      }
+      lastStatus = upstream.status;
+      if (upstream.status === 429 || upstream.status === 413) rateLimited = true;
+      if (upstream.status === 401 || upstream.status === 403) keyRejected = true;
+      console.log("model failed", entry, upstream.status, data?.error?.code, data?.error?.message);
+      // 429 and 413 are rate limits, 402 is no credit left, 401/403 a bad key
+      // for that provider; 404 and 400 can mean a retired model.
+      if (![400, 401, 402, 403, 404, 413, 422, 429, 498, 500, 502, 503].includes(upstream.status)) break models;
+      continue models;
     }
-    if (keyRejected && !rateLimited) {
-      return json({ error: "server_key", message: "Kunci API di server AI tidak valid. Hubungi admin." }, 502);
-    }
-    if (rateLimited) {
-      return json({ error: "busy", message: "Batas pemakaian AI gratis sedang penuh. Coba lagi dalam 1 menit." }, 429);
-    }
-    return json(
-      { error: "upstream", message: `Layanan AI sedang bermasalah (${lastStatus}). Coba lagi nanti.` },
-      502,
-    );
-  },
-} satisfies ExportedHandler<Env>;
+  }
+  if (keyRejected && !rateLimited) {
+    return json({ error: "server_key", message: "Kunci API di server AI tidak valid. Hubungi admin." }, 502);
+  }
+  if (rateLimited) {
+    return json({ error: "busy", message: "Batas pemakaian AI gratis sedang penuh. Coba lagi dalam 1 menit." }, 429);
+  }
+  return json(
+    { error: "upstream", message: `Layanan AI sedang bermasalah (${lastStatus}). Coba lagi nanti.` },
+    502,
+  );
+}

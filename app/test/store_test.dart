@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:mymanual/src/auth.dart';
 import 'package:mymanual/src/models.dart';
 import 'package:mymanual/src/screens/viewer_screen.dart';
 import 'package:mymanual/src/search.dart';
@@ -405,3 +406,13 @@ void main() {
     expect(outline[2].children, isEmpty);
   });
 }
+
+/// A session as the server would give it, for tests.
+Session testSession({bool admin = false, String token = 't', String nrp = '21045678'}) => Session(
+      token: token,
+      nrp: nrp,
+      name: admin ? 'Admin' : 'Budi',
+      admin: admin,
+      issuedAt: DateTime.now(),
+      expiresAt: DateTime.now().add(const Duration(days: 30)),
+    );
