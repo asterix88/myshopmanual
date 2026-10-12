@@ -88,7 +88,7 @@ if __name__ == '__main__':
             k = next(k for k in want if code.startswith(k))
             local = os.path.basename(path)
             if not os.path.exists(local):
-                urllib.request.urlretrieve('https://mymanual.my.id/' + path, local)
+                os.system(f"curl -s -A MyManual-probe -o '{local}' 'https://mymanual.my.id/{path}'")
             out.append(probe(local, want[k]))
             code_admin = os.environ.get('ADMIN_CODE', '')
             out.append(timing('https://files.mymanual.my.id', path, {'x-admin-code': code_admin}, 'files'))
