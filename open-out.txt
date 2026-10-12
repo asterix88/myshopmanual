@@ -1,5 +1,100 @@
 ['omm', 'other', 'partsbook', 'shop_manual']
-  File "/home/runner/work/myshopmanual/myshopmanual/work/../tools/diag/open_probe.py", line 90
-    global VERSION
-    ^^^^^^^^^^^^^^
-SyntaxError: name 'VERSION' is assigned to before global declaration
+after 0s more:
+  files blocks 0+1: 806 ms, 64 KB, cache bucket;dur=624
+  files blocks 0+4: 670 ms, 256 KB, cache bucket;dur=581
+  files blocks 100+4: 673 ms, 256 KB, cache bucket;dur=573
+  files blocks 900+4: 1159 ms, 256 KB, cache cache;dur=21
+  files blocks 200+1: 93 ms, 64 KB, cache cache;dur=25
+  files blocks 900+4: 371 ms, 256 KB, cache cache;dur=30
+after 30s more:
+  files blocks 0+1: 57 ms, 64 KB, cache cache;dur=8
+  files blocks 0+4: 107 ms, 256 KB, cache cache;dur=7
+  files blocks 100+4: 89 ms, 256 KB, cache cache;dur=6
+  files blocks 900+4: 131 ms, 256 KB, cache cache;dur=7
+  files blocks 200+1: 84 ms, 64 KB, cache cache;dur=5
+  files blocks 900+4: 91 ms, 256 KB, cache cache;dur=9
+after 60s more:
+  files blocks 0+1: 72 ms, 64 KB, cache cache;dur=9
+  files blocks 0+4: 86 ms, 256 KB, cache cache;dur=8
+  files blocks 100+4: 110 ms, 256 KB, cache cache;dur=8
+  files blocks 900+4: 98 ms, 256 KB, cache cache;dur=11
+  files blocks 200+1: 94 ms, 64 KB, cache cache;dur=21
+  files blocks 900+4: 128 ms, 256 KB, cache cache;dur=9
+  files blocks 0+1: 101 ms, 64 KB, cache cache;dur=25
+  files blocks 0+4: 131 ms, 256 KB, cache cache;dur=27
+  files blocks 100+4: 91 ms, 256 KB, cache cache;dur=8
+  files blocks 900+4: 139 ms, 256 KB, cache cache;dur=6
+  files blocks 200+1: 69 ms, 64 KB, cache cache;dur=10
+  files blocks 900+4: 1192 ms, 256 KB, cache bucket;dur=1056
+  public blocks 0+1: 250 ms, 64 KB, cache None
+  public blocks 0+4: 86 ms, 256 KB, cache None
+  public blocks 100+4: 87 ms, 256 KB, cache None
+  public blocks 900+4: 407 ms, 256 KB, cache None
+  public blocks 200+1: 73 ms, 64 KB, cache None
+  public blocks 900+4: 84 ms, 256 KB, cache None
+after 0s more:
+  files blocks 0+1: 746 ms, 64 KB, cache bucket;dur=638
+  files blocks 0+4: 670 ms, 256 KB, cache bucket;dur=576
+  files blocks 100+4: 1092 ms, 256 KB, cache bucket;dur=937
+  files blocks 900+4: 668 ms, 256 KB, cache bucket;dur=575
+  files blocks 200+1: 668 ms, 64 KB, cache bucket;dur=611
+  files blocks 900+4: 682 ms, 256 KB, cache bucket;dur=588
+after 30s more:
+  files blocks 0+1: 76 ms, 64 KB, cache cache;dur=9
+  files blocks 0+4: 90 ms, 256 KB, cache cache;dur=8
+  files blocks 100+4: 99 ms, 256 KB, cache cache;dur=8
+  files blocks 900+4: 101 ms, 256 KB, cache cache;dur=21
+  files blocks 200+1: 59 ms, 64 KB, cache cache;dur=4
+  files blocks 900+4: 113 ms, 256 KB, cache cache;dur=11
+after 60s more:
+  files blocks 0+1: 63 ms, 64 KB, cache cache;dur=8
+  files blocks 0+4: 104 ms, 256 KB, cache cache;dur=17
+  files blocks 100+4: 120 ms, 256 KB, cache cache;dur=21
+  files blocks 900+4: 93 ms, 256 KB, cache cache;dur=11
+  files blocks 200+1: 80 ms, 64 KB, cache cache;dur=17
+  files blocks 900+4: 111 ms, 256 KB, cache cache;dur=10
+  files blocks 0+1: 104 ms, 64 KB, cache cache;dur=14
+  files blocks 0+4: 123 ms, 256 KB, cache cache;dur=12
+  files blocks 100+4: 92 ms, 256 KB, cache cache;dur=10
+  files blocks 900+4: 102 ms, 256 KB, cache cache;dur=9
+  files blocks 200+1: 70 ms, 64 KB, cache cache;dur=14
+  files blocks 900+4: 704 ms, 256 KB, cache bucket;dur=600
+  public blocks 0+1: 249 ms, 64 KB, cache None
+  public blocks 0+4: 89 ms, 256 KB, cache None
+  public blocks 100+4: 142 ms, 256 KB, cache None
+  public blocks 900+4: 473 ms, 256 KB, cache None
+  public blocks 200+1: 63 ms, 64 KB, cache None
+  public blocks 900+4: 115 ms, 256 KB, cache None
+after 0s more:
+  files blocks 0+1: 716 ms, 64 KB, cache bucket;dur=649
+  files blocks 0+4: 691 ms, 256 KB, cache bucket;dur=604
+  files blocks 100+4: 649 ms, 256 KB, cache bucket;dur=554
+  files blocks 900+4: 724 ms, 256 KB, cache bucket;dur=638
+  files blocks 200+1: 728 ms, 64 KB, cache bucket;dur=672
+  files blocks 900+4: 1291 ms, 256 KB, cache cache;dur=7
+after 30s more:
+  files blocks 0+1: 74 ms, 64 KB, cache cache;dur=23
+  files blocks 0+4: 81 ms, 256 KB, cache cache;dur=5
+  files blocks 100+4: 110 ms, 256 KB, cache cache;dur=9
+  files blocks 900+4: 86 ms, 256 KB, cache cache;dur=6
+  files blocks 200+1: 62 ms, 64 KB, cache cache;dur=7
+  files blocks 900+4: 104 ms, 256 KB, cache cache;dur=13
+after 60s more:
+  files blocks 0+1: 60 ms, 64 KB, cache cache;dur=10
+  files blocks 0+4: 113 ms, 256 KB, cache cache;dur=16
+  files blocks 100+4: 93 ms, 256 KB, cache cache;dur=8
+  files blocks 900+4: 104 ms, 256 KB, cache cache;dur=13
+  files blocks 200+1: 62 ms, 64 KB, cache cache;dur=6
+  files blocks 900+4: 103 ms, 256 KB, cache cache;dur=10
+  files blocks 0+1: 117 ms, 64 KB, cache cache;dur=16
+  files blocks 0+4: 101 ms, 256 KB, cache cache;dur=9
+  files blocks 100+4: 112 ms, 256 KB, cache cache;dur=9
+  files blocks 900+4: 91 ms, 256 KB, cache cache;dur=9
+  files blocks 200+1: 70 ms, 64 KB, cache cache;dur=8
+  files blocks 900+4: 91 ms, 256 KB, cache cache;dur=11
+  public blocks 0+1: 258 ms, 64 KB, cache None
+  public blocks 0+4: 94 ms, 256 KB, cache None
+  public blocks 100+4: 95 ms, 256 KB, cache None
+  public blocks 900+4: 299 ms, 256 KB, cache None
+  public blocks 200+1: 59 ms, 64 KB, cache None
+  public blocks 900+4: 89 ms, 256 KB, cache None
