@@ -50,10 +50,15 @@ jobs:
 
       # The server address comes from the repository variable CATALOG_URL
       # (Settings > Secrets and variables > Actions > Variables).
-      # BUILD_ID (branch@commit) shows in menu ⋮ > Laporan masalah.
+      # BUILD_ID (branch@commit) shows in menu ⋮ > Laporan masalah; the
+      # version from pubspec.yaml and the run number (build) show under the
+      # login screen and also become the Android version code.
       - env:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: flutter build apk --release --split-per-abi --dart-define=CATALOG_URL=${{ vars.CATALOG_URL }} --dart-define=AI_TOKEN=${{ secrets.AI_TOKEN }} --dart-define=BUILD_ID=${{ github.head_ref || github.ref_name }}@${HEAD_SHA::7}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          VERSION=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
+          flutter build apk --release --split-per-abi --build-name=$VERSION --build-number=$BUILD_NUMBER --dart-define=CATALOG_URL=${{ vars.CATALOG_URL }} --dart-define=AI_TOKEN=${{ secrets.AI_TOKEN }} --dart-define=BUILD_ID=${{ github.head_ref || github.ref_name }}@${HEAD_SHA::7} --dart-define=APP_VERSION=$VERSION --dart-define=BUILD_NUMBER=$BUILD_NUMBER
 
       - uses: actions/upload-artifact@v4
         with:

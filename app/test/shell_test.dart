@@ -13,7 +13,7 @@ import 'store_test.dart' show fixtureServer;
 
 double shownOpacity(WidgetTester tester, Type screen) => tester
     .renderObject<RenderAnimatedOpacity>(
-        find.ancestor(of: find.byType(screen), matching: find.byType(AnimatedOpacity)))
+        find.ancestor(of: find.byType(screen), matching: find.byType(FadeTransition)).first)
     .opacity
     .value;
 

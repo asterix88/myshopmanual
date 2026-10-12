@@ -72,33 +72,71 @@ class _HomeShellState extends State<HomeShell> {
   }
 }
 
-/// Keeps every tab alive (scroll position, typed search) and cross-fades
-/// between them with a short rise, instead of swapping instantly.
-class _TabPage extends StatelessWidget {
+/// Keeps every tab alive (scroll position, typed search) and switches
+/// between them with Material's "fade through" (as in Coursera): the old
+/// tab fades out quickly, then the new one fades in while growing slightly.
+class _TabPage extends StatefulWidget {
   const _TabPage({required this.active, required this.child});
 
   final bool active;
   final Widget child;
 
-  static const _duration = Duration(milliseconds: 220);
+  @override
+  State<_TabPage> createState() => _TabPageState();
+}
+
+class _TabPageState extends State<_TabPage> with SingleTickerProviderStateMixin {
+  late final _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+    value: widget.active ? 1 : 0,
+  );
+
+  // Coming in: wait for the old tab to go (first 35%), then fade in.
+  // Going out: gone within the first 35% of the switch.
+  late final _opacity = CurvedAnimation(
+    parent: _controller,
+    curve: const Interval(0.35, 1, curve: Curves.easeOut),
+    reverseCurve: const Interval(0.65, 1, curve: Curves.easeIn),
+  );
+  late final _scale = Tween<double>(begin: 0.92, end: 1).animate(
+    CurvedAnimation(parent: _controller, curve: const Interval(0.35, 1, curve: Curves.easeOutCubic)),
+  );
+
+  @override
+  void didUpdateWidget(_TabPage old) {
+    super.didUpdateWidget(old);
+    if (widget.active != old.active) {
+      widget.active ? _controller.forward() : _controller.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _opacity.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final active = widget.active;
     return IgnorePointer(
       ignoring: !active,
       child: ExcludeSemantics(
         excluding: !active,
-        child: AnimatedOpacity(
-          opacity: active ? 1 : 0,
-          duration: _duration,
-          curve: Curves.easeOut,
-          child: AnimatedSlide(
-            offset: active ? Offset.zero : const Offset(0, 0.015),
-            duration: _duration,
-            curve: Curves.easeOutCubic,
+        child: FadeTransition(
+          opacity: _opacity,
+          child: AnimatedBuilder(
+            animation: _controller,
+            // The tab being left keeps its size while it fades.
+            builder: (context, child) => Transform.scale(
+              scale: _controller.status == AnimationStatus.reverse ? 1 : _scale.value,
+              child: child,
+            ),
             // Only the page's own animations pause; the fade above must keep
             // running, or a tab being left stays drawn over the new one.
-            child: TickerMode(enabled: active, child: child),
+            child: TickerMode(enabled: active, child: widget.child),
           ),
         ),
       ),

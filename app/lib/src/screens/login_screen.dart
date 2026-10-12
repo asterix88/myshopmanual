@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../auth.dart';
+import '../diagnostics.dart';
 import 'shell.dart';
 import '../theme.dart';
 
@@ -96,9 +97,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
                     onSubmitted: (_) => _login(),
                     decoration: _inputDecoration(error: _error != null).copyWith(
-                      suffixIcon: TextButton(
+                      suffixIcon: IconButton(
+                        key: const Key('login-show-pin'),
+                        tooltip: _showPin ? 'Sembunyikan PIN' : 'Lihat PIN',
                         onPressed: () => setState(() => _showPin = !_showPin),
-                        child: Text(_showPin ? 'Sembunyikan' : 'Lihat'),
+                        icon: Icon(
+                          _showPin ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          color: AppColors.muted,
+                        ),
                       ),
                     ),
                     style: const TextStyle(fontSize: 16, letterSpacing: 4),
@@ -112,6 +118,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            versionLabel,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
         ),
       ),

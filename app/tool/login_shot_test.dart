@@ -73,5 +73,31 @@ void main() {
     await tester.tap(find.text('Budi Santoso'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/l5_sheet.png'));
+    await tester.tapAt(const Offset(5, 100));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    // Tab switch half way (fade through) and a folder opening half way.
+    await tester.tap(find.text('Cari').last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/l7_tab_mid.png'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Home').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('EXCAVATOR'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/l8_open_mid.png'));
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Lainnya'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Keluar'));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/l6_logout.png'));
   });
 }
