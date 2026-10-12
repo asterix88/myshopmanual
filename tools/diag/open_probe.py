@@ -58,7 +58,7 @@ def probe(path, pages):
 def timing(base, key, headers, label):
     lines = []
     size = None
-    for i, (start, n) in enumerate([(0, 1), (0, 4), (100, 4), (2000, 4), (200, 1), (2000, 4)]):
+    for i, (start, n) in enumerate([(0, 1), (0, 4), (100, 4), (900, 4), (200, 1), (900, 4)]):
         h = dict(headers)
         h['Range'] = f'bytes={start*BLOCK}-{(start+n)*BLOCK-1}'
         h['User-Agent'] = 'MyManual-probe'
@@ -90,6 +90,10 @@ if __name__ == '__main__':
             if not os.path.exists(local):
                 os.system(f"curl -s -A MyManual-probe -o '{local}' 'https://mymanual.my.id/{path}'")
             out.append(probe(local, want[k]))
+            for wait in (0, 30, 60):
+                time.sleep(wait)
+                out.append(f'after {wait}s more:')
+                out.append(timing('https://files.mymanual.my.id', path, {'x-admin-code': os.environ.get('ADMIN_CODE', '')}, 'files'))
             code_admin = os.environ.get('ADMIN_CODE', '')
             out.append(timing('https://files.mymanual.my.id', path, {'x-admin-code': code_admin}, 'files'))
             out.append(timing('https://mymanual.my.id', path, {}, 'public'))
