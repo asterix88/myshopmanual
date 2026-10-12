@@ -161,7 +161,8 @@ class _SearchScreenState extends State<SearchScreen> {
               )
             else
               ..._resultSlivers(result),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            // Room to scroll the last results out from under the bottom bar.
+            SliverToBoxAdapter(child: SizedBox(height: 24 + MediaQuery.paddingOf(context).bottom)),
           ],
         ),
       ),

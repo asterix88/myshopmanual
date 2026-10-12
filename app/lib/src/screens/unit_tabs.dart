@@ -202,7 +202,8 @@ class PageRowList extends StatelessWidget {
     }
     final hint = this.hint;
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+      // The bottom bar is drawn over the page (see HomeShell).
+      padding: EdgeInsets.fromLTRB(16, 14, 16, 24 + MediaQuery.paddingOf(context).bottom),
       itemCount: rows.length + (hint == null ? 0 : 1) + after.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, i) {

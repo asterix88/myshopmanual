@@ -502,18 +502,21 @@ class _ViewerScreenState extends State<ViewerScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Flexible(
-                child: Text(
-                  torque == null
-                      ? 'Mencari angka torsi…'
-                      : count > 0
-                          ? '$count angka torsi ditemukan'
-                          : widget.torque!.marks?.isEmpty ?? false
-                              ? 'Tidak ada standar torque khusus pada komponen ini'
-                              : 'Torsi tidak terbaca, silakan langsung cek dokumen',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13, color: Colors.white),
+                // Shrinks a long message to fit instead of cutting it off.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    torque == null
+                        ? 'Mencari angka torsi…'
+                        : count > 0
+                            ? '$count angka torsi ditemukan'
+                            : widget.torque!.marks?.isEmpty ?? false
+                                ? 'Tidak ada standar torque khusus pada komponen ini'
+                                : 'Torsi tidak terbaca, silakan langsung cek dokumen',
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12.5, color: Colors.white),
+                  ),
                 ),
               ),
               // Which value is marked orange, like the search's 3/18.
