@@ -182,6 +182,29 @@ List<PageText> searchPageTextsSync(Map<String, String> indexes, String keywords,
   return pages.take(limit).toList();
 }
 
+/// The text of one page of a manual and the bookmark it falls under, read
+/// from the manual's index; null when the index has no text for it.
+({String text, String? section})? pageTextSync(String indexPath, int page) {
+  try {
+    final db = sqlite3.open(indexPath, mode: OpenMode.readOnly);
+    try {
+      final rows = db.select('''
+SELECT text,
+       (SELECT title FROM toc WHERE toc.page <= pages.page
+        ORDER BY toc.page DESC, toc.seq DESC LIMIT 1) AS section
+FROM pages WHERE page = ?
+''', [page]);
+      if (rows.isEmpty) return null;
+      final text = (rows.first['text'] as String? ?? '').replaceAll(RegExp(r'[ \t]+'), ' ').trim();
+      return text.isEmpty ? null : (text: text, section: rows.first['section'] as String?);
+    } finally {
+      db.close();
+    }
+  } on SqliteException {
+    return null;
+  }
+}
+
 /// Finds what the mechanic typed in a page's text the way the index matches
 /// it: case does not matter, and the words may be split by spaces, dashes or
 /// a line break ("01010-81640" also finds "01010 81640").

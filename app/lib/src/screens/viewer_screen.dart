@@ -17,6 +17,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/excavator_loader.dart';
+import 'chat_screen.dart';
 import 'shell.dart';
 
 /// Opens a manual, optionally at [page] and with [query] highlighted. A
@@ -153,7 +154,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   /// Pages for the AI are not drawn from the server while a manual is open
   /// here: they share PDFium's one worker, and this page comes first.
-  late final void Function() _resumeServerDrawing;
+  late void Function() _resumeServerDrawing;
 
   @override
   void dispose() {
@@ -671,10 +672,12 @@ class _ViewerScreenState extends State<ViewerScreen> {
                     params: _viewerParams,
                   ),
           ),
+          // On the left: the nyel AI button has the right corner.
           if (_searching && _matchCount > 0)
-            Positioned(right: 16, bottom: 16, child: _matchPill())
+            Positioned(left: 16, bottom: 24, child: _matchPill())
           else if (!_searching && (_torque?.isNotEmpty ?? false))
-            Positioned(right: 16, bottom: 16, child: _matchPill(prev: _prevTorque, next: _nextTorque)),
+            Positioned(left: 16, bottom: 24, child: _matchPill(prev: _prevTorque, next: _nextTorque)),
+          Positioned(right: 16, bottom: 16, child: _AiButton(onPressed: () => _askAi(file))),
         ],
       ),
       bottomNavigationBar: _pageCount == 0
@@ -686,6 +689,16 @@ class _ViewerScreenState extends State<ViewerScreen> {
               onJump: _jumpTo,
             ),
     );
+  }
+
+  /// Opens nyel AI over the viewer with the page shown now attached, so the
+  /// mechanic can ask "terjemahkan halaman ini"; back returns here.
+  Future<void> _askAi(ManualFile file) async {
+    // The chat covers the viewer, which then draws nothing: the AI may draw
+    // pages of online manuals meanwhile.
+    _resumeServerDrawing();
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ChatScreen(file: file, page: _page)));
+    if (mounted) _resumeServerDrawing = pauseServerDrawing();
   }
 
   /// Built once: the viewer re-lays out whenever its params change.
@@ -870,6 +883,37 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
 /// The section being read and a page number box: type a page and press
 /// enter to go there.
+/// The round nyel AI button over the page: the sparkle only, like the one
+/// in the middle of the tab bar.
+class _AiButton extends StatelessWidget {
+  const _AiButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Tanya nyel AI tentang halaman ini',
+      child: Material(
+        key: const Key('viewer-ai'),
+        color: AppColors.orange,
+        shape: const CircleBorder(),
+        elevation: 4,
+        shadowColor: const Color(0x80F08A1C),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: const SizedBox(
+            width: 56,
+            height: 56,
+            child: Icon(Icons.auto_awesome, color: Colors.white, size: 28),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PageBar extends StatefulWidget {
   const _PageBar({required this.page, required this.pageCount, required this.section, required this.onJump});
 

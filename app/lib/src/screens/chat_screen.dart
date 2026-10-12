@@ -16,10 +16,16 @@ import 'viewer_screen.dart';
 /// nyel AI: answers from the manuals downloaded on the phone, citing the
 /// pages it used. Needs internet; the search itself runs on the phone.
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, this.client});
+  const ChatScreen({super.key, this.client, this.file, this.page});
 
   /// For tests; the app uses a plain [http.Client].
   final http.Client? client;
+
+  /// The manual page open in the viewer when nyel AI was opened from it: the
+  /// next question is about that page. The chat then opens over the viewer,
+  /// so going back returns to the page.
+  final ManualFile? file;
+  final int? page;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -29,6 +35,12 @@ class _ChatScreenState extends State<ChatScreen> {
   late final http.Client _client = widget.client ?? http.Client();
   late final AiChat _chat = AiChat(store: StoreScope.read(context), client: _client);
   final List<ChatEntry> _entries = [];
+
+  /// The page the next question is about, until it is sent or taken off.
+  late ManualFile? _file = widget.file;
+  late final int? _page = widget.page;
+
+  static const _pageSuggestions = ['Terjemahkan halaman ini', 'Jelaskan halaman ini', 'Ringkas langkah kerjanya'];
 
   /// Messages sent or answered while the chat is open: they pop in, like in
   /// WhatsApp. Earlier ones loaded from the phone just appear.
@@ -101,9 +113,18 @@ class _ChatScreenState extends State<ChatScreen> {
     if (question.isEmpty || _status != null) return;
     if (StoreScope.read(context).aiQuestionsLeft == 0) return;
     final chat = _chat;
+    final store = StoreScope.read(context);
+    final file = _file;
+    final page = _page;
     _input.clear();
     setState(() {
-      final entry = ChatEntry.user(question);
+      _file = null;
+      final entry = ChatEntry.user(
+        question,
+        page: file == null || page == null
+            ? null
+            : AiSource(id: 0, file: file, unitName: store.unitNameOf(file), page: page),
+      );
       _fresh.add(entry);
       _entries.add(entry);
       _status = 'Memahami pertanyaan…';
@@ -113,6 +134,8 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       answer = await chat.ask(
         question,
+        file: file,
+        page: page,
         onStatus: (s) {
           if (mounted) setState(() => _status = s);
         },
@@ -218,7 +241,22 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       });
     }
+    // The other chat screen (the tab, or one opened from a manual page)
+    // changed the conversation: show it as saved.
+    if (_chat.revision >= 0 && _chat.revision != store.chatRevision && _status == null) {
+      _chat.load().then((entries) {
+        if (!mounted) return;
+        setState(() {
+          _entries
+            ..clear()
+            ..addAll(entries);
+          _fresh.clear();
+        });
+        _scrollToEnd();
+      });
+    }
     final offline = store.online == false;
+    final aboutPage = _file != null && _page != null;
     final hasManuals = store.catalog.files.isNotEmpty || store.local.isNotEmpty;
     return Scaffold(
       appBar: AppBar(
@@ -294,7 +332,9 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: _entries.isEmpty
+            child: _entries.isEmpty && aboutPage
+                ? const _PageIntro()
+                : _entries.isEmpty
                 ? _Intro(examples: _examples, hasManuals: hasManuals, onExample: offline ? null : _send)
                 // Every bubble is built (the chat keeps at most 60), so a
                 // search hit far up can be scrolled to.
@@ -323,6 +363,14 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           if (store.aiIndexProgress case final p?) _Preparing(progress: p),
           if (store.aiQuestionsLeft case final left?) _QuestionsLeft(left: left),
+          if (aboutPage)
+            _AttachedPage(
+              file: _file!,
+              page: _page,
+              suggestions: _pageSuggestions,
+              onSuggestion: offline || _status != null || store.aiQuestionsLeft == 0 ? null : _send,
+              onRemove: () => setState(() => _file = null),
+            ),
           _InputBar(
             controller: _input,
             enabled: !offline && _status == null && store.aiQuestionsLeft != 0,
@@ -334,6 +382,110 @@ class _ChatScreenState extends State<ChatScreen> {
             onSend: _send,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// What the chat shows before the first question about a manual page.
+class _PageIntro extends StatelessWidget {
+  const _PageIntro();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          'Tanya apa saja tentang halaman ini.\nTombol kembali membawa kamu ke halaman manual tadi.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.muted),
+        ),
+      ),
+    );
+  }
+}
+
+/// The manual page the next question is about, with ready-made questions.
+class _AttachedPage extends StatelessWidget {
+  const _AttachedPage({
+    required this.file,
+    required this.page,
+    required this.suggestions,
+    required this.onSuggestion,
+    required this.onRemove,
+  });
+
+  final ManualFile file;
+  final int page;
+  final List<String> suggestions;
+  final ValueChanged<String>? onSuggestion;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    return Material(
+      color: AppColors.surface,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final s in suggestions)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ActionChip(
+                        backgroundColor: AppColors.surface,
+                        side: BorderSide(color: AppColors.border),
+                        shape: const StadiumBorder(),
+                        label: Text(s, style: TextStyle(fontSize: 13, color: AppColors.navy)),
+                        onPressed: onSuggestion == null ? null : () => onSuggestion!(s),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.fromLTRB(10, 6, 2, 6),
+              decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(12)),
+              child: Row(
+                children: [
+                  Icon(Icons.description_outlined, size: 22, color: AppColors.navy),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Halaman $page',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.navy),
+                        ),
+                        Text(
+                          '${store.unitNameOf(file)} · ${file.title}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Lepas halaman',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: onRemove,
+                    icon: Icon(Icons.close, size: 18, color: AppColors.muted),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -535,7 +687,8 @@ class _Bubble extends StatelessWidget {
 
   Widget _bubble(BuildContext context) {
     if (entry.fromUser) {
-      return Align(
+      final page = entry.page;
+      final question = Align(
         alignment: Alignment.centerRight,
         child: Container(
           margin: const EdgeInsets.only(left: 48, bottom: 12),
@@ -561,6 +714,28 @@ class _Bubble extends StatelessWidget {
             ),
           ),
         ),
+      );
+      if (page == null) return question;
+      // The page the question is about, above it like a forwarded message.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 48, bottom: 4),
+            child: ActionChip(
+              visualDensity: VisualDensity.compact,
+              backgroundColor: AppColors.navySoft,
+              side: BorderSide.none,
+              avatar: Icon(Icons.description_outlined, size: 16, color: AppColors.navy),
+              label: Text(
+                '${page.unitName} · ${page.file.type.label} · hlm ${page.page}',
+                style: TextStyle(fontSize: 12, color: AppColors.navy),
+              ),
+              onPressed: () => openViewer(context, page.file, page: page.page),
+            ),
+          ),
+          question,
+        ],
       );
     }
     return Padding(
