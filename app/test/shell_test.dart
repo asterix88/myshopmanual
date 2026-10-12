@@ -43,6 +43,31 @@ void main() {
     root.deleteSync(recursive: true);
   });
 
+  testWidgets('Cari shows one card per file, with every hit in it', (tester) async {
+    late AppStore store;
+    final root = Directory.systemTemp.createTempSync('shell');
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer());
+      await store.setServerUrl('https://example.test');
+      await store.download(store.catalog.files.single, unitName: 'TEST1-1');
+    });
+    await tester.pumpWidget(MyManualApp(store: store));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cari').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'hydraulic oil filter');
+    for (var i = 0; i < 8; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+    // Pages 2 and 3 match: one card, no row per page.
+    expect(find.text('2 halaman ditemukan'), findsOneWidget);
+    expect(find.textContaining('hlm'), findsNothing);
+    expect(find.textContaining('perlu internet'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    root.deleteSync(recursive: true);
+  });
+
   testWidgets('back goes to Home first, then leaves the app from Home', (tester) async {
     late AppStore store;
     final root = Directory.systemTemp.createTempSync('shell');

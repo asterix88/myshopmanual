@@ -193,77 +193,65 @@ class _SearchScreenState extends State<SearchScreen> {
           final hits = groups[key]!;
           final file = store.fileByKey(key);
           if (file == null) return const SizedBox.shrink();
-          final downloaded = store.isDownloaded(key);
           final count = result.pageCounts[key] ?? hits.length;
+          final first = hits.first;
+          // One card per file: it opens at the best hit with the words
+          // searched inside, where < | > walks through every hit in the file.
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(file.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                              Text(
-                                [
-                                  store.unitNameOf(file),
-                                  '$count halaman',
-                                  if (!downloaded) 'belum diunduh, perlu internet',
-                                ].join(' · '),
-                                style: TextStyle(fontSize: 12, color: AppColors.muted),
-                              ),
-                            ],
+              child: InkWell(
+                onTap: () => openViewer(context, file, page: first.page, query: _query),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(file.title,
+                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                           ),
-                        ),
-                        Pill.docType(file.type),
-                      ],
+                          const SizedBox(width: 8),
+                          Pill.docType(file.type),
+                        ],
+                      ),
                     ),
-                  ),
-                  for (final hit in hits.take(5)) ...[
                     const Divider(),
-                    InkWell(
-                      onTap: () => openViewer(context, file, page: hit.page, query: _query),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 12, 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    hit.section ?? 'Halaman ${hit.page}',
+                                if (first.section != null)
+                                  Text(
+                                    first.section!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                                   ),
+                                const SizedBox(height: 2),
+                                HighlightedSnippet(first.snippet),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '$count halaman ditemukan',
+                                  style: TextStyle(
+                                      fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.orangeText),
                                 ),
-                                const SizedBox(width: 8),
-                                Text('hlm ${hit.page}',
-                                    style: TextStyle(fontSize: 12, color: AppColors.muted)),
                               ],
                             ),
-                            const SizedBox(height: 2),
-                            HighlightedSnippet(hit.snippet),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.chevron_right, color: AppColors.muted),
+                        ],
                       ),
                     ),
                   ],
-                  if (hits.length > 5)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                      child: Text(
-                        '+${count - 5} halaman lain. Buka file lalu pakai pencarian di dalamnya.',
-                        style: TextStyle(fontSize: 12, color: AppColors.muted),
-                      ),
-                    ),
-                ],
+                ),
               ),
             ),
           );

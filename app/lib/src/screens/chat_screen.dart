@@ -541,10 +541,24 @@ class _Bubble extends StatelessWidget {
           margin: const EdgeInsets.only(left: 48, bottom: 12),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(14)),
-          // Selectable like the answers, so a question can be copied.
-          child: SelectableText.rich(
-            TextSpan(children: _spans([(text: entry.text, bold: false)])),
-            style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
+          // Selectable like the answers, so a question can be copied. The
+          // usual navy highlight and handles vanish on the navy bubble.
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              textSelectionTheme: TextSelectionThemeData(
+                selectionColor: AppColors.orange.withAlpha(150),
+                selectionHandleColor: AppColors.orange,
+                cursorColor: AppColors.orange,
+              ),
+            ),
+            child: DefaultSelectionStyle(
+              selectionColor: AppColors.orange.withAlpha(150),
+              cursorColor: AppColors.orange,
+              child: SelectableText.rich(
+                TextSpan(children: _spans([(text: entry.text, bold: false)])),
+                style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
+              ),
+            ),
           ),
         ),
       );

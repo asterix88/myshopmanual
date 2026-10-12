@@ -197,8 +197,7 @@ class _SpecsScreenState extends State<SpecsScreen> {
               ? PageRowList(rows: const [], onOpen: (_) {}, after: _torqueGroups(unit!, list, parts))
               : PageRowList(
                   rows: list,
-                  hint: '${list.length} halaman dari bookmark manual ${unit!.name}',
-                  onOpen: (r) => openPageRow(context, unit, r),
+                  onOpen: (r) => openPageRow(context, unit!, r),
                 ),
       ],
     );
