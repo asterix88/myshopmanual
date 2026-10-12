@@ -87,7 +87,6 @@ if __name__ == '__main__':
             if f.get('type') != 'shop_manual':
                 continue
             k = next(k for k in want if code.startswith(k))
-            global VERSION
             VERSION = f['pdf']['sha256'][:12]
             local = os.path.basename(path)
             if os.environ.get('PROBE_PDF') and not os.path.exists(local):
