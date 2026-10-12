@@ -206,13 +206,28 @@ class _UnitScreenState extends State<UnitScreen> {
     final missing = inFolder.where((f) => !store.isDownloaded(f.key)).toList();
     if (missing.isEmpty) return const SizedBox.shrink();
     final running = missing.any((f) => store.downloadQueue.contains(f.key) || store.downloads.containsKey(f.key));
-    return TextButton.icon(
+    // Icon above a small label: narrow, so the unit's name stays whole.
+    final color = running ? AppColors.muted : AppColors.navy;
+    return InkWell(
       key: const Key('download-all'),
-      onPressed: running ? null : () => _confirmDownloadAll(unit, missing),
-      icon: running
-          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-          : const Icon(Icons.download_rounded, size: 20),
-      label: Text(running ? 'Mengunduh…' : 'Unduh semua', style: const TextStyle(fontWeight: FontWeight.w600)),
+      borderRadius: BorderRadius.circular(10),
+      onTap: running ? null : () => _confirmDownloadAll(unit, missing),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            running
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : Icon(Icons.download_rounded, size: 22, color: color),
+            const SizedBox(height: 2),
+            Text(
+              running ? 'Mengunduh…' : 'Unduh semua',
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -222,8 +237,8 @@ class _UnitScreenState extends State<UnitScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Unduh ${missing.length} file?'),
-        content: Text('Total ${formatSize(size)}. File diunduh satu per satu dan bisa dibaca tanpa sinyal setelah selesai.'),
+        title: Text('Unduh ${missing.length} file?', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+        content: Text('Total ${formatSize(size)}'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Unduh')),
