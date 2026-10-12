@@ -1,25 +1,49 @@
 ['omm', 'other', 'partsbook', 'shop_manual']
-Traceback (most recent call last):
-  File "/home/runner/work/myshopmanual/myshopmanual/work/../tools/diag/open_probe.py", line 91, in <module>
-    urllib.request.urlretrieve('https://mymanual.my.id/' + path, local)
-  File "/usr/lib/python3.12/urllib/request.py", line 240, in urlretrieve
-    with contextlib.closing(urlopen(url, data)) as fp:
-                            ^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/urllib/request.py", line 215, in urlopen
-    return opener.open(url, data, timeout)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/urllib/request.py", line 521, in open
-    response = meth(req, response)
-               ^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/urllib/request.py", line 630, in http_response
-    response = self.parent.error(
-               ^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/urllib/request.py", line 559, in error
-    return self._call_chain(*args)
-           ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
-    result = func(*args)
-             ^^^^^^^^^^^
-  File "/usr/lib/python3.12/urllib/request.py", line 639, in http_error_default
-    raise HTTPError(req.full_url, code, msg, hdrs, fp)
-urllib.error.HTTPError: HTTP Error 403: Forbidden
+Shop_Manual_D155A-6_85001_UP.pdf: 63.5 MB, 1345 pages
+  open: 3 requests, 576 KB; first blocks [(0, 4), (968, 1), (5, 4)] last [(0, 4), (968, 1), (5, 4)]
+  page 1: 1 requests, 256 KB, blocks [(9, 4)]
+  page 1006: 8 requests, 2048 KB, blocks [(178, 4), (51, 4), (120, 4), (227, 4), (188, 4), (408, 4), (430, 4), (531, 4)]
+  page 1152: 3 requests, 768 KB, blocks [(960, 4), (935, 4), (817, 4)]
+  files blocks 0+1: 753 ms, 64 KB, cache None
+  files blocks 0+4: 575 ms, 256 KB, cache None
+  files blocks 100+4: 506 ms, 256 KB, cache None
+  files blocks 2000+4: error HTTP Error 416: Range Not Satisfiable
+  files blocks 200+1: 744 ms, 64 KB, cache None
+  files blocks 2000+4: error HTTP Error 416: Range Not Satisfiable
+  public blocks 0+1: 28 ms, 64 KB, cache HIT
+  public blocks 0+4: 29 ms, 256 KB, cache HIT
+  public blocks 100+4: 39 ms, 256 KB, cache HIT
+  public blocks 2000+4: error HTTP Error 416: Range Not Satisfiable
+  public blocks 200+1: 48 ms, 64 KB, cache HIT
+  public blocks 2000+4: error HTTP Error 416: Range Not Satisfiable
+SM_PC2000-11R_SN30019_UP.pdf: 352.7 MB, 3406 pages
+  open: 4 requests, 640 KB; first blocks [(0, 4), (5381, 1), (5380, 1), (6, 4)] last [(5381, 1), (5380, 1), (6, 4)]
+  page 1: 1 requests, 64 KB, blocks [(5379, 1)]
+  page 1500: 3 requests, 448 KB, blocks [(5378, 1), (4, 2), (897, 4)]
+  files blocks 0+1: 554 ms, 64 KB, cache None
+  files blocks 0+4: 569 ms, 256 KB, cache None
+  files blocks 100+4: 456 ms, 256 KB, cache None
+  files blocks 2000+4: 1911 ms, 256 KB, cache None
+  files blocks 200+1: 524 ms, 64 KB, cache None
+  files blocks 2000+4: 461 ms, 256 KB, cache None
+  public blocks 0+1: 32 ms, 64 KB, cache HIT
+  public blocks 0+4: 55 ms, 256 KB, cache HIT
+  public blocks 100+4: 28 ms, 256 KB, cache HIT
+  public blocks 2000+4: 57 ms, 256 KB, cache HIT
+  public blocks 200+1: 32 ms, 64 KB, cache HIT
+  public blocks 2000+4: 91 ms, 256 KB, cache HIT
+SM_PC500LC-10R.pdf: 115.4 MB, 2532 pages
+  open: 3 requests, 576 KB; first blocks [(0, 4), (1760, 1), (4, 4)] last [(0, 4), (1760, 1), (4, 4)]
+  page 1: 1 requests, 128 KB, blocks [(1758, 2)]
+  files blocks 0+1: 515 ms, 64 KB, cache None
+  files blocks 0+4: 578 ms, 256 KB, cache None
+  files blocks 100+4: 544 ms, 256 KB, cache None
+  files blocks 2000+4: error HTTP Error 416: Range Not Satisfiable
+  files blocks 200+1: 513 ms, 64 KB, cache None
+  files blocks 2000+4: error HTTP Error 416: Range Not Satisfiable
+  public blocks 0+1: 18 ms, 64 KB, cache HIT
+  public blocks 0+4: 26 ms, 256 KB, cache HIT
+  public blocks 100+4: 42 ms, 256 KB, cache HIT
+  public blocks 2000+4: error HTTP Error 416: Range Not Satisfiable
+  public blocks 200+1: 36 ms, 64 KB, cache HIT
+  public blocks 2000+4: error HTTP Error 416: Range Not Satisfiable
