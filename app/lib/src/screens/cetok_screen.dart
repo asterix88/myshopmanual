@@ -33,12 +33,9 @@ class CetokCard extends StatelessWidget {
             onTap: () => openCetok(context),
             child: Row(
               children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(9)),
-                  child: CustomPaint(painter: CetokIconPainter(AppColors.orangeText)),
+                // Anas's photo of the Cetok Online workflow, cut round.
+                ClipOval(
+                  child: Image.asset('assets/images/cetok.png', width: 36, height: 36, fit: BoxFit.cover),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -74,35 +71,6 @@ class CetokCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// A box with a lid and a bold C on its front, drawn in [color].
-class CetokIconPainter extends CustomPainter {
-  CetokIconPainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final u = size.width / 24;
-    final line = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2 * u;
-    canvas.drawRRect(RRect.fromLTRBR(3 * u, 3 * u, 21 * u, 8 * u, Radius.circular(1.5 * u)), line);
-    canvas.drawRRect(RRect.fromLTRBR(4 * u, 8 * u, 20 * u, 21 * u, Radius.circular(1.5 * u)), line);
-    final c = TextPainter(
-      text: TextSpan(
-        text: 'C',
-        style: TextStyle(color: color, fontSize: 11 * u, fontWeight: FontWeight.w800, height: 1),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    c.paint(canvas, Offset(12 * u - c.width / 2, 14.6 * u - c.height / 2));
-  }
-
-  @override
-  bool shouldRepaint(CetokIconPainter old) => old.color != color;
 }
 
 /// Cetok Online inside MyManual: Stok (look up and open a part), Ambil and

@@ -440,6 +440,39 @@ class AppStore extends ChangeNotifier {
     }
   }
 
+  /// Manuals waiting in an "Unduh semua" run, downloaded one at a time.
+  final Set<String> downloadQueue = {};
+
+  /// Downloads [files] one after another. Stops at the first one that does
+  /// not finish (paused, cancelled or failed), so the rest wait for the
+  /// mechanic instead of filling the phone on a bad signal.
+  Future<void> downloadAll(List<ManualFile> files, {required String unitName}) async {
+    final todo = [for (final f in files) if (!isDownloaded(f.key) && !downloadQueue.contains(f.key)) f];
+    if (todo.isEmpty) return;
+    downloadQueue.addAll(todo.map((f) => f.key));
+    notifyListeners();
+    try {
+      for (final f in todo) {
+        if (!downloadQueue.contains(f.key)) break;
+        // Its own Unduh button may have started it already.
+        while (downloads.containsKey(f.key)) {
+          await Future<void>.delayed(const Duration(milliseconds: 300));
+        }
+        if (isDownloaded(f.key)) {
+          downloadQueue.remove(f.key);
+          continue;
+        }
+        await download(catalog.file(f.key) ?? f, unitName: unitName);
+        if (!isDownloaded(f.key)) break;
+        downloadQueue.remove(f.key);
+        notifyListeners();
+      }
+    } finally {
+      downloadQueue.removeAll(todo.map((f) => f.key));
+      notifyListeners();
+    }
+  }
+
   /// [_fetch], continuing from what arrived when the connection drops (a
   /// phone switching networks or waking up), before giving up.
   Future<void> _fetchRetrying(RemoteFile remote, String target, DownloadProgress progress, int done) async {

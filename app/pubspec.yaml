@@ -64,6 +64,7 @@ flutter:
 
   assets:
     - assets/images/logo.png
+    - assets/images/cetok.png
     - assets/units/
 
   fonts:

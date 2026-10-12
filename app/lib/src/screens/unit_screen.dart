@@ -80,7 +80,7 @@ class _UnitScreenState extends State<UnitScreen> {
         if (!didPop) setState(_exitEdit);
       },
       child: Scaffold(
-        appBar: _editing ? _editBar(onPhone) : _normalBar(unit, onPhone.isNotEmpty),
+        appBar: _editing ? _editBar(onPhone) : _normalBar(unit, onPhone.isNotEmpty, inFolder),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
           children: [
@@ -175,7 +175,7 @@ class _UnitScreenState extends State<UnitScreen> {
     );
   }
 
-  PreferredSizeWidget _normalBar(Unit unit, bool canEdit) => AppBar(
+  PreferredSizeWidget _normalBar(Unit unit, bool canEdit, List<ManualFile> inFolder) => AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -189,6 +189,7 @@ class _UnitScreenState extends State<UnitScreen> {
           ],
         ),
         actions: [
+          _downloadAllButton(unit, inFolder),
           if (canEdit)
             TextButton(
               onPressed: () => setState(() => _editing = true),
@@ -197,6 +198,45 @@ class _UnitScreenState extends State<UnitScreen> {
           const SizedBox(width: 8),
         ],
       );
+
+  /// Every manual of this folder and the folders inside it that is not on
+  /// the phone yet, one tap away.
+  Widget _downloadAllButton(Unit unit, List<ManualFile> inFolder) {
+    final store = StoreScope.of(context);
+    final missing = inFolder.where((f) => !store.isDownloaded(f.key)).toList();
+    if (missing.isEmpty) return const SizedBox.shrink();
+    final running = missing.any((f) => store.downloadQueue.contains(f.key) || store.downloads.containsKey(f.key));
+    return TextButton.icon(
+      key: const Key('download-all'),
+      onPressed: running ? null : () => _confirmDownloadAll(unit, missing),
+      icon: running
+          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+          : const Icon(Icons.download_rounded, size: 20),
+      label: Text(running ? 'Mengunduh…' : 'Unduh semua', style: const TextStyle(fontWeight: FontWeight.w600)),
+    );
+  }
+
+  Future<void> _confirmDownloadAll(Unit unit, List<ManualFile> missing) async {
+    final store = StoreScope.read(context);
+    final size = missing.fold(0, (s, f) => s + f.downloadSize);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Unduh ${missing.length} file?'),
+        content: Text('Total ${formatSize(size)}. File diunduh satu per satu dan bisa dibaca tanpa sinyal setelah selesai.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Unduh')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await store.downloadAll(missing, unitName: unit.name);
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
+  }
 
   PreferredSizeWidget _editBar(List<ManualFile> onPhone) => AppBar(
         leading: IconButton(
