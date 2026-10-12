@@ -96,6 +96,24 @@ void main() {
     store.dispose();
   });
 
+  test('online pieces name the file version so the server can answer from its cache', () async {
+    final seen = <Uri>[];
+    final store = await AppStore.open(
+      root: root,
+      client: MockClient((request) async {
+        seen.add(request.url);
+        return _files(request);
+      }),
+    );
+    await store.signIn(testSession(), refreshNow: false);
+    await store.refresh();
+    final file = store.catalog.files.single;
+    // The fixture server sends whole files, which fetchPdfRange refuses.
+    await expectLater(store.fetchPdfRange(file, 0, 10), throwsA(isA<HttpException>()));
+    expect(seen.last.queryParameters['v'], file.pdf.sha256.substring(0, 12));
+    store.dispose();
+  });
+
   test('an old session is swapped before the catalog is fetched, and stays after a restart', () async {
     final calls = <String>[];
     final client = MockClient((request) async {

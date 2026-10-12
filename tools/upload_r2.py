@@ -47,7 +47,7 @@ def catalog_paths(catalog: dict) -> dict[str, str]:
     return paths
 
 
-def warm(keys: list[str]) -> None:
+def warm(keys: list[str], shas: dict[str, str]) -> None:
     """Asks Cloudflare for the last 1 KB of each PDF in [keys], which makes
     it copy the whole file into its cache (see the note at the top)."""
     base = os.environ.get("R2_PUBLIC_URL", "https://files.mymanual.my.id").rstrip("/")
@@ -60,7 +60,8 @@ def warm(keys: list[str]) -> None:
         print(f"=== Memanaskan {len(pdfs)} PDF di server Cloudflare ===")
     for key in pdfs:
         request = urllib.request.Request(
-            f"{base}/{urllib.request.quote(key)}",
+            # v= is the version the app asks for, so the same cache copy is warmed.
+            f"{base}/{urllib.request.quote(key)}?v={shas[key][:12]}",
             headers={"Range": "bytes=-1024", "User-Agent": "MyManual-update", "x-admin-code": code},
         )
         start = time.monotonic()
@@ -84,7 +85,7 @@ def main() -> int:
     wanted = catalog_paths(catalog)
 
     if args.warm_all:
-        warm(sorted(wanted))
+        warm(sorted(wanted), wanted)
         return 0
 
     missing = [k for k in ("R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET")
@@ -143,7 +144,7 @@ def main() -> int:
     print(f"{len(to_upload)} file(s) uploaded, {len(to_delete)} deleted"
           + (" (dry run)" if args.dry_run else ""))
     if not args.dry_run:
-        warm(to_upload)
+        warm(to_upload, wanted)
     return 0
 
 

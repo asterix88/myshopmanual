@@ -32,6 +32,9 @@ function parseRange(header: string | null, size: number): Range | null | "bad" {
 
 const filling = new Set<string>();
 
+const versionKey = (version: string, key: string) =>
+  `https://files.mymanual.my.id/__cache/v/${version}/${encodeURIComponent(key)}`;
+
 export async function handleFiles(request: Request, env: FilesEnv, ctx: ExecutionContext): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD") {
     return new Response("Method not allowed", { status: 405 });
@@ -43,8 +46,36 @@ export async function handleFiles(request: Request, env: FilesEnv, ctx: Executio
     if (auth.error) return auth.error;
   }
 
-  const key = decodeURIComponent(new URL(request.url).pathname.slice(1));
+  const url = new URL(request.url);
+  const key = decodeURIComponent(url.pathname.slice(1));
   if (!key || key.includes("..")) return new Response("Not found", { status: 404 });
+  const started = Date.now();
+
+  // The app names the file's version (the start of its sha256 from the
+  // catalog), so a piece already in the cache is served without asking the
+  // bucket first: that question alone took ~250 ms per piece, and opening
+  // a page reads several pieces one after another.
+  const version = url.searchParams.get("v");
+  const rangeHeader = request.headers.get("range");
+  if (version && /^[0-9a-f]{8,64}$/.test(version) && key !== "catalog.json" && request.method === "GET") {
+    const cached = await caches.default.match(
+      new Request(versionKey(version, key), { headers: rangeHeader ? { range: rangeHeader } : {} }),
+    );
+    if (cached && (cached.status === 206 || (cached.status === 200 && !rangeHeader))) {
+      const headers = new Headers({
+        "content-type": cached.headers.get("content-type") ?? "application/octet-stream",
+        "accept-ranges": "bytes",
+        "cache-control": "private, no-store",
+        "server-timing": `cache;dur=${Date.now() - started}`,
+      });
+      for (const h of ["content-range", "content-length"]) {
+        const v = cached.headers.get(h);
+        if (v) headers.set(h, v);
+      }
+      return new Response(cached.body, { status: cached.status, headers });
+    }
+  }
+
   const head = await env.BUCKET.head(key);
   if (!head) return new Response("Not found", { status: 404 });
 
@@ -69,12 +100,17 @@ export async function handleFiles(request: Request, env: FilesEnv, ctx: Executio
   // Manuals and indexes never change under the same etag; the catalog does
   // and is always read from the bucket.
   const cacheable = key !== "catalog.json";
-  const cacheKey = new Request(`https://files.mymanual.my.id/__cache/${encodeURIComponent(head.etag)}/${encodeURIComponent(key)}`);
+  const cacheKey = new Request(
+    version && /^[0-9a-f]{8,64}$/.test(version)
+      ? versionKey(version, key)
+      : `https://files.mymanual.my.id/__cache/${encodeURIComponent(head.etag)}/${encodeURIComponent(key)}`,
+  );
   if (cacheable) {
     const cached = await caches.default.match(
       new Request(cacheKey.url, { headers: range ? { range: `bytes=${range.offset}-${range.offset + range.length - 1}` } : {} }),
     );
     if (cached && cached.status === status) {
+      headers.set("server-timing", `head+cache;dur=${Date.now() - started}`);
       return new Response(cached.body, { status, headers });
     }
     if (!filling.has(cacheKey.url)) {
@@ -106,5 +142,6 @@ export async function handleFiles(request: Request, env: FilesEnv, ctx: Executio
 
   const object = await env.BUCKET.get(key, range ? { range } : {});
   if (!object) return new Response("Not found", { status: 404 });
+  headers.set("server-timing", `bucket;dur=${Date.now() - started}`);
   return new Response(object.body, { status, headers });
 }
