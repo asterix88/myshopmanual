@@ -8,6 +8,18 @@ import 'package:path_provider/path_provider.dart';
 /// report says which test build it came from.
 const buildId = String.fromEnvironment('BUILD_ID');
 
+/// pubspec.yaml's version and the APK workflow's run number, both set by
+/// the workflow; empty in local builds.
+const appVersion = String.fromEnvironment('APP_VERSION');
+const buildNumber = String.fromEnvironment('BUILD_NUMBER');
+
+/// "Versi 1.0.0 (build 57)", shown under the login screen.
+String get versionLabel => appVersion.isEmpty
+    ? 'Versi lokal'
+    : buildNumber.isEmpty
+        ? 'Versi $appVersion'
+        : 'Versi $appVersion (build $buildNumber)';
+
 /// A small log of what the app was doing, kept on the phone so a force close
 /// can be explained afterwards (menu ⋮ > Laporan masalah). Each line is
 /// written straight to disk, so the last steps before a crash survive it.
@@ -59,7 +71,7 @@ class Diagnostics {
   /// Everything known about recent problems, as text to copy and send.
   static Future<String> report() async {
     final out = StringBuffer();
-    out.writeln('Versi: ${buildId.isEmpty ? 'lokal' : buildId}');
+    out.writeln('Versi: ${buildId.isEmpty ? 'lokal' : buildId}${buildNumber.isEmpty ? '' : ', build $buildNumber'}');
     try {
       final memory = (await _channel.invokeMapMethod<String, Object?>('memory')) ?? const {};
       out.writeln('RAM HP: ${memory['totalMb']} MB, tersedia ${memory['availMb']} MB, '

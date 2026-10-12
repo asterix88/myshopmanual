@@ -26,6 +26,11 @@ Future<void> loadFonts() async {
     poppins.addFont(Future.value(ByteData.sublistView(File('assets/fonts/Poppins-$w.ttf').readAsBytesSync())));
   }
   await poppins.load();
+  final sourceSans = FontLoader('SourceSans3');
+  for (final w in ['Regular', 'Semibold']) {
+    sourceSans.addFont(Future.value(ByteData.sublistView(File('assets/fonts/SourceSans3-$w.ttf').readAsBytesSync())));
+  }
+  await sourceSans.load();
   final icons = FontLoader('MaterialIcons');
   final iconFont = File(
     '${Platform.environment['FLUTTER_ROOT'] ?? '/home/claude/sdk/flutter'}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',

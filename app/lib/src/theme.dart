@@ -84,10 +84,49 @@ ThemeData buildTheme({required bool dark}) {
     ),
     dividerTheme: DividerThemeData(color: AppColors.divider, thickness: 1, space: 1),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
-    // Smoother opening of folders and manuals than the default zoom.
+    // Folders and manuals slide in from the side (as in Coursera).
     pageTransitionsTheme: const PageTransitionsTheme(
-      builders: {TargetPlatform.android: FadeForwardsPageTransitionsBuilder()},
+      builders: {TargetPlatform.android: SidePageTransitionsBuilder()},
     ),
     textTheme: base.textTheme.apply(bodyColor: AppColors.ink, displayColor: AppColors.ink),
   );
+}
+
+/// A new page slides in from the right while the page under it moves a
+/// little to the left; going back plays it the other way.
+class SidePageTransitionsBuilder extends PageTransitionsBuilder {
+  const SidePageTransitionsBuilder();
+
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 320);
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final incoming = Tween(begin: const Offset(1, 0), end: Offset.zero).animate(
+      CurvedAnimation(parent: animation, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic),
+    );
+    final outgoing = Tween(begin: Offset.zero, end: const Offset(-0.3, 0)).animate(
+      CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic),
+    );
+    return SlideTransition(
+      position: outgoing,
+      child: SlideTransition(
+        position: incoming,
+        child: DecoratedBox(
+          // Without a background the page under it shows through the gaps.
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 12)],
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
 }

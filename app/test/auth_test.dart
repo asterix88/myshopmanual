@@ -184,6 +184,10 @@ void main() {
     await tester.pumpWidget(MyManualApp(store: store, requireLogin: true));
     await tester.pumpAndSettle();
     expect(find.text('Masuk'), findsOneWidget);
+    expect(find.text('Versi lokal'), findsOneWidget);
+    await tester.tap(find.byTooltip('Lihat PIN'));
+    await tester.pump();
+    expect(find.byTooltip('Sembunyikan PIN'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('login-nrp')), '21045678');
     await tester.enterText(find.byKey(const Key('login-pin')), '000000');
