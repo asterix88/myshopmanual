@@ -83,7 +83,7 @@ if __name__ == '__main__':
             path = (f.get('pdf') or {}).get('path', '')
             if not any(code.startswith(k) for k in want):
                 continue
-            if f.get('type') != 'shop':
+            if f.get('type') != 'shop_manual':
                 continue
             k = next(k for k in want if code.startswith(k))
             local = os.path.basename(path)
