@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+
+import '../auth.dart';
 
 import '../models.dart';
 import '../store.dart';
@@ -75,6 +79,7 @@ class HomeScreen extends StatelessWidget {
               'employees' =>
                 Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EmployeesScreen())),
               'theme' => _chooseTheme(context, store),
+              'cetok' => showDialog<void>(context: context, builder: (_) => const _CetokDataDialog()),
               'logout' => _logout(context, store),
               _ => _editServer(context, store),
             },
@@ -98,6 +103,8 @@ class HomeScreen extends StatelessWidget {
                 ),
               if (store.session?.admin ?? false)
                 const PopupMenuItem(value: 'employees', child: Text('Kelola karyawan')),
+              if (store.session?.admin ?? false)
+                const PopupMenuItem(value: 'cetok', child: Text('Data Cetok Online')),
               const PopupMenuItem(value: 'theme', child: Text('Tampilan (terang / gelap)')),
               const PopupMenuItem(value: 'report', child: Text('Laporan masalah')),
               if (store.session?.admin ?? false)
@@ -477,6 +484,89 @@ class _FolderCard extends StatelessWidget {
           Icon(Icons.chevron_right, color: AppColors.faint),
         ],
       ),
+    );
+  }
+}
+
+/// Admins only: whether Cetok Online shows every location or hides some,
+/// for every phone at once (kept on the MyManual server, no app update).
+class _CetokDataDialog extends StatefulWidget {
+  const _CetokDataDialog();
+
+  @override
+  State<_CetokDataDialog> createState() => _CetokDataDialogState();
+}
+
+class _CetokDataDialogState extends State<_CetokDataDialog> {
+  late bool _all = StoreScope.read(context).cetok.showAll;
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _save() async {
+    final store = StoreScope.read(context);
+    final session = store.session;
+    if (session == null) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await store.auth.setAppConfig(session, cetokAll: _all);
+    } on AuthException catch (e) {
+      if (e.code == 'refresh' && await store.renewSession() != null) return _save();
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = e.message;
+        });
+      }
+      return;
+    }
+    store.cetok.showAll = _all;
+    unawaited(store.cetok.refresh());
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Data Cetok Online'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          RadioGroup<bool>(
+            groupValue: _all,
+            onChanged: (v) => setState(() => _all = v ?? _all),
+            child: const Column(
+              children: [
+                RadioListTile(
+                  value: false,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Sebagian'),
+                  subtitle: Text('LOGISTIK, FABRIKASI, LAYDOWN, TRACKINDO (seperti cetok-online)'),
+                ),
+                RadioListTile(
+                  value: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('Semua lokasi'),
+                  subtitle: Text('Tanpa filter (seperti stock-spareparts)'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text('Berlaku untuk semua HP saat Cetok Online dibuka.', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Text(_error!, style: TextStyle(fontSize: 13, color: AppColors.danger)),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+        FilledButton(onPressed: _busy ? null : _save, child: const Text('Simpan')),
+      ],
     );
   }
 }

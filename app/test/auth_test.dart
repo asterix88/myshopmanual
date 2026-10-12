@@ -53,6 +53,49 @@ void main() {
     store.dispose();
   });
 
+  test('Cetok shows every location when the admin chose so on the server', () async {
+    var all = true;
+    final hidden = <Object?>[];
+    final client = MockClient((request) async {
+      if (request.url.path == '/app/config') return http.Response(jsonEncode({'cetok_all': all}), 200);
+      if (request.url.host.contains('supabase')) {
+        hidden.add((jsonDecode(request.body) as Map)['p_show_hidden']);
+        return http.Response(jsonEncode({'parts': []}), 200);
+      }
+      return _files(request);
+    });
+    final store = await AppStore.open(root: root, client: client);
+    await store.signIn(testSession(), refreshNow: false);
+    await store.cetok.open();
+    all = false;
+    await store.cetok.refresh();
+    expect(hidden, [true, false]);
+    store.dispose();
+  });
+
+  test('without signal Cetok keeps the last choice', () async {
+    var online = true;
+    final hidden = <Object?>[];
+    final client = MockClient((request) async {
+      if (request.url.path == '/app/config') {
+        if (!online) throw const SocketException('offline');
+        return http.Response(jsonEncode({'cetok_all': true}), 200);
+      }
+      if (request.url.host.contains('supabase')) {
+        hidden.add((jsonDecode(request.body) as Map)['p_show_hidden']);
+        return http.Response(jsonEncode({'parts': []}), 200);
+      }
+      return _files(request);
+    });
+    final store = await AppStore.open(root: root, client: client);
+    await store.signIn(testSession(), refreshNow: false);
+    await store.cetok.open();
+    online = false;
+    await store.cetok.refresh();
+    expect(hidden, [true, true]);
+    store.dispose();
+  });
+
   test('an old session is swapped before the catalog is fetched, and stays after a restart', () async {
     final calls = <String>[];
     final client = MockClient((request) async {

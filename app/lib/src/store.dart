@@ -314,7 +314,25 @@ class AppStore extends ChangeNotifier {
   String get chatHistoryPath => p.join(_root.path, 'chat.json');
 
   /// Cetok Online's parts stock (its own server), opened from the Home tab.
-  late final Cetok cetok = Cetok(cachePath: p.join(_root.path, 'cetok.json'), client: _client);
+  late final Cetok cetok = Cetok(
+    cachePath: p.join(_root.path, 'cetok.json'),
+    client: _client,
+    showAllSetting: _cetokShowAll,
+  );
+
+  /// The admin's choice of all or some Cetok locations; null when offline.
+  Future<bool?> _cetokShowAll() async {
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final s = session;
+      if (s == null) return null;
+      try {
+        return (await auth.appConfig(s)).cetokAll;
+      } on AuthException catch (e) {
+        if (e.code != 'refresh' || attempt > 0 || await renewSession() == null) return null;
+      }
+    }
+    return null;
+  }
 
   Timer? _saveTimer;
 

@@ -132,6 +132,16 @@ class Employee {
   final int aiToday;
 }
 
+/// Settings an admin changes in the app that every phone follows.
+class AppConfig {
+  const AppConfig({required this.cetokAll});
+
+  factory AppConfig.fromJson(Map<String, dynamic> json) => AppConfig(cetokAll: json['cetok_all'] as bool? ?? false);
+
+  /// Cetok Online shows every location instead of hiding some.
+  final bool cetokAll;
+}
+
 /// What the app sends about this phone: a random id made once, and the
 /// model name the admin sees.
 class DeviceInfo {
@@ -224,6 +234,13 @@ class AuthApi {
   /// A new starting PIN for [nrp], to give to the employee.
   Future<String> newPin(Session session, String nrp) async =>
       (await _post('/admin/pin', {'nrp': nrp}, session: session))['pin'] as String;
+
+  /// Settings an admin chose for every phone (ai-worker/src/auth.ts).
+  Future<AppConfig> appConfig(Session session) async =>
+      AppConfig.fromJson(await _post('/app/config', const {}, session: session));
+
+  Future<AppConfig> setAppConfig(Session session, {required bool cetokAll}) async =>
+      AppConfig.fromJson(await _post('/admin/config', {'cetok_all': cetokAll}, session: session));
 
   Future<void> setActive(Session session, String nrp, bool active) =>
       _post('/admin/active', {'nrp': nrp, 'active': active}, session: session);

@@ -210,8 +210,12 @@ export async function handleAuth(request: Request, env: AuthEnv, path: string): 
       return setPin(request, env);
     case "/auth/refresh":
       return refresh(request, env);
+    case "/app/config":
+      return appConfig(request, env);
     case "/admin/import":
       return importList(request, env);
+    case "/admin/config":
+      return setAppConfig(request, env);
     case "/admin/employees":
     case "/admin/pin":
     case "/admin/active":
@@ -287,6 +291,34 @@ async function refresh(request: Request, env: AuthEnv): Promise<Response> {
   if (!e.active) return inactive();
   if (touch(e, b.device)) await save(env, e);
   return issue(env, e);
+}
+
+/// Settings an admin changes in the app that every phone follows without an
+/// app update. cetok_all: Cetok Online shows every location (like
+/// stock-spareparts.vercel.app) instead of hiding some (like cetok-online).
+type AppConfig = { cetok_all: boolean };
+
+async function readConfig(env: AuthEnv): Promise<AppConfig> {
+  const saved = (await env.AUTH.get<Partial<AppConfig>>("config:app", "json")) ?? {};
+  return { cetok_all: saved.cetok_all === true };
+}
+
+async function appConfig(request: Request, env: AuthEnv): Promise<Response> {
+  const auth = await requireSession(env, request);
+  if (auth.error) return auth.error;
+  return json(await readConfig(env));
+}
+
+async function setAppConfig(request: Request, env: AuthEnv): Promise<Response> {
+  const auth = await requireSession(env, request);
+  if (auth.error) return auth.error;
+  const me = await load(env, auth.session.n);
+  if (!me || !me.active || !me.admin) return json({ error: "forbidden", message: "Khusus admin." }, 403);
+  const b = (await body(request)) ?? {};
+  const config = await readConfig(env);
+  if (typeof b.cetok_all === "boolean") config.cetok_all = b.cetok_all;
+  await env.AUTH.put("config:app", JSON.stringify(config));
+  return json(config);
 }
 
 /// Replaces the employee list with the one in Anas's file.

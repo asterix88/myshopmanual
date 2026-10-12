@@ -82,7 +82,7 @@ String unitModelCode(String unit) =>
 /// rules (no negative stock, upper case, every change in its history) stay
 /// in the database. The last list read is kept on the phone for offline use.
 class Cetok extends ChangeNotifier {
-  Cetok({required this.cachePath, required this.client, Uri? baseUrl, String? key})
+  Cetok({required this.cachePath, required this.client, this.showAllSetting, Uri? baseUrl, String? key})
       : _base = baseUrl ?? Uri.parse(supabaseUrl),
         _key = key ?? publishableKey;
 
@@ -104,11 +104,16 @@ class Cetok extends ChangeNotifier {
     'D85ESS-2',
   ];
 
-  /// Like cetok-online.vercel.app: only the stock at LOGISTIK, FABRIKASI,
-  /// LAYDOWN and TRACKINDO (the database hides the rest).
-  static const showHidden = false;
-
   final String cachePath;
+
+  /// Asks the MyManual server whether an admin chose to show every location;
+  /// null when it can't be reached (the last answer stays).
+  final Future<bool?> Function()? showAllSetting;
+
+  /// true: every location, like stock-spareparts.vercel.app. false (the
+  /// default): only LOGISTIK, FABRIKASI, LAYDOWN and TRACKINDO, like
+  /// cetok-online.vercel.app (the database hides the rest).
+  bool showAll = false;
   final http.Client client;
   final Uri _base;
   final String _key;
@@ -136,6 +141,7 @@ class Cetok extends ChangeNotifier {
           final at = json['updated'] as String?;
           updated = at == null ? null : DateTime.tryParse(at);
           name = json['name'] as String? ?? '';
+          showAll = json['show_all'] as bool? ?? false;
           notifyListeners();
         }
       } on Object catch (e) {
@@ -154,7 +160,8 @@ class Cetok extends ChangeNotifier {
     loading = true;
     notifyListeners();
     try {
-      final data = await _rpc('get_all_data', {'p_riwayat_limit': 1, 'p_show_hidden': showHidden});
+      showAll = await showAllSetting?.call() ?? showAll;
+      final data = await _rpc('get_all_data', {'p_riwayat_limit': 1, 'p_show_hidden': showAll});
       final list = (data is Map ? data['parts'] : null) as List? ?? const [];
       parts = [for (final p in list) CetokPart.fromJson((p as Map).cast<String, dynamic>())];
       updated = DateTime.now();
@@ -281,6 +288,7 @@ class Cetok extends ChangeNotifier {
         'parts': [for (final p in parts) p.toJson()],
         'updated': updated?.toIso8601String(),
         'name': name,
+        'show_all': showAll,
       }));
       await tmp.rename(cachePath);
     } on Object catch (e) {
