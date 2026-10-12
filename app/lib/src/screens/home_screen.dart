@@ -142,6 +142,8 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
+                  // The bottom bar is drawn over the page (see HomeShell).
+                  SizedBox(height: MediaQuery.paddingOf(context).bottom),
                 ],
               ),
             ),
@@ -180,14 +182,8 @@ class HomeScreen extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(
-          'Keluar dari akun?',
-          style: TextStyle(fontFamily: 'SourceSans3', fontSize: 19, fontWeight: FontWeight.w600, color: AppColors.ink),
-        ),
-        content: Text(
-          'Manual yang sudah diunduh tetap tersimpan.',
-          style: TextStyle(fontFamily: 'SourceSans3', fontSize: 15, color: AppColors.muted),
-        ),
+        title: const Text('Keluar dari akun?'),
+        content: const Text('Manual yang sudah diunduh tetap tersimpan.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           FilledButton(

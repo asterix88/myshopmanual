@@ -26,11 +26,6 @@ Future<void> loadFonts() async {
     poppins.addFont(Future.value(ByteData.sublistView(File('assets/fonts/Poppins-$w.ttf').readAsBytesSync())));
   }
   await poppins.load();
-  final sourceSans = FontLoader('SourceSans3');
-  for (final w in ['Regular', 'Semibold']) {
-    sourceSans.addFont(Future.value(ByteData.sublistView(File('assets/fonts/SourceSans3-$w.ttf').readAsBytesSync())));
-  }
-  await sourceSans.load();
   final icons = FontLoader('MaterialIcons');
   final iconFont = File(
     '${Platform.environment['FLUTTER_ROOT'] ?? '/home/claude/sdk/flutter'}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
@@ -90,11 +85,11 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}4_search.png'));
 
-    await tester.tap(find.text('Nyel AI').last);
+    await tester.tap(find.text('nyel AI').last);
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}5_chat.png'));
 
-    await tester.tap(find.text('Spek').last);
+    await tester.tap(find.text('Standar').last);
     for (var i = 0; i < 5; i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
       await tester.pump();

@@ -51,6 +51,10 @@ class _HomeShellState extends State<HomeShell> {
         if (!didPop) setState(() => _tab = 0);
       },
       child: Scaffold(
+        // Pages run on under the bar, so the space beside the raised nyel AI
+        // button shows the page instead of an empty band. They keep their
+        // last rows clear of it with MediaQuery's bottom padding.
+        extendBody: true,
         body: Stack(
           children: [
             for (final (i, page) in [

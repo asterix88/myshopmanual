@@ -521,7 +521,12 @@ class AppStore extends ChangeNotifier {
   /// manual that is not on the phone.
   Future<Uint8List> fetchPdfRange(ManualFile f, int start, int end) async {
     final response = await _client
-        .get(_url(f.pdf.path), headers: {'Range': 'bytes=$start-${end - 1}'})
+        // v (the file's version) lets the server answer from its cache
+        // without first checking the bucket.
+        .get(
+          _url(f.pdf.path).replace(queryParameters: {'v': f.pdf.sha256.substring(0, 12)}),
+          headers: {'Range': 'bytes=$start-${end - 1}'},
+        )
         .timeout(const Duration(seconds: 30));
     if (response.statusCode == 206 && response.bodyBytes.length == end - start) return response.bodyBytes;
     throw HttpException('HTTP ${response.statusCode} untuk ${f.pdf.path}');
