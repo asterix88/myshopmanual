@@ -1,16 +1,17 @@
 import { requireSession, type AuthEnv } from "./auth";
 
-// "Jawaban salah" reports from the nyel AI chat. A phone sends the question,
-// the answer and the pages it cited; admins list them in the app to see
-// where nyel AI goes wrong, and the worst ones become questions in the AI
-// test (app/tool/ai_eval.json). Kept in the AUTH KV as "fb:<time>", for a
-// year.
+// Ratings of nyel AI answers: 👍 or 👎 "Jawaban salah". A phone sends the
+// rating, the question, the answer and the pages it cited; admins list them
+// in the app to see where nyel AI goes right and wrong, and the wrong ones
+// become questions in the AI test (app/tool/ai_eval.json). Kept in the AUTH
+// KV as "fb:<time>", for a year.
 
 const KEEP_SECONDS = 365 * 24 * 3600;
 const MAX_TEXT = 8000;
 const LIST_LIMIT = 100;
 
 type Report = {
+  rating: "good" | "bad";
   at: number;
   nrp: string;
   name: string;
@@ -58,6 +59,8 @@ export async function feedback(request: Request, env: AuthEnv): Promise<Response
     return json({ error: "bad_request" }, 400);
   }
   const report: Report = {
+    // Apps before 👍 sent only reports of wrong answers.
+    rating: body.rating === "good" ? "good" : "bad",
     at: Date.now(),
     nrp: s.n,
     name: s.nm,

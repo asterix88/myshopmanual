@@ -161,62 +161,68 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  /// "Jawaban salah": asks what is wrong, then sends the answer to the admins.
-  Future<void> _report(int index) async {
+  /// 👍 sends the rating straight away; 👎 "Jawaban salah" first asks what is
+  /// wrong. Both go to the admins with the question and the answer.
+  Future<void> _rate(int index, {required bool good}) async {
     final entry = _entries[index];
     final question = _entries.take(index).lastWhere((e) => e.fromUser, orElse: () => ChatEntry.user('')).text;
-    final note = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 24),
-        title: const Text('Jawaban salah?'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Jawaban ini dikirim ke admin untuk diperiksa dan dipakai memperbaiki nyel AI.'),
-              const SizedBox(height: 12),
-              TextField(
-                controller: note,
-                maxLines: 3,
-                minLines: 2,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  hintText: 'Apa yang salah? (boleh kosong)',
-                  border: OutlineInputBorder(),
+    var text = '';
+    if (!good) {
+      final note = TextEditingController();
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 24),
+          title: const Text('Jawaban salah?'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Jawaban ini dikirim ke admin untuk diperiksa dan dipakai memperbaiki nyel AI.'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: note,
+                  maxLines: 3,
+                  minLines: 2,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    hintText: 'Apa yang salah? (boleh kosong)',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.navy),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Kirim'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.navy),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Kirim'),
-          ),
-        ],
-      ),
-    );
-    final text = note.text.trim();
-    note.dispose();
-    if (ok != true || !mounted) return;
+      );
+      text = note.text.trim();
+      note.dispose();
+      if (ok != true || !mounted) return;
+    }
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await _chat.report(question: question, answer: entry, note: text);
+      await _chat.report(question: question, answer: entry, rating: good ? 'good' : 'bad', note: text);
       if (!mounted) return;
-      setState(() => entry.reported = true);
-      messenger.showSnackBar(const SnackBar(content: Text('Terima kasih, laporan terkirim ke admin.')));
+      setState(() => entry.rating = good ? 'good' : 'bad');
+      messenger.showSnackBar(SnackBar(
+        content: Text(good ? 'Terima kasih atas penilaiannya.' : 'Terima kasih, laporan terkirim ke admin.'),
+      ));
       await _chat.save(_entries);
     } on AiException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     } on Object catch (e) {
-      debugPrint('report failed: $e');
-      messenger.showSnackBar(const SnackBar(content: Text('Laporan belum terkirim. Coba lagi.')));
+      debugPrint('rating failed: $e');
+      messenger.showSnackBar(const SnackBar(content: Text('Penilaian belum terkirim. Coba lagi.')));
     }
   }
 
@@ -414,7 +420,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             popIn: _fresh.contains(entry),
                             highlight: _searching ? _query : '',
                             current: _searching && _hits.isNotEmpty && _hits[_hit] == i,
-                            onReport: entry.fromUser || entry.failed || _status != null ? null : () => _report(i),
+                            onRate: entry.fromUser || entry.failed || _status != null ? null : (good) => _rate(i, good: good),
                           ),
                         if (_status != null) _Working(status: _status!),
                       ],
@@ -638,13 +644,13 @@ class _Bubble extends StatelessWidget {
     this.popIn = false,
     this.highlight = '',
     this.current = false,
-    this.onReport,
+    this.onRate,
   });
 
   final ChatEntry entry;
 
-  /// Reports the answer as wrong; null for questions and errors.
-  final VoidCallback? onReport;
+  /// Rates the answer 👍 (true) or 👎 (false); null for questions and errors.
+  final void Function(bool good)? onRate;
 
   /// Pops in when first shown (a message just sent or answered).
   final bool popIn;
@@ -844,7 +850,7 @@ class _Bubble extends StatelessWidget {
                 ],
               ),
             ],
-            if (!entry.failed) _AnswerFooter(entry: entry, onReport: onReport),
+            if (!entry.failed) _AnswerFooter(entry: entry, onRate: onRate),
           ],
         ),
       ),
@@ -853,12 +859,12 @@ class _Bubble extends StatelessWidget {
 }
 
 /// Under an answer: a note when parts of it are not from a manual page, and
-/// the "Jawaban salah" button.
+/// the 👍 and 👎 "Jawaban salah" buttons.
 class _AnswerFooter extends StatelessWidget {
-  const _AnswerFooter({required this.entry, required this.onReport});
+  const _AnswerFooter({required this.entry, required this.onRate});
 
   final ChatEntry entry;
-  final VoidCallback? onReport;
+  final void Function(bool good)? onRate;
 
   @override
   Widget build(BuildContext context) {
@@ -887,27 +893,39 @@ class _AnswerFooter extends StatelessWidget {
                   )
                 : const SizedBox.shrink(),
           ),
-          if (entry.reported)
+          if (entry.rating case final rating?)
             Padding(
               padding: const EdgeInsets.only(left: 8),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.thumb_down, size: 15, color: AppColors.muted),
+                  Icon(rating == 'good' ? Icons.thumb_up : Icons.thumb_down, size: 15, color: AppColors.muted),
                   const SizedBox(width: 4),
-                  Text('Dilaporkan', style: TextStyle(fontSize: 11.5, color: AppColors.muted)),
+                  Text(
+                    rating == 'good' ? 'Membantu' : 'Dilaporkan',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.muted),
+                  ),
                 ],
               ),
             )
-          else if (onReport != null)
+          else if (onRate case final rate?) ...[
+            IconButton(
+              tooltip: 'Jawaban membantu',
+              visualDensity: VisualDensity.compact,
+              iconSize: 18,
+              color: AppColors.muted,
+              icon: const Icon(Icons.thumb_up_outlined),
+              onPressed: () => rate(true),
+            ),
             IconButton(
               tooltip: 'Jawaban salah',
               visualDensity: VisualDensity.compact,
               iconSize: 18,
               color: AppColors.muted,
               icon: const Icon(Icons.thumb_down_outlined),
-              onPressed: onReport,
+              onPressed: () => rate(false),
             ),
+          ],
         ],
       ),
     );

@@ -65,8 +65,9 @@ class ChatEntry {
   final List<AiSource> pictures;
   final bool failed;
 
-  /// The mechanic reported this answer as wrong ("Jawaban salah").
-  bool reported = false;
+  /// How the mechanic rated this answer: 'good' (👍) or 'bad' (👎, "Jawaban
+  /// salah"); null when not rated.
+  String? rating;
 
   Map<String, dynamic> toJson() => {
         'user': fromUser,
@@ -75,7 +76,7 @@ class ChatEntry {
         if (sources.isNotEmpty) 'sources': [for (final s in sources) s.toJson()],
         if (pictures.isNotEmpty) 'pictures': [for (final s in pictures) s.toJson()],
         if (failed) 'failed': true,
-        if (reported) 'reported': true,
+        if (rating != null) 'rating': rating,
       };
 
   static ChatEntry fromJson(AppStore store, Map<String, dynamic> json) {
@@ -90,7 +91,8 @@ class ChatEntry {
         ];
     return ChatEntry.assistant(text,
         sources: list('sources'), pictures: list('pictures'), failed: json['failed'] == true)
-      ..reported = json['reported'] == true;
+      // Versions before 👍 kept only 'reported' for a 👎.
+      ..rating = json['rating'] as String? ?? (json['reported'] == true ? 'bad' : null);
   }
 
   /// Parts of the answer come from the AI's general knowledge rather than a
@@ -102,9 +104,10 @@ class ChatEntry {
       (sources.isEmpty || RegExp(r'secara umum|pengetahuan umum|nilai umum', caseSensitive: false).hasMatch(text));
 }
 
-/// A "Jawaban salah" report, as admins see it.
+/// A rated answer (👍 or 👎), as admins see it.
 class AnswerReport {
   AnswerReport({
+    required this.good,
     required this.at,
     required this.name,
     required this.nrp,
@@ -115,6 +118,7 @@ class AnswerReport {
   });
 
   factory AnswerReport.fromJson(Map<String, dynamic> json) => AnswerReport(
+        good: json['rating'] == 'good',
         at: DateTime.fromMillisecondsSinceEpoch((json['at'] as num?)?.toInt() ?? 0),
         name: json['name'] as String? ?? '',
         nrp: json['nrp'] as String? ?? '',
@@ -124,6 +128,8 @@ class AnswerReport {
         note: json['note'] as String? ?? '',
       );
 
+  /// 👍; otherwise 👎 "Jawaban salah".
+  final bool good;
   final DateTime at;
   final String name;
   final String nrp;
@@ -176,7 +182,7 @@ class AiChat {
   final Map<String, ManualFile> _manuals = {};
 
   /// Requests per question: each search or look at a page costs one round.
-  static const maxRounds = 8;
+  static const maxRounds = 4;
 
   /// Page pictures the AI may look at per question; each is a large request.
   static const maxViews = 6;
@@ -281,14 +287,17 @@ class AiChat {
     );
   }
 
-  /// Sends a "Jawaban salah" report: the question, the answer and the pages
-  /// it cited, with what the mechanic says is wrong.
+  /// Sends the mechanic's rating of an answer, 'good' (👍) or 'bad' (👎,
+  /// "Jawaban salah"): the question, the answer and the pages it cited, with
+  /// what the mechanic says is wrong.
   Future<void> report({
     required String question,
     required ChatEntry answer,
+    String rating = 'bad',
     String note = '',
   }) async {
     await _post({
+      'rating': rating,
       'question': question,
       'answer': withoutSourceNumbers(answer.text),
       'sources': [for (final s in answer.sources) '${s.unitName} · ${s.file.title} · hlm ${s.page}'],
@@ -296,7 +305,7 @@ class AiChat {
     }, to: _endpoint.replace(path: '/feedback'));
   }
 
-  /// The newest "Jawaban salah" reports (admins only).
+  /// The newest answer ratings (admins only).
   Future<List<AnswerReport>> reports() async {
     final data = await _post(null, to: _endpoint.replace(path: '/feedback'));
     return [
