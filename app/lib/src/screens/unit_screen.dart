@@ -421,15 +421,10 @@ class _FileCard extends StatelessWidget {
                     ? 'Sudah ditarik dari server'
                     : lastPage != null
                         ? 'Terakhir dibuka: hlm $lastPage'
-                        : null;
-                if (note == null && !hasNewVersion && !canSave) return const SizedBox.shrink();
+                        : 'Siap dibuka offline';
                 return Row(
                   children: [
-                    Expanded(
-                      child: note == null
-                          ? const SizedBox.shrink()
-                          : Text(note, style: TextStyle(fontSize: 12, color: AppColors.muted)),
-                    ),
+                    Expanded(child: Text(note, style: TextStyle(fontSize: 12, color: AppColors.muted))),
                     if (hasNewVersion)
                       TextButton(
                         onPressed: () => _download(context, store),

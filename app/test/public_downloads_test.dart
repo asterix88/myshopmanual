@@ -51,7 +51,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Diunduh'), findsNothing);
-    expect(find.text('Siap dibuka offline'), findsNothing);
+    expect(find.text('Siap dibuka offline'), findsOneWidget);
     await tester.tap(find.byTooltip('Simpan file'));
     await tester.pumpAndSettle();
     expect(find.text('Simpan file?'), findsOneWidget);
