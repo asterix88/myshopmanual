@@ -12,6 +12,7 @@ import 'shell.dart';
 import '../widgets/excavator_loader.dart';
 import '../widgets/machine_icon.dart';
 import '../widgets/unit_icon.dart';
+import 'answer_reports_screen.dart';
 import 'cetok_screen.dart';
 import 'employees_screen.dart';
 import 'machine_screen.dart';
@@ -78,6 +79,8 @@ class HomeScreen extends StatelessWidget {
               'report' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportScreen())),
               'employees' =>
                 Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EmployeesScreen())),
+              'answers' =>
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnswerReportsScreen())),
               'theme' => _chooseTheme(context, store),
               'cetok' => showDialog<void>(context: context, builder: (_) => const _CetokDataDialog()),
               'logout' => _logout(context, store),
@@ -103,6 +106,8 @@ class HomeScreen extends StatelessWidget {
                 ),
               if (store.session?.admin ?? false)
                 const PopupMenuItem(value: 'employees', child: Text('Kelola karyawan')),
+              if (store.session?.admin ?? false)
+                const PopupMenuItem(value: 'answers', child: Text('Jawaban salah nyel AI')),
               if (store.session?.admin ?? false)
                 const PopupMenuItem(value: 'cetok', child: Text('Data Cetok Online')),
               const PopupMenuItem(value: 'theme', child: Text('Tampilan (terang / gelap)')),

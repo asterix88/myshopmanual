@@ -65,6 +65,9 @@ class ChatEntry {
   final List<AiSource> pictures;
   final bool failed;
 
+  /// The mechanic reported this answer as wrong ("Jawaban salah").
+  bool reported = false;
+
   Map<String, dynamic> toJson() => {
         'user': fromUser,
         'text': text,
@@ -72,6 +75,7 @@ class ChatEntry {
         if (sources.isNotEmpty) 'sources': [for (final s in sources) s.toJson()],
         if (pictures.isNotEmpty) 'pictures': [for (final s in pictures) s.toJson()],
         if (failed) 'failed': true,
+        if (reported) 'reported': true,
       };
 
   static ChatEntry fromJson(AppStore store, Map<String, dynamic> json) {
@@ -85,8 +89,48 @@ class ChatEntry {
           for (final s in (json[key] as List? ?? const [])) ?AiSource.fromJson(store, (s as Map).cast<String, dynamic>()),
         ];
     return ChatEntry.assistant(text,
-        sources: list('sources'), pictures: list('pictures'), failed: json['failed'] == true);
+        sources: list('sources'), pictures: list('pictures'), failed: json['failed'] == true)
+      ..reported = json['reported'] == true;
   }
+
+  /// Parts of the answer come from the AI's general knowledge rather than a
+  /// manual page: it says so ("Secara umum", "pengetahuan umum") or cites no
+  /// page at all.
+  bool get hasUncheckedParts =>
+      !fromUser &&
+      !failed &&
+      (sources.isEmpty || RegExp(r'secara umum|pengetahuan umum|nilai umum', caseSensitive: false).hasMatch(text));
+}
+
+/// A "Jawaban salah" report, as admins see it.
+class AnswerReport {
+  AnswerReport({
+    required this.at,
+    required this.name,
+    required this.nrp,
+    required this.question,
+    required this.answer,
+    required this.sources,
+    required this.note,
+  });
+
+  factory AnswerReport.fromJson(Map<String, dynamic> json) => AnswerReport(
+        at: DateTime.fromMillisecondsSinceEpoch((json['at'] as num?)?.toInt() ?? 0),
+        name: json['name'] as String? ?? '',
+        nrp: json['nrp'] as String? ?? '',
+        question: json['question'] as String? ?? '',
+        answer: json['answer'] as String? ?? '',
+        sources: [for (final s in json['sources'] as List? ?? const []) '$s'],
+        note: json['note'] as String? ?? '',
+      );
+
+  final DateTime at;
+  final String name;
+  final String nrp;
+  final String question;
+  final String answer;
+  final List<String> sources;
+  final String note;
 }
 
 class AiException implements Exception {
@@ -151,6 +195,7 @@ class AiChat {
       throw AiException('Jatah ${AppStore.aiDailyLimit} pertanyaan hari ini sudah habis. Coba lagi besok.');
     }
     _dropOldPictures();
+    _dropOldReasoning();
     _keepRecentQuestions();
     _views = 0;
     final content = file != null && page != null
@@ -176,8 +221,9 @@ class AiChat {
       final response = await _post({
         'messages': _messages,
         'manuals': manuals,
-        // Tells the server this app can show the AI manual pages.
-        'features': const ['view_page'],
+        // Tells the server this app can show the AI manual pages and sends
+        // back the model's reasoning within a question.
+        'features': const ['view_page', 'reasoning'],
       });
       final message = (response['message'] as Map).cast<String, dynamic>();
       final toolCalls = (message['tool_calls'] as List? ?? const []).cast<Map<String, dynamic>>();
@@ -185,6 +231,9 @@ class AiChat {
         'role': 'assistant',
         'content': message['content'],
         if (toolCalls.isNotEmpty) 'tool_calls': toolCalls,
+        // The model's thinking goes back with each round of this question.
+        if (message['reasoning_content'] case final String reasoning when reasoning.isNotEmpty)
+          'reasoning_content': reasoning,
       });
 
       if (toolCalls.isEmpty) {
@@ -228,20 +277,43 @@ class AiChat {
     );
   }
 
-  Future<Map<String, dynamic>> _post(Map<String, dynamic> body, {bool renewed = false}) async {
+  /// Sends a "Jawaban salah" report: the question, the answer and the pages
+  /// it cited, with what the mechanic says is wrong.
+  Future<void> report({
+    required String question,
+    required ChatEntry answer,
+    String note = '',
+  }) async {
+    await _post({
+      'question': question,
+      'answer': withoutSourceNumbers(answer.text),
+      'sources': [for (final s in answer.sources) '${s.unitName} · ${s.file.title} · hlm ${s.page}'],
+      'note': note,
+    }, to: _endpoint.replace(path: '/feedback'));
+  }
+
+  /// The newest "Jawaban salah" reports (admins only).
+  Future<List<AnswerReport>> reports() async {
+    final data = await _post(null, to: _endpoint.replace(path: '/feedback'));
+    return [
+      for (final r in data['reports'] as List? ?? const []) AnswerReport.fromJson((r as Map).cast<String, dynamic>()),
+    ];
+  }
+
+  /// POSTs [body] to the chat (or [to]); a null body is a GET.
+  Future<Map<String, dynamic>> _post(Map<String, dynamic>? body, {Uri? to, bool renewed = false}) async {
     final session = store.session;
+    final url = to ?? _endpoint;
+    final headers = {
+      'content-type': 'application/json',
+      if (_aiToken.isNotEmpty) 'authorization': 'Bearer $_aiToken',
+      if (session != null) sessionHeader: session.token,
+    };
     final http.Response response;
     try {
-      response = await client
-          .post(
-            _endpoint,
-            headers: {
-              'content-type': 'application/json',
-              if (_aiToken.isNotEmpty) 'authorization': 'Bearer $_aiToken',
-              if (session != null) sessionHeader: session.token,
-            },
-            body: jsonEncode(body),
-          )
+      response = await (body == null
+              ? client.get(url, headers: headers)
+              : client.post(url, headers: headers, body: jsonEncode(body)))
           .timeout(const Duration(seconds: 120));
     } on Exception {
       throw AiException('Tidak bisa terhubung ke AI. Periksa sinyal internet.');
@@ -254,7 +326,7 @@ class AiChat {
     }
     // The server takes a session for a day; swap it and ask again.
     if (response.statusCode == 401 && session != null && !renewed) {
-      if (await store.renewSession() != null) return _post(body, renewed: true);
+      if (await store.renewSession() != null) return _post(body, to: to, renewed: true);
     }
     if (response.statusCode != 200 || data == null) {
       throw AiException(data?['message'] as String? ?? 'AI sedang bermasalah (kode ${response.statusCode}).');
@@ -444,6 +516,7 @@ class AiChat {
   /// so the conversation is still there the next time the app opens.
   Future<void> save(List<ChatEntry> entries) async {
     _dropOldPictures();
+    _dropOldReasoning();
     final file = File(store.chatHistoryPath);
     final json = jsonEncode({
       'entries': [for (final e in entries.skip(entries.length > keptEntries ? entries.length - keptEntries : 0)) e.toJson()],
@@ -500,6 +573,14 @@ class AiChat {
     final file = File(store.chatHistoryPath);
     if (await file.exists()) await file.delete();
     _changed();
+  }
+
+  /// The model's thinking is only needed within its own question, and it is
+  /// long, so it is not kept after the answer.
+  void _dropOldReasoning() {
+    for (final m in _messages) {
+      m.remove('reasoning_content');
+    }
   }
 
   /// Page pictures from earlier questions are dropped from the history (they

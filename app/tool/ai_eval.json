@@ -1,0 +1,9 @@
+[
+  {
+    "note": "D155A-6 SM hlm 856 (E-3 Engine does not start): R - chassis ground, generation signal, Max 13 V. nyel AI once said no such value exists (13 Oct 2026).",
+    "question": "berapa maksimal voltase pada terminal R alternator posisi kunci kontak ON agara starting motor bisa menyala? unit D155A-6",
+    "must": ["13\\s*V"],
+    "must_not": ["tidak ada nilai"],
+    "pages": [855, 856, 857]
+  }
+]
