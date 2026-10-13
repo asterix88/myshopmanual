@@ -21,6 +21,15 @@ class _AdminClient extends http.BaseClient {
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) {
     if (request.url.host == 'files.mymanual.my.id') request.headers['x-admin-code'] = code;
+    // The pages each search found, so a wrong answer can be traced to the
+    // search or to the model.
+    if (request.url.port == 8787 && request is http.Request) {
+      final messages = (jsonDecode(request.body) as Map)['messages'] as List;
+      for (final m in messages.reversed.takeWhile((m) => (m as Map)['role'] == 'tool')) {
+        final found = RegExp(r'^\[S\d+\][^\n]*', multiLine: true).allMatches('${(m as Map)['content']}');
+        print('  found: ${found.map((f) => f[0]).join(' | ')}');
+      }
+    }
     return _inner.send(request);
   }
 }

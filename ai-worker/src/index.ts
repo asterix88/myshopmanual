@@ -271,7 +271,7 @@ async function handle(
     return json({ error: "too_large", message: "Percakapan terlalu panjang. Mulai percakapan baru." }, 413);
   }
 
-  let body: { messages?: unknown; manuals?: unknown; features?: unknown };
+  let body: { messages?: unknown; manuals?: unknown; features?: unknown; final?: unknown };
   try {
     body = JSON.parse(raw);
   } catch {
@@ -315,7 +315,13 @@ async function handle(
     .split(",")
     .map((m) => m.trim())
     .filter(Boolean);
-  const system = `${canView ? `${SYSTEM}\n\n${VIEW_INSTRUCTIONS}` : SYSTEM}\n\n${WEB_INSTRUCTIONS}`;
+  // The app's last round for a question: no more tools, answer now.
+  const final = body.final === true;
+  const system =
+    `${canView ? `${SYSTEM}\n\n${VIEW_INSTRUCTIONS}` : SYSTEM}\n\n${WEB_INSTRUCTIONS}` +
+    (final
+      ? "\n\nNo more searches are possible for this question. Answer now from the pages already found (cite them) and your knowledge, marked as general; say briefly what the mechanic should still check in the manual."
+      : "");
   const appTools = canView ? [SEARCH_TOOL, VIEW_TOOL] : [SEARCH_TOOL];
   let lastStatus = 0;
   let rateLimited = false;
@@ -344,8 +350,9 @@ async function handle(
           body: JSON.stringify({
             model,
             messages: [{ role: "system", content: `${system}\n\n${context}` }, ...turns],
-            tools: webSearches < MAX_WEB_SEARCHES ? [...appTools, WEB_TOOL] : appTools,
-            tool_choice: "auto",
+            ...(final
+              ? {}
+              : { tools: webSearches < MAX_WEB_SEARCHES ? [...appTools, WEB_TOOL] : appTools, tool_choice: "auto" }),
             // Thinking ignores temperature, and its reasoning counts
             // against max_tokens.
             ...(thinking ? { max_tokens: 8192 } : { temperature: 0.2, max_tokens: 2048 }),

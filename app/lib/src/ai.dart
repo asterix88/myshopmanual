@@ -224,6 +224,8 @@ class AiChat {
         // Tells the server this app can show the AI manual pages and sends
         // back the model's reasoning within a question.
         'features': const ['view_page', 'reasoning'],
+        // The last round: the server asks for the answer with what was found.
+        if (round == maxRounds - 1) 'final': true,
       });
       final message = (response['message'] as Map).cast<String, dynamic>();
       final toolCalls = (message['tool_calls'] as List? ?? const []).cast<Map<String, dynamic>>();
