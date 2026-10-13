@@ -5,7 +5,7 @@ The file has a header row with these columns (any order, any case):
 
     NRP | Nama | PIN awal | Admin
 
-- PIN awal: 6 digits, given to the employee for the first login; the app
+- PIN awal: 4 digits, given to the employee for the first login; the app
   then asks for a new PIN. Changing it in the file later resets that
   employee's PIN to the new starting PIN.
 - Admin: "ya" for employees who manage the list in the app (menu
@@ -30,6 +30,9 @@ import urllib.request
 from pathlib import Path
 
 SERVER = os.environ.get("AI_SERVER_URL", "https://ai.mymanual.my.id").rstrip("/")
+
+# Digits in a starting PIN (the server checks the same).
+PIN_LENGTH = 4
 
 COLUMNS = {
     "nrp": ("nrp",),
@@ -85,11 +88,11 @@ def parse(rows: list[list[str]]) -> tuple[list[dict], list[str]]:
         if not nrp:
             continue
         pin = get(row, "pin")
-        # Excel drops leading zeros from numbers: 012345 becomes 12345.
-        if pin.isdigit() and len(pin) < 6:
-            pin = pin.zfill(6)
-        if not (pin.isdigit() and len(pin) == 6):
-            problems.append(f"Baris {n} ({nrp}): PIN awal harus 6 angka.")
+        # Excel drops leading zeros from numbers: 0123 becomes 123.
+        if pin.isdigit() and len(pin) < PIN_LENGTH:
+            pin = pin.zfill(PIN_LENGTH)
+        if not (pin.isdigit() and len(pin) == PIN_LENGTH):
+            problems.append(f"Baris {n} ({nrp}): PIN awal harus {PIN_LENGTH} angka.")
             continue
         if nrp in seen:
             problems.append(f"Baris {n}: NRP {nrp} dobel.")
