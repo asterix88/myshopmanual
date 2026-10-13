@@ -161,6 +161,65 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  /// "Jawaban salah": asks what is wrong, then sends the answer to the admins.
+  Future<void> _report(int index) async {
+    final entry = _entries[index];
+    final question = _entries.take(index).lastWhere((e) => e.fromUser, orElse: () => ChatEntry.user('')).text;
+    final note = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 24),
+        title: const Text('Jawaban salah?'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Jawaban ini dikirim ke admin untuk diperiksa dan dipakai memperbaiki nyel AI.'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: note,
+                maxLines: 3,
+                minLines: 2,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  hintText: 'Apa yang salah? (boleh kosong)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.navy),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Kirim'),
+          ),
+        ],
+      ),
+    );
+    final text = note.text.trim();
+    note.dispose();
+    if (ok != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _chat.report(question: question, answer: entry, note: text);
+      if (!mounted) return;
+      setState(() => entry.reported = true);
+      messenger.showSnackBar(const SnackBar(content: Text('Terima kasih, laporan terkirim ke admin.')));
+      await _chat.save(_entries);
+    } on AiException catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    } on Object catch (e) {
+      debugPrint('report failed: $e');
+      messenger.showSnackBar(const SnackBar(content: Text('Laporan belum terkirim. Coba lagi.')));
+    }
+  }
+
   void _newChat() {
     setState(_entries.clear);
     _closeSearch();
@@ -355,6 +414,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             popIn: _fresh.contains(entry),
                             highlight: _searching ? _query : '',
                             current: _searching && _hits.isNotEmpty && _hits[_hit] == i,
+                            onReport: entry.fromUser || entry.failed || _status != null ? null : () => _report(i),
                           ),
                         if (_status != null) _Working(status: _status!),
                       ],
@@ -572,9 +632,19 @@ class _Intro extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({super.key, required this.entry, this.popIn = false, this.highlight = '', this.current = false});
+  const _Bubble({
+    super.key,
+    required this.entry,
+    this.popIn = false,
+    this.highlight = '',
+    this.current = false,
+    this.onReport,
+  });
 
   final ChatEntry entry;
+
+  /// Reports the answer as wrong; null for questions and errors.
+  final VoidCallback? onReport;
 
   /// Pops in when first shown (a message just sent or answered).
   final bool popIn;
@@ -774,8 +844,71 @@ class _Bubble extends StatelessWidget {
                 ],
               ),
             ],
+            if (!entry.failed) _AnswerFooter(entry: entry, onReport: onReport),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Under an answer: a note when parts of it are not from a manual page, and
+/// the "Jawaban salah" button.
+class _AnswerFooter extends StatelessWidget {
+  const _AnswerFooter({required this.entry, required this.onReport});
+
+  final ChatEntry entry;
+  final VoidCallback? onReport;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: entry.hasUncheckedParts
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 1),
+                        child: Icon(Icons.info_outline, size: 15, color: AppColors.orangeText),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Sebagian dari pengetahuan umum, belum dicek di manual. Cek manual unit sebelum dipakai.',
+                          style: TextStyle(fontSize: 11.5, height: 1.35, color: AppColors.orangeText),
+                        ),
+                      ),
+                    ],
+                  )
+                : const SizedBox.shrink(),
+          ),
+          if (entry.reported)
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.thumb_down, size: 15, color: AppColors.muted),
+                  const SizedBox(width: 4),
+                  Text('Dilaporkan', style: TextStyle(fontSize: 11.5, color: AppColors.muted)),
+                ],
+              ),
+            )
+          else if (onReport != null)
+            IconButton(
+              tooltip: 'Jawaban salah',
+              visualDensity: VisualDensity.compact,
+              iconSize: 18,
+              color: AppColors.muted,
+              icon: const Icon(Icons.thumb_down_outlined),
+              onPressed: onReport,
+            ),
+        ],
       ),
     );
   }

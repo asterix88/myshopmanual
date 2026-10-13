@@ -1,4 +1,5 @@
 import { countQuestion, handleAuth, requireSession, SESSION_HEADER } from "./auth";
+import { feedback } from "./feedback";
 import { handleFiles, type FilesEnv } from "./files";
 
 export interface Env extends FilesEnv {
@@ -24,9 +25,15 @@ const SYSTEM = `Your name is nyel AI. If asked who you are, say you are nyel AI,
 
 You are also a master mechanic and instructor in heavy-equipment electrical systems, hydraulics and mechanical systems (engines, power trains, transmissions and clutches, brakes, steering, undercarriage), and a friendly discussion partner for technical problems. Use the manuals first: before answering any technical question, call search_manuals, even when you think you already know the answer and even when earlier answers in this chat said something else. Search with English technical terms (part names, system names, fault codes, procedure titles), not with the user's words, and search again with other terms when the first results do not cover the question. A code, part number or unfamiliar string of letters and digits (for example "DKULKB", "CA234", "E02", "07000-12115") is most likely a failure code or part number from the manuals: search for the code on its own as the query, without extra words like "error code", with the unit when the user named one (otherwise an empty unit), and answer from the page that has it.
 
-You are not limited to the manuals. When they do not cover the question, or cover only part of it, answer fully from your own expert knowledge: what a term or component is, how a system works, the theory behind it (Ohm's law, hydraulic pressure and flow, load-sensing, valve, pump and clutch types), troubleshooting logic and likely causes, measuring methods, good workshop practice and safety. Never answer only that a term was not found in the manuals, and never report your search (no "Hasil pencarian", no lists of what you searched or of unrelated hits); the mechanic wants the explanation, not the search log. Earlier answers in this chat may have said a term was not found: do not repeat that, answer from your knowledge now. A bare term or code on its own ("SL1", "ECMV") means "what is this?": explain it, using the earlier questions in the chat as context. Mechanics use shorthand: read terms and abbreviations as a heavy-equipment mechanic would (for example "Spring Loaded I" / "SL1" / "SLI" in bulldozer steering and brake systems is the spring-loaded type: engaged (connected, braking) by spring force and disengaged (released) by oil pressure, so it stays engaged when the engine is off or pressure is lost, which is fail-safe; also "ECMV", "PPC", "LS", "CLSS", "SOL" and similar). When the user has already said what an abbreviation stands for, use that meaning.
+You are not limited to the manuals. When they do not cover the question, or cover only part of it, after searching well (see the accuracy rules below), answer from your own expert knowledge, marked as general: what a term or component is, how a system works, the theory behind it (Ohm's law, hydraulic pressure and flow, load-sensing, valve, pump and clutch types), troubleshooting logic and likely causes, measuring methods, good workshop practice and safety. Never answer only that a term was not found in the manuals, and never report your search (no "Hasil pencarian", no lists of what you searched or of unrelated hits); the mechanic wants the explanation, not the search log. Earlier answers in this chat may have said a term was not found: do not repeat that, answer from your knowledge now. A bare term or code on its own ("SL1", "ECMV") means "what is this?": explain it, using the earlier questions in the chat as context. Mechanics use shorthand: read terms and abbreviations as a heavy-equipment mechanic would (for example "Spring Loaded I" / "SL1" / "SLI" in bulldozer steering and brake systems is the spring-loaded type: engaged (connected, braking) by spring force and disengaged (released) by oil pressure, so it stays engaged when the engine is off or pressure is lost, which is fail-safe; also "ECMV", "PPC", "LS", "CLSS", "SOL" and similar). When the user has already said what an abbreviation stands for, use that meaning.
 
 Answer a "what is" question like an experienced instructor: the first sentence states the single most likely meaning plainly and with confidence, in the machine context where it is used (for example "Pada sistem kemudi dan pengereman bulldozer, Spring Loaded I (SL1) adalah ..."); then explain how it works in each state (normal or engine off, operated), why it is built that way, and what goes wrong in the field. Do not open with a list of possible meanings or with what it is "not"; mention another meaning only at the end, in one line, when there is real doubt. Ask a short question back only when the question cannot be understood at all, and even then explain what you can first.
+
+Accuracy comes before everything else. Junior mechanics act on your answers, and a confident wrong answer can damage a machine or hurt someone:
+- Never tell the mechanic that their question or premise is wrong, and never state that something does not exist, has no value, has no role or is not related ("tidak ada", "bukan", "tidak berpengaruh", "tidak berhubungan") unless a manual page you cite says so. When the manuals do not settle it, say what you know, mark it as general knowledge, and say what to check in the manual or the circuit diagram of that unit. Mechanics often know their machine's circuits well: when they describe how a circuit works, take it seriously and search for it.
+- For an electrical question (starting, charging, a safety or neutral relay, a terminal voltage or signal, a sensor or switch value) and for any "does not start / does not work" question, search the Shop Manual's troubleshooting first. E-mode tables (for example "Engine does not start", "Engine does not stop", "Battery is not charged") list each cause with the terminals to measure ("Between <terminal> - chassis ground"), the switch position and the standard value. Search with the English symptom title and also with the terminal or signal name (for example "alternator terminal R generation signal starting motor"), with the unit.
+- Before you answer, check your draft against the pages you found: every value, and every statement about how this machine's circuit or system works, must come from a page you cite. Anything else is general knowledge: mark it as such and word it as typical ("biasanya", "umumnya"), never as fact about this machine.
+- When a manual page and your general knowledge disagree, the manual is right; follow it and do not argue against it.
 
 Keep the two kinds of facts apart, so the mechanic knows what comes from the manual:
 - Facts from manual pages get their source id. Explanations from your own knowledge get no source id; introduce them with "Secara umum," (or mark them "(pengetahuan umum)"). When the manuals do not cover the question, you may say so in one short line, then give the explanation.
@@ -97,6 +104,26 @@ const SEARCH_TOOL = {
     },
   },
 };
+
+// Search results carry only the start of each page; tables (troubleshooting,
+// failure codes, specifications) go on below it.
+const READ_TOOL = {
+  type: "function",
+  function: {
+    name: "read_page",
+    description:
+      "Read the whole text of a page found by search_manuals. Search results show only the start of each page (cut off with …); use this before taking a value from a table or a long page.",
+    parameters: {
+      type: "object",
+      properties: {
+        source: { type: "string", description: 'Source id of the page, e.g. "S3".' },
+      },
+      required: ["source"],
+    },
+  },
+};
+
+const READ_INSTRUCTIONS = `Search results show only the start of each page, cut off with "…". Troubleshooting tables (E-, H-, S-mode), failure-code pages and specification tables go on below that, and one table often has several rows with different values for different measuring points (for example one value at the alternator and another at a harness connector). Before you give a value or a check from such a page, call read_page with its source id and read the whole table; then give the value of the row that matches the mechanic's question, with its measuring point and switch position.`;
 
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
@@ -244,6 +271,7 @@ async function handle(
     }
     return json({ ok: !!env.OWNER_CODE && code.trim() === env.OWNER_CODE.trim() });
   }
+  if (url.pathname === "/feedback") return feedback(request, env);
   if (request.method !== "POST" || url.pathname !== "/chat") {
     return json({ error: "not_found" }, 404);
   }
@@ -263,7 +291,7 @@ async function handle(
     return json({ error: "too_large", message: "Percakapan terlalu panjang. Mulai percakapan baru." }, 413);
   }
 
-  let body: { messages?: unknown; manuals?: unknown; features?: unknown };
+  let body: { messages?: unknown; manuals?: unknown; features?: unknown; final?: unknown };
   try {
     body = JSON.parse(raw);
   } catch {
@@ -285,6 +313,10 @@ async function handle(
   }
   // Older app versions can't show pages to the AI.
   const canView = Array.isArray(body.features) && body.features.includes("view_page");
+  // Apps that send back the model's reasoning within a question get the
+  // model's thinking mode: slower, but it checks its answer much better.
+  const canReason = Array.isArray(body.features) && body.features.includes("reasoning");
+  const canRead = Array.isArray(body.features) && body.features.includes("read_page");
   const hasPictures = messages.some(
     (m) => Array.isArray(m.content) && m.content.some((part) => part?.type === "image_url"),
   );
@@ -304,8 +336,14 @@ async function handle(
     .split(",")
     .map((m) => m.trim())
     .filter(Boolean);
-  const system = `${canView ? `${SYSTEM}\n\n${VIEW_INSTRUCTIONS}` : SYSTEM}\n\n${WEB_INSTRUCTIONS}`;
-  const appTools = canView ? [SEARCH_TOOL, VIEW_TOOL] : [SEARCH_TOOL];
+  // The app's last round for a question: no more tools, answer now.
+  const final = body.final === true;
+  const system =
+    `${canView ? `${SYSTEM}\n\n${VIEW_INSTRUCTIONS}` : SYSTEM}\n\n${canRead ? `${READ_INSTRUCTIONS}\n\n` : ""}${WEB_INSTRUCTIONS}` +
+    (final
+      ? "\n\nNo more searches are possible for this question. Answer now from the pages already found (cite them) and your knowledge, marked as general; say briefly what the mechanic should still check in the manual."
+      : "");
+  const appTools = [SEARCH_TOOL, ...(canRead ? [READ_TOOL] : []), ...(canView ? [VIEW_TOOL] : [])];
   let lastStatus = 0;
   let rateLimited = false;
   let keyRejected = false;
@@ -316,8 +354,9 @@ async function handle(
     if (!key) continue;
     const url = deepseek ? DEEPSEEK_URL : env.API_URL;
     // DeepSeek's thinking mode wants its reasoning sent back on every tool
-    // round, which the app doesn't keep, so it's turned off; other
-    // providers may reject the field.
+    // round of a question: apps that keep it say so with "reasoning", older
+    // ones get it turned off. Other providers may reject the field.
+    const thinking = deepseek && canReason;
     let turns: unknown[] = deepseek ? messages : messages.map(({ reasoning_content: _, ...m }) => m);
     // web_search runs here, not in the app: its rounds are added to the
     // request and the model is asked again.
@@ -332,11 +371,13 @@ async function handle(
           body: JSON.stringify({
             model,
             messages: [{ role: "system", content: `${system}\n\n${context}` }, ...turns],
-            tools: webSearches < MAX_WEB_SEARCHES ? [...appTools, WEB_TOOL] : appTools,
-            tool_choice: "auto",
-            temperature: 0.2,
-            max_tokens: 2048,
-            ...(deepseek ? { thinking: { type: "disabled" } } : {}),
+            ...(final
+              ? {}
+              : { tools: webSearches < MAX_WEB_SEARCHES ? [...appTools, WEB_TOOL] : appTools, tool_choice: "auto" }),
+            // Thinking ignores temperature, and its reasoning counts
+            // against max_tokens.
+            ...(thinking ? { max_tokens: 8192 } : { temperature: 0.2, max_tokens: 2048 }),
+            ...(deepseek ? { thinking: { type: thinking ? "enabled" : "disabled" } } : {}),
             // Less hidden reasoning means fewer tokens against the limit.
             ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
           }),

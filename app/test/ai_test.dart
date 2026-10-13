@@ -70,7 +70,7 @@ void main() {
     client.close();
 
     expect(requests.first['manuals'], ['[M1] TEST1-1: OMM Test Unit (OMM, 4 pages)']);
-    expect(requests.first['features'], ['view_page']);
+    expect(requests.first['features'], ['view_page', 'reasoning', 'read_page']);
     // Second request: question, the AI's tool call, then the pages found.
     final messages = (requests[1]['messages'] as List).cast<Map<String, dynamic>>();
     expect(messages.map((m) => m['role']), ['user', 'assistant', 'tool']);
@@ -87,6 +87,97 @@ void main() {
     expect(answer.sources.map((s) => s.page), [2, 3]);
     // [Gambar S#] lines become pictures of those pages, not text.
     expect(answer.pictures.map((s) => s.page), [3]);
+    store.dispose();
+  });
+
+  test("the model's thinking goes back within a question and is dropped after it", () async {
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    final requests = <Map<String, dynamic>>[];
+    final worker = MockClient((request) async {
+      requests.add(jsonDecode(request.body) as Map<String, dynamic>);
+      final Map<String, dynamic> message = requests.length == 1
+          ? {
+              'role': 'assistant',
+              'content': '',
+              'reasoning_content': 'Cari tabel E-3 dulu.',
+              'tool_calls': [
+                {
+                  'id': 'c1',
+                  'type': 'function',
+                  'function': {'name': 'search_manuals', 'arguments': jsonEncode({'query': 'filter', 'unit': ''})},
+                },
+              ],
+            }
+          : {'role': 'assistant', 'content': 'Secara umum, ganti filter.', 'reasoning_content': 'Selesai.'};
+      return http.Response(jsonEncode({'finish_reason': 'stop', 'message': message}), 200);
+    });
+    final chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'));
+    final answer = await chat.ask('Filter?');
+    final second = (requests[1]['messages'] as List).cast<Map<String, dynamic>>();
+    expect(second[1]['reasoning_content'], 'Cari tabel E-3 dulu.');
+    // Not from a manual page: the answer says it needs checking.
+    expect(answer.hasUncheckedParts, isTrue);
+
+    await chat.ask('Lagi?');
+    final third = (requests[2]['messages'] as List).cast<Map<String, dynamic>>();
+    expect(third.where((m) => m.containsKey('reasoning_content')), isEmpty);
+    store.dispose();
+  });
+
+  test('the AI can read the whole text of a page search found', () async {
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    await store.download(store.catalog.files.single, unitName: 'TEST1-1');
+    final requests = <Map<String, dynamic>>[];
+    Map<String, dynamic> call(String name, Map<String, dynamic> args) => {
+          'role': 'assistant',
+          'content': '',
+          'tool_calls': [
+            {
+              'id': name,
+              'type': 'function',
+              'function': {'name': name, 'arguments': jsonEncode(args)},
+            },
+          ],
+        };
+    final worker = MockClient((request) async {
+      requests.add(jsonDecode(request.body) as Map<String, dynamic>);
+      final message = switch (requests.length) {
+        1 => call('search_manuals', {'query': 'hydraulic oil filter clogging lamp', 'unit': ''}),
+        2 => call('read_page', {'source': 'S1'}),
+        _ => {'role': 'assistant', 'content': 'Ganti filter [S1].'},
+      };
+      return http.Response(jsonEncode({'message': message}), 200);
+    });
+    final chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'));
+    await chat.ask('Filter?');
+    final read = (requests[2]['messages'] as List).cast<Map<String, dynamic>>().last;
+    expect(read['tool_call_id'], 'read_page');
+    expect(read['content'], startsWith('[S1] TEST1-1 · OMM Test Unit · page 2'));
+    expect(read['content'], contains('HYDRAULIC OIL FILTER CLOGGING CAUTION LAMP'));
+    store.dispose();
+  });
+
+  test('a wrong answer is reported with its question and pages', () async {
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    late http.Request sent;
+    final worker = MockClient((request) async {
+      sent = request;
+      return http.Response(jsonEncode({'ok': true}), 200);
+    });
+    final chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'));
+    await chat.report(
+      question: 'Tegangan terminal R?',
+      answer: ChatEntry.assistant('Tidak ada nilai [1].'),
+      note: 'Ada di E-3',
+    );
+    expect(sent.url.toString(), 'https://ai.test/feedback');
+    final body = jsonDecode(sent.body) as Map<String, dynamic>;
+    expect(body['question'], 'Tegangan terminal R?');
+    expect(body['answer'], 'Tidak ada nilai.');
+    expect(body['note'], 'Ada di E-3');
     store.dispose();
   });
 

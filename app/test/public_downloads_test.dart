@@ -50,20 +50,21 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Simpan ke Download'));
+    expect(find.text('Diunduh'), findsNothing);
+    expect(find.text('Siap dibuka offline'), findsOneWidget);
+    await tester.tap(find.byTooltip('Simpan file'));
     await tester.pumpAndSettle();
-    expect(find.text('Simpan ke folder Download?'), findsOneWidget);
-    expect(find.text('Download/MyManual/'), findsOneWidget);
-    expect(find.textContaining('ruang kosong di HP'), findsOneWidget);
+    expect(find.text('Simpan file?'), findsOneWidget);
+    expect(find.text('File disimpan di folder /Download/MyManual'), findsOneWidget);
 
-    await tester.tap(find.text('Simpan'));
+    await tester.tap(find.text('Ya'));
     await tester.pumpAndSettle();
     final name = PublicDownloads.fileName(file.title);
     expect(saved, [name]);
     expect(find.text('Tersimpan di Download/MyManual/$name'), findsOneWidget);
     expect(find.text('BUKA'), findsOneWidget);
     // The copy is there now, so the card no longer offers it.
-    expect(find.text('Simpan ke Download'), findsNothing);
+    expect(find.byTooltip('Simpan file'), findsNothing);
     // The message goes away by itself.
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();

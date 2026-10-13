@@ -72,21 +72,21 @@ void main() {
 
     step('show unit page');
     await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(home: UnitScreen(unitId: file.unitId))));
-    await pumpUntil(tester, find.text('Simpan ke Download'));
+    await pumpUntil(tester, find.byTooltip('Simpan file'));
 
-    step('tap Simpan ke Download');
-    await tester.tap(find.text('Simpan ke Download'));
-    await pumpUntil(tester, find.text('Simpan ke folder Download?'));
-    expect(find.text('Download/MyManual/'), findsOneWidget);
+    step('tap save icon');
+    await tester.tap(find.byTooltip('Simpan file'));
+    await pumpUntil(tester, find.text('Simpan file?'));
+    expect(find.text('File disimpan di folder /Download/MyManual'), findsOneWidget);
     step('confirm');
-    await tester.tap(find.text('Simpan'));
+    await tester.tap(find.text('Ya'));
 
     await pumpUntil(tester, find.textContaining('Tersimpan di Download/MyManual/'));
     step('saved');
     // The message closes by itself after 2 seconds.
     await wait(tester, const Duration(seconds: 4));
     expect(find.textContaining('Tersimpan di Download/MyManual/'), findsNothing);
-    expect(find.text('Simpan ke Download'), findsNothing);
+    expect(find.byTooltip('Simpan file'), findsNothing);
 
     step('leave and come back');
     // Leaving the app and coming back checks the Download folder again:
@@ -100,7 +100,7 @@ void main() {
       tester.binding.handleAppLifecycleStateChanged(state);
     }
     await wait(tester, const Duration(seconds: 3));
-    expect(find.text('Simpan ke Download'), findsNothing);
+    expect(find.byTooltip('Simpan file'), findsNothing);
     step('done');
   }, timeout: const Timeout(Duration(minutes: 4)));
 

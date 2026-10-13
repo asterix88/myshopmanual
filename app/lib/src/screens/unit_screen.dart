@@ -410,55 +410,35 @@ class _FileCard extends StatelessWidget {
               ],
             )
           else
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    withdrawn
-                        ? 'Sudah ditarik dari server'
-                        : lastPage != null
-                            ? 'Terakhir dibuka: hlm $lastPage'
-                            : 'Siap dibuka offline',
-                    style: TextStyle(fontSize: 12, color: AppColors.muted),
-                  ),
-                ),
-                if (hasNewVersion)
-                  TextButton(
-                    onPressed: () => _download(context, store),
-                    child: const Text('Perbarui', style: TextStyle(fontWeight: FontWeight.w600)),
-                  ),
-                Pill('Diunduh', background: AppColors.greySoft, foreground: AppColors.ink),
-              ],
-            ),
-          if (downloaded && progress == null)
-            // Hidden once the copy is in Download; back if it gets deleted.
+            // Copy to the phone's Download folder: a small icon, hidden once
+            // the copy is there and back if it gets deleted.
             ListenableBuilder(
               listenable: PublicDownloads.instance,
               builder: (context, _) {
                 final name = PublicDownloads.fileName(file.title);
-                if (!PublicDownloads.instance.canSave(name)) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 32),
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                final canSave = PublicDownloads.instance.canSave(name);
+                final note = withdrawn
+                    ? 'Sudah ditarik dari server'
+                    : lastPage != null
+                        ? 'Terakhir dibuka: hlm $lastPage'
+                        : 'Siap dibuka offline';
+                return Row(
+                  children: [
+                    Expanded(child: Text(note, style: TextStyle(fontSize: 12, color: AppColors.muted))),
+                    if (hasNewVersion)
+                      TextButton(
+                        onPressed: () => _download(context, store),
+                        child: const Text('Perbarui', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
+                    if (canSave)
+                      IconButton(
+                        tooltip: 'Simpan file',
                         visualDensity: VisualDensity.compact,
-                        side: BorderSide(color: AppColors.navy, width: 1.2),
-                        foregroundColor: AppColors.navy,
-                        shape: const StadiumBorder(),
+                        color: AppColors.navy,
+                        icon: const Icon(Icons.sd_card_outlined, size: 22),
+                        onPressed: () => _saveToDownloads(context, store, name),
                       ),
-                      onPressed: () => _saveToDownloads(context, store, name),
-                      icon: const Icon(Icons.download, size: 15),
-                      label: const Text(
-                        'Simpan ke Download',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
+                  ],
                 );
               },
             ),
@@ -469,14 +449,25 @@ class _FileCard extends StatelessWidget {
 
   Future<void> _saveToDownloads(BuildContext context, AppStore store, String name) async {
     final downloads = PublicDownloads.instance;
-    final size = store.localManual(file.key)?.file.pdf.size ?? file.pdf.size;
-    final free = await downloads.freeSpace();
-    if (!context.mounted) return;
-    final ok = await showModalBottomSheet<bool>(
+    final ok = await showDialog<bool>(
       context: context,
-      showDragHandle: true,
-      backgroundColor: AppColors.surface,
-      builder: (context) => _SaveSheet(name: name, size: size, free: free),
+      builder: (context) => AlertDialog(
+        // Wider than other dialogs: close to the screen edges.
+        insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 24),
+        title: const Text('Simpan file?'),
+        content: const SizedBox(
+          width: double.maxFinite,
+          child: Text('File disimpan di folder /Download/MyManual'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Tidak')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.navy),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Ya'),
+          ),
+        ],
+      ),
     );
     if (ok != true || !context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
@@ -670,73 +661,4 @@ bool _sameList(List<String> a, List<String> b) {
     if (a[i] != b[i]) return false;
   }
   return true;
-}
-
-/// "Simpan ke folder Download?": what gets copied where, and its cost in space.
-class _SaveSheet extends StatelessWidget {
-  const _SaveSheet({required this.name, required this.size, required this.free});
-
-  final String name;
-  final int size;
-  final int? free;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('Simpan ke folder Download?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-              decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(12)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600)),
-                  Text('Download/MyManual/', style: TextStyle(fontSize: 12, color: AppColors.muted)),
-                  Text(
-                    free == null
-                        ? formatSize(size)
-                        : '${formatSize(size)} · ruang kosong di HP ${formatSize(free!)}',
-                    style: TextStyle(fontSize: 12, color: AppColors.muted),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Salinan ini memakai ruang ${formatSize(size)} lagi.',
-              style: TextStyle(fontSize: 12.5, color: AppColors.muted),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.navy, width: 1.2),
-                    foregroundColor: AppColors.navy,
-                    shape: const StadiumBorder(),
-                  ),
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Batal'),
-                ),
-                const SizedBox(width: 10),
-                FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: AppColors.navy, shape: const StadiumBorder()),
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Simpan'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
