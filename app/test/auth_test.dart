@@ -268,15 +268,15 @@ void main() {
     expect(find.text('Halo, Budi'), findsOneWidget);
     expect(find.text('Buat PIN baru Anda'), findsOneWidget);
 
-    await tester.enterText(find.descendant(of: find.byKey(const Key('pin-new')), matching: find.byType(TextField)), '123456');
+    await tester.enterText(find.descendant(of: find.byKey(const Key('pin-new')), matching: find.byType(TextField)), '1234');
     // The sixth digit of the repeated PIN saves it.
     await tester.runAsync(() async {
       await tester.enterText(
-          find.descendant(of: find.byKey(const Key('pin-repeat')), matching: find.byType(TextField)), '123456');
+          find.descendant(of: find.byKey(const Key('pin-repeat')), matching: find.byType(TextField)), '1234');
       await Future<void>.delayed(const Duration(milliseconds: 300));
     });
     await tester.pumpAndSettle();
-    expect(sent['/auth/pin']!['pin'], '123456');
+    expect(sent['/auth/pin']!['pin'], '1234');
     expect(store.loggedIn, isTrue);
     expect(find.text('MANUAL BOOK'), findsOneWidget);
     await tester.runAsync(() async => store.dispose());
@@ -296,7 +296,7 @@ void main() {
               }),
               200);
         case '/admin/pin':
-          return http.Response(jsonEncode({'ok': true, 'pin': '482907'}), 200);
+          return http.Response(jsonEncode({'ok': true, 'pin': '4829'}), 200);
       }
       return _files(request);
     });
@@ -335,7 +335,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     });
     await tester.pumpAndSettle();
-    expect(find.text('482907'), findsOneWidget);
+    expect(find.text('4829'), findsOneWidget);
     await tester.runAsync(() async => store.dispose());
   });
 }

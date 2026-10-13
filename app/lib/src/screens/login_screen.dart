@@ -94,6 +94,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _pin,
                     obscureText: !_showPin,
                     keyboardType: TextInputType.number,
+                    // Up to 6: PINs chosen before PINs became 4 digits still
+                    // work until the employee list resets them.
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
                     onSubmitted: (_) => _login(),
                     decoration: _inputDecoration(error: _error != null).copyWith(
@@ -135,6 +137,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
+/// Digits in a PIN (the server checks the same).
+const pinLength = 4;
+
 /// After the first login with the starting PIN: the employee picks their own.
 class ChoosePinScreen extends StatefulWidget {
   const ChoosePinScreen({super.key, required this.setupToken, required this.name});
@@ -163,8 +168,8 @@ class _ChoosePinScreenState extends State<ChoosePinScreen> {
 
   Future<void> _save() async {
     if (_busy) return;
-    if (_pin.text.length != 6) {
-      setState(() => _error = 'PIN harus 6 angka.');
+    if (_pin.text.length != pinLength) {
+      setState(() => _error = 'PIN harus $pinLength angka.');
       return;
     }
     if (_pin.text != _repeat.text) {
@@ -284,7 +289,7 @@ class _PinBoxesState extends State<PinBoxes> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              for (var i = 0; i < 6; i++)
+              for (var i = 0; i < pinLength; i++)
                 Container(
                   width: 44,
                   height: 52,
@@ -318,9 +323,9 @@ class _PinBoxesState extends State<PinBoxes> {
                 keyboardType: TextInputType.number,
                 showCursor: false,
                 enableInteractiveSelection: false,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(pinLength)],
                 onChanged: (v) {
-                  if (v.length == 6) widget.onCompleted?.call();
+                  if (v.length == pinLength) widget.onCompleted?.call();
                 },
               ),
             ),

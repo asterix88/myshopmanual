@@ -1,4 +1,4 @@
-// Employee login: NRP + 6-digit PIN. The employee list comes from Anas's
+// Employee login: NRP + 4-digit PIN. The employee list comes from Anas's
 // karyawan.xlsx (tools/upload_karyawan.py posts it to /admin/import); each
 // employee is one KV entry "emp:<NRP>" whose metadata is the row the admin
 // screen lists, so listing needs no extra reads.
@@ -138,7 +138,11 @@ async function pinHash(env: AuthEnv, salt: string, pin: string): Promise<string>
   return hex(await crypto.subtle.sign("HMAC", await signingKey(env), enc.encode(`${salt}:${pin}`)));
 }
 
-const validPin = (pin: string) => /^\d{6}$/.test(pin);
+// New PINs (starting and chosen) have 4 digits. Login takes any PIN that
+// matches, so 6-digit PINs set before 13 Oct 2026 still work until the
+// employee list gives everyone a new 4-digit starting PIN.
+const PIN_LENGTH = 4;
+const validPin = (pin: string) => new RegExp(`^\\d{${PIN_LENGTH}}$`).test(pin);
 const cleanNrp = (nrp: unknown) => String(nrp ?? "").trim().toUpperCase();
 
 function rowOf(e: Employee): Row {
@@ -270,7 +274,7 @@ async function setPin(request: Request, env: AuthEnv): Promise<Response> {
     return json({ error: "expired", message: "Waktu habis. Silakan masuk lagi dengan PIN awal." }, 401);
   }
   const pin = String(b.pin ?? "").trim();
-  if (!validPin(pin)) return json({ error: "pin_format", message: "PIN harus 6 angka." }, 400);
+  if (!validPin(pin)) return json({ error: "pin_format", message: `PIN harus ${PIN_LENGTH} angka.` }, 400);
   const e = await load(env, s.n);
   if (!e) return notFound();
   if (!e.active) return inactive();
@@ -337,7 +341,7 @@ async function importList(request: Request, env: AuthEnv): Promise<Response> {
     const pin = String(r.pin ?? "").trim();
     if (!nrp) continue;
     if (!validPin(pin)) {
-      problems.push(`${nrp}: PIN awal harus 6 angka`);
+      problems.push(`${nrp}: PIN awal harus ${PIN_LENGTH} angka`);
       continue;
     }
     rows.set(nrp, { name: String(r.name ?? "").trim() || nrp, pin, admin: r.admin === true });
@@ -463,7 +467,7 @@ async function admin(request: Request, env: AuthEnv, path: string): Promise<Resp
   if (!e) return notFound();
 
   if (path === "/admin/pin") {
-    const pin = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, "0");
+    const pin = String(crypto.getRandomValues(new Uint32Array(1))[0] % 10 ** PIN_LENGTH).padStart(PIN_LENGTH, "0");
     e.salt = b64url(crypto.getRandomValues(new Uint8Array(12)));
     e.pin = await pinHash(env, e.salt, pin);
     e.must_change = true;
