@@ -105,6 +105,26 @@ const SEARCH_TOOL = {
   },
 };
 
+// Search results carry only the start of each page; tables (troubleshooting,
+// failure codes, specifications) go on below it.
+const READ_TOOL = {
+  type: "function",
+  function: {
+    name: "read_page",
+    description:
+      "Read the whole text of a page found by search_manuals. Search results show only the start of each page (cut off with …); use this before taking a value from a table or a long page.",
+    parameters: {
+      type: "object",
+      properties: {
+        source: { type: "string", description: 'Source id of the page, e.g. "S3".' },
+      },
+      required: ["source"],
+    },
+  },
+};
+
+const READ_INSTRUCTIONS = `Search results show only the start of each page, cut off with "…". Troubleshooting tables (E-, H-, S-mode), failure-code pages and specification tables go on below that, and one table often has several rows with different values for different measuring points (for example one value at the alternator and another at a harness connector). Before you give a value or a check from such a page, call read_page with its source id and read the whole table; then give the value of the row that matches the mechanic's question, with its measuring point and switch position.`;
+
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
 const VIEW_TOOL = {
@@ -296,6 +316,7 @@ async function handle(
   // Apps that send back the model's reasoning within a question get the
   // model's thinking mode: slower, but it checks its answer much better.
   const canReason = Array.isArray(body.features) && body.features.includes("reasoning");
+  const canRead = Array.isArray(body.features) && body.features.includes("read_page");
   const hasPictures = messages.some(
     (m) => Array.isArray(m.content) && m.content.some((part) => part?.type === "image_url"),
   );
@@ -318,11 +339,11 @@ async function handle(
   // The app's last round for a question: no more tools, answer now.
   const final = body.final === true;
   const system =
-    `${canView ? `${SYSTEM}\n\n${VIEW_INSTRUCTIONS}` : SYSTEM}\n\n${WEB_INSTRUCTIONS}` +
+    `${canView ? `${SYSTEM}\n\n${VIEW_INSTRUCTIONS}` : SYSTEM}\n\n${canRead ? `${READ_INSTRUCTIONS}\n\n` : ""}${WEB_INSTRUCTIONS}` +
     (final
       ? "\n\nNo more searches are possible for this question. Answer now from the pages already found (cite them) and your knowledge, marked as general; say briefly what the mechanic should still check in the manual."
       : "");
-  const appTools = canView ? [SEARCH_TOOL, VIEW_TOOL] : [SEARCH_TOOL];
+  const appTools = [SEARCH_TOOL, ...(canRead ? [READ_TOOL] : []), ...(canView ? [VIEW_TOOL] : [])];
   let lastStatus = 0;
   let rateLimited = false;
   let keyRejected = false;

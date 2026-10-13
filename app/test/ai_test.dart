@@ -70,7 +70,7 @@ void main() {
     client.close();
 
     expect(requests.first['manuals'], ['[M1] TEST1-1: OMM Test Unit (OMM, 4 pages)']);
-    expect(requests.first['features'], ['view_page', 'reasoning']);
+    expect(requests.first['features'], ['view_page', 'reasoning', 'read_page']);
     // Second request: question, the AI's tool call, then the pages found.
     final messages = (requests[1]['messages'] as List).cast<Map<String, dynamic>>();
     expect(messages.map((m) => m['role']), ['user', 'assistant', 'tool']);
@@ -122,6 +122,40 @@ void main() {
     await chat.ask('Lagi?');
     final third = (requests[2]['messages'] as List).cast<Map<String, dynamic>>();
     expect(third.where((m) => m.containsKey('reasoning_content')), isEmpty);
+    store.dispose();
+  });
+
+  test('the AI can read the whole text of a page search found', () async {
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    await store.download(store.catalog.files.single, unitName: 'TEST1-1');
+    final requests = <Map<String, dynamic>>[];
+    Map<String, dynamic> call(String name, Map<String, dynamic> args) => {
+          'role': 'assistant',
+          'content': '',
+          'tool_calls': [
+            {
+              'id': name,
+              'type': 'function',
+              'function': {'name': name, 'arguments': jsonEncode(args)},
+            },
+          ],
+        };
+    final worker = MockClient((request) async {
+      requests.add(jsonDecode(request.body) as Map<String, dynamic>);
+      final message = switch (requests.length) {
+        1 => call('search_manuals', {'query': 'hydraulic oil filter clogging lamp', 'unit': ''}),
+        2 => call('read_page', {'source': 'S1'}),
+        _ => {'role': 'assistant', 'content': 'Ganti filter [S1].'},
+      };
+      return http.Response(jsonEncode({'message': message}), 200);
+    });
+    final chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'));
+    await chat.ask('Filter?');
+    final read = (requests[2]['messages'] as List).cast<Map<String, dynamic>>().last;
+    expect(read['tool_call_id'], 'read_page');
+    expect(read['content'], startsWith('[S1] TEST1-1 · OMM Test Unit · page 2'));
+    expect(read['content'], contains('HYDRAULIC OIL FILTER CLOGGING CAUTION LAMP'));
     store.dispose();
   });
 

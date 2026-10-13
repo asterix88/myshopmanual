@@ -223,7 +223,7 @@ class AiChat {
         'manuals': manuals,
         // Tells the server this app can show the AI manual pages and sends
         // back the model's reasoning within a question.
-        'features': const ['view_page', 'reasoning'],
+        'features': const ['view_page', 'reasoning', 'read_page'],
         // The last round: the server asks for the answer with what was found.
         if (round == maxRounds - 1) 'final': true,
       });
@@ -254,6 +254,8 @@ class AiChat {
         final String content;
         if (function['name'] == 'view_page') {
           content = await _view(args, pictures, onStatus: onStatus);
+        } else if (function['name'] == 'read_page') {
+          content = await _read((args['source'] as String? ?? '').trim(), onStatus: onStatus);
         } else {
           final query = (args['query'] as String? ?? '').trim();
           content = await _search(query, (args['unit'] as String? ?? '').trim(), onStatus: onStatus);
@@ -474,6 +476,23 @@ class AiChat {
         'This page has no readable text; call view_page with source "S${source.id}" to look at it.',
       'Question: $question',
     ].join('\n\n');
+  }
+
+  /// The whole text of a page search found ([source] like "S3"), for tables
+  /// that go on past the start search shows.
+  Future<String> _read(String source, {void Function(String status)? onStatus}) async {
+    final id = RegExp(r'^\[?S(\d+)\]?$').firstMatch(source);
+    final known = id == null ? null : _sources[int.parse(id[1]!)];
+    if (known == null) return 'Unknown source "$source". Use a source id from the search results.';
+    if (!known.file.searchable) return 'This manual has no text; use view_page.';
+    onStatus?.call('Membaca halaman ${known.page}…');
+    final indexes = await store.aiIndexes(where: (f) => f.key == known.file.key, onStatus: onStatus);
+    final path = indexes[known.file.key];
+    final found = path == null ? null : await _pageTextInBackground(path, known.page);
+    if (found == null) return 'The text of this page could not be read; use view_page.';
+    final text = found.text.length > maxPageText ? '${found.text.substring(0, maxPageText)}…' : found.text;
+    return '[S${known.id}] ${known.unitName} · ${known.file.title} · page ${known.page}'
+        '${found.section == null ? '' : ' · section: ${found.section}'}\n$text';
   }
 
   static Future<({String text, String? section})?> _pageTextInBackground(String path, int page) =>
