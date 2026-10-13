@@ -107,7 +107,7 @@ class HomeScreen extends StatelessWidget {
               if (store.session?.admin ?? false)
                 const PopupMenuItem(value: 'employees', child: Text('Kelola karyawan')),
               if (store.session?.admin ?? false)
-                const PopupMenuItem(value: 'answers', child: Text('Jawaban salah nyel AI')),
+                const PopupMenuItem(value: 'answers', child: Text('Penilaian nyel AI')),
               if (store.session?.admin ?? false)
                 const PopupMenuItem(value: 'cetok', child: Text('Data Cetok Online')),
               const PopupMenuItem(value: 'theme', child: Text('Tampilan (terang / gelap)')),

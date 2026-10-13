@@ -178,6 +178,14 @@ void main() {
     expect(body['question'], 'Tegangan terminal R?');
     expect(body['answer'], 'Tidak ada nilai.');
     expect(body['note'], 'Ada di E-3');
+    expect(body['rating'], 'bad');
+
+    await chat.report(question: 'Torsi?', answer: ChatEntry.assistant('98 Nm'), rating: 'good');
+    expect((jsonDecode(sent.body) as Map)['rating'], 'good');
+    // A rating is kept with the chat; old saves knew only 'reported'.
+    final rated = ChatEntry.assistant('98 Nm')..rating = 'good';
+    expect(ChatEntry.fromJson(store, rated.toJson()).rating, 'good');
+    expect(ChatEntry.fromJson(store, {'user': false, 'text': 'x', 'reported': true}).rating, 'bad');
     store.dispose();
   });
 

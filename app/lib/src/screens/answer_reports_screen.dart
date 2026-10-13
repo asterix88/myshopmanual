@@ -7,7 +7,7 @@ import '../widgets/common.dart';
 import '../widgets/excavator_loader.dart';
 import 'shell.dart';
 
-/// Admins: the nyel AI answers mechanics reported as wrong ("Jawaban salah"),
+/// Admins: how mechanics rated nyel AI's answers, 👍 or 👎 "Jawaban salah",
 /// newest first.
 class AnswerReportsScreen extends StatefulWidget {
   const AnswerReportsScreen({super.key, this.client});
@@ -55,7 +55,7 @@ class _AnswerReportsScreenState extends State<AnswerReportsScreen> {
     final reports = _reports;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Jawaban salah'),
+        title: const Text('Penilaian nyel AI'),
         shape: Border(bottom: BorderSide(color: AppColors.line)),
       ),
       body: reports == null
@@ -75,7 +75,7 @@ class _AnswerReportsScreenState extends State<AnswerReportsScreen> {
                     ),
             )
           : reports.isEmpty
-              ? const EmptyState(icon: Icons.thumb_up_alt_outlined, title: 'Belum ada laporan jawaban salah.')
+              ? const EmptyState(icon: Icons.thumb_up_alt_outlined, title: 'Belum ada penilaian jawaban.')
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView.separated(
@@ -105,7 +105,22 @@ class _ReportCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('${report.name} · NRP ${report.nrp} · $when', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          Row(
+            children: [
+              Icon(
+                report.good ? Icons.thumb_up : Icons.thumb_down,
+                size: 16,
+                color: report.good ? AppColors.green : AppColors.danger,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '${report.good ? 'Membantu' : 'Jawaban salah'} · ${report.name} · NRP ${report.nrp} · $when',
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           Text('Pertanyaan', style: label),
           Text(report.question, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
