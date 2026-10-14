@@ -799,6 +799,7 @@ class AppStore extends ChangeNotifier {
     if (_aiIndexRun != null) return;
     final files = [for (final f in catalog.files) if (f.searchable) f];
     final missing = [for (final f in files) if (_readyAiIndex(f) == null) f];
+    if (missing.isNotEmpty) aiIndexError = null;
     final run = _aiIndexRun = AiIndexProgress(
       total: files.length,
       ready: files.length - missing.length,
@@ -973,7 +974,11 @@ class AppStore extends ChangeNotifier {
           });
       try {
         await download;
-      } on Exception {
+      } on Exception catch (e) {
+        // Shown on Cari and kept in Laporan masalah, so a phone that can't
+        // fetch indexes doesn't just search fewer manuals without a word.
+        aiIndexError = e.toString();
+        Diagnostics.log('index ${file.index.path}: $e');
         continue;
       }
       result[file.key] = target;
@@ -982,6 +987,21 @@ class AppStore extends ChangeNotifier {
   }
 
   final _aiIndexFetches = <String, Future<void>>{};
+
+  /// Why the last search index could not be fetched; cleared when a
+  /// background run starts again.
+  String? aiIndexError;
+
+  /// How many of the manuals on the server Cari can search right now.
+  ({int ready, int total}) get searchCoverage {
+    var ready = 0, total = 0;
+    for (final file in catalog.files) {
+      if (!file.searchable) continue;
+      total++;
+      if (_readyAiIndex(file) != null) ready++;
+    }
+    return (ready: ready, total: total);
+  }
 
   /// The index of [file] if it is on the phone already, else null.
   String? _readyAiIndex(ManualFile file) {

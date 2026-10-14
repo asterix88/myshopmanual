@@ -518,6 +518,29 @@ void main() {
     expect(store.aiIndexProgress, isNull);
     store.dispose();
   });
+
+  test('Cari tells how many manuals it can search when an index fails', () async {
+    var failIndexes = true;
+    final store = await AppStore.open(
+      root: root,
+      client: MockClient((request) async {
+        if (failIndexes && request.url.path.endsWith('.sqlite')) return http.Response('no', 401);
+        return fixtureServer()
+            .send(http.Request(request.method, request.url)..headers.addAll(request.headers))
+            .then(http.Response.fromStream);
+      }),
+    );
+    await store.setServerUrl('https://example.test');
+    await store.fetchAllAiIndexes();
+    expect(store.searchCoverage, (ready: 0, total: 1));
+    expect(store.aiIndexError, contains('HTTP 401'));
+
+    failIndexes = false;
+    await store.fetchAllAiIndexes();
+    expect(store.searchCoverage, (ready: 1, total: 1));
+    expect(store.aiIndexError, isNull);
+    store.dispose();
+  });
 }
 
 /// An HTTP client holding something that can't cross isolates, as a real
