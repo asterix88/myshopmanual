@@ -137,6 +137,8 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ),
             ),
+            if (store.searchCoverage case (:final ready, :final total) when ready > 0 && ready < total)
+              SliverToBoxAdapter(child: _Coverage(ready: ready, total: total)),
             if (store.searchableIndexes().isEmpty)
               const SliverToBoxAdapter(
                 child: EmptyState(
@@ -259,5 +261,62 @@ class _SearchScreenState extends State<SearchScreen> {
         },
       ),
     ];
+  }
+}
+
+/// Says when Cari can't search every manual yet: the indexes of the others
+/// are still coming, or could not be fetched (then a retry).
+class _Coverage extends StatelessWidget {
+  const _Coverage({required this.ready, required this.total});
+
+  final int ready;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final progress = store.aiIndexProgress;
+    final bytes = progress == null || progress.totalBytes == 0
+        ? null
+        : (progress.receivedBytes / progress.totalBytes).clamp(0.0, 1.0);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+      decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  progress != null
+                      ? 'Menyiapkan pencarian: $ready dari $total manual siap'
+                      : 'Baru $ready dari $total manual bisa dicari',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.navy),
+                ),
+              ),
+              if (progress == null)
+                TextButton(onPressed: store.fetchAllAiIndexes, child: const Text('Coba lagi')),
+            ],
+          ),
+          if (progress != null) ...[
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: LinearProgressIndicator(value: bytes, minHeight: 4, borderRadius: BorderRadius.circular(2)),
+            ),
+          ] else
+            Text(
+              store.aiIndexError == null
+                  ? 'Sisanya belum terunduh. Butuh internet sebentar.'
+                  : 'Gagal mengunduh: ${store.aiIndexError}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 11, color: AppColors.muted),
+            ),
+        ],
+      ),
+    );
   }
 }
