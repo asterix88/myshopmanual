@@ -346,6 +346,10 @@ async function handle(
       ? "\n\nNo more searches are possible for this question. Answer now from the pages already found (cite them) and your knowledge, marked as general; say briefly what the mechanic should still check in the manual."
       : "");
   const appTools = [SEARCH_TOOL, ...(canRead ? [READ_TOOL] : []), ...(canView ? [VIEW_TOOL] : [])];
+  const lastUser = messages.map((m) => m.role).lastIndexOf("user");
+  const fallbackRoundInQuestion = messages
+    .slice(lastUser + 1)
+    .some((m) => m.role === "assistant" && !m.reasoning_content);
   let lastStatus = 0;
   let rateLimited = false;
   let keyRejected = false;
@@ -361,7 +365,10 @@ async function handle(
     // DeepSeek's thinking mode wants its reasoning sent back on every tool
     // round of a question: apps that keep it say so with "reasoning", older
     // ones get it turned off. Other providers may reject the field.
-    const thinking = deepseek && canReason;
+    // A round of this question answered by a fallback model carries no
+    // reasoning, and thinking mode rejects that (400), so such a question
+    // goes on without thinking.
+    const thinking = deepseek && canReason && !fallbackRoundInQuestion;
     let turns: unknown[] = deepseek ? messages : messages.map(({ reasoning_content: _, ...m }) => m);
     // web_search runs here, not in the app: its rounds are added to the
     // request and the model is asked again.
