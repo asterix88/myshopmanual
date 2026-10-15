@@ -126,6 +126,8 @@ const READ_TOOL = {
 const READ_INSTRUCTIONS = `Search results show only the start of each page, cut off with "…". Troubleshooting tables (E-, H-, S-mode), failure-code pages and specification tables go on below that, and one table often has several rows with different values for different measuring points (for example one value at the alternator and another at a harness connector). Before you give a value or a check from such a page, call read_page with its source id and read the whole table; then give the value of the row that matches the mechanic's question, with its measuring point and switch position.`;
 
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
+// Extra tries when DeepSeek says it is too busy, before the fallback models.
+const DEEPSEEK_BUSY_RETRIES = 2;
 
 const VIEW_TOOL = {
   type: "function",
@@ -347,6 +349,9 @@ async function handle(
   let lastStatus = 0;
   let rateLimited = false;
   let keyRejected = false;
+  // DeepSeek answering "too busy" (503) is a different story from Groq's
+  // free tier being full, and the mechanic should hear which one it was.
+  let deepseekBusy = false;
   models: for (const entry of models) {
     const deepseek = entry.startsWith("deepseek:");
     const model = deepseek ? entry.slice("deepseek:".length) : entry;
@@ -362,6 +367,9 @@ async function handle(
     // request and the model is asked again.
     let webSearches = 0;
     const webNotes: string[] = [];
+    // DeepSeek's "too busy" usually clears within seconds, and its answers
+    // are better than the free fallback's, so it gets asked again first.
+    let busyRetries = 0;
     for (let round = 0; ; round++) {
       let upstream: Response;
       try {
@@ -441,6 +449,15 @@ async function handle(
         continue;
       }
       lastStatus = upstream.status;
+      if (deepseek && [429, 500, 502, 503].includes(upstream.status)) {
+        deepseekBusy = true;
+        if (busyRetries < DEEPSEEK_BUSY_RETRIES) {
+          console.log("deepseek busy, retrying", upstream.status, data?.error?.message);
+          await new Promise((resolve) => setTimeout(resolve, 1500 * ++busyRetries));
+          round--;
+          continue;
+        }
+      }
       if (upstream.status === 429 || upstream.status === 413) rateLimited = true;
       if (upstream.status === 401 || upstream.status === 403) keyRejected = true;
       console.log("model failed", entry, upstream.status, data?.error?.code, data?.error?.message);
@@ -452,6 +469,12 @@ async function handle(
   }
   if (keyRejected && !rateLimited) {
     return json({ error: "server_key", message: "Kunci API di server AI tidak valid. Hubungi admin." }, 502);
+  }
+  if (deepseekBusy) {
+    return json(
+      { error: "busy", message: "Server DeepSeek sedang sibuk dan AI cadangan juga penuh. Coba lagi sebentar lagi." },
+      503,
+    );
   }
   if (rateLimited) {
     return json({ error: "busy", message: "Batas pemakaian AI gratis sedang penuh. Coba lagi dalam 1 menit." }, 429);
