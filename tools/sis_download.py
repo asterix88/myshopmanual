@@ -165,23 +165,38 @@ def wait_until_settled(page, timeout: float = 45) -> None:
         time.sleep(0.7)
 
 
-def wait_for_print_view(view, timeout: float = 30) -> None:
-    """Returns as soon as SIS calls print() or the print view stops changing."""
+# Pictures still missing: every "Illustration N" caption needs a loaded <img>.
+MISSING_PICTURES = r"""() => {
+  const text = document.body ? document.body.innerText : '';
+  const captions = new Set(text.match(/Illustration\s+\d+/g) || []).size;
+  const loaded = [...document.images].filter(i => i.complete && i.naturalWidth > 1 &&
+                                               i.naturalWidth * i.naturalHeight > 2500).length;
+  const loading = [...document.images].filter(i => !i.complete).length;
+  return Math.max(captions - loaded, 0) + loading;
+}"""
+
+
+def wait_for_print_view(view, timeout: float = 60) -> int:
+    """Waits until the print view's text stops changing and every picture has
+    loaded (SIS's print() call alone is not trusted). Returns the number of
+    pictures still missing when the time runs out."""
     end = time.time() + timeout
-    last, same = -1, 0
+    last, same, missing = -1, 0, 0
     while time.time() < end:
         try:
-            if view.evaluate("window.__sisPrinted === true"):
-                return
+            # Lazy pictures below the window would never load on their own.
+            view.evaluate("document.querySelectorAll('img[loading=lazy]')"
+                          ".forEach(i => { i.loading = 'eager'; })")
             size = view.evaluate(PAGE_SIZE)
-            images = view.evaluate(IMAGES_LOADED)
+            missing = view.evaluate(MISSING_PICTURES)
         except Error:
-            size, images = -1, False
-        same = same + 1 if size == last and size > 200 and images else 0
-        if same >= 4:
-            return
+            size, missing = -1, 1
+        same = same + 1 if size == last and size > 200 and missing == 0 else 0
+        if same >= 3:
+            return 0
         last = size
         time.sleep(0.5)
+    return missing
 
 
 def open_print_view(context, page, timeout_ms: int):
@@ -201,7 +216,9 @@ def open_print_view(context, page, timeout_ms: int):
     time.sleep(0.8)
     new = [pg for pg in context.pages if pg not in pages_before]
     view = new[0] if new else page
-    wait_for_print_view(view)
+    missing = wait_for_print_view(view)
+    if missing:
+        say(f"  Peringatan: {missing} gambar belum termuat, tetap disimpan.")
     return view
 
 
