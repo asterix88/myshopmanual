@@ -35,6 +35,9 @@ PAUSE_SECONDS = 1.0
 # pops up and stops the script.
 NO_PRINT_DIALOG = "window.print = () => {};"
 
+# Every result on the page as [href, title, kind]: kind "doc" for a titled
+# link, "icon" for an icon-only link (the ⧉ next to a title) and "book" for
+# a book entry (no document number: it lists documents, it is not one).
 COLLECT_LINKS = r"""() => {
   const out = [];
   for (const a of document.querySelectorAll('a[href]')) {
@@ -42,14 +45,14 @@ COLLECT_LINKS = r"""() => {
     if (!/#\/(detail|print-preview)/i.test(href)) continue;
     // Results of the previous page SIS still keeps, hidden, are not taken.
     if (!a.getClientRects().length) continue;
-    // Book entries (no document number) list documents, they are not one.
-    if (/#\/detail/i.test(href) && !/serviceIeSystemControlNumber=/i.test(href)) continue;
     let title = (a.innerText || a.title || a.getAttribute('aria-label') || '').trim();
+    const kind = /#\/detail/i.test(href) && !/serviceIeSystemControlNumber=/i.test(href)
+        ? 'book' : (title ? 'doc' : 'icon');
     // An icon-only link: take the title from the result row around it.
     for (let row = a.parentElement; !title && row && row !== document.body; row = row.parentElement)
       title = (row.innerText || '').trim().split('\n')[0].trim();
     title = title.replace(/\s+/g, ' ');
-    out.push([href, title || 'dokumen']);
+    out.push([href, title || 'dokumen', kind]);
   }
   return out;
 }"""
@@ -382,21 +385,40 @@ LIST_PROBE = TOOLS / "sis-probe-daftar.txt"
 
 
 def page_links(page) -> list[tuple[str, str]]:
+    """The documents on the results page, in order. Each titled result
+    counts, also when SIS lists the same document twice; an icon link
+    only adds a document whose title link is missing. Book entries are
+    left out (see page_books)."""
     links = []
     for frame in page.frames:
         try:
             links += frame.evaluate(COLLECT_LINKS)
         except Error:
             pass
-    on_page: dict[str, str] = {}
-    for href, title in links:
-        on_page.setdefault(href, title)  # title link + icon link: once
-    return list(on_page.items())
+    titled = {href for href, _, kind in links if kind == "doc"}
+    out, icons = [], set()
+    for href, title, kind in links:
+        if kind == "doc":
+            out.append((href, title))
+        elif kind == "icon" and href not in titled and href not in icons:
+            icons.add(href)
+            out.append((href, title))
+    return out
 
 
-def collect(page, found: list, page_no: int) -> int:
+def page_books(page) -> list[str]:
+    books = []
+    for frame in page.frames:
+        try:
+            books += [t for _, t, kind in frame.evaluate(COLLECT_LINKS) if kind == "book"]
+        except Error:
+            pass
+    return list(dict.fromkeys(books))
+
+
+def collect(page, found: list, page_no: int) -> tuple[int, int]:
     """Adds every document on the results page (also one already taken from
-    another page: Anas wants them all); returns how many. Waits until the
+    another page: Anas wants them all); returns (documents, book entries skipped). Waits until the
     list stops changing, so a page still being drawn is not half taken.
     Writes them all to sis-probe-daftar.txt for checking."""
     links, end = [], time.time() + 15
@@ -412,15 +434,19 @@ def collect(page, found: list, page_no: int) -> int:
             break
         links = now
     earlier = {href: n for n, (href, _, _) in enumerate(found, 1)}
+    books = page_books(page)
+    for title in books:
+        say(f"    dilewati (buku/daftar isi, bukan dokumen): {title}")
     rows = []
     for href, title in links:
         if href in earlier:
             say(f"    link sama dengan dokumen ke-{earlier[href]}: {title} (tetap diunduh)")
+        earlier.setdefault(href, len(found) + 1)
         found.append((href, title, page_no))
         rows.append(f"{len(found):03d} {title}  {href}")
     with LIST_PROBE.open("a", encoding="utf-8") as f:
         f.write(f"=== halaman hasil ke-{page_no} {page.url}\n" + "\n".join(rows) + "\n\n")
-    return len(links)
+    return len(links), len(books)
 
 
 class SessionDenied(Exception):
@@ -511,9 +537,10 @@ def download_folder(p, context, folder: Path) -> bool:
             work = current
             break
         pages_taken += 1
-        on_page = collect(current, found, pages_taken)
+        on_page, books = collect(current, found, pages_taken)
         last_page = [h for h, _, _ in found[len(found) - on_page:]]
-        say(f"  Halaman hasil ke-{pages_taken}: {on_page} dokumen. Total {len(found)}.")
+        say(f"  Halaman hasil ke-{pages_taken}: {on_page + books} hasil = {on_page} dokumen"
+            f" + {books} buku (dilewati). Total dokumen {len(found)}.")
         if on_page == 0:
             pages_taken -= 1
             say("  Tidak ada link dokumen di halaman ini.")
