@@ -139,7 +139,7 @@ SNAPSHOT = r"""async ([ie, title]) => {
   style.textContent = css + '\nbody { margin: 0; background: #fff; }';
   doc.head.appendChild(style);
   // SIS's title bar may sit outside the document part: keep the title.
-  if (!(content.innerText || content.textContent).includes(title.split(' - ')[0])) {
+  if (!(content.innerText || content.textContent).toLowerCase().includes(title.toLowerCase())) {
     const h = doc.createElement('h2');
     h.textContent = title;
     doc.body.appendChild(h);
