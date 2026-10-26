@@ -176,13 +176,27 @@ MISSING_PICTURES = r"""() => {
 }"""
 
 
-def wait_for_print_view(view, timeout: float = 60) -> int:
-    """Waits until the print view's text stops changing and every picture has
-    loaded (SIS's print() call alone is not trusted). Returns the number of
-    pictures still missing when the time runs out."""
-    end = time.time() + timeout
+def skip_pressed() -> bool:
+    """True when S was pressed in the console window (Windows only)."""
+    try:
+        import msvcrt
+    except ImportError:
+        return False
+    hit = False
+    while msvcrt.kbhit():
+        hit = msvcrt.getwch().lower() == "s" or hit
+    return hit
+
+
+def wait_for_print_view(view) -> int:
+    """Waits, without a time limit, until the print view's text stops changing
+    and every picture has loaded (SIS's print() call alone is not trusted).
+    Pressing S saves the document as it is; returns the pictures still
+    missing then."""
+    start = time.time()
+    next_note = start + 60
     last, same, missing = -1, 0, 0
-    while time.time() < end:
+    while True:
         try:
             # Lazy pictures below the window would never load on their own.
             view.evaluate("document.querySelectorAll('img[loading=lazy]')"
@@ -194,9 +208,14 @@ def wait_for_print_view(view, timeout: float = 60) -> int:
         same = same + 1 if size == last and size > 200 and missing == 0 else 0
         if same >= 3:
             return 0
+        if time.time() >= next_note:
+            say(f"  Masih menunggu {missing} gambar ({time.time() - start:.0f} dtk)... "
+                "tekan S untuk simpan apa adanya.")
+            next_note += 60
+        if skip_pressed():
+            return missing
         last = size
         time.sleep(0.5)
-    return missing
 
 
 def open_print_view(context, page, timeout_ms: int):
@@ -218,7 +237,7 @@ def open_print_view(context, page, timeout_ms: int):
     view = new[0] if new else page
     missing = wait_for_print_view(view)
     if missing:
-        say(f"  Peringatan: {missing} gambar belum termuat, tetap disimpan.")
+        say(f"  Peringatan: {missing} gambar belum termuat, disimpan apa adanya.")
     return view
 
 
