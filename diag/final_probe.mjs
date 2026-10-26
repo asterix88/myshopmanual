@@ -8,7 +8,7 @@ function body(reason) {
   if (reason) a.reasoning_content = "I should search the shop manual for fuel pressure testing.";
   return { messages: [{ role: "user", content: q }, a, tool], manuals: ["SM PC2000-11R (PC2000)"], features: reason ? ["view_page", "reasoning", "read_page"] : ["view_page", "read_page"], final: true };
 }
-for (const reason of [true, false]) for (let i = 0; i < 3; i++) {
+for (const reason of [true, false]) for (let i = 0; i < 4; i++) {
   const r = await fetch("http://127.0.0.1:8787/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body(reason)) });
   const j = await r.json();
   const c = String(j.message?.content ?? JSON.stringify(j));
