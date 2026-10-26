@@ -62,9 +62,11 @@ PAGE_SIZE = "() => document.body ? document.body.innerText.length : 0"
 
 IMAGES_LOADED = """() => [...document.images].every(i => i.complete)"""
 
-# Turns the ready page into one self-contained HTML document: pictures become
-# data: URLs (they need the SIS login) and stylesheets are copied inline.
-SNAPSHOT = r"""async () => {
+# Turns the ready page into one self-contained HTML document holding only
+# the document itself: the SIS menus, tabs, document tree and footer are
+# left out. Pictures become data: URLs (they need the SIS login) and
+# stylesheets are copied inline.
+SNAPSHOT = r"""async ([ie, title]) => {
   const toDataUrl = async (url) => {
     const r = await fetch(url, {credentials: 'include'});
     const blob = await r.blob();
@@ -75,9 +77,26 @@ SNAPSHOT = r"""async () => {
       fr.readAsDataURL(blob);
     });
   };
-  const doc = document.documentElement.cloneNode(true);
-  const live = [...document.images];
-  const copies = [...doc.querySelectorAll('img')];
+  const JUNK = 'nav, header, footer, button, .d-print-none, [class*=Navigation], ' +
+               '[class*=AccordionTree], [class*=Breadcrumb], [class*=breadcrumb], ' +
+               '[class*=ookie], [class*=Banner], [class*=banner]';
+  // The document part: the largest block around the "i0..." number that has
+  // no app menu or document tree in it.
+  let part = null;
+  if (ie) {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (node.nodeValue.trim() === ie) { part = node.parentElement; break; }
+    }
+    while (part && part.parentElement && part.parentElement !== document.body &&
+           !part.parentElement.querySelector('[class*=AccordionTree], [class*=Navigation], nav'))
+      part = part.parentElement;
+  }
+  const source = part || document.body;
+  const content = source.cloneNode(true);
+  const live = [...source.querySelectorAll('img')];
+  const copies = [...content.querySelectorAll('img')];
   for (let i = 0; i < copies.length; i++) {
     const src = live[i] && (live[i].currentSrc || live[i].src);
     copies[i].removeAttribute('srcset');
@@ -85,22 +104,31 @@ SNAPSHOT = r"""async () => {
     if (!src || src.startsWith('data:')) continue;
     try { copies[i].src = await toDataUrl(src); } catch (e) { copies[i].src = src; }
   }
+  content.querySelectorAll(JUNK).forEach(n => n.remove());
+  content.querySelectorAll('script, link, style').forEach(n => n.remove());
+
   let css = '';
   for (const sheet of document.styleSheets) {
     try { for (const rule of sheet.cssRules) css += rule.cssText + '\n'; } catch (e) {}
   }
-  doc.querySelectorAll('script, link[rel=stylesheet], style').forEach(n => n.remove());
-  const head = doc.querySelector('head');
-  const style = document.createElement('style');
-  style.textContent = css;
-  head.appendChild(style);
-  const base = document.createElement('base');
-  base.href = location.origin + '/';
-  head.prepend(base);
-  const meta = document.createElement('meta');
+  const doc = document.implementation.createHTMLDocument(title);
+  const meta = doc.createElement('meta');
   meta.setAttribute('charset', 'utf-8');
-  head.prepend(meta);
-  return '<!doctype html>' + doc.outerHTML;
+  doc.head.appendChild(meta);
+  const base = doc.createElement('base');
+  base.href = location.origin + '/';
+  doc.head.appendChild(base);
+  const style = doc.createElement('style');
+  style.textContent = css + '\nbody { margin: 0; background: #fff; }';
+  doc.head.appendChild(style);
+  // SIS's title bar may sit outside the document part: keep the title.
+  if (!(content.innerText || content.textContent).includes(title.split(' - ')[0])) {
+    const h = doc.createElement('h2');
+    h.textContent = title;
+    doc.body.appendChild(h);
+  }
+  doc.body.appendChild(doc.importNode(content, true));
+  return '<!doctype html>' + doc.documentElement.outerHTML;
 }"""
 
 # SIS 2.0 has one print button per tab (Service, Repair, ...); only the one
@@ -267,7 +295,7 @@ def save_document(context, page, renderer, href: str, title: str, target: Path) 
             say("  Tombol print tidak ketemu, dokumen ini dilewati.")
             write_probe(page)
             return False
-        html = view.evaluate(SNAPSHOT)
+        html = view.evaluate(SNAPSHOT, [ie.group(1) if ie else "", title])
     except Error as e:
         say(f"  Gagal membuka: {e.message.splitlines()[0]}")
         write_probe(page)
