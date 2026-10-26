@@ -1,0 +1,38 @@
+--- thinking=true #0 status=200 model=deepseek-v4-flash dsml=false tool_calls=false
+Tekanan bahan bakar sirkuit tekanan rendah PC2000-11R diukur di **outlet feed pump** dengan pressure gauge berkapasitas **0.98 MPa**, dan nilai standarnya ada pada tabel di halaman 613 Shop Manual unit ini [S37][S38]. Karena tabel standarnya memuat beberapa baris (posisi pengukuran dan kondisi putaran berbeda), baca dulu nilai pada baris yang sesuai sebelum memutuskan hasilnya masih standar atau t
+--- thinking=true #1 status=200 model=deepseek-v4-flash dsml=false tool_calls=false
+Tekanan bahan bakar sirkuit tekanan rendah diukur di **outlet feed pump** (sisi masuk fuel filter) dengan pressure gauge berkapasitas 0,98 MPa {10 kg/cm²}, dan angka standarnya dibaca pada tabel tes di halaman prosedur itu [S37][S38] — pakai angka pada tabel tersebut sebagai patokan unit ini. Secara umum, untuk mesin diesel besar sekelas PC2000, tekanan suplai di outlet feed pump biasanya berkisar
+--- thinking=true #2 status=200 model=deepseek-v4-flash dsml=false tool_calls=false
+Tekanan bahan bakar sirkuit tekanan rendah PC2000-11R diukur di outlet feed pump dengan gauge berkapasitas 0,98 MPa, pada putaran rated engine tanpa beban [S37]; nilai standarnya ada di tabel standard value pada halaman testing tersebut [S37][S38].
+
+Secara umum (pengetahuan umum, bukan angka manual unit ini): tekanan feed pump pada mesin diesel Komatsu besar biasanya sekitar **0,15–0,30 MPa (1,5–3
+--- thinking=true #3 status=200 model=deepseek-v4-flash dsml=false tool_calls=false
+Tekanan bahan bakar sisi low pressure PC2000-11R diukur di **outlet feed pump** dengan pressure gauge berkapasitas 0,98 MPa, dan nilai standarnya dibaca pada tabel standard value halaman berikutnya [S37][S38].
+
+Langkah pengecekan:
+- Pasang pressure gauge (0,98 MPa) pada outlet feed pump, sambungan dirapatkan dengan seal yang baik supaya tidak ada kebocoran/udara masuk [S37].
+- Hidupkan engine, nai
+--- thinking=false #0 status=200 model=deepseek-v4-flash dsml=false tool_calls=false
+Tekanan bahan bakar sirkuit tekanan rendah PC2000-11R: **standar 0,98 MPa (10 kgf/cm²)** di saluran keluar feed pump, diukur dengan gauge 0,98 MPa [S37]. Nilai standar tabelnya ada di halaman lanjutan [S38].
+
+Cara cek (mengikuti prosedur Shop Manual):
+1. Pasang gauge tekanan 0,98 MPa pada saluran keluar (outlet) feed pump [S37].
+2. Jalankan mesin pada kondisi yang ditentukan prosedur (putaran dan 
+--- thinking=false #1 status=200 model=deepseek-v4-flash dsml=false tool_calls=false
+Tekanan bahan bakar sirkuit tekanan rendah PC2000-11R: **standar 0,98 MPa (10 kgf/cm²)** di outlet feed pump, diukur pada putaran mesin tinggi tanpa beban (high idle). Nilai ini yang dipakai sebagai acuan tes tekanan bahan bakar [S37].
+
+Cara ceknya:
+
+1. Pasang gauge tekanan (range minimal 1,5 MPa) pada outlet feed pump, yaitu di saluran bahan bakar tekanan rendah menuju filter/supply pump. Gunakan
+--- thinking=false #2 status=200 model=deepseek-v4-flash dsml=false tool_calls=false
+Tekanan bahan bakar sirkuit tekanan rendah PC2000-11R: **standar 0,98 MPa (9,8 kg/cm²)** diukur di outlet feed pump, dengan alat ukur berkapasitas 0,98 MPa [S37]. Halaman itu memuat tabel nilai standar lanjutan, jadi angka pastinya perlu dibaca lengkap di manual unit.
+
+Cara cek (umum, ikuti prosedur di Shop Manual):
+1. Pasang gauge tekanan 0,98 MPa pada outlet feed pump (sambungan tekanan rendah a
+--- thinking=false #3 status=200 model=deepseek-v4-flash dsml=false tool_calls=false
+Tekanan bahan bakar sirkuit tekanan rendah PC2000-11R: **standar 0,98 MPa (9,8 kg/cm²)** diukur di outlet feed pump, dengan alat ukur berkapasitas 0,98 MPa [S37]. Saya baca dulu tabel standarnya supaya nilai per titik ukur dan kondisi pengukuran tepat.
+
+Langkah cek (mengikuti prosedur Testing Fuel Pressure):
+
+1. Pasang gauge tekanan 0,98 MPa pada outlet feed pump (sambungan tekanan rendah antara f
+=== worker log
