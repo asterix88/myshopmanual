@@ -40,6 +40,8 @@ COLLECT_LINKS = r"""() => {
   for (const a of document.querySelectorAll('a[href]')) {
     const href = a.href;
     if (!/#\/(detail|print-preview)/i.test(href)) continue;
+    // Results of the previous page SIS still keeps, hidden, are not taken.
+    if (!a.getClientRects().length) continue;
     // Book entries (no document number) list documents, they are not one.
     if (/#\/detail/i.test(href) && !/serviceIeSystemControlNumber=/i.test(href)) continue;
     let title = (a.innerText || a.title || a.getAttribute('aria-label') || '').trim();
@@ -379,21 +381,7 @@ SCROLL_ALL = """() => {
 LIST_PROBE = TOOLS / "sis-probe-daftar.txt"
 
 
-# Results page on which each document was first taken.
-first_seen: dict[str, int] = {}
-
-
-def collect(page, found: dict, page_no: int) -> tuple[int, int]:
-    """Adds the page's document links; returns (documents on page, new ones).
-    Prints the ones taken on an earlier results page and writes them all
-    to sis-probe-daftar.txt for checking."""
-    for _ in range(4):
-        for frame in page.frames:
-            try:
-                frame.evaluate(SCROLL_ALL)
-            except Error:
-                pass
-        time.sleep(0.5)
+def page_links(page) -> list[tuple[str, str]]:
     links = []
     for frame in page.frames:
         try:
@@ -402,21 +390,37 @@ def collect(page, found: dict, page_no: int) -> tuple[int, int]:
             pass
     on_page: dict[str, str] = {}
     for href, title in links:
-        on_page.setdefault(href, title)
-    added = 0
+        on_page.setdefault(href, title)  # title link + icon link: once
+    return list(on_page.items())
+
+
+def collect(page, found: list, page_no: int) -> int:
+    """Adds every document on the results page (also one already taken from
+    another page: Anas wants them all); returns how many. Waits until the
+    list stops changing, so a page still being drawn is not half taken.
+    Writes them all to sis-probe-daftar.txt for checking."""
+    links, end = [], time.time() + 15
+    while time.time() < end:
+        for frame in page.frames:
+            try:
+                frame.evaluate(SCROLL_ALL)
+            except Error:
+                pass
+        time.sleep(1.0)
+        now = page_links(page)
+        if now and now == links:
+            break
+        links = now
+    earlier = {href: n for n, (href, _, _) in enumerate(found, 1)}
     rows = []
-    for href, title in on_page.items():
-        new = href not in found
-        rows.append(("BARU  " if new else "SUDAH ") + title + "  " + href)
-        if new:
-            found[href] = title
-            first_seen[href] = page_no
-            added += 1
-        else:
-            say(f"    sudah ada: {title} (dari halaman hasil ke-{first_seen.get(href, '?')})")
+    for href, title in links:
+        if href in earlier:
+            say(f"    link sama dengan dokumen ke-{earlier[href]}: {title} (tetap diunduh)")
+        found.append((href, title, page_no))
+        rows.append(f"{len(found):03d} {title}  {href}")
     with LIST_PROBE.open("a", encoding="utf-8") as f:
-        f.write(f"=== {page.url}\n" + "\n".join(rows) + "\n\n")
-    return len(on_page), added
+        f.write(f"=== halaman hasil ke-{page_no} {page.url}\n" + "\n".join(rows) + "\n\n")
+    return len(links)
 
 
 def main() -> int:
@@ -437,8 +441,9 @@ def main() -> int:
         say("1. Di jendela Chrome yang terbuka: login SIS (sekali saja, nanti diingat).")
         say("2. Cari dan pasang filter (mis. 395 + Disassembly and Assembly).")
         say("3. Saat daftar hasil tampil, kembali ke jendela hitam ini.")
-        found: dict[str, str] = {}
+        found: list[tuple[str, str, int]] = []
         pages_taken = 0
+        last_page: list[str] = []
         LIST_PROBE.unlink(missing_ok=True)
         while True:
             say("")
@@ -448,18 +453,19 @@ def main() -> int:
                 context.close()
                 return 0
             current = sis_tab(context)
-            if cmd == "m" and found:
+            # m on the results page just taken starts at once; on a new
+            # results page, that page is taken first.
+            if cmd == "m" and found and [h for h, _ in page_links(current)] == last_page:
                 work = current
                 break
             pages_taken += 1
-            on_page, added = collect(current, found, pages_taken)
-            say(f"  Di halaman ini {on_page} dokumen: {added} baru, "
-                f"{on_page - added} sudah diambil sebelumnya. Total {len(found)}.")
+            on_page = collect(current, found, pages_taken)
+            last_page = [h for h, _, _ in found[len(found) - on_page:]]
+            say(f"  Halaman hasil ke-{pages_taken}: {on_page} dokumen. Total {len(found)}.")
             if on_page == 0:
+                pages_taken -= 1
                 say("  Tidak ada link dokumen di halaman ini.")
                 write_probe(current)
-            elif added == 0:
-                say("  Semua dokumen di halaman ini sudah diambil sebelumnya.")
             elif cmd == "m":
                 work = current
                 break
@@ -475,11 +481,16 @@ def main() -> int:
         done = skipped = failed = 0
         total = len(found)
         saved = {re.sub(r"^\d+ ", "", f.stem).lower() for f in args.folder.glob("*.pdf")}
-        for n, (href, title) in enumerate(found.items(), 1):
+        title_count: dict[str, int] = {}
+        for _, title, _ in found:
+            key = safe_name(title).lower()
+            title_count[key] = title_count.get(key, 0) + 1
+        for n, (href, title, _) in enumerate(found, 1):
             target = args.folder / f"{n:03d} {safe_name(title)}.pdf"
-            # Already saved, maybe under another number (the results list
-            # can come in another order or with more pages next time).
-            if target.exists() or safe_name(title).lower() in saved:
+            # Already saved. A title that is unique in the list also counts
+            # under another number (the list order can change between runs).
+            key = safe_name(title).lower()
+            if target.exists() or (title_count[key] == 1 and key in saved):
                 skipped += 1
                 continue
             say(f"[{n}/{total}] {title}")
