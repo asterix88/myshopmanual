@@ -45,14 +45,25 @@ PDFs with little or no text layer (scans, wiring and hydraulic diagrams)
 are shipped too, marked as not searchable: they open and keep their
 bookmarks, but search and Tanya AI skip them. Pass --skip-scanned to leave
 them out instead.
+
+When Tesseract OCR is installed on the PC, such a PDF is read with OCR
+first: the recognised text goes into that file's search index (the PDF
+itself is shipped unchanged), so Cari and nyel AI can use it. OCR is slow,
+about a second or two per page, so the result is cached in
+dist/.ocr/<sha>.json and only redone when the source PDF changes. Pass
+--no-ocr to skip it.
 """
 
 import argparse
 import hashlib
 import json
+import os
 import re
+import shutil
 import sqlite3
+import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -63,6 +74,15 @@ import pymupdf
 MIN_CHARS_PER_PAGE = 40
 # A PDF is "scanned" when fewer than this share of its pages carry text.
 MIN_TEXT_PAGE_RATIO = 0.5
+
+# OCR settings for scanned PDFs (see ocr_pages).
+OCR_DPI = 300
+OCR_LANG = "eng"
+# Where Tesseract puts itself on Windows when installed with the usual installer.
+TESSERACT_GUESSES = [
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+]
 
 # Spek tab sections and the bookmark titles that belong to them. Keep in
 # step with specSections in app/lib/src/specs.dart (used for catalogs built
@@ -176,6 +196,61 @@ def is_scanned(pages: list[str]) -> bool:
         return True
     text_pages = sum(1 for t in pages if len(t.strip()) >= MIN_CHARS_PER_PAGE)
     return text_pages / len(pages) < MIN_TEXT_PAGE_RATIO
+
+
+def find_tesseract() -> str | None:
+    """The Tesseract OCR program, when it is installed on this PC."""
+    found = shutil.which("tesseract")
+    if found:
+        return found
+    return next((p for p in TESSERACT_GUESSES if Path(p).exists()), None)
+
+
+def ocr_page(exe: str, png: Path) -> str:
+    """The text Tesseract reads from one rendered page."""
+    done = subprocess.run(
+        [exe, str(png), "stdout", "-l", OCR_LANG],
+        capture_output=True, text=True, errors="replace",
+        env={**os.environ, "OMP_THREAD_LIMIT": "1"},
+    )
+    if done.returncode != 0:
+        raise RuntimeError(done.stderr.strip().splitlines()[-1] if done.stderr.strip() else "tesseract gagal")
+    return done.stdout
+
+
+def ocr_pages(pdf: Path, pages: list[str], exe: str, cache_dir: Path, label: str) -> list[str]:
+    """pages with the image-only ones replaced by what OCR reads from them.
+
+    The PDF is not changed; only the search index gets the text. Results are
+    cached per source PDF, because OCR takes a second or two per page.
+    """
+    cache = cache_dir / f"{sha256_of(pdf)[:16]}.json"
+    if cache.exists():
+        try:
+            cached = json.loads(cache.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            cached = None
+        if isinstance(cached, list) and len(cached) == len(pages):
+            print(f"  OCR dari cache: {label}")
+            return cached
+
+    todo = [i for i, text in enumerate(pages) if len(text.strip()) < MIN_CHARS_PER_PAGE]
+    print(f"  OCR {len(todo)} halaman: {label} (kira-kira {len(todo) * 1.5 / 60:.0f} menit)")
+    out = list(pages)
+    started = time.time()
+    with pymupdf.open(pdf) as doc, tempfile.TemporaryDirectory() as tmp:
+        png = Path(tmp) / "page.png"
+        for done, i in enumerate(todo, start=1):
+            doc[i].get_pixmap(dpi=OCR_DPI).save(png)
+            try:
+                out[i] = ocr_page(exe, png)
+            except RuntimeError as err:
+                print(f"    halaman {i + 1} gagal di-OCR: {err}")
+            if done % 25 == 0 or done == len(todo):
+                print(f"    {done}/{len(todo)} halaman, {time.time() - started:.0f}s")
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache.write_text(json.dumps(out), encoding="utf-8")
+    return out
 
 
 def write_index(path: Path, title: str, doc_type: str, pages: list[str],
@@ -578,7 +653,7 @@ def read_torsi_hidden(unit_id: str) -> set[str]:
 
 
 def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
-               previous: dict, now: str) -> dict:
+               previous: dict, now: str, ocr_exe: str | None) -> dict:
     unit_id = unit_dir.name
     meta_path = unit_dir / "unit.json"
     meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
@@ -597,6 +672,8 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
         rel = pdf.relative_to(unit_dir)
         group = " / ".join(rel.parts[:-1])
         pages, toc = extract(pdf)
+        if is_scanned(pages) and ocr_exe:
+            pages = ocr_pages(pdf, pages, ocr_exe, out_dir / ".ocr", rel.as_posix())
         scanned = is_scanned(pages)
         if scanned and not include_scanned:
             skipped.append(rel.as_posix())
@@ -677,6 +754,8 @@ def main() -> int:
     parser.add_argument("--only", nargs="*", help="build only these unit ids")
     parser.add_argument("--skip-scanned", action="store_true",
                         help="leave out PDFs without a text layer instead of shipping them unsearchable")
+    parser.add_argument("--no-ocr", action="store_true",
+                        help="do not read scanned PDFs with Tesseract OCR")
     args = parser.parse_args()
     try:
         import pikepdf  # noqa: F401  (used by write_pdf)
@@ -703,12 +782,22 @@ def main() -> int:
     previous_units = {u["id"]: u for u in previous.get("units", [])}
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
+    ocr_exe = None if args.no_ocr else find_tesseract()
+    if args.no_ocr:
+        print("OCR dimatikan (--no-ocr): PDF hasil scan tetap tidak bisa dicari.")
+    elif ocr_exe:
+        print(f"OCR siap: {ocr_exe}")
+    else:
+        print("Tesseract OCR belum terpasang, PDF hasil scan tidak bisa dicari.")
+        print("Pasang sekali saja dari https://github.com/UB-Mannheim/tesseract/wiki")
+        print("(pilih bahasa English), lalu jalankan update.bat lagi.")
+
     built = {}
     for unit_dir in unit_dirs:
         print(f"[{unit_dir.name}]")
         started = time.time()
         unit = build_unit(unit_dir, args.dist, not args.skip_scanned,
-                          previous_units.get(unit_dir.name, {}), now)
+                          previous_units.get(unit_dir.name, {}), now, ocr_exe)
         built[unit["id"]] = unit
         print(f"  done in {time.time() - started:.1f}s, {unit['size'] / 1e6:.1f} MB")
 

@@ -22,6 +22,18 @@ python tools/build_packages.py source dist --only PC210
 python tools/search.py dist/units/PC210/index.sqlite "track tension"
 ```
 
+### PDF hasil scan (OCR)
+
+PDF tanpa lapisan teks (hasil scan, atau hasil "Microsoft Print to PDF") tetap diunggah,
+tetapi tidak bisa dicari. Kalau **Tesseract OCR** terpasang di PC, `update.bat` membacanya
+sendiri: teks hasil OCR masuk ke indeks pencarian file itu (PDF-nya tidak diubah), jadi Cari
+dan nyel AI bisa memakainya. Pasang sekali saja dari
+<https://github.com/UB-Mannheim/tesseract/wiki> (installer Windows, pilih bahasa English),
+lalu jalankan `update.bat` seperti biasa.
+
+OCR butuh sekitar 1-2 detik per halaman. Hasilnya disimpan di `dist/.ocr/` dan hanya diulang
+kalau PDF sumbernya berubah. Untuk melewatinya: `update.bat --no-ocr`.
+
 Folder unit boleh berisi `unit.json`, misalnya `{"name": "PC210-10M0", "kind": "Excavator"}`.
 `kind` menentukan folder di beranda (Excavator atau Bulldozer). Kalau kosong, aplikasi menebak dari
 kode model: PC, CAT, ZX, EX masuk EXCAVATOR; D85, D155, D375 masuk BULLDOZER; selain itu LAINNYA.
