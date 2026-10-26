@@ -103,7 +103,11 @@ SNAPSHOT = r"""async ([ie, title]) => {
     }
   }
   let part = null;
-  if (button && number) {
+  // SIS's own print view (sometimes opened in this tab) wraps exactly the
+  // document, title bar included.
+  const printContent = [...document.querySelectorAll('._ServiceDetailPrintContent')].filter(visible);
+  if (printContent.length) part = printContent[printContent.length - 1];
+  else if (button && number) {
     const above = new Set();
     for (let el = button; el; el = el.parentElement) above.add(el);
     part = number;
