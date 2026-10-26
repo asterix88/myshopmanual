@@ -278,7 +278,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(sent['/auth/pin']!['pin'], '1234');
     expect(store.loggedIn, isTrue);
-    expect(find.text('MANUAL BOOK'), findsOneWidget);
+    expect(find.text('Manual book'), findsOneWidget);
     await tester.runAsync(() async => store.dispose());
   });
 

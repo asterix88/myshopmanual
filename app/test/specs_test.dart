@@ -130,7 +130,8 @@ void main() {
     final viewer = tester.widget<SpecViewerScreen>(find.byType(SpecViewerScreen));
     expect(viewer.path, store.readySpecPath(unit));
     expect(viewer.page, 3);
-    expect(find.text('Manual lengkap'), findsOneWidget);
+    expect(find.text('Buka manual lengkap'), findsOneWidget);
+    expect(find.byType(AiCircleButton), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
 
@@ -177,7 +178,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(tester.widget<SpecViewerScreen>(find.byType(SpecViewerScreen)).page, 3);
-    await tester.tap(find.text('Tanya nyel AI'));
+    await tester.tap(find.byType(AiCircleButton));
     await tester.pumpAndSettle();
     expect(find.byType(SpecViewerScreen), findsNothing);
     final input = tester.widget<EditableText>(

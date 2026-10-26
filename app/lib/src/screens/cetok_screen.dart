@@ -15,64 +15,6 @@ Future<void> openCetok(BuildContext context, {bool search = false}) => Navigator
       MaterialPageRoute(builder: (_) => CetokScreen(focusSearch: search)),
     );
 
-/// The small Cetok Online card at the bottom of the Home tab: a line that
-/// opens Cetok Online and a search box that opens it ready to type, kept
-/// small so Home stays about the manuals.
-class CetokCard extends StatelessWidget {
-  const CetokCard({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.all(10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: () => openCetok(context),
-            child: Row(
-              children: [
-                // Anas's photo of the Cetok Online workflow, cut round.
-                ClipOval(
-                  child: Image.asset('assets/images/cetok.png', width: 36, height: 36, fit: BoxFit.cover),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Check - Ambil - Catat',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.navy),
-                  ),
-                ),
-                Icon(Icons.chevron_right, color: AppColors.faint),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Material(
-            color: AppColors.field,
-            borderRadius: BorderRadius.circular(20),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(20),
-              onTap: () => openCetok(context, search: true),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                child: Row(
-                  children: [
-                    Icon(Icons.search, size: 17, color: AppColors.faint),
-                    const SizedBox(width: 8),
-                    Text('Cari part number atau nama part', style: TextStyle(fontSize: 12.5, color: AppColors.faint)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Cetok Online inside MyManual: Stok (look up and open a part), Ambil and
 /// Input, using the same database functions as the website.
 class CetokScreen extends StatefulWidget {

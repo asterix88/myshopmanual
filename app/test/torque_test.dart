@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mymanual/main.dart';
+import 'package:mymanual/src/screens/specs_screen.dart';
 import 'package:mymanual/src/screens/unit_tabs.dart';
 import 'package:mymanual/src/screens/viewer_screen.dart';
 import 'package:mymanual/src/specs.dart';
@@ -112,7 +113,8 @@ void main() {
     expect(find.byType(GroupCard), findsNWidgets(2));
     // The standard torque table is a card of its own above the groups,
     // which start closed.
-    expect(find.byType(ItemCard), findsOneWidget);
+    // Other tabs list their pages as ItemCards too, so look only at Torsi.
+    expect(find.descendant(of: find.byType(SpecsScreen), matching: find.byType(ItemCard)).hitTestable(), findsOneWidget);
     expect(find.text('Standard tightening torque'), findsNothing);
     expect(find.textContaining('hlm'), findsNothing);
     expect(find.text('Track roller'), findsNothing);

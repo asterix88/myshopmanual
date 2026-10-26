@@ -14,6 +14,7 @@ import '../widgets/machine_icon.dart';
 import '../widgets/unit_icon.dart';
 import 'answer_reports_screen.dart';
 import 'cetok_screen.dart';
+import 'convert_screen.dart';
 import 'employees_screen.dart';
 import 'machine_screen.dart';
 import 'report_screen.dart';
@@ -123,32 +124,23 @@ class HomeScreen extends StatelessWidget {
       ),
       body: RefreshIndicator(
         onRefresh: store.refresh,
-        child: CustomScrollView(
+        child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverList.list(children: [
-              if (store.online == false) _OfflineBanner(store: store),
-              if (store.lastRead != null) _ContinueReading(lastRead: store.lastRead!),
-            ]),
-            // The machine folders sit in the middle of whatever space is left;
-            // Cetok Online is small and lower down, halfway to the bottom.
-            SliverFillRemaining(
-              hasScrollBody: false,
+          // The bottom bar is drawn over the page (see HomeShell).
+          padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
+          children: [
+            _Greeting(name: store.session?.name, onSearch: onOpenSearch),
+            if (store.online == false) ...[const SizedBox(height: 12), _OfflineBanner(store: store)],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Spacer(flex: 2),
+                  if (store.lastRead != null) _ContinueReading(lastRead: store.lastRead!),
                   _MachineFolders(store: store),
-                  const Spacer(),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [_HomeLabel('CETOK ONLINE'), CetokCard()],
-                    ),
-                  ),
-                  const Spacer(),
-                  // The bottom bar is drawn over the page (see HomeShell).
-                  SizedBox(height: MediaQuery.paddingOf(context).bottom),
+                  const SizedBox(height: 20),
+                  const _HomeLabel('Alat bantu'),
+                  const _Tools(),
                 ],
               ),
             ),
@@ -263,6 +255,69 @@ class _OfflineBanner extends StatelessWidget {
   }
 }
 
+/// "Halo, Anas" and the search box that opens the Cari tab.
+class _Greeting extends StatelessWidget {
+  const _Greeting({required this.name, required this.onSearch});
+
+  final String? name;
+  final VoidCallback onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(22)),
+        boxShadow: const [BoxShadow(color: Color(0x0F101828), blurRadius: 10, offset: Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            greeting(name),
+            style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: AppColors.ink),
+          ),
+          const SizedBox(height: 12),
+          Material(
+            color: AppColors.field,
+            shape: StadiumBorder(side: BorderSide(color: AppColors.line)),
+            child: InkWell(
+              key: const Key('home-search'),
+              customBorder: const StadiumBorder(),
+              onTap: onSearch,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                child: Row(
+                  children: [
+                    Icon(Icons.search, size: 20, color: AppColors.muted),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Cari manual, part number, kode error',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 13, color: AppColors.muted),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Halo, Anas" from the login name (its first word, AHMAD -> Ahmad).
+String greeting(String? name) {
+  final first = (name ?? '').trim().split(RegExp(r'\s+')).first;
+  if (first.isEmpty) return 'Halo';
+  return 'Halo, ${first[0].toUpperCase()}${first.substring(1).toLowerCase()}';
+}
+
 class _ContinueReading extends StatelessWidget {
   const _ContinueReading({required this.lastRead});
 
@@ -277,79 +332,67 @@ class _ContinueReading extends StatelessWidget {
       return const SizedBox.shrink();
     }
     final progress = file.pages == 0 ? 0.0 : lastRead.page / file.pages;
-    return Container(
-      margin: const EdgeInsets.only(top: 10),
-      color: AppColors.surface,
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Lanjutkan membaca',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
-          ),
-          const SizedBox(height: 6),
-          Material(
-            color: AppColors.navy,
-            borderRadius: BorderRadius.circular(12),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => openViewer(context, file, page: lastRead.page),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                child: Row(
-                  children: [
-                    // The unit's machine picture, like in its folder.
-                    Container(
-                      width: 48,
-                      height: 36,
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
-                      child: UnitIcon(unitId: file.unitId, width: 42, height: 30),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            file.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                          ),
-                          Text(
-                            [store.unitNameOf(file), if (lastRead.section != null) lastRead.section!, 'hlm ${lastRead.page}'].join(' · '),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Color(0xFFC9D3E3), fontSize: 11),
-                          ),
-                          const SizedBox(height: 5),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(2),
-                            child: LinearProgressIndicator(
-                              value: progress,
-                              minHeight: 3,
-                              color: AppColors.orange,
-                              backgroundColor: const Color(0xFF3A5582),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Material(
+        color: const Color(0xFF1E3A64),
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => openViewer(context, file, page: lastRead.page),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                // The unit's machine picture, like in its folder.
+                Container(
+                  width: 52,
+                  height: 40,
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                  child: UnitIcon(unitId: file.unitId, width: 46, height: 34),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Lanjutkan membaca',
+                        style: TextStyle(color: Color(0xFFF5B26B), fontSize: 11, fontWeight: FontWeight.w500),
+                      ),
+                      Text(
+                        [file.title, 'hlm ${lastRead.page}'].join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 5),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 3,
+                          color: AppColors.orange,
+                          backgroundColor: const Color(0xFF3A5582),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.chevron_right, color: Color(0xFFC9D3E3)),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-/// The home screen's folders: EXCAVATOR and BULLDOZER, plus LAINNYA when a
-/// unit fits neither.
+/// The home screen's folders, two to a row: EXCAVATOR and BULLDOZER, plus
+/// LAINNYA when a unit fits neither.
 class _MachineFolders extends StatelessWidget {
   const _MachineFolders({required this.store});
 
@@ -363,52 +406,57 @@ class _MachineFolders extends StatelessWidget {
       Machine.bulldozer,
       if (units.any((u) => u.machine == Machine.other)) Machine.other,
     ];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _HomeLabel(
-            'MANUAL BOOK',
-            trailing: Text(
-              '${formatSize(store.usedBytes)} di HP',
-              style: TextStyle(fontSize: 12, color: AppColors.muted),
+    Widget card(Machine machine) => _FolderCard(
+      machine: machine,
+      units: [for (final u in units) if (u.machine == machine) u],
+      store: store,
+    );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _HomeLabel(
+          'Manual book',
+          trailing: units.isEmpty
+              ? null
+              : Text('${units.length} model unit', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+        ),
+        for (var i = 0; i < machines.length; i += 2)
+          Padding(
+            padding: EdgeInsets.only(top: i == 0 ? 0 : 12),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: card(machines[i])),
+                  const SizedBox(width: 12),
+                  Expanded(child: i + 1 < machines.length ? card(machines[i + 1]) : const SizedBox.shrink()),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          for (final machine in machines)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _FolderCard(
-                machine: machine,
-                units: [for (final u in units) if (u.machine == machine) u],
-                store: store,
-              ),
+        if (units.isEmpty && store.online == null)
+          const Padding(
+            padding: EdgeInsets.only(top: 24),
+            child: ExcavatorLoader(label: 'Memuat daftar unit…'),
+          )
+        else if (units.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Text(
+              store.online == false
+                      ? 'Sambungkan HP ke internet sekali untuk mengambil daftar manual.'
+                      : 'Belum ada manual di server.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: AppColors.muted),
             ),
-          if (units.isEmpty && store.online == null)
-            const Padding(
-              padding: EdgeInsets.only(top: 24),
-              child: ExcavatorLoader(label: 'Memuat daftar unit…'),
-            )
-          else if (units.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Text(
-                store.online == false
-                        ? 'Sambungkan HP ke internet sekali untuk mengambil daftar manual.'
-                        : 'Belum ada manual di server.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: AppColors.muted),
-              ),
-            ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
 
-/// A Home section title in the same type as the EXCAVATOR / BULLDOZER folders.
+/// A Home section title: Manual book, Alat bantu.
 class _HomeLabel extends StatelessWidget {
   const _HomeLabel(this.text, {this.trailing});
 
@@ -418,11 +466,13 @@ class _HomeLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+      padding: const EdgeInsets.fromLTRB(2, 0, 2, 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Expanded(child: Text(text, style: homeTitleStyle)),
+          Expanded(
+            child: Text(text, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.navy)),
+          ),
           ?trailing,
         ],
       ),
@@ -430,9 +480,9 @@ class _HomeLabel extends StatelessWidget {
   }
 }
 
-/// The type of the Home folder names (EXCAVATOR, BULLDOZER) and section titles.
+/// The type of the Home folder names (EXCAVATOR, BULLDOZER).
 TextStyle get homeTitleStyle =>
-    TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.navy, letterSpacing: 0.5);
+    TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.navy, letterSpacing: 0.3);
 
 class _FolderCard extends StatelessWidget {
   const _FolderCard({required this.machine, required this.units, required this.store});
@@ -444,45 +494,137 @@ class _FolderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final keys = {for (final u in units) for (final f in store.filesOf(u)) f.key};
-    final hasUpdate = store.unseenUpdates.any((u) => keys.contains(u.file.key));
+    final updates = store.unseenUpdates.where((u) => keys.contains(u.file.key)).length;
     return AppCard(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => MachineScreen(machine: machine)),
       ),
-      padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
-      child: Row(
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Badge(
-            isLabelVisible: hasUpdate,
-            smallSize: 10,
-            backgroundColor: const Color(0xFFE8541E),
-            child: Container(
-              width: 104,
-              height: 76,
-              decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(14)),
-              alignment: Alignment.center,
-              child: MachineIcon(machine, width: 86),
-            ),
+          Container(
+            height: 92,
+            decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(12)),
+            alignment: Alignment.center,
+            child: MachineIcon(machine, width: 124),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
               children: [
-                Text(machine.label, style: homeTitleStyle),
-                Text(
-                  units.isEmpty ? 'belum ada model' : '${units.length} model unit',
-                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(machine.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: homeTitleStyle),
+                      Text(
+                        units.isEmpty ? 'belum ada model' : '${units.length} unit',
+                        style: TextStyle(fontSize: 11.5, color: AppColors.muted),
+                      ),
+                    ],
+                  ),
                 ),
-                if (hasUpdate)
-                  Text(
-                    'Ada update manual',
-                    style: TextStyle(fontSize: 12, color: AppColors.update, fontWeight: FontWeight.w600),
+                if (updates > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(6)),
+                    child: Text(
+                      '$updates update',
+                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.update),
+                    ),
                   ),
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: AppColors.faint),
+        ],
+      ),
+    );
+  }
+}
+
+/// Alat bantu: small tiles for the tools beside the manuals.
+class _Tools extends StatelessWidget {
+  const _Tools();
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _ToolTile(
+              key: const Key('tool-convert'),
+              icon: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: const Color(0xFF1E3A64), borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.speed, color: Colors.white, size: 24),
+              ),
+              title: 'Konversi',
+              subtitle: 'Tekanan & torsi',
+              onTap: () => openConvert(context),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _ToolTile(
+              key: const Key('tool-cetok'),
+              icon: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                // Anas's photo of the Cetok Online workflow.
+                child: Image.asset('assets/images/cetok.png', width: 40, height: 40, fit: BoxFit.cover),
+              ),
+              title: 'Cetok Online',
+              subtitle: 'Cek stok part',
+              onTap: () => openCetok(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolTile extends StatelessWidget {
+  const _ToolTile({super.key, required this.icon, required this.title, required this.subtitle, required this.onTap});
+
+  final Widget icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          icon,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
+                ),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 11, color: AppColors.muted),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
