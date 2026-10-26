@@ -20,8 +20,6 @@ export const SESSION_DAYS = 30;
 const FRESH_SECONDS = 24 * 3600;
 /// The token for choosing a PIN after logging in with the starting PIN.
 const SETUP_SECONDS = 15 * 60;
-const MAX_FAILS = 5;
-const LOCK_MINUTES = 15;
 export const AI_DAILY_LIMIT = 10;
 
 export type Session = { n: string; nm: string; a: boolean; iat: number; exp: number; t?: "setup" };
@@ -43,6 +41,7 @@ type Employee = {
   // Hash of the starting PIN last read from the file, so a changed one in
   // the file resets the PIN and an unchanged one does not.
   file_pin: string;
+  // Left from when wrong PINs locked the NRP for a while; now always 0.
   fails: number;
   lock_until: number;
   last_seen: number;
@@ -237,23 +236,12 @@ async function login(request: Request, env: AuthEnv): Promise<Response> {
   if (!e) return notFound();
   if (!e.active) return inactive();
   const t = now();
-  if (e.lock_until > t) {
-    const minutes = Math.ceil((e.lock_until - t) / 60);
-    return json({ error: "locked", message: `Terlalu banyak salah PIN. Coba lagi dalam ${minutes} menit.` }, 429);
-  }
+  // No lockout after wrong PINs (Anas's choice): the mechanic just tries
+  // again, or asks an admin for a temporary PIN.
   if ((await pinHash(env, e.salt, pin)) !== e.pin) {
-    e.fails += 1;
-    let message: string;
-    if (e.fails >= MAX_FAILS) {
-      e.fails = 0;
-      e.lock_until = t + LOCK_MINUTES * 60;
-      message = `PIN salah ${MAX_FAILS} kali. Coba lagi dalam ${LOCK_MINUTES} menit.`;
-    } else {
-      message = `PIN salah, sisa ${MAX_FAILS - e.fails} kali coba.`;
-    }
-    await save(env, e);
-    return json({ error: "pin", message }, 403);
+    return json({ error: "pin", message: "PIN salah. Periksa lagi lalu coba ulang." }, 403);
   }
+  // Clears counters left by builds that still locked after wrong PINs.
   const changed = e.fails > 0 || e.lock_until > 0;
   e.fails = 0;
   e.lock_until = 0;

@@ -94,9 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _pin,
                     obscureText: !_showPin,
                     keyboardType: TextInputType.number,
-                    // Up to 6: PINs chosen before PINs became 4 digits still
-                    // work until the employee list resets them.
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(pinLength)],
                     onSubmitted: (_) => _login(),
                     decoration: _inputDecoration(error: _error != null).copyWith(
                       suffixIcon: IconButton(

@@ -66,7 +66,7 @@ class Session {
 class AuthException implements Exception {
   AuthException(this.code, this.message);
 
-  /// 'unknown' (NRP not in the list), 'inactive', 'pin', 'locked', 'login'
+  /// 'unknown' (NRP not in the list), 'inactive', 'pin', 'login'
   /// (session no longer valid), 'network', ...
   final String code;
   final String message;

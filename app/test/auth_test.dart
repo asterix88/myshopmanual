@@ -231,7 +231,7 @@ void main() {
         sent[request.url.path] = body;
         if (request.url.path == '/auth/login') {
           if (body['pin'] != '111111') {
-            return http.Response(jsonEncode({'error': 'pin', 'message': 'PIN salah, sisa 4 kali coba.'}), 403);
+            return http.Response(jsonEncode({'error': 'pin', 'message': 'PIN salah. Periksa lagi lalu coba ulang.'}), 403);
           }
           return http.Response(jsonEncode({'status': 'set_pin', 'setup': 'S', 'name': 'Budi'}), 200);
         }
@@ -257,7 +257,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     });
     await tester.pumpAndSettle();
-    expect(find.text('PIN salah, sisa 4 kali coba.'), findsOneWidget);
+    expect(find.text('PIN salah. Periksa lagi lalu coba ulang.'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('login-pin')), '111111');
     await tester.runAsync(() async {

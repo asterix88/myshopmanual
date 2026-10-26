@@ -20,7 +20,7 @@ void main() {
     late AppStore store;
     final client = MockClient((request) async {
       if (request.url.path == '/auth/login') {
-        return http.Response(jsonEncode({'error': 'pin', 'message': 'PIN salah, sisa 3 kali coba.'}), 403);
+        return http.Response(jsonEncode({'error': 'pin', 'message': 'PIN salah. Periksa lagi lalu coba ulang.'}), 403);
       }
       if (request.url.path == '/admin/employees') {
         return http.Response(jsonEncode({'employees': [
