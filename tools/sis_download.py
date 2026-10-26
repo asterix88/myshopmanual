@@ -31,9 +31,9 @@ PROBE = TOOLS / "sis-probe.txt"
 # Pause between documents, to go easy on the SIS server.
 PAUSE_SECONDS = 1.0
 
-# SIS opens its print view and calls window.print() once the document is
-# ready; replace it so no print dialog pops up and the script knows when.
-NO_PRINT_DIALOG = "window.print = () => { window.__sisPrinted = true; };"
+# SIS's print button calls window.print(); replace it so no print dialog
+# pops up and stops the script.
+NO_PRINT_DIALOG = "window.print = () => {};"
 
 COLLECT_LINKS = r"""() => {
   const out = [];
@@ -283,26 +283,21 @@ def wait_for_print_view(view) -> int:
 
 
 def open_print_view(context, page, timeout_ms: int):
-    """Clicks SIS's print button; returns the page that holds the print view,
-    or None when there is no print button."""
+    """Clicks SIS's print button, which readies the document for printing,
+    then waits for it on the document tab itself. The preview tab SIS may
+    open is not used (save_document closes it). Returns None when there is
+    no print button."""
     try:
         button = page.locator(PRINT_BUTTON).first
         button.wait_for(state="visible", timeout=timeout_ms)
     except TimeoutError:
         return None
-    pages_before = set(context.pages)
-    try:
-        page.evaluate("window.__sisPrinted = false")
-    except Error:
-        pass
     button.click()
     time.sleep(0.8)
-    new = [pg for pg in context.pages if pg not in pages_before]
-    view = new[0] if new else page
-    missing = wait_for_print_view(view)
+    missing = wait_for_print_view(page)
     if missing:
         say(f"  Peringatan: {missing} gambar belum termuat, disimpan apa adanya.")
-    return view
+    return page
 
 
 def save_document(context, page, renderer, href: str, title: str, target: Path) -> bool:
