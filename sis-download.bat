@@ -6,7 +6,7 @@ setlocal
 cd /d "%~dp0"
 
 echo === Memeriksa paket Python ===
-python -m pip install --disable-pip-version-check -q playwright
+python -m pip install --disable-pip-version-check --no-warn-script-location -q playwright
 if errorlevel 1 goto failed
 
 echo.

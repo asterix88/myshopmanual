@@ -120,11 +120,15 @@ def safe_name(title: str) -> str:
 
 
 def write_probe(page) -> None:
-    try:
-        PROBE.write_text(page.evaluate(PROBE_PAGE), encoding="utf-8")
-        say(f"  Detail halaman disimpan di {PROBE}. Kirim file itu ke Claude.")
-    except Error:
-        pass
+    """Dumps the links and buttons of the page and its frames."""
+    parts = []
+    for frame in page.frames:
+        try:
+            parts.append(f"=== frame {frame.url}\n" + frame.evaluate(PROBE_PAGE))
+        except Error as e:
+            parts.append(f"=== frame {frame.url}\nerror: {e.message.splitlines()[0]}")
+    PROBE.write_text("\n\n".join(parts), encoding="utf-8")
+    say(f"  Detail halaman disimpan di {PROBE}. Kirim file itu ke Claude.")
 
 
 def launch_browser(p, headless: bool, user_data: Path | None = None):
@@ -218,9 +222,20 @@ def save_document(context, page, renderer, href: str, title: str, target: Path) 
     return True
 
 
+def sis_tab(context):
+    """The last open tab showing SIS (the one the user is looking at)."""
+    tabs = [pg for pg in context.pages if "cat.com" in pg.url]
+    return (tabs or context.pages)[-1]
+
+
 def collect(page, found: dict) -> tuple[int, int]:
     """Adds the page's document links; returns (links on page, new ones)."""
-    links = page.evaluate(COLLECT_LINKS)
+    links = []
+    for frame in page.frames:
+        try:
+            links += frame.evaluate(COLLECT_LINKS)
+        except Error:
+            pass
     added = 0
     for href, title in links:
         if href not in found:
@@ -255,10 +270,10 @@ def main() -> int:
             if cmd == "q":
                 context.close()
                 return 0
-            if cmd == "m":
-                work = context.pages[-1]
+            current = sis_tab(context)
+            if cmd == "m" and found:
+                work = current
                 break
-            current = context.pages[-1]
             on_page, added = collect(current, found)
             say(f"  +{added} dokumen baru, total {len(found)}.")
             if on_page == 0:
@@ -266,6 +281,9 @@ def main() -> int:
                 write_probe(current)
             elif added == 0:
                 say("  Semua dokumen di halaman ini sudah diambil sebelumnya.")
+            elif cmd == "m":
+                work = current
+                break
             else:
                 say("  Kalau hasilnya lebih dari satu halaman, pindah ke halaman berikutnya lalu Enter lagi.")
 
