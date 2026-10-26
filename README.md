@@ -51,6 +51,14 @@ python tools/upload_r2.py dist --warm-all  # panaskan semua PDF di Cloudflare (t
    lain tetap ada di aplikasi seperti sebelumnya. Lewat Command Prompt bisa juga `update.bat --only PC210`.
    PDF boleh juga ditaruh di subfolder unit, misalnya `source\CAT395\System Diagram\`: file itu tetap
    masuk unit CAT395 dan tampil di bawah judul "System Diagram" di halaman unit.
+4. Dokumen Caterpillar dari SIS 2.0 (sis2.cat.com) bisa disimpan otomatis dengan `sis-download.bat`.
+   Chrome (atau Edge) terbuka dengan profil sendiri; login SIS di situ (diingat untuk berikutnya), cari dan
+   pasang filter, lalu di jendela hitam tekan Enter untuk mengambil daftar hasil (ulangi di tiap halaman
+   hasil) dan `m` untuk mulai. Tiap dokumen dibuka, tombol print SIS ditekan, dan hasilnya disimpan
+   sebagai PDF yang ada teksnya ke `source\<folder>\NNN Judul.pdf` sesuai urutan hasil. File yang sudah
+   ada dilewati, jadi kalau berhenti di tengah cukup dijalankan lagi. Kalau halaman SIS tidak sesuai
+   dugaan, script menulis `tools\sis-probe.txt` untuk dikirim ke developer. Perhatikan aturan pakai
+   SIS: download massal bisa dianggap melanggar dan akun bisa diblokir.
 
 ## Server AI (`ai-worker/`)
 
