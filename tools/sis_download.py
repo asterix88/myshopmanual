@@ -379,9 +379,14 @@ SCROLL_ALL = """() => {
 LIST_PROBE = TOOLS / "sis-probe-daftar.txt"
 
 
-def collect(page, found: dict) -> tuple[int, int]:
+# Results page on which each document was first taken.
+first_seen: dict[str, int] = {}
+
+
+def collect(page, found: dict, page_no: int) -> tuple[int, int]:
     """Adds the page's document links; returns (documents on page, new ones).
-    Writes them all to sis-probe-daftar.txt for checking."""
+    Prints the ones taken on an earlier results page and writes them all
+    to sis-probe-daftar.txt for checking."""
     for _ in range(4):
         for frame in page.frames:
             try:
@@ -405,7 +410,10 @@ def collect(page, found: dict) -> tuple[int, int]:
         rows.append(("BARU  " if new else "SUDAH ") + title + "  " + href)
         if new:
             found[href] = title
+            first_seen[href] = page_no
             added += 1
+        else:
+            say(f"    sudah ada: {title} (dari halaman hasil ke-{first_seen.get(href, '?')})")
     with LIST_PROBE.open("a", encoding="utf-8") as f:
         f.write(f"=== {page.url}\n" + "\n".join(rows) + "\n\n")
     return len(on_page), added
@@ -430,6 +438,7 @@ def main() -> int:
         say("2. Cari dan pasang filter (mis. 395 + Disassembly and Assembly).")
         say("3. Saat daftar hasil tampil, kembali ke jendela hitam ini.")
         found: dict[str, str] = {}
+        pages_taken = 0
         LIST_PROBE.unlink(missing_ok=True)
         while True:
             say("")
@@ -442,7 +451,8 @@ def main() -> int:
             if cmd == "m" and found:
                 work = current
                 break
-            on_page, added = collect(current, found)
+            pages_taken += 1
+            on_page, added = collect(current, found, pages_taken)
             say(f"  Di halaman ini {on_page} dokumen: {added} baru, "
                 f"{on_page - added} sudah diambil sebelumnya. Total {len(found)}.")
             if on_page == 0:
