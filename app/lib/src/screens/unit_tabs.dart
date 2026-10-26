@@ -216,7 +216,6 @@ class PageRowList extends StatelessWidget {
           );
         }
         final row = rows[i - (hint == null ? 0 : 1)];
-        final file = row.file;
         if (row.heading) {
           return InkWell(
             onTap: () => onOpen(row),
@@ -241,30 +240,22 @@ class PageRowList extends StatelessWidget {
             ),
           );
         }
-        return AppCard(
-          onTap: () => onOpen(row),
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              const PageThumb(),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // No file and page line under the title (Anas, 11 Oct).
-                    Text(row.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, height: 1.3)),
-                    if (file != null) ...[const SizedBox(height: 5), Pill.docType(file.type)],
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right, color: AppColors.faint),
-            ],
-          ),
-        );
+        // A plain row like the Torsi tab's (Anas, 26 Oct 2026).
+        return ItemCard(item: (title: rowTitle(row.title), subtitle: null, onTap: () => onOpen(row)));
       },
     );
   }
+}
+
+/// A bookmark title without the unit after its colon, which the page
+/// header already shows: "STANDARD VALUE TABLE FOR ENGINE: PC210-10M0" ->
+/// "STANDARD VALUE TABLE FOR ENGINE".
+String rowTitle(String title) {
+  final colon = title.lastIndexOf(':');
+  if (colon <= 0) return title;
+  final tail = title.substring(colon + 1).trim();
+  final isUnit = RegExp(r'^[A-Z]{1,4}\d[A-Z0-9-]*(,\s*[A-Z]{1,4}\d[A-Z0-9-]*)*$', caseSensitive: false).hasMatch(tail);
+  return isUnit ? title.substring(0, colon).trim() : title;
 }
 
 /// Opens [row] from the unit's spek.pdf when it is on the phone, else the
@@ -288,65 +279,6 @@ void openPageRow(BuildContext context, Unit unit, PageRow row) {
     );
   } else if (row.file != null) {
     openViewer(context, row.file!, page: row.page);
-  }
-}
-
-/// A small drawing of a manual page with a table on it.
-class PageThumb extends StatelessWidget {
-  const PageThumb({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    const grey = Color(0xFFC9CED6);
-    Widget bar(double widthFactor, {Color color = grey, double height = 3}) => FractionallySizedBox(
-      alignment: Alignment.centerLeft,
-      widthFactor: widthFactor,
-      child: Container(
-        height: height,
-        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
-      ),
-    );
-    return Container(
-      width: 50,
-      height: 66,
-      padding: const EdgeInsets.fromLTRB(6, 7, 6, 7),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          bar(0.7, color: const Color(0xFF1E3A64), height: 4),
-          const SizedBox(height: 4),
-          bar(1),
-          const SizedBox(height: 4),
-          bar(0.8),
-          const SizedBox(height: 5),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: grey),
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: Column(
-                children: [
-                  for (var i = 0; i < 4; i++)
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: i == 0 ? null : const Border(top: BorderSide(color: Color(0xFFE3E6EA))),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -510,31 +442,65 @@ class _SpecViewerScreenState extends State<SpecViewerScreen> {
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
             child: Row(
               children: [
-                if (file != null) ...[
+                if (file != null)
                   Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        side: BorderSide(color: AppColors.navy, width: 1.5),
+                        foregroundColor: AppColors.navy,
+                        shape: const StadiumBorder(),
+                      ),
                       onPressed: () => openViewer(context, file, page: widget.sourcePage),
+                      icon: const Icon(Icons.menu_book_outlined, size: 20),
                       // One line on a narrow phone.
-                      child: const Text('Manual lengkap', maxLines: 1, overflow: TextOverflow.ellipsis),
+                      label: const Text(
+                        'Buka manual lengkap',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                ],
-                Expanded(
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.navy,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                    onPressed: _askAi,
-                    icon: const Icon(Icons.auto_awesome, size: 18),
-                    label: const Text('Tanya nyel AI'),
-                  ),
-                ),
+                  )
+                else
+                  const Spacer(),
+                const SizedBox(width: 12),
+                // The round sparkle, like nyel AI everywhere else.
+                AiCircleButton(onPressed: _askAi),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The round orange nyel AI button with the sparkle, as in the middle of
+/// the tab bar.
+class AiCircleButton extends StatelessWidget {
+  const AiCircleButton({super.key, required this.onPressed, this.tooltip = 'Tanya nyel AI'});
+
+  final VoidCallback onPressed;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: AppColors.orange,
+        shape: const CircleBorder(),
+        elevation: 4,
+        shadowColor: const Color(0x80F08A1C),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: const SizedBox(
+            width: 56,
+            height: 56,
+            child: Icon(Icons.auto_awesome, color: Colors.white, size: 28),
           ),
         ),
       ),

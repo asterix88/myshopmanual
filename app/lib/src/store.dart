@@ -167,6 +167,9 @@ class AppStore extends ChangeNotifier {
       themeChosen = json['theme_chosen'] as bool? ?? false;
       themeMode = themeChosen ? json['theme'] as String? ?? 'light' : 'light';
       _aiDay = json['ai_day'] as String? ?? '';
+      if (json['convert'] case {'kind': final String kind, 'from': final String from, 'to': final String to}) {
+        lastConvert = (kind: kind, from: from, to: to);
+      }
       _aiAsked = json['ai_asked'] as int? ?? 0;
     }
     if (_deviceId.isEmpty) _deviceId = DeviceInfo.newId();
@@ -361,6 +364,7 @@ class AppStore extends ChangeNotifier {
       'theme_chosen': themeChosen,
       'ai_day': _aiDay,
       'ai_asked': _aiAsked,
+      if (lastConvert case final c?) 'convert': {'kind': c.kind, 'from': c.from, 'to': c.to},
     };
     return jsonEncode(json);
   }
@@ -838,6 +842,14 @@ class AppStore extends ChangeNotifier {
     await for (final entry in dir.list(recursive: true)) {
       if (entry is File && entry.path.endsWith('.sqlite') && !keep.contains(entry.path)) await entry.delete();
     }
+  }
+
+  /// The kind and units the Konversi Satuan screen showed last.
+  ({String kind, String from, String to})? lastConvert;
+
+  void setLastConvert(String kind, String from, String to) {
+    lastConvert = (kind: kind, from: from, to: to);
+    _scheduleSave();
   }
 
   /// The unit shown on the Spek and Servis tabs, once picked (not saved).

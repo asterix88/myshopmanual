@@ -337,7 +337,7 @@ class _FileCard extends StatelessWidget {
                     ),
                     if (!file.searchable)
                       Text(
-                        'Gambar atau hasil scan: tidak bisa dicari',
+                        'Gambar atau hasil scan: tidak bisa melakukan pencarian',
                         style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
                   ],
@@ -422,9 +422,21 @@ class _FileCard extends StatelessWidget {
                     : lastPage != null
                         ? 'Terakhir dibuka: hlm $lastPage'
                         : 'Siap dibuka offline';
+                final ready = !withdrawn && lastPage == null;
                 return Row(
                   children: [
-                    Expanded(child: Text(note, style: TextStyle(fontSize: 12, color: AppColors.muted))),
+                    if (ready) ...[
+                      Icon(Icons.check_circle, size: 16, color: AppColors.green),
+                      const SizedBox(width: 6),
+                    ],
+                    Expanded(
+                      child: Text(
+                        note,
+                        style: ready
+                            ? TextStyle(fontSize: 12, color: AppColors.green, fontWeight: FontWeight.w500)
+                            : TextStyle(fontSize: 12, color: AppColors.muted),
+                      ),
+                    ),
                     if (hasNewVersion)
                       TextButton(
                         onPressed: () => _download(context, store),
@@ -433,9 +445,16 @@ class _FileCard extends StatelessWidget {
                     if (canSave)
                       IconButton(
                         tooltip: 'Simpan file',
-                        visualDensity: VisualDensity.compact,
-                        color: AppColors.navy,
-                        icon: const Icon(Icons.sd_card_outlined, size: 22),
+                        style: IconButton.styleFrom(
+                          fixedSize: const Size(40, 40),
+                          minimumSize: const Size(40, 40),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: AppColors.border),
+                          ),
+                        ),
+                        // A folder with a down arrow: save to the Download folder.
+                        icon: const _SaveToFolderIcon(),
                         onPressed: () => _saveToDownloads(context, store, name),
                       ),
                   ],
@@ -661,4 +680,26 @@ bool _sameList(List<String> a, List<String> b) {
     if (a[i] != b[i]) return false;
   }
   return true;
+}
+
+class _SaveToFolderIcon extends StatelessWidget {
+  const _SaveToFolderIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 24,
+      height: 24,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(Icons.folder_outlined, size: 24, color: AppColors.navy),
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Icon(Icons.arrow_downward_rounded, size: 12, color: AppColors.orange),
+          ),
+        ],
+      ),
+    );
+  }
 }
