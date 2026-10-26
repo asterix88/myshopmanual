@@ -103,9 +103,11 @@ SNAPSHOT = r"""async () => {
   return '<!doctype html>' + doc.outerHTML;
 }"""
 
+# SIS 2.0 has one print button per tab (Service, Repair, ...); only the one
+# on the open tab is visible.
 PRINT_BUTTON = (
-    "[title*='print' i], [aria-label*='print' i], "
-    "button:has(mat-icon:text-is('print')), mat-icon:text-is('print')"
+    "button._CommonPrintButton:visible, "
+    "button[title*='print' i]:visible, [aria-label*='print' i]:visible"
 )
 
 
@@ -194,10 +196,10 @@ def save_document(context, page, renderer, href: str, title: str, target: Path) 
         page.goto(href, wait_until="domcontentloaded", timeout=60000)
         view = open_print_view(context, page, 40000)
         if view is None:
-            say("  Tombol print tidak ketemu, halaman disimpan apa adanya.")
+            # The full app page (menus, tree) is no use as a manual page.
+            say("  Tombol print tidak ketemu, dokumen ini dilewati.")
             write_probe(page)
-            wait_until_settled(page)
-            view = page
+            return False
         html = view.evaluate(SNAPSHOT)
     except Error as e:
         say(f"  Gagal membuka: {e.message.splitlines()[0]}")
