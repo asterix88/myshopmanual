@@ -460,9 +460,12 @@ def main() -> int:
         renderer = launch_browser(p, headless=True)
         done = skipped = failed = 0
         total = len(found)
+        saved = {re.sub(r"^\d+ ", "", f.stem).lower() for f in args.folder.glob("*.pdf")}
         for n, (href, title) in enumerate(found.items(), 1):
             target = args.folder / f"{n:03d} {safe_name(title)}.pdf"
-            if target.exists():
+            # Already saved, maybe under another number (the results list
+            # can come in another order or with more pages next time).
+            if target.exists() or safe_name(title).lower() in saved:
                 skipped += 1
                 continue
             say(f"[{n}/{total}] {title}")
