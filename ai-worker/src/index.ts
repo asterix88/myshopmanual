@@ -231,6 +231,21 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+// DeepSeek sometimes writes a tool call as its own markup in the answer
+// text ("<｜DSML｜function_calls> ... </｜DSML｜function_calls>") instead of a
+// real tool call, mostly when the request carries no tools. That text is
+// cut out; if nothing else is left, the model is asked again.
+const DSML_BLOCK = /<[｜|\s]*DSML[｜|\s]*(?:function_)?calls>[\s\S]*?(?:<\/[｜|\s]*DSML[｜|\s]*(?:function_)?calls>|$)/g;
+const DSML_TAG = /<\/?[｜|\s]*DSML[｜|\s]*[^>]*>/g;
+
+function hasDsml(text: unknown): boolean {
+  return typeof text === "string" && /[｜|]\s*DSML\s*[｜|]/.test(text);
+}
+
+function stripDsml(text: string): string {
+  return text.replace(DSML_BLOCK, "").replace(DSML_TAG, "").replace(/\n{3,}/g, "\n\n").trim();
+}
+
 type ChatMessage = {
   role: string;
   content?: unknown;
@@ -303,9 +318,11 @@ async function handle(
     return json({ error: "bad_request" }, 400);
   }
   // Only conversation turns from the app; the system prompt is ours.
-  const messages = (body.messages as ChatMessage[]).filter(
-    (m) => m && (m.role === "user" || m.role === "assistant" || m.role === "tool"),
-  );
+  // Answers saved with tool-call markup in them would teach the model to
+  // write it again.
+  const messages = (body.messages as ChatMessage[])
+    .filter((m) => m && (m.role === "user" || m.role === "assistant" || m.role === "tool"))
+    .map((m) => (m.role === "assistant" && hasDsml(m.content) ? { ...m, content: stripDsml(m.content as string) } : m));
   // A request ending with the user's message starts a new question; the
   // rounds after it end with the app's tool results.
   if (session && messages[messages.length - 1]?.role === "user") {
@@ -377,6 +394,7 @@ async function handle(
     // DeepSeek's "too busy" usually clears within seconds, and its answers
     // are better than the free fallback's, so it gets asked again first.
     let busyRetries = 0;
+    let dsmlRetried = false;
     for (let round = 0; ; round++) {
       let upstream: Response;
       try {
@@ -386,8 +404,10 @@ async function handle(
           body: JSON.stringify({
             model,
             messages: [{ role: "system", content: `${system}\n\n${context}` }, ...turns],
+            // The last round still lists the tools but may not use them:
+            // without any, DeepSeek writes its calls into the answer text.
             ...(final
-              ? {}
+              ? { tools: appTools, tool_choice: "none" }
               : { tools: webSearches < MAX_WEB_SEARCHES ? [...appTools, WEB_TOOL] : appTools, tool_choice: "auto" }),
             // Thinking ignores temperature, and its reasoning counts
             // against max_tokens.
@@ -409,6 +429,26 @@ async function handle(
       const choice = data?.choices?.[0];
       if (upstream.ok && choice?.message) {
         const message = choice.message;
+        if (hasDsml(message.content)) {
+          const text = stripDsml(message.content as string);
+          console.log("tool-call markup in answer", entry, final, text.length);
+          if (!text && !dsmlRetried) {
+            dsmlRetried = true;
+            turns = [
+              ...turns,
+              {
+                role: "user",
+                content:
+                  "Jawab sekarang dengan teks biasa dari halaman yang sudah ditemukan dan pengetahuanmu, tanpa memanggil alat. (Answer now in plain text, no tool calls.)",
+              },
+            ];
+            round--;
+            continue;
+          }
+          message.content =
+            text ||
+            "Maaf, jawabannya gagal disusun. Coba tanyakan lagi dengan kalimat yang sedikit berbeda.";
+        }
         const calls = Array.isArray(message.tool_calls) ? (message.tool_calls as ToolCall[]) : [];
         const web = calls.filter((c) => c.function?.name === "web_search");
         const others = calls.filter((c) => c.function?.name !== "web_search");
