@@ -230,8 +230,8 @@ void main() {
         final body = jsonDecode(request.body) as Map<String, dynamic>;
         sent[request.url.path] = body;
         if (request.url.path == '/auth/login') {
-          if (body['pin'] != '111111') {
-            return http.Response(jsonEncode({'error': 'pin', 'message': 'PIN salah. Periksa lagi lalu coba ulang.'}), 403);
+          if (body['pin'] != '1111') {
+            return http.Response(jsonEncode({'error': 'pin', 'message': 'PIN salah.'}), 403);
           }
           return http.Response(jsonEncode({'status': 'set_pin', 'setup': 'S', 'name': 'Budi'}), 200);
         }
@@ -244,24 +244,24 @@ void main() {
     });
     await tester.pumpWidget(MyManualApp(store: store, requireLogin: true));
     await tester.pumpAndSettle();
-    expect(find.text('Masuk'), findsOneWidget);
+    expect(find.byKey(const Key('login-submit')), findsOneWidget);
     expect(find.text('Versi lokal'), findsOneWidget);
     await tester.tap(find.byTooltip('Lihat PIN'));
     await tester.pump();
     expect(find.byTooltip('Sembunyikan PIN'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('login-nrp')), '21045678');
-    await tester.enterText(find.byKey(const Key('login-pin')), '000000');
+    // The PIN boxes take 4 digits, and the 4th one logs in.
     await tester.runAsync(() async {
-      await tester.tap(find.text('Masuk'));
+      await tester.enterText(find.byKey(const Key('login-pin')), '000000');
       await Future<void>.delayed(const Duration(milliseconds: 200));
     });
     await tester.pumpAndSettle();
-    expect(find.text('PIN salah. Periksa lagi lalu coba ulang.'), findsOneWidget);
+    expect(sent['/auth/login']!['pin'], '0000');
+    expect(find.text('PIN salah.'), findsOneWidget);
 
-    await tester.enterText(find.byKey(const Key('login-pin')), '111111');
     await tester.runAsync(() async {
-      await tester.tap(find.text('Masuk'));
+      await tester.enterText(find.byKey(const Key('login-pin')), '1111');
       await Future<void>.delayed(const Duration(milliseconds: 200));
     });
     await tester.pumpAndSettle();
@@ -282,7 +282,39 @@ void main() {
     await tester.runAsync(() async => store.dispose());
   });
 
-  testWidgets('only admins see Kelola karyawan, which lists employees and makes a new starting PIN', (tester) async {
+  testWidgets('Lupa PIN sends the NRP to the admins', (tester) async {
+    late AppStore store;
+    final sent = <String, Map<String, dynamic>>{};
+    final client = MockClient((request) async {
+      if (request.url.path == '/auth/forgot') {
+        sent[request.url.path] = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(jsonEncode({'ok': true}), 200);
+      }
+      return _files(request);
+    });
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: client);
+    });
+    await tester.pumpWidget(MyManualApp(store: store, requireLogin: true));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('login-nrp')), '21045678');
+    await tester.tap(find.byKey(const Key('login-forgot')));
+    await tester.pumpAndSettle();
+    expect(find.text('Lupa PIN'), findsOneWidget);
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('forgot-send')));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+    expect(sent['/auth/forgot']!['nrp'], '21045678');
+    expect(find.text('Permintaan terkirim'), findsOneWidget);
+    await tester.tap(find.text('Kembali ke Masuk'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('login-submit')), findsOneWidget);
+    await tester.runAsync(() async => store.dispose());
+  });
+
+  testWidgets('only admins see Kelola karyawan, which lists employees, PIN reset requests and makes a temporary PIN', (tester) async {
     late AppStore store;
     final client = MockClient((request) async {
       switch (request.url.path) {
@@ -290,7 +322,7 @@ void main() {
           return http.Response(
               jsonEncode({
                 'employees': [
-                  {'nrp': '21045678', 'name': 'Budi', 'admin': false, 'active': true, 'status': 'active', 'seen': 1, 'devices': ['Samsung SM-A546E'], 'ai_today': 4},
+                  {'nrp': '21045678', 'name': 'Budi', 'admin': false, 'active': true, 'status': 'active', 'seen': 1, 'devices': ['Samsung SM-A546E'], 'ai_today': 4, 'reset': 1793000000},
                   {'nrp': '21051133', 'name': 'Rudi', 'admin': false, 'active': true, 'status': 'new', 'seen': 0, 'devices': [], 'ai_today': 0},
                 ],
               }),
@@ -323,19 +355,35 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     });
     await tester.pumpAndSettle();
-    expect(find.text('Budi'), findsOneWidget);
+    // Budi tapped Lupa PIN: on top as a request, and in the list.
+    expect(find.text('Permintaan reset PIN'), findsOneWidget);
+    expect(find.text('Budi'), findsNWidgets(2));
     expect(find.text('Belum login 1'), findsOneWidget);
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('reset-pin-21045678')));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('PIN sementara'), findsOneWidget);
+    expect(find.text('9'), findsOneWidget);
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Selesai'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
+    expect(find.text('Permintaan reset PIN'), findsNothing);
 
     await tester.tap(find.text('Rudi'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Buat PIN awal baru'));
+    await tester.tap(find.text('Buat PIN sementara'));
     await tester.pumpAndSettle();
     await tester.runAsync(() async {
       await tester.tap(find.text('Buat PIN'));
       await Future<void>.delayed(const Duration(milliseconds: 200));
     });
     await tester.pumpAndSettle();
-    expect(find.text('4829'), findsOneWidget);
+    expect(find.text('4'), findsOneWidget);
+    expect(find.text('8'), findsOneWidget);
     await tester.runAsync(() async => store.dispose());
   });
 }

@@ -19,12 +19,18 @@ void main() {
     tester.view.devicePixelRatio = 2.75;
     late AppStore store;
     final client = MockClient((request) async {
+      if (request.url.path == '/auth/forgot') {
+        return http.Response(jsonEncode({'ok': true}), 200);
+      }
+      if (request.url.path == '/admin/pin') {
+        return http.Response(jsonEncode({'ok': true, 'pin': '4821'}), 200);
+      }
       if (request.url.path == '/auth/login') {
-        return http.Response(jsonEncode({'error': 'pin', 'message': 'PIN salah. Periksa lagi lalu coba ulang.'}), 403);
+        return http.Response(jsonEncode({'error': 'pin', 'message': 'PIN salah.'}), 403);
       }
       if (request.url.path == '/admin/employees') {
         return http.Response(jsonEncode({'employees': [
-          {'nrp': '21045678', 'name': 'Budi Santoso', 'admin': false, 'active': true, 'status': 'active', 'seen': DateTime.now().millisecondsSinceEpoch ~/ 1000, 'devices': ['Samsung SM-A546E', 'Xiaomi Redmi Note 12'], 'ai_today': 4},
+          {'nrp': '21045678', 'name': 'Budi Santoso', 'admin': false, 'active': true, 'status': 'active', 'seen': DateTime.now().millisecondsSinceEpoch ~/ 1000, 'devices': ['Samsung SM-A546E', 'Xiaomi Redmi Note 12'], 'ai_today': 4, 'reset': DateTime.now().millisecondsSinceEpoch ~/ 1000 - 600},
           {'nrp': '21039012', 'name': 'Andi Pratama', 'admin': false, 'active': true, 'status': 'active', 'seen': DateTime.now().millisecondsSinceEpoch ~/ 1000 - 3 * 86400, 'devices': ['Xiaomi Redmi Note 12'], 'ai_today': 0},
           {'nrp': '21051133', 'name': 'Rudi Hartono', 'admin': false, 'active': true, 'status': 'new', 'seen': 0, 'devices': [], 'ai_today': 0},
           {'nrp': '21000001', 'name': 'Anas', 'admin': true, 'active': true, 'status': 'active', 'seen': DateTime.now().millisecondsSinceEpoch ~/ 1000, 'devices': ['Samsung SM-S918B'], 'ai_today': 12},
@@ -40,21 +46,32 @@ void main() {
     await tester.pumpWidget(MyManualApp(store: store, requireLogin: true));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('login-nrp')), '21045678');
-    await tester.enterText(find.byKey(const Key('login-pin')), '123456');
+    await tester.enterText(find.byKey(const Key('login-pin')), '12');
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/l0_login.png'));
     await tester.runAsync(() async {
-      await tester.tap(find.text('Masuk'));
+      await tester.enterText(find.byKey(const Key('login-pin')), '1234');
       await Future<void>.delayed(const Duration(milliseconds: 200));
     });
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/l1_login.png'));
+    await tester.tap(find.byKey(const Key('login-forgot')));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/l1b_forgot.png'));
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('forgot-send')));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/l1c_sent.png'));
 
     await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(
       theme: ThemeData(fontFamily: 'Poppins', useMaterial3: true),
       home: const ChoosePinScreen(setupToken: 's', name: 'Budi Santoso'),
     )));
     await tester.pumpAndSettle();
-    await tester.enterText(find.descendant(of: find.byKey(const Key('pin-new')), matching: find.byType(TextField)), '123456');
-    await tester.enterText(find.descendant(of: find.byKey(const Key('pin-repeat')), matching: find.byType(TextField)), '123');
+    await tester.enterText(find.descendant(of: find.byKey(const Key('pin-new')), matching: find.byType(TextField)), '1234');
+    await tester.enterText(find.descendant(of: find.byKey(const Key('pin-repeat')), matching: find.byType(TextField)), '12');
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/l2_pin.png'));
 
@@ -70,6 +87,17 @@ void main() {
     });
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/l4_admin.png'));
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('reset-pin-21045678')));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    });
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/l4b_pin.png'));
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Selesai'));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Budi Santoso'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/l5_sheet.png'));

@@ -105,6 +105,7 @@ class Employee {
     required this.lastSeen,
     required this.devices,
     required this.aiToday,
+    this.resetAt,
   });
 
   factory Employee.fromJson(Map<String, dynamic> json) => Employee(
@@ -118,6 +119,9 @@ class Employee {
             : DateTime.fromMillisecondsSinceEpoch((json['seen'] as num).toInt() * 1000),
         devices: (json['devices'] as List? ?? const []).cast<String>(),
         aiToday: (json['ai_today'] as num? ?? 0).toInt(),
+        resetAt: json['reset'] == null
+            ? null
+            : DateTime.fromMillisecondsSinceEpoch((json['reset'] as num).toInt() * 1000),
       );
 
   final String nrp;
@@ -130,6 +134,9 @@ class Employee {
   final DateTime? lastSeen;
   final List<String> devices;
   final int aiToday;
+
+  /// When the employee tapped "Lupa PIN"; null when there is no request.
+  DateTime? resetAt;
 }
 
 /// Settings an admin changes in the app that every phone follows.
@@ -230,6 +237,13 @@ class AuthApi {
     ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     return list;
   }
+
+  /// "Lupa PIN": asks the admins for a temporary PIN for [nrp].
+  Future<void> forgotPin(String nrp) => _post('/auth/forgot', {'nrp': nrp.trim()});
+
+  /// Takes [nrp] off the list of PIN reset requests.
+  Future<void> dismissReset(Session session, String nrp) =>
+      _post('/admin/dismiss', {'nrp': nrp}, session: session);
 
   /// A new starting PIN for [nrp], to give to the employee.
   Future<String> newPin(Session session, String nrp) async =>

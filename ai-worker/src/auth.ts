@@ -46,10 +46,21 @@ type Employee = {
   lock_until: number;
   last_seen: number;
   devices: Record<string, Device>;
+  // When the employee asked for a PIN reset on the login screen ("Lupa
+  // PIN"); cleared when an admin makes a temporary PIN or dismisses it.
+  reset_at?: number;
 };
 
 /// What the admin screen lists, kept in the KV entry's metadata.
-type Row = { name: string; admin: boolean; active: boolean; status: "new" | "active"; seen: number; devices: string[] };
+type Row = {
+  name: string;
+  admin: boolean;
+  active: boolean;
+  status: "new" | "active";
+  seen: number;
+  devices: string[];
+  reset?: number;
+};
 
 const now = () => Math.floor(Date.now() / 1000);
 const enc = new TextEncoder();
@@ -137,9 +148,8 @@ async function pinHash(env: AuthEnv, salt: string, pin: string): Promise<string>
   return hex(await crypto.subtle.sign("HMAC", await signingKey(env), enc.encode(`${salt}:${pin}`)));
 }
 
-// New PINs (starting and chosen) have 4 digits. Login takes any PIN that
-// matches, so 6-digit PINs set before 13 Oct 2026 still work until the
-// employee list gives everyone a new 4-digit starting PIN.
+// PINs have 4 digits; the app's PIN boxes take no more, so a 6-digit PIN
+// set before 13 Oct 2026 needs a new one from an admin.
 const PIN_LENGTH = 4;
 const validPin = (pin: string) => new RegExp(`^\\d{${PIN_LENGTH}}$`).test(pin);
 const cleanNrp = (nrp: unknown) => String(nrp ?? "").trim().toUpperCase();
@@ -152,6 +162,7 @@ function rowOf(e: Employee): Row {
     status: e.must_change && Object.keys(e.devices).length === 0 ? "new" : "active",
     seen: e.last_seen,
     devices: Object.values(e.devices).map((d) => d.model).slice(0, 8),
+    ...(e.reset_at ? { reset: e.reset_at } : {}),
   };
 }
 
@@ -211,6 +222,8 @@ export async function handleAuth(request: Request, env: AuthEnv, path: string): 
       return login(request, env);
     case "/auth/pin":
       return setPin(request, env);
+    case "/auth/forgot":
+      return forgot(request, env);
     case "/auth/refresh":
       return refresh(request, env);
     case "/app/config":
@@ -222,6 +235,7 @@ export async function handleAuth(request: Request, env: AuthEnv, path: string): 
     case "/admin/employees":
     case "/admin/pin":
     case "/admin/active":
+    case "/admin/dismiss":
       return admin(request, env, path);
   }
   return null;
@@ -239,12 +253,14 @@ async function login(request: Request, env: AuthEnv): Promise<Response> {
   // No lockout after wrong PINs (Anas's choice): the mechanic just tries
   // again, or asks an admin for a temporary PIN.
   if ((await pinHash(env, e.salt, pin)) !== e.pin) {
-    return json({ error: "pin", message: "PIN salah. Periksa lagi lalu coba ulang." }, 403);
+    return json({ error: "pin", message: "PIN salah." }, 403);
   }
-  // Clears counters left by builds that still locked after wrong PINs.
-  const changed = e.fails > 0 || e.lock_until > 0;
+  // Clears counters left by builds that still locked after wrong PINs, and
+  // a reset request the employee no longer needs.
+  const changed = e.fails > 0 || e.lock_until > 0 || e.reset_at !== undefined;
   e.fails = 0;
   e.lock_until = 0;
+  delete e.reset_at;
   if (e.must_change) {
     if (changed) await save(env, e);
     const setup = await sign(env, { n: e.nrp, nm: e.name, a: e.admin, iat: t, exp: t + SETUP_SECONDS, t: "setup" });
@@ -252,6 +268,22 @@ async function login(request: Request, env: AuthEnv): Promise<Response> {
   }
   if (touch(e, b.device) || changed) await save(env, e);
   return issue(env, e);
+}
+
+/// "Lupa PIN": puts the NRP on the admins' list of reset requests. It
+/// changes nothing else; an admin still has to make a temporary PIN.
+async function forgot(request: Request, env: AuthEnv): Promise<Response> {
+  const b = await body(request);
+  if (!b) return json({ error: "bad_request" }, 400);
+  const nrp = cleanNrp(b.nrp);
+  const e = nrp ? await load(env, nrp) : null;
+  if (!e) return notFound();
+  if (!e.active) return inactive();
+  if (!e.reset_at) {
+    e.reset_at = now();
+    await save(env, e);
+  }
+  return json({ ok: true });
 }
 
 async function setPin(request: Request, env: AuthEnv): Promise<Response> {
@@ -461,8 +493,17 @@ async function admin(request: Request, env: AuthEnv, path: string): Promise<Resp
     e.must_change = true;
     e.fails = 0;
     e.lock_until = 0;
+    delete e.reset_at;
     await save(env, e);
     return json({ ok: true, pin });
+  }
+
+  if (path === "/admin/dismiss") {
+    if (e.reset_at) {
+      delete e.reset_at;
+      await save(env, e);
+    }
+    return json({ ok: true });
   }
 
   // /admin/active
