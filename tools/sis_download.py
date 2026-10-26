@@ -45,12 +45,16 @@ COLLECT_LINKS = r"""() => {
     if (!/#\/(detail|print-preview)/i.test(href)) continue;
     // Results of the previous page SIS still keeps, hidden, are not taken.
     if (!a.getClientRects().length) continue;
-    let title = (a.innerText || a.title || a.getAttribute('aria-label') || '').trim();
+    // SIS's "Open in new Tab" button next to each title is a second link to
+    // the same result: it counts as an icon, not as a result of its own.
+    const clean = t => t.replace(/open in new tab/ig, ' ').replace(/\s+/g, ' ').trim();
+    const lines = el => (el.innerText || '').split('\n').map(clean).filter(Boolean);
+    let title = clean(a.innerText || a.title || a.getAttribute('aria-label') || '');
     const kind = /#\/detail/i.test(href) && !/serviceIeSystemControlNumber=/i.test(href)
         ? 'book' : (title ? 'doc' : 'icon');
     // An icon-only link: take the title from the result row around it.
     for (let row = a.parentElement; !title && row && row !== document.body; row = row.parentElement)
-      title = (row.innerText || '').trim().split('\n')[0].trim();
+      title = lines(row)[0] || '';
     title = title.replace(/\s+/g, ' ');
     // The result row: the largest block around the link holding no other
     // result. Its other lines say which book (and M0... number) and date.
@@ -59,8 +63,7 @@ COLLECT_LINKS = r"""() => {
            [...row.parentElement.querySelectorAll('a[href]')]
                .filter(x => /#\/detail/i.test(x.href) && x.href !== href).length === 0)
       row = row.parentElement;
-    const info = (row.innerText || '').split('\n').map(t => t.trim())
-        .filter(t => t && t !== title).slice(0, 2).join(' | ');
+    const info = lines(row).filter(t => t !== title).slice(0, 2).join(' | ');
     out.push([href, title || 'dokumen', kind, info]);
   }
   return out;
@@ -416,14 +419,17 @@ def page_links(page) -> list[tuple[str, str, str]]:
 
 
 def page_books(page) -> list[str]:
-    books = []
+    """The book entries on the results page, one per book (its title link
+    and its "Open in new Tab" link are the same book)."""
+    books: dict[str, str] = {}
     for frame in page.frames:
         try:
-            books += [f"{t} | {info}" for _, t, kind, info in frame.evaluate(COLLECT_LINKS)
-                      if kind == "book"]
+            for href, t, kind, info in frame.evaluate(COLLECT_LINKS):
+                if kind == "book":
+                    books.setdefault(href, f"{t} | {info}")
         except Error:
             pass
-    return list(dict.fromkeys(books))
+    return list(books.values())
 
 
 def collect(page, found: list, page_no: int) -> tuple[int, int]:
