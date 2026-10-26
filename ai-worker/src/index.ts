@@ -246,6 +246,30 @@ function stripDsml(text: string): string {
   return text.replace(DSML_BLOCK, "").replace(DSML_TAG, "").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+// The last round of a question gets no tools. DeepSeek still writes calls
+// (as DSML markup) when the conversation holds tool rounds, even with
+// tool_choice "none", so that round sees them as plain text: each lookup
+// and its result become a note from the app.
+function flattenToolRounds(turns: ChatMessage[]): ChatMessage[] {
+  const names = new Map<string, string>();
+  const out: ChatMessage[] = [];
+  for (const m of turns) {
+    const { reasoning_content: _, tool_calls, tool_call_id, ...rest } = m;
+    if (m.role === "assistant" && Array.isArray(tool_calls)) {
+      for (const call of tool_calls as ToolCall[]) {
+        if (call.id) names.set(call.id, `${call.function?.name ?? "tool"} ${call.function?.arguments ?? ""}`.trim());
+      }
+      if (typeof m.content === "string" && m.content.trim()) out.push({ role: "assistant", content: m.content });
+    } else if (m.role === "tool") {
+      const label = names.get(String(tool_call_id)) ?? "a lookup";
+      out.push({ role: "user", content: `(From the app, result of ${label}:)\n${typeof m.content === "string" ? m.content : JSON.stringify(m.content)}` });
+    } else {
+      out.push(rest);
+    }
+  }
+  return out;
+}
+
 type ChatMessage = {
   role: string;
   content?: unknown;
@@ -386,7 +410,11 @@ async function handle(
     // reasoning, and thinking mode rejects that (400), so such a question
     // goes on without thinking.
     const thinking = deepseek && canReason && !fallbackRoundInQuestion;
-    let turns: unknown[] = deepseek ? messages : messages.map(({ reasoning_content: _, ...m }) => m);
+    let turns: unknown[] = final
+      ? flattenToolRounds(messages)
+      : deepseek
+        ? messages
+        : messages.map(({ reasoning_content: _, ...m }) => m);
     // web_search runs here, not in the app: its rounds are added to the
     // request and the model is asked again.
     let webSearches = 0;
@@ -404,10 +432,8 @@ async function handle(
           body: JSON.stringify({
             model,
             messages: [{ role: "system", content: `${system}\n\n${context}` }, ...turns],
-            // The last round still lists the tools but may not use them:
-            // without any, DeepSeek writes its calls into the answer text.
             ...(final
-              ? { tools: appTools, tool_choice: "none" }
+              ? {}
               : { tools: webSearches < MAX_WEB_SEARCHES ? [...appTools, WEB_TOOL] : appTools, tool_choice: "auto" }),
             // Thinking ignores temperature, and its reasoning counts
             // against max_tokens.
