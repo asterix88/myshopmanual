@@ -40,8 +40,12 @@ COLLECT_LINKS = r"""() => {
   for (const a of document.querySelectorAll('a[href]')) {
     const href = a.href;
     if (!/#\/(detail|print-preview)/i.test(href)) continue;
-    const title = (a.innerText || a.title || '').trim().replace(/\s+/g, ' ');
-    if (title) out.push([href, title]);
+    let title = (a.innerText || a.title || a.getAttribute('aria-label') || '').trim();
+    // An icon-only link: take the title from the result row around it.
+    for (let row = a.parentElement; !title && row && row !== document.body; row = row.parentElement)
+      title = (row.innerText || '').trim().split('\n')[0].trim();
+    title = title.replace(/\s+/g, ' ');
+    out.push([href, title || 'dokumen']);
   }
   return out;
 }"""
@@ -326,20 +330,47 @@ def sis_tab(context):
     return (tabs or context.pages)[-1]
 
 
+# Scrolls every scrollable box to the bottom, so results drawn only when
+# they come into view are in the page too.
+SCROLL_ALL = """() => {
+  window.scrollTo(0, document.body.scrollHeight);
+  for (const el of document.querySelectorAll('*'))
+    if (el.scrollHeight > el.clientHeight + 20) el.scrollTop = el.scrollHeight;
+}"""
+
+LIST_PROBE = TOOLS / "sis-probe-daftar.txt"
+
+
 def collect(page, found: dict) -> tuple[int, int]:
-    """Adds the page's document links; returns (links on page, new ones)."""
+    """Adds the page's document links; returns (documents on page, new ones).
+    Writes them all to sis-probe-daftar.txt for checking."""
+    for _ in range(4):
+        for frame in page.frames:
+            try:
+                frame.evaluate(SCROLL_ALL)
+            except Error:
+                pass
+        time.sleep(0.5)
     links = []
     for frame in page.frames:
         try:
             links += frame.evaluate(COLLECT_LINKS)
         except Error:
             pass
-    added = 0
+    on_page: dict[str, str] = {}
     for href, title in links:
-        if href not in found:
+        on_page.setdefault(href, title)
+    added = 0
+    rows = []
+    for href, title in on_page.items():
+        new = href not in found
+        rows.append(("BARU  " if new else "SUDAH ") + title + "  " + href)
+        if new:
             found[href] = title
             added += 1
-    return len(links), added
+    with LIST_PROBE.open("a", encoding="utf-8") as f:
+        f.write(f"=== {page.url}\n" + "\n".join(rows) + "\n\n")
+    return len(on_page), added
 
 
 def main() -> int:
@@ -361,6 +392,7 @@ def main() -> int:
         say("2. Cari dan pasang filter (mis. 395 + Disassembly and Assembly).")
         say("3. Saat daftar hasil tampil, kembali ke jendela hitam ini.")
         found: dict[str, str] = {}
+        LIST_PROBE.unlink(missing_ok=True)
         while True:
             say("")
             cmd = input("Enter = ambil daftar di halaman ini | m = mulai download | q = batal: ")
@@ -373,7 +405,8 @@ def main() -> int:
                 work = current
                 break
             on_page, added = collect(current, found)
-            say(f"  +{added} dokumen baru, total {len(found)}.")
+            say(f"  Di halaman ini {on_page} dokumen: {added} baru, "
+                f"{on_page - added} sudah diambil sebelumnya. Total {len(found)}.")
             if on_page == 0:
                 say("  Tidak ada link dokumen di halaman ini.")
                 write_probe(current)

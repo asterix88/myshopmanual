@@ -21,3 +21,4 @@ karyawan.csv
 # SIS login profile and page dumps from sis-download.bat
 tools/.sis-profile/
 tools/sis-probe.txt
+tools/sis-probe-daftar.txt
