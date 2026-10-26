@@ -40,6 +40,8 @@ COLLECT_LINKS = r"""() => {
   for (const a of document.querySelectorAll('a[href]')) {
     const href = a.href;
     if (!/#\/(detail|print-preview)/i.test(href)) continue;
+    // Book entries (no document number) list documents, they are not one.
+    if (/#\/detail/i.test(href) && !/serviceIeSystemControlNumber=/i.test(href)) continue;
     let title = (a.innerText || a.title || a.getAttribute('aria-label') || '').trim();
     // An icon-only link: take the title from the result row around it.
     for (let row = a.parentElement; !title && row && row !== document.body; row = row.parentElement)
@@ -84,18 +86,29 @@ SNAPSHOT = r"""async ([ie, title]) => {
   const JUNK = 'nav, header, footer, button, .d-print-none, [class*=Navigation], ' +
                '[class*=AccordionTree], [class*=Breadcrumb], [class*=breadcrumb], ' +
                '[class*=ookie], [class*=Banner], [class*=banner]';
-  // The document part: the largest block around the "i0..." number that has
-  // no app menu or document tree in it.
-  let part = null;
+  // The document part: the smallest block holding both SIS's visible print
+  // button (in the document's title bar) and the visible "i0..." number.
+  const visible = el => !!(el && el.getClientRects().length);
+  const button = [...document.querySelectorAll(
+      "button._CommonPrintButton, button[title*='print' i]")].find(visible);
+  let number = null;
   if (ie) {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     let node;
     while ((node = walker.nextNode())) {
-      if (node.nodeValue.trim() === ie) { part = node.parentElement; break; }
+      if (node.nodeValue.trim() === ie && visible(node.parentElement)) {
+        number = node.parentElement;
+        break;
+      }
     }
-    while (part && part.parentElement && part.parentElement !== document.body &&
-           !part.parentElement.querySelector('[class*=AccordionTree], [class*=Navigation], nav'))
-      part = part.parentElement;
+  }
+  let part = null;
+  if (button && number) {
+    const above = new Set();
+    for (let el = button; el; el = el.parentElement) above.add(el);
+    part = number;
+    while (part && !above.has(part)) part = part.parentElement;
+    if (part === document.body || part === document.documentElement) part = null;
   }
   const source = part || document.body;
   const content = source.cloneNode(true);
@@ -132,7 +145,8 @@ SNAPSHOT = r"""async ([ie, title]) => {
     doc.body.appendChild(h);
   }
   doc.body.appendChild(doc.importNode(content, true));
-  return '<!doctype html>' + doc.documentElement.outerHTML;
+  return [(content.textContent || '').trim().length, !!part,
+          '<!doctype html>' + doc.documentElement.outerHTML];
 }"""
 
 # SIS 2.0 has one print button per tab (Service, Repair, ...); only the one
@@ -163,6 +177,24 @@ def write_probe(page) -> None:
             parts.append(f"=== frame {frame.url}\nerror: {e.message.splitlines()[0]}")
     PROBE.write_text("\n\n".join(parts), encoding="utf-8")
     say(f"  Detail halaman disimpan di {PROBE}. Kirim file itu ke Claude.")
+
+
+PAGE_PROBE = TOOLS / "sis-probe-halaman.html"
+
+
+def write_page_probe(page) -> None:
+    """Saves the page's HTML (pictures left out) for the developer."""
+    try:
+        html = page.evaluate("""() => {
+          const d = document.documentElement.cloneNode(true);
+          d.querySelectorAll('script, style, svg').forEach(n => n.remove());
+          d.querySelectorAll('img').forEach(i => i.removeAttribute('src'));
+          return d.outerHTML;
+        }""")
+        PAGE_PROBE.write_text(html, encoding="utf-8")
+        say(f"  Halaman disimpan di {PAGE_PROBE}. Kirim file itu ke Claude.")
+    except Error:
+        pass
 
 
 def launch_browser(p, headless: bool, user_data: Path | None = None):
@@ -299,7 +331,11 @@ def save_document(context, page, renderer, href: str, title: str, target: Path) 
             say("  Tombol print tidak ketemu, dokumen ini dilewati.")
             write_probe(page)
             return False
-        html = view.evaluate(SNAPSHOT, [ie.group(1) if ie else "", title])
+        size, found_part, html = view.evaluate(SNAPSHOT, [ie.group(1) if ie else "", title])
+        if not found_part or size < 200:
+            say("  Isi dokumen tidak ketemu, dokumen ini dilewati.")
+            write_page_probe(view)
+            return False
     except Error as e:
         say(f"  Gagal membuka: {e.message.splitlines()[0]}")
         write_probe(page)
