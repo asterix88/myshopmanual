@@ -341,11 +341,14 @@ def save_document(context, page, renderer, href: str, title: str, target: Path) 
         write_probe(page)
         return False
     finally:
-        if view is not None and view is not page:
-            try:
-                view.close()
-            except Error:
-                pass
+        # SIS's print button opens a print preview tab (sometimes only after
+        # a moment); close every tab but the working one so none pile up.
+        for pg in context.pages:
+            if pg is not page:
+                try:
+                    pg.close()
+                except Error:
+                    pass
     out = renderer.new_page()
     try:
         out.set_content(html, wait_until="load", timeout=60000)
