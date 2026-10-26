@@ -29,7 +29,7 @@ TOOLS = Path(__file__).resolve().parent
 PROFILE = TOOLS / ".sis-profile"
 PROBE = TOOLS / "sis-probe.txt"
 # Pause between documents, to go easy on the SIS server.
-PAUSE_SECONDS = 2.0
+PAUSE_SECONDS = 1.0
 
 # SIS opens its print view and calls window.print() once the document is
 # ready; replace it so no print dialog pops up and the script knows when.
@@ -165,6 +165,25 @@ def wait_until_settled(page, timeout: float = 45) -> None:
         time.sleep(0.7)
 
 
+def wait_for_print_view(view, timeout: float = 30) -> None:
+    """Returns as soon as SIS calls print() or the print view stops changing."""
+    end = time.time() + timeout
+    last, same = -1, 0
+    while time.time() < end:
+        try:
+            if view.evaluate("window.__sisPrinted === true"):
+                return
+            size = view.evaluate(PAGE_SIZE)
+            images = view.evaluate(IMAGES_LOADED)
+        except Error:
+            size, images = -1, False
+        same = same + 1 if size == last and size > 200 and images else 0
+        if same >= 4:
+            return
+        last = size
+        time.sleep(0.5)
+
+
 def open_print_view(context, page, timeout_ms: int):
     """Clicks SIS's print button; returns the page that holds the print view,
     or None when there is no print button."""
@@ -174,15 +193,15 @@ def open_print_view(context, page, timeout_ms: int):
     except TimeoutError:
         return None
     pages_before = set(context.pages)
+    try:
+        page.evaluate("window.__sisPrinted = false")
+    except Error:
+        pass
     button.click()
-    time.sleep(1.5)
+    time.sleep(0.8)
     new = [pg for pg in context.pages if pg not in pages_before]
     view = new[0] if new else page
-    try:
-        view.wait_for_function("window.__sisPrinted === true", timeout=60000)
-    except TimeoutError:
-        pass  # no print() call seen: fall back to waiting for the page
-    wait_until_settled(view, 20)
+    wait_for_print_view(view)
     return view
 
 
@@ -191,10 +210,22 @@ def save_document(context, page, renderer, href: str, title: str, target: Path) 
     its login per tab), so that tab is reused rather than closed."""
     view = None
     try:
-        # A full reload, so the previous document's print button is gone.
-        page.goto("about:blank")
-        page.goto(href, wait_until="domcontentloaded", timeout=60000)
+        t0 = time.time()
+        # SIS shows the document's "i0..." number once it has loaded it, so
+        # the app can stay open between documents (much faster than a
+        # reload). Without that number, reload so the old print button goes.
+        ie = re.search(r"serviceIeSystemControlNumber=(i\d+)", href)
+        if ie:
+            page.goto(href, wait_until="commit", timeout=60000)
+            page.wait_for_function(
+                "n => document.body && document.body.innerText.includes(n)",
+                arg=ie.group(1), timeout=60000)
+        else:
+            page.goto("about:blank")
+            page.goto(href, wait_until="domcontentloaded", timeout=60000)
+        t1 = time.time()
         view = open_print_view(context, page, 40000)
+        t2 = time.time()
         if view is None:
             # The full app page (menus, tree) is no use as a manual page.
             say("  Tombol print tidak ketemu, dokumen ini dilewati.")
@@ -221,6 +252,7 @@ def save_document(context, page, renderer, href: str, title: str, target: Path) 
         tmp.replace(target)
     finally:
         out.close()
+    say(f"  buka {t1 - t0:.0f} dtk, print {t2 - t1:.0f} dtk, simpan {time.time() - t2:.0f} dtk")
     return True
 
 
