@@ -15,3 +15,4 @@ for (const reason of [true, false]) for (let i = 0; i < 4; i++) {
   console.log(`--- thinking=${reason} #${i} status=${r.status} model=${j.model} dsml=${/DSML/.test(c)} tool_calls=${!!j.message?.tool_calls}`);
   console.log(c.slice(0, 400));
 }
+// v2
