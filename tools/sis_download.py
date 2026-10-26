@@ -39,32 +39,46 @@ NO_PRINT_DIALOG = "window.print = () => {};"
 # link, "icon" for an icon-only link (the ⧉ next to a title) and "book" for
 # a book entry (no document number: it lists documents, it is not one).
 COLLECT_LINKS = r"""() => {
+  const clean = t => (t || '').replace(/open in new tab/ig, ' ').replace(/\s+/g, ' ').trim();
+  const lines = el => (el.innerText || '').split('\n').map(clean).filter(Boolean);
+  const isResult = a => /#\/(detail|print-preview)/i.test(a.href);
+  // Results of the previous page SIS still keeps, hidden, are not taken.
+  const links = [...document.querySelectorAll('a[href]')]
+      .filter(a => isResult(a) && a.getClientRects().length);
+  const inside = (el, group) => [...el.querySelectorAll('a[href]')]
+      .filter(isResult).every(x => group.includes(x) || !x.getClientRects().length);
+  // One result row has its title link and SIS's "Open in new Tab" link
+  // next to it (the two may differ in their address): links that sit
+  // together in a block holding no other result are one result.
+  const groups = [];
+  for (const a of links) {
+    const last = groups[groups.length - 1];
+    if (last) {
+      let both = last[0].parentElement;
+      while (both && !both.contains(a)) both = both.parentElement;
+      if (both && both !== document.body && inside(both, [...last, a])) {
+        last.push(a);
+        continue;
+      }
+    }
+    groups.push([a]);
+  }
   const out = [];
-  for (const a of document.querySelectorAll('a[href]')) {
+  for (const group of groups) {
+    const titled = group.find(a => clean(a.innerText || a.title || a.getAttribute('aria-label')));
+    const a = titled || group[0];
     const href = a.href;
-    if (!/#\/(detail|print-preview)/i.test(href)) continue;
-    // Results of the previous page SIS still keeps, hidden, are not taken.
-    if (!a.getClientRects().length) continue;
-    // SIS's "Open in new Tab" button next to each title is a second link to
-    // the same result: it counts as an icon, not as a result of its own.
-    const clean = t => t.replace(/open in new tab/ig, ' ').replace(/\s+/g, ' ').trim();
-    const lines = el => (el.innerText || '').split('\n').map(clean).filter(Boolean);
-    let title = clean(a.innerText || a.title || a.getAttribute('aria-label') || '');
-    const kind = /#\/detail/i.test(href) && !/serviceIeSystemControlNumber=/i.test(href)
-        ? 'book' : (title ? 'doc' : 'icon');
-    // An icon-only link: take the title from the result row around it.
-    for (let row = a.parentElement; !title && row && row !== document.body; row = row.parentElement)
-      title = lines(row)[0] || '';
-    title = title.replace(/\s+/g, ' ');
-    // The result row: the largest block around the link holding no other
+    // The result row: the largest block around the links holding no other
     // result. Its other lines say which book (and M0... number) and date.
     let row = a;
-    while (row.parentElement && row.parentElement !== document.body &&
-           [...row.parentElement.querySelectorAll('a[href]')]
-               .filter(x => /#\/detail/i.test(x.href) && x.href !== href).length === 0)
+    while (row.parentElement && row.parentElement !== document.body && inside(row.parentElement, group))
       row = row.parentElement;
+    // An icon-only result takes its title from the row.
+    const title = (titled ? clean(titled.innerText || titled.title || titled.getAttribute('aria-label'))
+                          : lines(row)[0]) || 'dokumen';
+    const kind = /#\/detail/i.test(href) && !/serviceIeSystemControlNumber=/i.test(href) ? 'book' : 'doc';
     const info = lines(row).filter(t => t !== title).slice(0, 2).join(' | ');
-    out.push([href, title || 'dokumen', kind, info]);
+    out.push([href, title, kind, info]);
   }
   return out;
 }"""
@@ -397,39 +411,29 @@ LIST_PROBE = TOOLS / "sis-probe-daftar.txt"
 
 
 def page_links(page) -> list[tuple[str, str, str]]:
-    """The documents on the results page, in order. Each titled result
-    counts, also when SIS lists the same document twice; an icon link
-    only adds a document whose title link is missing. Book entries are
-    left out (see page_books)."""
-    links = []
+    """The documents on the results page, in order: one per result row, also
+    when SIS lists the same document twice. Book entries are left out (see
+    page_books)."""
+    out = []
     for frame in page.frames:
         try:
-            links += frame.evaluate(COLLECT_LINKS)
+            out += [(href, title, info) for href, title, kind, info in frame.evaluate(COLLECT_LINKS)
+                    if kind == "doc"]
         except Error:
             pass
-    titled = {href for href, _, kind, _ in links if kind == "doc"}
-    out, icons = [], set()
-    for href, title, kind, info in links:
-        if kind == "doc":
-            out.append((href, title, info))
-        elif kind == "icon" and href not in titled and href not in icons:
-            icons.add(href)
-            out.append((href, title, info))
     return out
 
 
 def page_books(page) -> list[str]:
-    """The book entries on the results page, one per book (its title link
-    and its "Open in new Tab" link are the same book)."""
-    books: dict[str, str] = {}
+    """The book entries on the results page, one per result row."""
+    books = []
     for frame in page.frames:
         try:
-            for href, t, kind, info in frame.evaluate(COLLECT_LINKS):
-                if kind == "book":
-                    books.setdefault(href, f"{t} | {info}")
+            books += [f"{t} | {info}" for _, t, kind, info in frame.evaluate(COLLECT_LINKS)
+                      if kind == "book"]
         except Error:
             pass
-    return list(books.values())
+    return books
 
 
 def collect(page, found: list, page_no: int) -> tuple[int, int]:
