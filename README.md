@@ -56,7 +56,10 @@ python tools/upload_r2.py dist --warm-all  # panaskan semua PDF di Cloudflare (t
    pasang filter, lalu di jendela hitam tekan Enter untuk mengambil daftar hasil (ulangi di tiap halaman
    hasil) dan `m` untuk mulai. Tiap dokumen dibuka, tombol print SIS ditekan, dan hasilnya disimpan
    sebagai PDF yang ada teksnya ke `source\<folder>\NNN Judul.pdf` sesuai urutan hasil. File yang sudah
-   ada dilewati, jadi kalau berhenti di tengah cukup dijalankan lagi. Kalau halaman SIS tidak sesuai
+   ada dilewati, jadi kalau berhenti di tengah cukup dijalankan lagi. Satu jendela dipakai untuk banyak folder (skrip
+   menanyakan folder berikutnya), dan saat selesai atau `q`/Ctrl+C skrip logout dari SIS: jangan tutup jendela
+   hitam dengan X, karena sesi SIS yang tidak di-logout menumpuk dan akun bisa diblokir ("Active sessions
+   exceeded"). Kalau halaman SIS tidak sesuai
    dugaan, script menulis `tools\sis-probe.txt` untuk dikirim ke developer. Perhatikan aturan pakai
    SIS: download massal bisa dianggap melanggar dan akun bisa diblokir.
 

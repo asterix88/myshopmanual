@@ -211,7 +211,7 @@ def launch_browser(p, headless: bool, user_data: Path | None = None):
             if user_data:
                 return p.chromium.launch_persistent_context(
                     str(user_data), channel=channel, headless=headless,
-                    no_viewport=True)
+                    no_viewport=True, ignore_default_args=["--no-sandbox"])
             return p.chromium.launch(channel=channel, headless=headless)
         except Error as e:
             last = e
@@ -423,70 +423,118 @@ def collect(page, found: list, page_no: int) -> int:
     return len(links)
 
 
-def main() -> int:
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("folder", type=Path, help="folder tujuan, mis. source/CAT395/R&I")
-    args = ap.parse_args()
-    args.folder.mkdir(parents=True, exist_ok=True)
+class SessionDenied(Exception):
+    """SIS refused the login: too many sessions open for the account."""
 
-    with sync_playwright() as p:
-        context = launch_browser(p, headless=False, user_data=PROFILE)
-        context.add_init_script(NO_PRINT_DIALOG)
-        page = context.pages[0] if context.pages else context.new_page()
-        page.goto(SIS_URL)
 
+def check_session(page) -> None:
+    if "sessiondenied" in page.url.lower():
+        raise SessionDenied
+
+
+LOGOUT_CLICK = r"""() => {
+  const visible = el => !!el.getClientRects().length;
+  const isLogout = el => visible(el) &&
+      /^(log\s*out|sign\s*out|logoff|keluar)$/i.test((el.innerText || '').trim());
+  // Links and buttons first: a wrapping <div> with the same text is no button.
+  const pick = () =>
+      [...document.querySelectorAll('a, button, [role=menuitem]')].find(isLogout) ||
+      [...document.querySelectorAll('li, span, div')].find(isLogout);
+  let el = pick();
+  if (!el) {
+    // The logout entry may sit in a closed account or main menu: open them.
+    const menus = [...document.querySelectorAll(
+        "[aria-label*='account' i], [aria-label*='profile' i], [aria-label*='user' i], " +
+        "[title*='account' i], [title*='profile' i], [class*='avatar' i], [class*='Profile'], " +
+        "[class*='UserMenu'], [class*='user-menu'], .navbar-toggler, [class*='Hamburger']")]
+        .filter(visible);
+    for (const m of menus) {
+      m.click();
+      el = pick();
+      if (el) break;
+    }
+  }
+  if (!el) return false;
+  el.click();
+  return true;
+}"""
+
+
+def logout(context) -> None:
+    """Logs out of SIS so the session does not stay open on SIS's side."""
+    if not context.pages:
+        return
+    page = sis_tab(context)
+    clicked = False
+    for _ in range(2):
+        try:
+            clicked = page.evaluate(LOGOUT_CLICK)
+        except Error:
+            clicked = False
+        if clicked:
+            break
+        time.sleep(1.5)  # a menu that opened may need a moment
+    if clicked:
+        time.sleep(4)
+        say("Logout SIS selesai.")
+        return
+    say("Tombol logout SIS tidak ketemu. Klik logout sendiri di jendela Chrome,")
+    try:
+        input("lalu tekan Enter di sini untuk menutup Chrome: ")
+    except (EOFError, KeyboardInterrupt):
+        pass
+
+
+def download_folder(p, context, folder: Path) -> bool:
+    """Collects the results pages and saves their documents into folder.
+    Returns False when the user quits."""
+    folder.mkdir(parents=True, exist_ok=True)
+    say("")
+    say(f"Folder tujuan: {folder}")
+    say("Di jendela Chrome: cari dan pasang filter (mis. 395 + Disassembly and Assembly).")
+    say("Saat daftar hasil tampil, kembali ke jendela hitam ini.")
+    found: list[tuple[str, str, int]] = []
+    pages_taken = 0
+    last_page: list[str] = []
+    LIST_PROBE.unlink(missing_ok=True)
+    while True:
         say("")
-        say("1. Di jendela Chrome yang terbuka: login SIS (sekali saja, nanti diingat).")
-        say("2. Cari dan pasang filter (mis. 395 + Disassembly and Assembly).")
-        say("3. Saat daftar hasil tampil, kembali ke jendela hitam ini.")
-        found: list[tuple[str, str, int]] = []
-        pages_taken = 0
-        last_page: list[str] = []
-        LIST_PROBE.unlink(missing_ok=True)
-        while True:
-            say("")
-            cmd = input("Enter = ambil daftar di halaman ini | m = mulai download | q = batal: ")
-            cmd = cmd.strip().lower()
-            if cmd == "q":
-                context.close()
-                return 0
-            current = sis_tab(context)
-            # m on the results page just taken starts at once; on a new
-            # results page, that page is taken first.
-            if cmd == "m" and found and [h for h, _ in page_links(current)] == last_page:
-                work = current
-                break
-            pages_taken += 1
-            on_page = collect(current, found, pages_taken)
-            last_page = [h for h, _, _ in found[len(found) - on_page:]]
-            say(f"  Halaman hasil ke-{pages_taken}: {on_page} dokumen. Total {len(found)}.")
-            if on_page == 0:
-                pages_taken -= 1
-                say("  Tidak ada link dokumen di halaman ini.")
-                write_probe(current)
-            elif cmd == "m":
-                work = current
-                break
-            else:
-                say("  Kalau hasilnya lebih dari satu halaman, pindah ke halaman berikutnya lalu Enter lagi.")
+        cmd = input("Enter = ambil daftar di halaman ini | m = mulai download | q = keluar: ")
+        cmd = cmd.strip().lower()
+        if cmd == "q":
+            return False
+        current = sis_tab(context)
+        check_session(current)
+        # m on the results page just taken starts at once; on a new
+        # results page, that page is taken first.
+        if cmd == "m" and found and [h for h, _ in page_links(current)] == last_page:
+            work = current
+            break
+        pages_taken += 1
+        on_page = collect(current, found, pages_taken)
+        last_page = [h for h, _, _ in found[len(found) - on_page:]]
+        say(f"  Halaman hasil ke-{pages_taken}: {on_page} dokumen. Total {len(found)}.")
+        if on_page == 0:
+            pages_taken -= 1
+            say("  Tidak ada link dokumen di halaman ini.")
+            write_probe(current)
+        elif cmd == "m":
+            work = current
+            break
+        else:
+            say("  Kalau hasilnya lebih dari satu halaman, pindah ke halaman berikutnya lalu Enter lagi.")
 
-        if not found:
-            say("Belum ada dokumen yang diambil.")
-            context.close()
-            return 1
-
-        renderer = launch_browser(p, headless=True)
-        done = skipped = failed = 0
-        total = len(found)
-        saved = {re.sub(r"^\d+ ", "", f.stem).lower() for f in args.folder.glob("*.pdf")}
-        title_count: dict[str, int] = {}
-        for _, title, _ in found:
-            key = safe_name(title).lower()
-            title_count[key] = title_count.get(key, 0) + 1
+    renderer = launch_browser(p, headless=True)
+    done = skipped = failed = 0
+    total = len(found)
+    saved = {re.sub(r"^\d+ ", "", f.stem).lower() for f in folder.glob("*.pdf")}
+    title_count: dict[str, int] = {}
+    for _, title, _ in found:
+        key = safe_name(title).lower()
+        title_count[key] = title_count.get(key, 0) + 1
+    try:
         for n, (href, title, _) in enumerate(found, 1):
-            target = args.folder / f"{n:03d} {safe_name(title)}.pdf"
+            target = folder / f"{n:03d} {safe_name(title)}.pdf"
             # Already saved. A title that is unique in the list also counts
             # under another number (the list order can change between runs).
             key = safe_name(title).lower()
@@ -498,16 +546,64 @@ def main() -> int:
                 done += 1
             else:
                 failed += 1
+            check_session(work)
             time.sleep(PAUSE_SECONDS)
+    finally:
         renderer.close()
-        context.close()
 
     say("")
     say(f"Selesai: {done} disimpan, {skipped} sudah ada, {failed} gagal.")
-    say(f"Folder: {args.folder.resolve()}")
+    say(f"Folder: {folder.resolve()}")
     if failed:
-        say("Jalankan lagi untuk mencoba yang gagal (yang sudah ada dilewati).")
-    return 0 if not failed else 1
+        say("Yang gagal bisa dicoba lagi nanti (yang sudah ada dilewati).")
+    return True
+
+
+def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("folder", type=Path, help="folder tujuan, mis. source/CAT395/R&I")
+    args = ap.parse_args()
+    # Later folders are asked for relative to the same root (source\).
+    root = Path(args.folder.parts[0]) if len(args.folder.parts) > 1 else Path(".")
+
+    with sync_playwright() as p:
+        context = launch_browser(p, headless=False, user_data=PROFILE)
+        context.add_init_script(NO_PRINT_DIALOG)
+        page = context.pages[0] if context.pages else context.new_page()
+        page.goto(SIS_URL)
+        say("")
+        say("Login SIS di jendela Chrome yang terbuka (kalau diminta).")
+        say("Satu jendela ini dipakai untuk semua folder, jadi tidak perlu login ulang.")
+        say("Selesai atau batal: ketik q (atau Ctrl+C), jangan tutup jendela ini dengan X,")
+        say("supaya skrip sempat logout dari SIS.")
+        code = 0
+        try:
+            folder = args.folder
+            while folder is not None:
+                if not download_folder(p, context, folder):
+                    break
+                say("")
+                name = input(f"Folder berikutnya di {root}\\ (kosong = selesai): ").strip()
+                folder = root / name if name else None
+        except SessionDenied:
+            say("")
+            say("SIS menolak: terlalu banyak sesi aktif untuk akun ini. Skrip berhenti.")
+            code = 1
+        except (KeyboardInterrupt, EOFError):
+            say("")
+            say("Dibatalkan.")
+        finally:
+            try:
+                logout(context)
+            except Exception as e:  # a broken connection after Ctrl+C
+                say(f"Logout SIS gagal ({e}); logout sendiri di Chrome kalau masih terbuka.")
+            try:
+                context.close()
+            except Error:
+                pass
+    return code
 
 
 if __name__ == "__main__":
