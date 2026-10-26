@@ -35,7 +35,7 @@ PAUSE_SECONDS = 1.0
 # pops up and stops the script.
 NO_PRINT_DIALOG = "window.print = () => {};"
 
-# Every result on the page as [href, title, kind]: kind "doc" for a titled
+# Every result on the page as [href, title, kind, info]: kind "doc" for a titled
 # link, "icon" for an icon-only link (the ⧉ next to a title) and "book" for
 # a book entry (no document number: it lists documents, it is not one).
 COLLECT_LINKS = r"""() => {
@@ -52,7 +52,16 @@ COLLECT_LINKS = r"""() => {
     for (let row = a.parentElement; !title && row && row !== document.body; row = row.parentElement)
       title = (row.innerText || '').trim().split('\n')[0].trim();
     title = title.replace(/\s+/g, ' ');
-    out.push([href, title || 'dokumen', kind]);
+    // The result row: the largest block around the link holding no other
+    // result. Its other lines say which book (and M0... number) and date.
+    let row = a;
+    while (row.parentElement && row.parentElement !== document.body &&
+           [...row.parentElement.querySelectorAll('a[href]')]
+               .filter(x => /#\/detail/i.test(x.href) && x.href !== href).length === 0)
+      row = row.parentElement;
+    const info = (row.innerText || '').split('\n').map(t => t.trim())
+        .filter(t => t && t !== title).slice(0, 2).join(' | ');
+    out.push([href, title || 'dokumen', kind, info]);
   }
   return out;
 }"""
@@ -384,7 +393,7 @@ SCROLL_ALL = """() => {
 LIST_PROBE = TOOLS / "sis-probe-daftar.txt"
 
 
-def page_links(page) -> list[tuple[str, str]]:
+def page_links(page) -> list[tuple[str, str, str]]:
     """The documents on the results page, in order. Each titled result
     counts, also when SIS lists the same document twice; an icon link
     only adds a document whose title link is missing. Book entries are
@@ -395,14 +404,14 @@ def page_links(page) -> list[tuple[str, str]]:
             links += frame.evaluate(COLLECT_LINKS)
         except Error:
             pass
-    titled = {href for href, _, kind in links if kind == "doc"}
+    titled = {href for href, _, kind, _ in links if kind == "doc"}
     out, icons = [], set()
-    for href, title, kind in links:
+    for href, title, kind, info in links:
         if kind == "doc":
-            out.append((href, title))
+            out.append((href, title, info))
         elif kind == "icon" and href not in titled and href not in icons:
             icons.add(href)
-            out.append((href, title))
+            out.append((href, title, info))
     return out
 
 
@@ -410,7 +419,8 @@ def page_books(page) -> list[str]:
     books = []
     for frame in page.frames:
         try:
-            books += [t for _, t, kind in frame.evaluate(COLLECT_LINKS) if kind == "book"]
+            books += [f"{t} | {info}" for _, t, kind, info in frame.evaluate(COLLECT_LINKS)
+                      if kind == "book"]
         except Error:
             pass
     return list(dict.fromkeys(books))
@@ -435,15 +445,16 @@ def collect(page, found: list, page_no: int) -> tuple[int, int]:
         links = now
     earlier = {href: n for n, (href, _, _) in enumerate(found, 1)}
     books = page_books(page)
-    for title in books:
-        say(f"    dilewati (buku/daftar isi, bukan dokumen): {title}")
     rows = []
-    for href, title in links:
-        if href in earlier:
-            say(f"    link sama dengan dokumen ke-{earlier[href]}: {title} (tetap diunduh)")
-        earlier.setdefault(href, len(found) + 1)
-        found.append((href, title, page_no))
-        rows.append(f"{len(found):03d} {title}  {href}")
+    for href, title, info in links:
+        found.append((href, title, info))
+        n = len(found)
+        note = f"  (link sama dengan no. {earlier[href]})" if href in earlier else ""
+        earlier.setdefault(href, n)
+        say(f"    {n:03d} {title} | {info}{note}")
+        rows.append(f"{n:03d} {title} | {info}{note}  {href}")
+    for title in books:
+        say(f"    --- buku/daftar isi, dilewati: {title}")
     with LIST_PROBE.open("a", encoding="utf-8") as f:
         f.write(f"=== halaman hasil ke-{page_no} {page.url}\n" + "\n".join(rows) + "\n\n")
     return len(links), len(books)
@@ -519,7 +530,7 @@ def download_folder(p, context, folder: Path) -> bool:
     say(f"Folder tujuan: {folder}")
     say("Di jendela Chrome: cari dan pasang filter (mis. 395 + Disassembly and Assembly).")
     say("Saat daftar hasil tampil, kembali ke jendela hitam ini.")
-    found: list[tuple[str, str, int]] = []
+    found: list[tuple[str, str, str]] = []  # href, title, book | date
     pages_taken = 0
     last_page: list[str] = []
     LIST_PROBE.unlink(missing_ok=True)
@@ -533,7 +544,7 @@ def download_folder(p, context, folder: Path) -> bool:
         check_session(current)
         # m on the results page just taken starts at once; on a new
         # results page, that page is taken first.
-        if cmd == "m" and found and [h for h, _ in page_links(current)] == last_page:
+        if cmd == "m" and found and [h for h, _, _ in page_links(current)] == last_page:
             work = current
             break
         pages_taken += 1
@@ -550,6 +561,13 @@ def download_folder(p, context, folder: Path) -> bool:
             break
         else:
             say("  Kalau hasilnya lebih dari satu halaman, pindah ke halaman berikutnya lalu Enter lagi.")
+
+    # The whole list next to the PDFs, so same-titled documents can be told
+    # apart (book, M0... number, date) and sorted out by hand.
+    with (folder / "daftar-dokumen.txt").open("w", encoding="utf-8") as f:
+        for n, (_, title, info) in enumerate(found, 1):
+            f.write(f"{n:03d} {safe_name(title)}.pdf | {info}\n")
+    say(f"Daftar lengkap: {folder / 'daftar-dokumen.txt'}")
 
     renderer = launch_browser(p, headless=True)
     done = skipped = failed = 0
