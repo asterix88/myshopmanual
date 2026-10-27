@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../auth.dart';
 
@@ -11,6 +12,7 @@ import '../widgets/common.dart';
 import 'shell.dart';
 import '../widgets/excavator_loader.dart';
 import '../widgets/machine_icon.dart';
+import '../widgets/tool_icons.dart';
 import '../widgets/unit_icon.dart';
 import 'answer_reports_screen.dart';
 import 'cetok_screen.dart';
@@ -30,123 +32,107 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final updateCount = store.unseenUpdates.length;
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 64,
-        titleSpacing: 14,
-        shape: Border(bottom: BorderSide(color: AppColors.line)),
-        title: Row(
+    // The navy header runs up under the status bar, so its icons turn white.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
+      child: Scaffold(
+        body: Column(
           children: [
-            Image.asset('assets/images/logo.png', width: 42, height: 42),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'MyManual',
-                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: AppColors.navy, height: 1.15),
-                ),
-                Text(
-                  'TRACK SECTION',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.8,
-                    color: Color(0xFFC86A0A),
-                    height: 1.15,
+            _Header(
+              name: store.session?.name,
+              onSearch: onOpenSearch,
+              actions: [
+                IconButton(
+                  tooltip: updateCount == 0 ? 'Update manual' : 'Update manual, $updateCount baru',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const UpdatesScreen()),
+                  ),
+                  icon: Badge(
+                    isLabelVisible: updateCount > 0,
+                    label: Text('$updateCount'),
+                    backgroundColor: const Color(0xFFE8541E),
+                    child: const Icon(Icons.notifications, color: Colors.white, size: 26),
                   ),
                 ),
+                _menu(context, store),
               ],
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: updateCount == 0 ? 'Update manual' : 'Update manual, $updateCount baru',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const UpdatesScreen()),
-            ),
-            icon: Badge(
-              isLabelVisible: updateCount > 0,
-              label: Text('$updateCount'),
-              backgroundColor: const Color(0xFFE8541E),
-              child: Icon(Icons.notifications, color: AppColors.navy, size: 26),
-            ),
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'Lainnya',
-            icon: Icon(Icons.more_vert, color: AppColors.navy),
-            onSelected: (value) => switch (value) {
-              'report' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportScreen())),
-              'employees' =>
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EmployeesScreen())),
-              'answers' =>
-                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnswerReportsScreen())),
-              'theme' => _chooseTheme(context, store),
-              'cetok' => showDialog<void>(context: context, builder: (_) => const _CetokDataDialog()),
-              'logout' => _logout(context, store),
-              _ => _editServer(context, store),
-            },
-            itemBuilder: (_) => [
-              if (store.session case final session?)
-                PopupMenuItem(
-                  enabled: false,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        session.name,
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.ink),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: store.refresh,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  // The bottom bar is drawn over the page (see HomeShell).
+                  padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
+                  children: [
+                    if (store.online == false) _OfflineBanner(store: store),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (store.lastRead != null) _ContinueReading(lastRead: store.lastRead!),
+                          _MachineFolders(store: store),
+                          const SizedBox(height: 20),
+                          const _HomeLabel('Fitur lainnya'),
+                          const _Tools(),
+                        ],
                       ),
-                      Text(
-                        session.admin ? 'NRP ${session.nrp} · Admin' : 'NRP ${session.nrp}',
-                        style: TextStyle(fontSize: 12, color: AppColors.muted),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              if (store.session?.admin ?? false)
-                const PopupMenuItem(value: 'employees', child: Text('Kelola karyawan')),
-              if (store.session?.admin ?? false)
-                const PopupMenuItem(value: 'answers', child: Text('Penilaian nyel AI')),
-              if (store.session?.admin ?? false)
-                const PopupMenuItem(value: 'cetok', child: Text('Data Cetok Online')),
-              const PopupMenuItem(value: 'theme', child: Text('Tampilan (terang / gelap)')),
-              const PopupMenuItem(value: 'report', child: Text('Laporan masalah')),
-              if (store.session?.admin ?? false)
-                const PopupMenuItem(value: 'server', child: Text('Alamat server')),
-              if (store.loggedIn)
-                PopupMenuItem(value: 'logout', child: Text('Keluar', style: TextStyle(color: AppColors.danger))),
-            ],
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: store.refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          // The bottom bar is drawn over the page (see HomeShell).
-          padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
-          children: [
-            _Greeting(name: store.session?.name, onSearch: onOpenSearch),
-            if (store.online == false) ...[const SizedBox(height: 12), _OfflineBanner(store: store)],
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (store.lastRead != null) _ContinueReading(lastRead: store.lastRead!),
-                  _MachineFolders(store: store),
-                  const SizedBox(height: 20),
-                  const _HomeLabel('Alat bantu'),
-                  const _Tools(),
-                ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _menu(BuildContext context, AppStore store) {
+    return PopupMenuButton<String>(
+      tooltip: 'Lainnya',
+      icon: const Icon(Icons.more_vert, color: Colors.white),
+      onSelected: (value) => switch (value) {
+        'report' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportScreen())),
+        'employees' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EmployeesScreen())),
+        'answers' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnswerReportsScreen())),
+        'theme' => _chooseTheme(context, store),
+        'cetok' => showDialog<void>(context: context, builder: (_) => const _CetokDataDialog()),
+        'logout' => _logout(context, store),
+        _ => _editServer(context, store),
+      },
+      itemBuilder: (_) => [
+        if (store.session case final session?)
+          PopupMenuItem(
+            enabled: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  session.name,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.ink),
+                ),
+                Text(
+                  session.admin ? 'NRP ${session.nrp} · Admin' : 'NRP ${session.nrp}',
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+              ],
+            ),
+          ),
+        if (store.session?.admin ?? false)
+          const PopupMenuItem(value: 'employees', child: Text('Kelola karyawan')),
+        if (store.session?.admin ?? false)
+          const PopupMenuItem(value: 'answers', child: Text('Penilaian nyel AI')),
+        if (store.session?.admin ?? false)
+          const PopupMenuItem(value: 'cetok', child: Text('Data Cetok Online')),
+        const PopupMenuItem(value: 'theme', child: Text('Tampilan (terang / gelap)')),
+        const PopupMenuItem(value: 'report', child: Text('Laporan masalah')),
+        if (store.session?.admin ?? false)
+          const PopupMenuItem(value: 'server', child: Text('Alamat server')),
+        if (store.loggedIn)
+          PopupMenuItem(value: 'logout', child: Text('Keluar', style: TextStyle(color: AppColors.danger))),
+      ],
     );
   }
 
@@ -255,49 +241,80 @@ class _OfflineBanner extends StatelessWidget {
   }
 }
 
-/// "Halo, Anas" and the search box that opens the Cari tab.
-class _Greeting extends StatelessWidget {
-  const _Greeting({required this.name, required this.onSearch});
+/// The navy top of Home: logo, "Selamat siang, Anas", the bell and menu,
+/// and the search box that opens the Cari tab.
+class _Header extends StatelessWidget {
+  const _Header({required this.name, required this.onSearch, required this.actions});
 
   final String? name;
   final VoidCallback onSearch;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 18),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(22)),
-        boxShadow: const [BoxShadow(color: Color(0x0F101828), blurRadius: 10, offset: Offset(0, 4))],
+      padding: EdgeInsets.fromLTRB(16, MediaQuery.paddingOf(context).top + 10, 16, 18),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E3A64),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            greeting(name),
-            style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: AppColors.ink),
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: ClipOval(child: Image.asset('assets/images/logo.png')),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // "My" white, "Manual" in the app's orange.
+                    Text.rich(
+                      TextSpan(
+                        text: 'My',
+                        children: [TextSpan(text: 'Manual', style: TextStyle(color: AppColors.orange))],
+                      ),
+                      style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2),
+                    ),
+                    Text(
+                      greeting(name),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12, color: Color(0xFFC9D3E3)),
+                    ),
+                  ],
+                ),
+              ),
+              ...actions,
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Material(
-            color: AppColors.field,
-            shape: StadiumBorder(side: BorderSide(color: AppColors.line)),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
             child: InkWell(
               key: const Key('home-search'),
-              customBorder: const StadiumBorder(),
+              borderRadius: BorderRadius.circular(12),
               onTap: onSearch,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
                 child: Row(
                   children: [
-                    Icon(Icons.search, size: 20, color: AppColors.muted),
-                    const SizedBox(width: 10),
+                    Icon(Icons.search, size: 20, color: Color(0xFF6B7178)),
+                    SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         'Cari manual, part number, kode error',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 13, color: AppColors.muted),
+                        style: TextStyle(fontSize: 13, color: Color(0xFF6B7178)),
                       ),
                     ),
                   ],
@@ -311,11 +328,20 @@ class _Greeting extends StatelessWidget {
   }
 }
 
-/// "Halo, Anas" from the login name (its first word, AHMAD -> Ahmad).
-String greeting(String? name) {
+/// "Selamat siang, Anas" from the time of day and the login name (its
+/// first word, AHMAD -> Ahmad).
+String greeting(String? name, [DateTime? now]) {
+  final hour = (now ?? DateTime.now()).hour;
+  final part = switch (hour) {
+    < 4 => 'malam',
+    < 11 => 'pagi',
+    < 15 => 'siang',
+    < 18 => 'sore',
+    _ => 'malam',
+  };
   final first = (name ?? '').trim().split(RegExp(r'\s+')).first;
-  if (first.isEmpty) return 'Halo';
-  return 'Halo, ${first[0].toUpperCase()}${first.substring(1).toLowerCase()}';
+  if (first.isEmpty) return 'Selamat $part';
+  return 'Selamat $part, ${first[0].toUpperCase()}${first.substring(1).toLowerCase()}';
 }
 
 class _ContinueReading extends StatelessWidget {
@@ -416,7 +442,7 @@ class _MachineFolders extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _HomeLabel(
-          'Manual book',
+          'Dokumen teknis',
           trailing: units.isEmpty
               ? null
               : Text('${units.length} model unit', style: TextStyle(fontSize: 12, color: AppColors.muted)),
@@ -456,7 +482,7 @@ class _MachineFolders extends StatelessWidget {
   }
 }
 
-/// A Home section title: Manual book, Alat bantu.
+/// A Home section title: Dokumen teknis, Fitur lainnya.
 class _HomeLabel extends StatelessWidget {
   const _HomeLabel(this.text, {this.trailing});
 
@@ -471,7 +497,7 @@ class _HomeLabel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: Text(text, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.navy)),
+            child: Text(text, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.ink)),
           ),
           ?trailing,
         ],
@@ -480,9 +506,12 @@ class _HomeLabel extends StatelessWidget {
   }
 }
 
-/// The type of the Home folder names (EXCAVATOR, BULLDOZER).
-TextStyle get homeTitleStyle =>
-    TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.navy, letterSpacing: 0.3);
+/// The type of the Home folder names (Excavator, Bulldozer).
+TextStyle get homeTitleStyle => TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink);
+
+/// EXCAVATOR -> Excavator.
+String titleCase(String label) =>
+    label.isEmpty ? label : '${label[0].toUpperCase()}${label.substring(1).toLowerCase()}';
 
 class _FolderCard extends StatelessWidget {
   const _FolderCard({required this.machine, required this.units, required this.store});
@@ -499,42 +528,61 @@ class _FolderCard extends StatelessWidget {
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => MachineScreen(machine: machine)),
       ),
-      padding: const EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            height: 92,
-            decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(12)),
-            alignment: Alignment.center,
-            child: MachineIcon(machine, width: 124),
+          // The machine picture fills the top of the card.
+          Stack(
+            children: [
+              Container(
+                height: 104,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.navySoft, Color.lerp(AppColors.navySoft, AppColors.navy, 0.12)!],
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: MachineIcon(machine, width: 140),
+              ),
+              if (updates > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: const Color(0xFFE8541E), borderRadius: BorderRadius.circular(6)),
+                    child: Text(
+                      '$updates baru',
+                      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Colors.white),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 8),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.fromLTRB(12, 10, 8, 12),
             child: Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(machine.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: homeTitleStyle),
                       Text(
-                        units.isEmpty ? 'belum ada model' : '${units.length} unit',
+                        titleCase(machine.label),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: homeTitleStyle,
+                      ),
+                      Text(
+                        units.isEmpty ? 'belum ada model' : '${units.length} model',
                         style: TextStyle(fontSize: 11.5, color: AppColors.muted),
                       ),
                     ],
                   ),
                 ),
-                if (updates > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(6)),
-                    child: Text(
-                      '$updates update',
-                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.update),
-                    ),
-                  ),
+                Icon(Icons.chevron_right, color: AppColors.muted),
               ],
             ),
           ),
@@ -544,7 +592,7 @@ class _FolderCard extends StatelessWidget {
   }
 }
 
-/// Alat bantu: small tiles for the tools beside the manuals.
+/// Fitur lainnya: the tools beside the manuals, icon on top, name below.
 class _Tools extends StatelessWidget {
   const _Tools();
 
@@ -557,14 +605,8 @@ class _Tools extends StatelessWidget {
           Expanded(
             child: _ToolTile(
               key: const Key('tool-convert'),
-              icon: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(color: const Color(0xFF1E3A64), borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.speed, color: Colors.white, size: 24),
-              ),
-              title: 'Konversi',
-              subtitle: 'Tekanan & torsi',
+              icon: const ToolIcon.gauge(),
+              title: 'Konversi satuan',
               onTap: () => openConvert(context),
             ),
           ),
@@ -572,13 +614,8 @@ class _Tools extends StatelessWidget {
           Expanded(
             child: _ToolTile(
               key: const Key('tool-cetok'),
-              icon: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                // Anas's photo of the Cetok Online workflow.
-                child: Image.asset('assets/images/cetok.png', width: 40, height: 40, fit: BoxFit.cover),
-              ),
+              icon: const ToolIcon.partSearch(),
               title: 'Cetok Online',
-              subtitle: 'Cek stok part',
               onTap: () => openCetok(context),
             ),
           ),
@@ -589,41 +626,27 @@ class _Tools extends StatelessWidget {
 }
 
 class _ToolTile extends StatelessWidget {
-  const _ToolTile({super.key, required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _ToolTile({super.key, required this.icon, required this.title, required this.onTap});
 
   final Widget icon;
   final String title;
-  final String subtitle;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
       onTap: onTap,
-      padding: const EdgeInsets.all(12),
-      child: Row(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      child: Column(
         children: [
           icon,
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
-                ),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, color: AppColors.muted),
-                ),
-              ],
-            ),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.ink),
           ),
         ],
       ),
