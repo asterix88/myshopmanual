@@ -38,13 +38,22 @@ def is_merged_folder(folder: Path) -> bool:
 
 
 def numbered_pdfs(folder: Path) -> dict[str, Path]:
-    """The folder's "NNN Title.pdf" files by number."""
+    """The folder's "NNN Title.pdf" files by number. A PDF without a
+    number (saved by hand) gets its file name as key: no susunan.txt line
+    can name it, so it always lands under Others rather than being lost."""
     out = {}
     for pdf in sorted(folder.glob("*.pdf")):
         m = DOC_NUMBER.match(pdf.stem)
-        if m:
-            out[m.group(1)] = pdf
+        out[m.group(1) if m else pdf.name] = pdf
     return out
+
+
+def needs_draft(folder: Path) -> bool:
+    """True when susunan.txt is missing or holds nothing yet: an empty
+    susunan.txt is how a folder without daftar-dokumen.txt (downloaded
+    before that list existed) asks to be merged."""
+    path = folder / SUSUNAN_FILE
+    return not path.exists() or not read_susunan(path)[0]
 
 
 def doc_title(pdf: Path) -> str:
@@ -260,8 +269,10 @@ def draft_susunan(folder: Path) -> str:
     """A first susunan.txt for the folder, from its daftar-dokumen.txt.
     Every document is listed, same titles too (each SIS copy may differ);
     a title found in two books carries the book's code."""
-    rows = read_list(folder)
     files = numbered_pdfs(folder)
+    if not (folder / LIST_FILE).exists():
+        return draft_from_names(files)
+    rows = read_list(folder)
     rows = [r for r in rows if r["number"] in files]
     tree: dict[str, dict[str, list[dict]]] = {}
     for row in rows:
@@ -295,3 +306,35 @@ def draft_susunan(folder: Path) -> str:
                 code = f" ({r['code']})" if len(books[r["title"].lower()]) > 1 and r["code"] else ""
                 lines.append(f"{r['number']} {r['title']}{code}")
     return "\n".join(lines) + "\n"
+
+
+def draft_from_names(files: dict[str, Path]) -> str:
+    """A first susunan.txt from the file names alone (no daftar-dokumen.txt,
+    so no SIS book to sort by): one chapter per component, the words before
+    the first " - " of the title (Relief Valve (Main) - Test -> Relief
+    Valve (Main)); components with one document share a chapter Miscellaneous."""
+    chapters: dict[str, list[tuple[str, str]]] = {}
+    for number, pdf in files.items():
+        if not DOC_NUMBER.match(pdf.stem):
+            continue  # unnumbered files go to Others by themselves
+        title = doc_title(pdf)
+        chapters.setdefault(title.split(" - ")[0].strip(), []).append((number, title))
+    lines = [
+        "// Susunan manual: # = bab, ## = kelompok, lalu nomor file dan judul bookmark.",
+        "// Dibuat dari nama file (folder ini tidak punya daftar-dokumen.txt). Pindahkan baris",
+        "// untuk mengubah urutan atau bab; tulis // di depan baris dokumen yang tidak dipakai.",
+        "",
+    ]
+    singles = []
+    for name in sorted(chapters, key=str.lower):
+        docs = sorted(chapters[name], key=lambda d: (d[1].lower(), d[0]))
+        if len(docs) == 1:
+            singles.append(docs[0])
+            continue
+        lines.append(f"# {name}")
+        lines += [f"{n} {t}" for n, t in docs]
+        lines.append("")
+    if singles:
+        lines.append("# Miscellaneous")
+        lines += [f"{n} {t}" for n, t in sorted(singles, key=lambda d: d[1].lower())]
+    return "\n".join(lines).rstrip() + "\n"

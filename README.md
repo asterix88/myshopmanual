@@ -79,7 +79,8 @@ python tools/upload_r2.py dist --warm-all  # panaskan semua PDF di Cloudflare (t
    lalu baris `NNN Judul` per dokumen (nomor = nomor file). Kalau belum ada, `update.bat` membuatnya
    sendiri (bab dari buku SIS, kelompok dari kata di judul); edit dengan Notepad lalu jalankan
    `update-unit.bat` lagi. `// NNN ...` = dokumen itu tidak dipakai; file baru yang belum tercantum masuk
-   bab Others di akhir.
+   bab Others di akhir. Folder lama tanpa `daftar-dokumen.txt`: buat file kosong `susunan.txt` di folder
+   itu, lalu `update.bat` mengisinya dari nama file (satu bab per komponen).
 
 ## Server AI (`ai-worker/`)
 

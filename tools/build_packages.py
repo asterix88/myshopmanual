@@ -690,7 +690,7 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
     sources = []  # (PDF to ship, path it stands for in the unit folder, title)
     for folder in merged:
         rel = folder.relative_to(unit_dir)
-        if not (folder / susunan.SUSUNAN_FILE).exists():
+        if susunan.needs_draft(folder):
             (folder / susunan.SUSUNAN_FILE).write_text(susunan.draft_susunan(folder), encoding="utf-8")
             print(f"  {rel.as_posix()}/{susunan.SUSUNAN_FILE} dibuat: cek dan edit susunan bookmark-nya bila perlu")
         manual = out_dir / ".merged" / unit_id / f"{slugify(rel.as_posix())}.pdf"
