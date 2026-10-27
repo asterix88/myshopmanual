@@ -74,6 +74,12 @@ python tools/upload_r2.py dist --warm-all  # panaskan semua PDF di Cloudflare (t
    exceeded"). Kalau halaman SIS tidak sesuai
    dugaan, script menulis `tools\sis-probe.txt` untuk dikirim ke developer. Perhatikan aturan pakai
    SIS: download massal bisa dianggap melanggar dan akun bisa diblokir.
+5. Folder hasil `sis-download.bat` (yang berisi `daftar-dokumen.txt`) diunggah sebagai **satu manual**,
+   bukan satu file per dokumen. Bookmark-nya diatur `susunan.txt` di folder itu: `# Bab`, `## Kelompok`,
+   lalu baris `NNN Judul` per dokumen (nomor = nomor file). Kalau belum ada, `update.bat` membuatnya
+   sendiri (bab dari buku SIS, kelompok dari kata di judul); edit dengan Notepad lalu jalankan
+   `update-unit.bat` lagi. `// NNN ...` = dokumen itu tidak dipakai; file baru yang belum tercantum masuk
+   bab Others di akhir.
 
 ## Server AI (`ai-worker/`)
 

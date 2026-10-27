@@ -46,6 +46,11 @@ are shipped too, marked as not searchable: they open and keep their
 bookmarks, but search and Tanya AI skip them. Pass --skip-scanned to leave
 them out instead.
 
+A folder of single SIS documents (from sis-download.bat, with its
+daftar-dokumen.txt) is shipped as ONE manual: its susunan.txt says the
+chapters, groups and documents, which become the manual's bookmarks
+(see susunan.py; update.bat writes a first susunan.txt when there is none).
+
 When Tesseract OCR is installed on the PC, such a PDF is read with OCR
 first: the recognised text goes into that file's search index (the PDF
 itself is shipped unchanged), so Cari and nyel AI can use it. OCR is slow,
@@ -69,6 +74,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pymupdf
+
+import susunan
 
 # A page with fewer extracted characters than this is treated as image-only.
 MIN_CHARS_PER_PAGE = 40
@@ -639,6 +646,16 @@ def write_pdf(pdf: Path, target: Path, before: dict | None) -> str:
     return source_sha
 
 
+def manual_title(folder_name: str) -> str:
+    """A folder name typed in capitals reads as a title: TESTING AND
+    ADJUSTING -> Testing and Adjusting."""
+    if not folder_name.isupper():
+        return folder_name
+    small = {"and", "or", "of", "for", "the", "a", "an", "in", "on", "to", "with"}
+    words = folder_name.lower().split()
+    return " ".join(w if i and w in small else w.capitalize() for i, w in enumerate(words))
+
+
 def file_entry(path: Path, rel: str) -> dict:
     return {"path": rel, "size": path.stat().st_size, "sha256": sha256_of(path)}
 
@@ -668,8 +685,29 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
         rel = pdf.relative_to(unit_dir)
         return (len(rel.parts) == 1, [part.lower() for part in rel.parts])
 
-    for pdf in sorted(unit_dir.rglob("*.pdf"), key=order):
-        rel = pdf.relative_to(unit_dir)
+    # Folders of single SIS documents become one manual each (susunan.py).
+    merged = sorted(d for d in unit_dir.rglob("*") if d.is_dir() and susunan.is_merged_folder(d))
+    sources = []  # (PDF to ship, path it stands for in the unit folder, title)
+    for folder in merged:
+        rel = folder.relative_to(unit_dir)
+        if not (folder / susunan.SUSUNAN_FILE).exists():
+            (folder / susunan.SUSUNAN_FILE).write_text(susunan.draft_susunan(folder), encoding="utf-8")
+            print(f"  {rel.as_posix()}/{susunan.SUSUNAN_FILE} dibuat: cek dan edit susunan bookmark-nya bila perlu")
+        manual = out_dir / ".merged" / unit_id / f"{slugify(rel.as_posix())}.pdf"
+        title = manual_title(folder.name)
+        rebuilt, missing, unlisted = susunan.merge_folder(folder, manual, title)
+        if rebuilt:
+            print(f"  digabung: {rel.as_posix()} -> {title}")
+        if missing:
+            print(f"  {susunan.SUSUNAN_FILE}: nomor tanpa file PDF: {', '.join(missing)}")
+        for pdf in unlisted:
+            print(f"  belum ada di {susunan.SUSUNAN_FILE}, masuk bab Others: {pdf.name}")
+        sources.append((manual, rel.with_name(rel.name + ".pdf"), title))
+    for pdf in unit_dir.rglob("*.pdf"):
+        if not any(folder in pdf.parents for folder in merged):
+            sources.append((pdf, pdf.relative_to(unit_dir), pdf.stem))
+
+    for pdf, rel, title in sorted(sources, key=lambda s: order(unit_dir / s[1])):
         group = " / ".join(rel.parts[:-1])
         pages, toc = extract(pdf)
         if is_scanned(pages) and ocr_exe:
@@ -683,8 +721,7 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
         # The folder is part of the id, so equal names in two subfolders
         # don't collide; files directly in the unit folder keep their ids.
         file_id = slugify(rel.with_suffix("").as_posix())
-        title = pdf.stem
-        doc_type = guess_doc_type(pdf.name)
+        doc_type = guess_doc_type(rel.name)
         target = unit_out / f"{file_id}.pdf"
         index_path = unit_out / f"{file_id}.sqlite"
         before = previous_files.get(file_id)
