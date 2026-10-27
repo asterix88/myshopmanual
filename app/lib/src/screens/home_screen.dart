@@ -275,15 +275,19 @@ class _Header extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // "My" white, "Manual" in the app's orange.
+                    Text.rich(
+                      TextSpan(
+                        text: 'My',
+                        children: [TextSpan(text: 'Manual', style: TextStyle(color: AppColors.orange))],
+                      ),
+                      style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2),
+                    ),
                     Text(
                       greeting(name),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 12, color: Color(0xFFC9D3E3)),
-                    ),
-                    const Text(
-                      'MyManual',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2),
                     ),
                   ],
                 ),
