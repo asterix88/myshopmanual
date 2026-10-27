@@ -17,3 +17,9 @@ ai-worker/.dev.vars
 # Employee list with starting PINs (update-karyawan.bat), stays on the PC
 karyawan.xlsx
 karyawan.csv
+
+# SIS login profile and page dumps from sis-download.bat
+tools/.sis-profile/
+tools/sis-probe.txt
+tools/sis-probe-daftar.txt
+tools/sis-probe-halaman.html
