@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -111,6 +112,8 @@ void main() {
       name: 'budi',
     );
     expect(server.calls[5].$1, 'input_barang');
+    // The purpose used for Ambil is offered next time.
+    expect(c.recentNotes, ['SERVIS']);
     expect(server.calls[5].$2['p_unit'], 'CAT395');
     expect(server.calls[5].$2['p_qty'], 3);
   });
@@ -154,14 +157,64 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CetokScreen), findsOneWidget);
-    expect(find.text('Ambil'), findsWidgets);
-    expect(find.text('Input'), findsOneWidget);
+    for (final tab in ['Stok', 'Ambil', 'Transfer', 'Input']) {
+      expect(find.text(tab), findsOneWidget);
+    }
+    expect(find.text('CARTRIDGE'), findsOneWidget);
+    expect(find.text('2 part'), findsOneWidget);
+    // An empty row shows 0, not "Habis".
+    expect(find.text('0'), findsOneWidget);
+    expect(find.text('Habis'), findsNothing);
+
+    // Location filter: a sheet with each location and its count.
+    await tester.tap(find.byKey(const Key('cetok-location')));
+    await tester.pumpAndSettle();
+    expect(find.text('Semua lokasi'), findsWidgets);
+    await tester.tap(find.text('LAYDOWN').last);
+    await tester.pumpAndSettle();
+    expect(find.text('1 part'), findsOneWidget);
+    expect(find.text('CARTRIDGE'), findsNothing);
+    await tester.tap(find.byTooltip('Hapus filter lokasi'));
+    await tester.pumpAndSettle();
     expect(find.text('CARTRIDGE'), findsOneWidget);
 
+    // A part's details; Transfer opens the Transfer tab with it picked.
     await tester.tap(find.text('CARTRIDGE'));
     await tester.pumpAndSettle();
-    expect(find.text('Buka di Partsbook PC210'), findsOneWidget);
-    expect(find.text('Pindahkan'), findsOneWidget);
+    expect(find.text('Buka di Partsbook'), findsOneWidget);
+    expect(find.text('PART NUMBER'), findsOneWidget);
     expect(find.textContaining('Tanya'), findsNothing);
+    await tester.tap(find.text('Transfer').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Ganti'), findsOneWidget);
+    expect(find.text('Isi lokasi tujuan'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('cetok-move-location')));
+    await tester.enterText(find.byKey(const Key('cetok-move-location')), 'LOGISTIK');
+    await tester.pumpAndSettle();
+    expect(find.text('Tujuan sama dengan asal'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('status-NOT RFU')));
+    await tester.tap(find.byKey(const Key('status-NOT RFU')));
+    await tester.pumpAndSettle();
+    expect(find.text('Isi nama'), findsOneWidget);
+    final name = find.widgetWithText(TextField, 'Nama kamu');
+    await tester.ensureVisible(name);
+    await tester.enterText(name, 'BUDI');
+    await tester.pumpAndSettle();
+    expect(find.text('Transfer 1 pcs'), findsOneWidget);
+
+    // Ambil starts with nothing picked.
+    await tester.tap(find.byKey(const Key('cetok-tab-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('Pilih part'), findsOneWidget);
+
+    // No Partsbook on this server: the search says so.
+    await tester.tap(find.byKey(const Key('cetok-tab-0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('CARTRIDGE'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Buka di Partsbook'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cari di Partsbook'), findsOneWidget);
+    expect(find.text('Belum ada Partsbook di MyManual.'), findsOneWidget);
   });
 }
