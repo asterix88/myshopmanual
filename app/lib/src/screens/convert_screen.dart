@@ -197,7 +197,7 @@ class _ConvertScreenState extends State<ConvertScreen> {
                                   width: 74,
                                   child: Text(
                                     u.symbol,
-                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.navy),
+                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.navy),
                                   ),
                                 ),
                                 Expanded(
@@ -244,7 +244,7 @@ class _KindTab extends StatelessWidget {
             child: Text(
               kind.label,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                 color: selected ? Colors.white : AppColors.inkSoft,
               ),
@@ -301,7 +301,7 @@ class _Card extends StatelessWidget {
             if (note case final note?)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Text(note, style: TextStyle(fontSize: 11.5, color: labelColor)),
+                child: Text(note, style: TextStyle(fontSize: 12, color: labelColor)),
               ),
             if (choices case final choices?) ...[const SizedBox(height: 10), choices],
           ],

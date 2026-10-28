@@ -9,6 +9,7 @@ import '../models.dart';
 import '../page_image.dart';
 import '../store.dart';
 import '../theme.dart';
+import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
@@ -350,7 +351,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     children: [
                       Text(
                         'nyel AI',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navy),
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.navy),
                       ),
                       Text(
                         'Teman diskusi masalah teknismu :)',
@@ -536,7 +537,7 @@ class _AttachedPage extends StatelessWidget {
                           '${store.unitNameOf(file)} · ${file.title}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+                          style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
                         ),
                       ],
                     ),
@@ -589,45 +590,55 @@ class _Intro extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 32, 16, 16),
       children: [
-        AppCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Tanya soal teknis ke nyel AI', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 6),
-              Text(
-                'nyel AI mencari di semua manual, termasuk yang belum diunduh, dan bisa melihat gambar seperti wiring '
-                'atau hydraulic diagram. Kalau manual tidak membahasnya, nyel AI menjawab dari ilmu elektrik, '
-                'hidrolik, dan mekanik secara umum.',
-                style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.inkSoft),
-              ),
-              if (!hasManuals) ...[
-                const SizedBox(height: 12),
-                Text(
-                  'Daftar manual belum termuat. Sambungkan ke internet lalu buka tab Home.',
-                  style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.orangeText),
-                ),
-              ],
-            ],
+        Center(
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(12)),
+            alignment: Alignment.center,
+            child: AppIcon(AppGlyph.nyel, size: 30, color: AppColors.orange),
           ),
         ),
-        const SizedBox(height: 18),
-        const SectionLabel('Contoh pertanyaan'),
-        const SizedBox(height: 8),
+        const SizedBox(height: 14),
+        const Text(
+          'Tanya soal teknis',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Dijawab dari semua manual.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13, color: AppColors.muted),
+        ),
+        if (!hasManuals) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Daftar manual belum termuat. Sambungkan ke internet lalu buka tab Home.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.orangeText),
+          ),
+        ],
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'CONTOH',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: AppColors.muted),
+          ),
+        ),
         for (final example in examples)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: AppCard(
               onTap: onExample == null ? null : () => onExample!(example),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
               child: Row(
                 children: [
-                  Icon(Icons.chat_bubble_outline, size: 18, color: AppColors.navy),
-                  const SizedBox(width: 10),
                   Expanded(child: Text(example, style: const TextStyle(fontSize: 13))),
+                  Icon(Icons.chevron_right, size: 20, color: AppColors.faint),
                 ],
               ),
             ),
@@ -702,7 +713,7 @@ class _Bubble extends StatelessWidget {
   /// one ending in ':'), bullet points and numbered steps with their text
   /// indented, so a long answer reads like a tidy note.
   Widget _answerText(String text) {
-    final style = TextStyle(fontSize: 14, height: 1.5, color: entry.failed ? AppColors.danger : AppColors.ink);
+    final style = TextStyle(fontSize: 13, height: 1.5, color: entry.failed ? AppColors.danger : AppColors.ink);
     final blocks = <Widget>[];
     var gap = false;
     for (final raw in text.split('\n')) {
@@ -729,7 +740,7 @@ class _Bubble extends StatelessWidget {
                 width: number != null ? 22 : 16,
                 child: Text(
                   number != null ? '${number[1]}.' : '•',
-                  style: style.copyWith(fontWeight: FontWeight.w700, color: AppColors.orangeText),
+                  style: style.copyWith(fontWeight: FontWeight.w700, color: AppColors.navy),
                 ),
               ),
               Expanded(child: Text.rich(TextSpan(children: _spans(boldRuns(bullet?[1] ?? number![2]!))), style: style)),
@@ -785,7 +796,7 @@ class _Bubble extends StatelessWidget {
               cursorColor: AppColors.orange,
               child: SelectableText.rich(
                 TextSpan(children: _spans([(text: entry.text, bold: false)])),
-                style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
+                style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
               ),
             ),
           ),
@@ -802,7 +813,7 @@ class _Bubble extends StatelessWidget {
               visualDensity: VisualDensity.compact,
               backgroundColor: AppColors.navySoft,
               side: BorderSide.none,
-              avatar: Icon(Icons.description_outlined, size: 16, color: AppColors.navy),
+              avatar: AppIcon(docGlyph(page.file), size: 16),
               label: Text(
                 '${page.unitName} · ${page.file.type.label} · hlm ${page.page}',
                 style: TextStyle(fontSize: 12, color: AppColors.navy),
@@ -841,6 +852,7 @@ class _Bubble extends StatelessWidget {
                       visualDensity: VisualDensity.compact,
                       backgroundColor: AppColors.navySoft,
                       side: BorderSide.none,
+                      avatar: AppIcon(docGlyph(s.file), size: 16),
                       label: Text(
                         '${s.unitName} · ${s.file.type.label} · hlm ${s.page}',
                         style: TextStyle(fontSize: 12, color: AppColors.navy),
@@ -880,13 +892,13 @@ class _AnswerFooter extends StatelessWidget {
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(top: 1),
-                        child: Icon(Icons.info_outline, size: 15, color: AppColors.orangeText),
+                        child: AppIcon(AppGlyph.info, size: 15, color: AppColors.muted),
                       ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           'Sebagian dari pengetahuan umum, belum dicek di manual. Cek manual unit sebelum dipakai.',
-                          style: TextStyle(fontSize: 11.5, height: 1.35, color: AppColors.orangeText),
+                          style: TextStyle(fontSize: 12, height: 1.35, color: AppColors.muted),
                         ),
                       ),
                     ],
@@ -899,11 +911,11 @@ class _AnswerFooter extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(rating == 'good' ? Icons.thumb_up : Icons.thumb_down, size: 15, color: AppColors.muted),
+                  AppIcon(rating == 'good' ? AppGlyph.thumbUp : AppGlyph.thumbDown, size: 15, color: AppColors.muted),
                   const SizedBox(width: 4),
                   Text(
                     rating == 'good' ? 'Membantu' : 'Dilaporkan',
-                    style: TextStyle(fontSize: 11.5, color: AppColors.muted),
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
                   ),
                 ],
               ),
@@ -914,7 +926,7 @@ class _AnswerFooter extends StatelessWidget {
               visualDensity: VisualDensity.compact,
               iconSize: 18,
               color: AppColors.muted,
-              icon: const Icon(Icons.thumb_up_outlined),
+              icon: AppIcon(AppGlyph.thumbUp, size: 18, color: AppColors.muted),
               onPressed: () => rate(true),
             ),
             IconButton(
@@ -922,7 +934,7 @@ class _AnswerFooter extends StatelessWidget {
               visualDensity: VisualDensity.compact,
               iconSize: 18,
               color: AppColors.muted,
-              icon: const Icon(Icons.thumb_down_outlined),
+              icon: AppIcon(AppGlyph.thumbDown, size: 18, color: AppColors.muted),
               onPressed: () => rate(false),
             ),
           ],
@@ -1138,7 +1150,7 @@ class _InputBar extends StatelessWidget {
                   // next to the field sends the question.
                   keyboardType: TextInputType.multiline,
                   textInputAction: TextInputAction.newline,
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: 13),
                   decoration: InputDecoration(
                     isDense: true,
                     filled: true,

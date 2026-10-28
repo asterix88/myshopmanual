@@ -77,7 +77,7 @@ ThemeData buildTheme({required bool dark}) {
       ),
       titleTextStyle: TextStyle(
         fontFamily: 'Poppins',
-        fontSize: 19,
+        fontSize: 17,
         fontWeight: FontWeight.w600,
         color: AppColors.ink,
       ),
@@ -87,8 +87,8 @@ ThemeData buildTheme({required bool dark}) {
     // Dialogs in the same Poppins sizes as the ⋮ menu, not Material's large
     // thin headline.
     dialogTheme: DialogThemeData(
-      titleTextStyle: TextStyle(fontFamily: 'Poppins', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.ink),
-      contentTextStyle: TextStyle(fontFamily: 'Poppins', fontSize: 14, height: 1.45, color: AppColors.inkSoft),
+      titleTextStyle: TextStyle(fontFamily: 'Poppins', fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.ink),
+      contentTextStyle: TextStyle(fontFamily: 'Poppins', fontSize: 13, height: 1.45, color: AppColors.inkSoft),
     ),
     // Folders and manuals slide in from the side (as in Coursera).
     pageTransitionsTheme: const PageTransitionsTheme(

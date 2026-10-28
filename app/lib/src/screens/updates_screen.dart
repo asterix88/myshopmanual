@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
+import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
 import 'shell.dart';
 
@@ -47,6 +48,14 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
             ),
           ],
         ),
+        actions: [
+          if (_shown.isNotEmpty)
+            IconButton(
+              tooltip: 'Hapus notifikasi',
+              icon: const AppIcon(AppGlyph.trash),
+              onPressed: () => _confirmClear(store),
+            ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -66,11 +75,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
                 ),
               ),
             if (_shown.isEmpty)
-              const EmptyState(
-                icon: Icons.notifications_none,
-                title: 'Tidak ada update',
-                message: 'Semua manual di HP sudah versi terbaru.',
-              )
+              const EmptyState(icon: Icons.notifications_none, title: 'Tidak ada update')
             else ...[
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -89,6 +94,56 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmClear(AppStore store) async {
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Hapus semua notifikasi?', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              Text(
+                'Manual yang sudah diunduh tidak ikut terhapus.',
+                style: TextStyle(fontSize: 13, color: AppColors.muted),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Batal'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.danger,
+                        minimumSize: const Size.fromHeight(44),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text('Hapus'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (ok != true || !mounted) return;
+    store.clearUpdates();
+    setState(() => _shown = []);
   }
 
   static String _time(DateTime t) =>
@@ -112,15 +167,15 @@ class _UpdateCard extends StatelessWidget {
 
     final (pill, description) = switch (update.kind) {
       UpdateKind.added => (
-          Pill('MANUAL BARU', background: AppColors.greenSoft, foreground: AppColors.green),
+          Pill('Baru', background: AppColors.greenSoft, foreground: AppColors.green),
           '${update.unitName} · ${formatSize(file.downloadSize)}',
         ),
       UpdateKind.newVersion => (
-          Pill('VERSI BARU', background: AppColors.orangeSoft, foreground: AppColors.orangeText),
+          Pill('Versi baru', background: AppColors.orangeSoft, foreground: AppColors.orangeText),
           '${update.unitName} · file di HP sudah lama · unduh ulang ${formatSize(file.downloadSize)}',
         ),
       UpdateKind.withdrawn => (
-          Pill('DITARIK', background: AppColors.greySoft, foreground: AppColors.ink),
+          Pill('Ditarik', background: AppColors.greySoft, foreground: AppColors.ink),
           'Sudah tidak ada di server. File yang sudah diunduh tetap bisa dibuka.',
         ),
     };
@@ -167,9 +222,23 @@ class _UpdateCard extends StatelessWidget {
                 Text(_date(file.updatedAt!), style: TextStyle(fontSize: 11, color: AppColors.muted)),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(file.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-          Text(description, style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DocTile(docGlyph(file), size: 40, muted: update.kind == UpdateKind.withdrawn),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(file.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    Text(description, style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                  ],
+                ),
+              ),
+            ],
+          ),
           if (action != null) ...[const SizedBox(height: 10), action],
         ],
       ),

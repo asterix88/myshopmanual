@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mymanual/main.dart';
 import 'package:mymanual/src/screens/chat_screen.dart';
@@ -11,14 +10,12 @@ import 'package:mymanual/src/store.dart';
 
 import 'store_test.dart' show fixtureServer;
 
-double shownOpacity(WidgetTester tester, Type screen) => tester
-    .renderObject<RenderAnimatedOpacity>(
-        find.ancestor(of: find.byType(screen), matching: find.byType(FadeTransition)).first)
-    .opacity
-    .value;
+/// Whether [screen]'s tab is the one on screen (the others are kept, off
+/// to the side of the tab pages).
+bool shown(Type screen) => find.byType(screen).evaluate().isNotEmpty;
 
 void main() {
-  testWidgets('leaving a tab fades it out, so the chosen tab shows', (tester) async {
+  testWidgets('the chosen tab shows and the one left goes off screen', (tester) async {
     late AppStore store;
     final root = Directory.systemTemp.createTempSync('shell');
     await tester.runAsync(() async {
@@ -29,17 +26,17 @@ void main() {
 
     await tester.tap(find.text('nyel AI').last);
     await tester.pumpAndSettle();
-    expect(shownOpacity(tester, ChatScreen), 1);
+    expect(shown(ChatScreen), isTrue);
 
     await tester.tap(find.text('Home').last);
     await tester.pumpAndSettle();
-    expect(shownOpacity(tester, ChatScreen), 0);
+    expect(shown(ChatScreen), isFalse);
 
     await tester.tap(find.text('Cari').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Home').last);
     await tester.pumpAndSettle();
-    expect(shownOpacity(tester, SearchScreen), 0);
+    expect(shown(SearchScreen), isFalse);
     root.deleteSync(recursive: true);
   });
 
@@ -82,7 +79,7 @@ void main() {
     // Handled in the app: the Home tab shows again.
     expect(await tester.binding.handlePopRoute(), isTrue);
     await tester.pumpAndSettle();
-    expect(shownOpacity(tester, SearchScreen), 0);
+    expect(shown(SearchScreen), isFalse);
 
     // On Home the app no longer holds back, so Android closes it.
     expect(await tester.binding.handlePopRoute(), isFalse);
@@ -127,6 +124,7 @@ void main() {
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pumpAndSettle();
     await tester.tap(find.text('nyel AI').last);
+    await tester.pumpAndSettle();
     // The saved conversation is read from the phone.
     for (var i = 0; i < 20 && find.byType(SelectableText).evaluate().isEmpty; i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));

@@ -1,7 +1,9 @@
+import 'package:flutter/gestures.dart' show Drag;
 import 'package:flutter/material.dart';
 
 import '../store.dart';
 import '../theme.dart';
+import '../widgets/app_icons.dart';
 import 'chat_screen.dart';
 import 'home_screen.dart';
 import 'search_screen.dart';
@@ -36,8 +38,43 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
   int _aiAsks = 0;
+  final _pages = PageController();
+
+  /// A swipe that went past the end of a page's own sub-tabs (Standar,
+  /// Servis), carried on by the tab pages.
+  Drag? _carried;
 
   static const chatTab = 2;
+
+  @override
+  void dispose() {
+    _carried?.cancel();
+    _pages.dispose();
+    super.dispose();
+  }
+
+  void _select(int tab) {
+    if (tab == _tab) return;
+    setState(() => _tab = tab);
+    _pages.animateToPage(tab, duration: const Duration(milliseconds: 320), curve: Curves.easeOutCubic);
+  }
+
+  /// Sideways swipes on a page's own tabs move those first; at their first
+  /// or last tab the swipe moves on to the next or previous main tab.
+  bool _onPageScroll(ScrollNotification n) {
+    if (n.depth == 0 || n.metrics.axis != Axis.horizontal || !_pages.hasClients) return false;
+    if (n is OverscrollNotification && n.dragDetails != null) {
+      final d = n.dragDetails!;
+      _carried ??= _pages.position.drag(
+        DragStartDetails(globalPosition: d.globalPosition, localPosition: d.localPosition),
+        () => _carried = null,
+      );
+      _carried?.update(d);
+    } else if (n is ScrollEndNotification && _carried != null) {
+      _carried?.end(n.dragDetails ?? DragEndDetails(primaryVelocity: 0));
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,123 +83,83 @@ class _HomeShellState extends State<HomeShell> {
       // "Tanya nyel AI" on a page: show the chat with the question in it.
       _aiAsks = store.aiAsks;
       _tab = chatTab;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_pages.hasClients) _pages.jumpToPage(chatTab);
+      });
     }
+    final pages = [
+      HomeScreen(onOpenSearch: () => _select(1), entrance: widget.entrance),
+      const SearchScreen(),
+      const ChatScreen(),
+      const SpecsScreen(),
+      const ServiceScreen(),
+    ];
     return PopScope(
       // Back on another tab goes to Home first; on Home it closes the app.
       canPop: _tab == 0,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) setState(() => _tab = 0);
+        if (!didPop) _select(0);
       },
       child: Scaffold(
         // Pages run on under the bar, so the space beside the raised nyel AI
         // button shows the page instead of an empty band. They keep their
         // last rows clear of it with MediaQuery's bottom padding.
         extendBody: true,
-        body: Stack(
-          children: [
-            for (final (i, page) in [
-              HomeScreen(onOpenSearch: () => setState(() => _tab = 1), entrance: widget.entrance),
-              const SearchScreen(),
-              const ChatScreen(),
-              const SpecsScreen(),
-              const ServiceScreen(),
-            ].indexed)
-              _TabPage(active: i == _tab, child: page),
-          ],
+        // Swipe left or right to move between the tabs; the page follows the
+        // finger and the bar's orange line follows the page.
+        body: NotificationListener<ScrollNotification>(
+          onNotification: _onPageScroll,
+          child: PageView(
+            controller: _pages,
+            onPageChanged: (i) => setState(() => _tab = i),
+            children: [
+              for (final (i, page) in pages.indexed)
+                // Each tab keeps its scroll position and typed search; only
+                // the shown one runs its animations.
+                _KeepAlive(child: TickerMode(enabled: i == _tab, child: page)),
+            ],
+          ),
         ),
-        bottomNavigationBar: _NavBar(
-          current: _tab,
-          onSelect: (i) => setState(() => _tab = i),
-        ),
+        bottomNavigationBar: _NavBar(pages: _pages, current: _tab, onSelect: _select),
       ),
     );
   }
 }
 
-/// Keeps every tab alive (scroll position, typed search) and switches
-/// between them with Material's "fade through" (as in Coursera): the old
-/// tab fades out quickly, then the new one fades in while growing slightly.
-class _TabPage extends StatefulWidget {
-  const _TabPage({required this.active, required this.child});
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
 
-  final bool active;
   final Widget child;
 
   @override
-  State<_TabPage> createState() => _TabPageState();
+  State<_KeepAlive> createState() => _KeepAliveState();
 }
 
-class _TabPageState extends State<_TabPage> with SingleTickerProviderStateMixin {
-  late final _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 300),
-    value: widget.active ? 1 : 0,
-  );
-
-  // Coming in: wait for the old tab to go (first 35%), then fade in.
-  // Going out: gone within the first 35% of the switch.
-  late final _opacity = CurvedAnimation(
-    parent: _controller,
-    curve: const Interval(0.35, 1, curve: Curves.easeOut),
-    reverseCurve: const Interval(0.65, 1, curve: Curves.easeIn),
-  );
-  late final _scale = Tween<double>(begin: 0.92, end: 1).animate(
-    CurvedAnimation(parent: _controller, curve: const Interval(0.35, 1, curve: Curves.easeOutCubic)),
-  );
-
+class _KeepAliveState extends State<_KeepAlive> with AutomaticKeepAliveClientMixin {
   @override
-  void didUpdateWidget(_TabPage old) {
-    super.didUpdateWidget(old);
-    if (widget.active != old.active) {
-      widget.active ? _controller.forward() : _controller.reverse();
-    }
-  }
-
-  @override
-  void dispose() {
-    _opacity.dispose();
-    _controller.dispose();
-    super.dispose();
-  }
+  bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
-    final active = widget.active;
-    return IgnorePointer(
-      ignoring: !active,
-      child: ExcludeSemantics(
-        excluding: !active,
-        child: FadeTransition(
-          opacity: _opacity,
-          child: AnimatedBuilder(
-            animation: _controller,
-            // The tab being left keeps its size while it fades.
-            builder: (context, child) => Transform.scale(
-              scale: _controller.status == AnimationStatus.reverse ? 1 : _scale.value,
-              child: child,
-            ),
-            // Only the page's own animations pause; the fade above must keep
-            // running, or a tab being left stays drawn over the new one.
-            child: TickerMode(enabled: active, child: widget.child),
-          ),
-        ),
-      ),
-    );
+    super.build(context);
+    return widget.child;
   }
 }
 
 class _NavBar extends StatelessWidget {
-  const _NavBar({required this.current, required this.onSelect});
+  const _NavBar({required this.pages, required this.current, required this.onSelect});
 
+  /// The tab pages, followed by the orange line while they slide.
+  final PageController pages;
   final int current;
   final ValueChanged<int> onSelect;
 
   static const _items = [
-    (Icons.home_outlined, Icons.home, 'Home'),
-    (Icons.search, Icons.search, 'Cari'),
-    (Icons.auto_awesome, Icons.auto_awesome, 'nyel AI'),
-    (Icons.fact_check_outlined, Icons.fact_check, 'Standar'),
-    (Icons.event_note_outlined, Icons.event_note, 'Servis'),
+    (AppGlyph.home, 'Home'),
+    (AppGlyph.search, 'Cari'),
+    (AppGlyph.nyel, 'nyel AI'),
+    (AppGlyph.standar, 'Standar'),
+    (AppGlyph.servis, 'Servis'),
   ];
 
   /// How far the nyel AI button rises above the bar.
@@ -203,7 +200,7 @@ class _NavBar extends StatelessWidget {
                     child: Semantics(
                       selected: i == current,
                       button: true,
-                      label: _items[i].$3,
+                      label: _items[i].$2,
                       excludeSemantics: true,
                       child: i == _HomeShellState.chatTab
                           ? _AiButton(item: _items[i], active: i == current, onTap: () => onSelect(i))
@@ -219,6 +216,43 @@ class _NavBar extends StatelessWidget {
               ],
             ),
           ),
+          // An orange line under the current tab's name; it slides along
+          // with the pages, mid-swipe too.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: bottom + 3,
+            height: 3,
+            child: IgnorePointer(
+              child: LayoutBuilder(
+                builder: (context, box) => AnimatedBuilder(
+                  animation: pages,
+                  builder: (context, _) {
+                    final page = pages.hasClients && pages.position.haveDimensions
+                        ? (pages.page ?? current.toDouble())
+                        : current.toDouble();
+                    final slot = box.maxWidth / _items.length;
+                    return Stack(
+                      children: [
+                        Positioned(
+                          left: (page.clamp(0, _items.length - 1) + 0.5) * slot - 14,
+                          width: 28,
+                          top: 0,
+                          bottom: 0,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: AppColors.orange,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -229,7 +263,7 @@ class _NavBar extends StatelessWidget {
 class _AiButton extends StatelessWidget {
   const _AiButton({required this.item, required this.active, required this.onTap});
 
-  final (IconData, IconData, String) item;
+  final (AppGlyph, String) item;
   final bool active;
   final VoidCallback onTap;
 
@@ -248,13 +282,13 @@ class _AiButton extends StatelessWidget {
               color: AppColors.orange,
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.surface, width: 4),
-              boxShadow: const [BoxShadow(color: Color(0x40F08A1C), blurRadius: 12, offset: Offset(0, 4))],
+              boxShadow: const [BoxShadow(color: Color(0x29101828), blurRadius: 6, offset: Offset(0, 2))],
             ),
-            child: const Icon(Icons.auto_awesome, color: Colors.white, size: 28),
+            child: const Center(child: AppIcon(AppGlyph.nyel, color: Colors.white, size: 28)),
           ),
           const SizedBox(height: 2),
           Text(
-            item.$3,
+            item.$2,
             style: TextStyle(
               fontSize: 12,
               color: AppColors.orangeText,
@@ -271,26 +305,21 @@ class _AiButton extends StatelessWidget {
 class _NavItem extends StatelessWidget {
   const _NavItem({required this.item, required this.active});
 
-  final (IconData, IconData, String) item;
+  final (AppGlyph, String) item;
   final bool active;
 
   @override
   Widget build(BuildContext context) {
     final color = active ? AppColors.navy : AppColors.tabInactive;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: active ? AppColors.navySoft : Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(active ? item.$2 : item.$1, color: color, size: 22),
+          AppIcon(item.$1, color: color, size: 22),
           const SizedBox(height: 1),
           Text(
-            item.$3,
+            item.$2,
             style: TextStyle(
               fontSize: 12,
               color: color,

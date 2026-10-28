@@ -266,7 +266,7 @@ void main() {
     });
     await tester.pumpAndSettle();
     expect(find.text('Halo, Budi'), findsOneWidget);
-    expect(find.text('Buat PIN baru Anda'), findsOneWidget);
+    expect(find.text('Buat PIN'), findsOneWidget);
 
     await tester.enterText(find.descendant(of: find.byKey(const Key('pin-new')), matching: find.byType(TextField)), '1234');
     // The sixth digit of the repeated PIN saves it.

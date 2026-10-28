@@ -8,6 +8,7 @@ import '../auth.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
+import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
 import 'shell.dart';
 import '../widgets/entrance.dart';
@@ -60,7 +61,7 @@ class HomeScreen extends StatelessWidget {
                       isLabelVisible: updateCount > 0,
                       label: Text('$updateCount'),
                       backgroundColor: const Color(0xFFE8541E),
-                      child: const Icon(Icons.notifications, color: Colors.white, size: 26),
+                      child: const AppIcon(AppGlyph.bell, color: Colors.white, size: 26),
                     ),
                   ),
                   _menu(context, store),
@@ -296,7 +297,7 @@ class _Header extends StatelessWidget {
                         text: 'My',
                         children: [TextSpan(text: 'Manual', style: TextStyle(color: AppColors.orange))],
                       ),
-                      style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2),
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2),
                     ),
                     Text(
                       greeting(name),
@@ -322,7 +323,7 @@ class _Header extends StatelessWidget {
                 padding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
                 child: Row(
                   children: [
-                    Icon(Icons.search, size: 20, color: Color(0xFF6B7178)),
+                    AppIcon(AppGlyph.search, size: 20, color: Color(0xFF6B7178)),
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -512,7 +513,7 @@ class _HomeLabel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: Text(text, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.ink)),
+            child: Text(text, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.ink)),
           ),
           ?trailing,
         ],
@@ -522,7 +523,7 @@ class _HomeLabel extends StatelessWidget {
 }
 
 /// The type of the Home folder names (Excavator, Bulldozer).
-TextStyle get homeTitleStyle => TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink);
+TextStyle get homeTitleStyle => TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.ink);
 
 /// EXCAVATOR -> Excavator.
 String titleCase(String label) =>
@@ -549,17 +550,29 @@ class _FolderCard extends StatelessWidget {
           // The machine picture fills the top of the card.
           Stack(
             children: [
+              // The picture stands on a plain grey tile, as in the unit lists.
               Container(
                 height: 104,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppColors.navySoft, Color.lerp(AppColors.navySoft, AppColors.navy, 0.12)!],
-                  ),
+                width: double.infinity,
+                color: AppColors.field,
+                child: Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    Positioned(
+                      left: 30,
+                      right: 30,
+                      bottom: 12,
+                      child: Container(
+                        height: 9,
+                        decoration: const BoxDecoration(
+                          borderRadius: BorderRadius.all(Radius.elliptical(60, 5)),
+                          boxShadow: [BoxShadow(color: Color(0x29101828), blurRadius: 5)],
+                        ),
+                      ),
+                    ),
+                    Padding(padding: const EdgeInsets.only(bottom: 10), child: MachineIcon(machine, width: 124)),
+                  ],
                 ),
-                alignment: Alignment.center,
-                child: MachineIcon(machine, width: 140),
               ),
               if (updates > 0)
                 Positioned(
@@ -567,10 +580,10 @@ class _FolderCard extends StatelessWidget {
                   right: 8,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: const Color(0xFFE8541E), borderRadius: BorderRadius.circular(6)),
+                    decoration: BoxDecoration(color: AppColors.update, borderRadius: BorderRadius.circular(6)),
                     child: Text(
                       '$updates baru',
-                      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Colors.white),
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
                     ),
                   ),
                 ),
@@ -592,7 +605,7 @@ class _FolderCard extends StatelessWidget {
                       ),
                       Text(
                         units.isEmpty ? 'belum ada model' : '${units.length} model',
-                        style: TextStyle(fontSize: 11.5, color: AppColors.muted),
+                        style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
                     ],
                   ),
@@ -629,7 +642,7 @@ class _Tools extends StatelessWidget {
           Expanded(
             child: _ToolTile(
               key: const Key('tool-cetok'),
-              icon: const ToolIcon.partSearch(),
+              icon: const ToolIcon.box(),
               title: 'Cetok Online',
               onTap: () => openCetok(context),
             ),
@@ -661,7 +674,7 @@ class _ToolTile extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.ink),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
           ),
         ],
       ),
@@ -672,7 +685,7 @@ class _ToolTile extends StatelessWidget {
 /// Choices in the dialogs, written like the ⋮ menu's items (Material's
 /// default list text is larger and spaced out).
 const _optionStyle = TextStyle(fontFamily: 'Poppins', fontSize: 15, letterSpacing: 0.1);
-const _optionNote = TextStyle(fontFamily: 'Poppins', fontSize: 12.5, letterSpacing: 0, height: 1.35);
+const _optionNote = TextStyle(fontFamily: 'Poppins', fontSize: 13, letterSpacing: 0, height: 1.35);
 
 /// Admins only: whether Cetok Online shows every location or hides some,
 /// for every phone at once (kept on the MyManual server, no app update).

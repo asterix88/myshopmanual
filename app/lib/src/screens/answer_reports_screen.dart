@@ -99,7 +99,7 @@ class _ReportCard extends StatelessWidget {
     final at = report.at;
     String two(int n) => n.toString().padLeft(2, '0');
     final when = '${two(at.day)}/${two(at.month)}/${at.year} ${two(at.hour)}.${two(at.minute)}';
-    final label = TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.muted);
+    final label = TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted);
     return AppCard(
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -123,11 +123,11 @@ class _ReportCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text('Pertanyaan', style: label),
-          Text(report.question, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          Text(report.question, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
           if (report.note.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text('Yang salah menurut mekanik', style: label),
-            Text(report.note, style: TextStyle(fontSize: 14, color: AppColors.danger)),
+            Text(report.note, style: TextStyle(fontSize: 13, color: AppColors.danger)),
           ],
           const SizedBox(height: 8),
           Text('Jawaban nyel AI', style: label),
