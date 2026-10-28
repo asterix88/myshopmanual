@@ -157,13 +157,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(CetokScreen), findsOneWidget);
-    debugPrint('cetok: ${store.cetok.parts.length} parts, loading ${store.cetok.loading}, error ${store.cetok.error}');
-    debugPrint('cards onstage ${find.byType(PartCard).evaluate().length}, all ${find.byType(PartCard, skipOffstage: false).evaluate().length}, '
-        'text all ${find.text('CARTRIDGE', skipOffstage: false).evaluate().length}, '
-        'screen ${tester.view.physicalSize / tester.view.devicePixelRatio}');
-    for (final f in find.byType(RefreshIndicator, skipOffstage: false).evaluate()) {
-      debugPrint('refresh box ${(f.renderObject as RenderBox?)?.size}');
-    }
     for (final tab in ['Stok', 'Ambil', 'Transfer', 'Input']) {
       expect(find.text(tab), findsOneWidget);
     }

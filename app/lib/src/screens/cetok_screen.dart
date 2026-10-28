@@ -79,16 +79,11 @@ class _CetokScreenState extends State<CetokScreen> {
   @override
   Widget build(BuildContext context) {
     final cetok = StoreScope.of(context).cetok;
-    final pages = [
-      _StockTab(cetok: cetok, focusSearch: widget.focusSearch, onOpen: _openPart),
-      TakeForm(cetok: cetok, choice: _takePart),
-      MoveForm(cetok: cetok, choice: _movePart),
-      AddForm(cetok: cetok),
-    ];
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: ListenableBuilder(
         listenable: cetok,
+        // The tabs are made here so each change of the stock rebuilds them.
         builder: (context, _) => Scaffold(
           backgroundColor: AppColors.background,
           body: Column(
@@ -107,7 +102,13 @@ class _CetokScreenState extends State<CetokScreen> {
                 child: IndexedStack(
                   index: _tab,
                   children: [
-                    for (var i = 0; i < pages.length; i++) _TabEntrance(active: _tab == i, child: pages[i]),
+                    _TabEntrance(
+                      active: _tab == 0,
+                      child: _StockTab(cetok: cetok, focusSearch: widget.focusSearch, onOpen: _openPart),
+                    ),
+                    _TabEntrance(active: _tab == 1, child: TakeForm(cetok: cetok, choice: _takePart)),
+                    _TabEntrance(active: _tab == 2, child: MoveForm(cetok: cetok, choice: _movePart)),
+                    _TabEntrance(active: _tab == 3, child: AddForm(cetok: cetok)),
                   ],
                 ),
               ),
