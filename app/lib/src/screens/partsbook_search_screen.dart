@@ -5,6 +5,7 @@ import '../cetok.dart';
 import '../models.dart';
 import '../search.dart';
 import '../theme.dart';
+import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
 import '../widgets/excavator_loader.dart';
 import '../widgets/rise.dart';
@@ -267,6 +268,8 @@ class _ResultCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(14, 12, 12, 10),
             child: Row(
               children: [
+                DocTile(docGlyph(file), size: 40),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,8 +281,6 @@ class _ResultCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Pill.docType(file.type),
               ],
             ),
           ),
@@ -301,7 +302,7 @@ class _ResultCard extends StatelessWidget {
                       HighlightedSnippet(hit.snippet),
                       const SizedBox(height: 6),
                       Text('${found.pages} halaman ditemukan',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.orangeText)),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.navy)),
                     ],
                   ),
                 ),

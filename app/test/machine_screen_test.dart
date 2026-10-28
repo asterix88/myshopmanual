@@ -73,10 +73,9 @@ void main() {
     expect(find.textContaining('belum ada file'), findsNothing);
     // A model without a picture shows its code instead.
     expect(find.text('PC300'), findsOneWidget);
-    // The last row ends near the bottom of the page instead of leaving space.
-    final body = tester.getRect(find.byType(ListView));
-    final last = tester.getRect(find.byType(UnitRow).last);
-    expect(body.bottom - last.bottom, lessThan(4));
+    // Every unit is a card of the same height (docs/panduan-desain.md).
+    final heights = {for (final e in find.byType(UnitRow).evaluate()) tester.getSize(find.byWidget(e.widget)).height};
+    expect(heights, {96});
   });
 
   testWidgets('subfolders of a unit folder open as their own folder page', (tester) async {
@@ -151,5 +150,42 @@ void main() {
     expect(find.text('Boom Cylinder'), findsOneWidget);
     expect(find.text('Swing Motor'), findsNothing);
     expect(find.text('Cylinders'), findsNothing);
+  });
+
+  testWidgets('a CAT unit lists its 7 SIS books, also the ones not uploaded yet', (tester) async {
+    final catalog = fixtureCatalog();
+    final unit = (catalog['units'] as List).single as Map<String, dynamic>;
+    final file = (unit['files'] as List).single as Map<String, dynamic>;
+    unit['id'] = 'CAT395';
+    unit['name'] = 'CAT395';
+    unit['files'] = [
+      {...file, 'id': 'Partsbook', 'title': 'Partsbook', 'type': 'other'},
+      {...file, 'id': 'Training', 'title': 'Training hydraulic', 'type': 'other'},
+    ];
+    late AppStore store;
+    final root = Directory.systemTemp.createTempSync('unit');
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
+      await store.setServerUrl('https://example.test');
+    });
+    await tester.pumpWidget(StoreScope(store: store, child: const MaterialApp(home: UnitScreen(unitId: 'CAT395'))));
+    // The waiting cards spin, so no pumpAndSettle.
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('2 dokumen'), findsOneWidget);
+    expect(find.text('sis2.cat.com'), findsOneWidget);
+    expect(find.text('Partsbook'), findsOneWidget);
+    expect(find.text('Dokumen masih dalam proses unduh'), findsNWidgets(6));
+    // A file that is none of the books stays listed after them.
+    await tester.dragUntilVisible(find.text('Training hydraulic'), find.byType(ListView), const Offset(0, -300));
+    expect(tester.getTopLeft(find.text('Training hydraulic')).dy,
+        greaterThan(tester.getTopLeft(find.text('Schematic Diagram')).dy));
+
+    await tester.tap(find.text('Schematic Diagram'));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Dokumen masih dalam proses unduh.'), findsOneWidget);
+    await tester.tap(find.text('Mengerti'));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Mengerti'), findsNothing);
   });
 }

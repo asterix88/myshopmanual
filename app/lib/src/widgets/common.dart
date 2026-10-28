@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../models.dart';
 import '../theme.dart';
 
 /// White rounded card used for every grouped list, like the company app.
@@ -15,30 +14,27 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final content = Padding(padding: padding ?? EdgeInsets.zero, child: child);
-    return Material(
-      color: color ?? AppColors.surface,
-      borderRadius: BorderRadius.circular(14),
-      // A soft shadow lifts the card off the grey page.
-      shadowColor: const Color(0x33101828),
-      elevation: 3,
-      clipBehavior: Clip.antiAlias,
-      child: onTap == null ? content : InkWell(onTap: onTap, child: content),
+    // One radius and one thin shadow for every card (docs/panduan-desain.md).
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: cardShadow,
+      ),
+      child: Material(
+        color: color ?? AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: onTap == null ? content : InkWell(onTap: onTap, child: content),
+      ),
     );
   }
 }
 
+/// The thin shadow under cards.
+const cardShadow = [BoxShadow(color: Color(0x14101828), blurRadius: 4, offset: Offset(0, 1))];
+
 class Pill extends StatelessWidget {
   const Pill(this.label, {super.key, required this.background, required this.foreground});
-
-  /// The type label of a manual; other documents get none.
-  static Widget docType(DocType type) => switch (type) {
-        DocType.shopManual =>
-          Pill('SHOP MANUAL', background: AppColors.blueSoft, foreground: AppColors.blue),
-        DocType.omm => Pill('OMM', background: AppColors.orangeSoft, foreground: AppColors.orangeText),
-        DocType.partsbook =>
-          Pill('PARTBOOK', background: AppColors.greenSoft, foreground: AppColors.green),
-        DocType.other => const SizedBox.shrink(),
-      };
 
   final String label;
   final Color background;

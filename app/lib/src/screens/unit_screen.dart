@@ -1,12 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models.dart';
 import '../public_downloads.dart';
 import '../store.dart';
 import '../theme.dart';
+import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
+import '../widgets/unit_icon.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
 
@@ -73,6 +76,9 @@ class _UnitScreenState extends State<UnitScreen> {
         : inFolder.where((f) => f.title.toLowerCase().contains(query)).toList();
     final subfolders = query.isEmpty ? _subfolders(all, widget.folder) : const <(String, List<ManualFile>)>[];
     final onPhone = files.where((f) => store.isDownloaded(f.key)).toList();
+    final atTop = widget.folder.isEmpty && query.isEmpty && !_editing;
+    // CAT units always show their 7 SIS books, also the ones not uploaded yet.
+    final slots = atTop && isCat(unit) ? catSlots(files) : null;
 
     return PopScope(
       canPop: !_editing,
@@ -91,6 +97,11 @@ class _UnitScreenState extends State<UnitScreen> {
                   'Pilih file yang ingin dihapus dari HP. File bisa diunduh lagi kapan saja.',
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
+              ),
+            if (atTop)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _SummaryCard(unit: unit, count: inFolder.length),
               ),
             if (!_editing && inFolder.length >= _filterFrom)
               Padding(
@@ -139,20 +150,28 @@ class _UnitScreenState extends State<UnitScreen> {
                 padding: EdgeInsets.only(top: 8),
                 child: SectionLabel('Manual'),
               ),
-            for (final file in files)
-              Padding(
-                key: file.key == widget.focus ? _focusKey : null,
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _editing
-                    ? _SelectableFile(
-                        file: file,
-                        enabled: store.isDownloaded(file.key),
-                        selected: _selected.contains(file.key),
-                        onChanged: (v) => setState(() => v ? _selected.add(file.key) : _selected.remove(file.key)),
-                      )
-                    : _FileCard(file: file, unit: unit),
-              ),
-            if (files.isEmpty && subfolders.isEmpty)
+            if (slots != null)
+              for (final (title, file) in slots)
+                Padding(
+                  key: file != null && file.key == widget.focus ? _focusKey : null,
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: file == null ? _WaitingCard(title: title) : _FileCard(file: file, unit: unit),
+                )
+            else
+              for (final file in files)
+                Padding(
+                  key: file.key == widget.focus ? _focusKey : null,
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _editing
+                      ? _SelectableFile(
+                          file: file,
+                          enabled: store.isDownloaded(file.key),
+                          selected: _selected.contains(file.key),
+                          onChanged: (v) => setState(() => v ? _selected.add(file.key) : _selected.remove(file.key)),
+                        )
+                      : _FileCard(file: file, unit: unit),
+                ),
+            if (files.isEmpty && subfolders.isEmpty && slots == null)
               query.isEmpty
                   ? const EmptyState(icon: Icons.folder_off_outlined, title: 'Folder ini kosong')
                   : const EmptyState(icon: Icons.search_off, title: 'Tidak ada file dengan nama itu'),
@@ -326,11 +345,13 @@ class _FileCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              DocTile(docGlyph(file)),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(file.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    Text(file.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.3)),
                     Text(
                       '${file.pages} halaman · ${formatSize(file.downloadSize)}',
                       style: TextStyle(fontSize: 12, color: AppColors.muted),
@@ -343,7 +364,6 @@ class _FileCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (file.type != DocType.other) ...[const SizedBox(width: 10), Pill.docType(file.type)],
             ],
           ),
           if (partial > 0)
@@ -354,7 +374,7 @@ class _FileCard extends StatelessWidget {
                 style: TextStyle(fontSize: 12, color: AppColors.muted),
               ),
             ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           if (progress != null)
             _DownloadingRow(
               progress: progress,
@@ -426,14 +446,14 @@ class _FileCard extends StatelessWidget {
                 return Row(
                   children: [
                     if (ready) ...[
-                      Icon(Icons.check_circle, size: 16, color: AppColors.green),
-                      const SizedBox(width: 6),
+                      Icon(Icons.check_circle, size: 20, color: AppColors.green),
+                      const SizedBox(width: 8),
                     ],
                     Expanded(
                       child: Text(
                         note,
                         style: ready
-                            ? TextStyle(fontSize: 12, color: AppColors.green, fontWeight: FontWeight.w500)
+                            ? TextStyle(fontSize: 13, color: AppColors.green, fontWeight: FontWeight.w600)
                             : TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
                     ),
@@ -446,8 +466,8 @@ class _FileCard extends StatelessWidget {
                       IconButton(
                         tooltip: 'Simpan file',
                         style: IconButton.styleFrom(
-                          fixedSize: const Size(40, 40),
-                          minimumSize: const Size(40, 40),
+                          fixedSize: const Size(44, 44),
+                          minimumSize: const Size(44, 44),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                             side: BorderSide(color: AppColors.border),
@@ -525,6 +545,240 @@ class _FileCard extends StatelessWidget {
       if (context.mounted) showError(context, e);
     }
   }
+}
+
+/// CAT's SIS books, in the order the unit page lists them.
+const catBooks = [
+  ('Operation & Maintenance Manual', AppGlyph.omm),
+  ('Partsbook', AppGlyph.partsbook),
+  ('System Operation', AppGlyph.systemOperation),
+  ('Testing & Adjusting', AppGlyph.testing),
+  ('Disassembly & Assembly', AppGlyph.disassembly),
+  ('Troubleshooting', AppGlyph.troubleshooting),
+  ('Schematic Diagram', AppGlyph.diagram),
+];
+
+bool isCat(Unit unit) => UnitIcon.modelCode(unit.id).startsWith('CAT');
+
+/// One row per SIS book with its manual (null: not uploaded yet), then the
+/// unit's other manuals, so none goes missing.
+List<(String, ManualFile?)> catSlots(List<ManualFile> files) {
+  final left = [...files];
+  final rows = <(String, ManualFile?)>[];
+  for (final (title, glyph) in catBooks) {
+    final i = left.indexWhere((f) => docGlyph(f) == glyph);
+    rows.add((title, i < 0 ? null : left.removeAt(i)));
+  }
+  return [...rows, for (final f in left) (f.title, f)];
+}
+
+/// The top of a unit page: how many documents it has and its picture; for
+/// CAT also a link to Caterpillar's own SIS.
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({required this.unit, required this.count});
+
+  final Unit unit;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(16)),
+      padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'DOKUMEN TEKNIS',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1, color: Color(0xFFC9D3E3)),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '$count dokumen',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+                if (isCat(unit)) ...[
+                  const SizedBox(height: 10),
+                  const Text('Lihat lebih lengkap di', style: TextStyle(fontSize: 11, color: Color(0xFFC9D3E3))),
+                  const SizedBox(height: 6),
+                  Material(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    shape: const StadiumBorder(),
+                    child: InkWell(
+                      customBorder: const StadiumBorder(),
+                      onTap: () => _openSis(context),
+                      child: const Padding(
+                        padding: EdgeInsets.fromLTRB(8, 5, 10, 5),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.language, size: 14, color: Colors.white),
+                            SizedBox(width: 6),
+                            Text(
+                              'sis2.cat.com',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                            ),
+                            SizedBox(width: 6),
+                            Icon(Icons.north_east, size: 13, color: Color(0xFFF5B26B)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          UnitIcon(unitId: unit.id, width: 124, height: 76),
+        ],
+      ),
+    );
+  }
+
+  static Future<void> _openSis(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await launchUrl(Uri.parse('https://sis2.cat.com'), mode: LaunchMode.externalApplication)
+        .catchError((_) => false);
+    if (!ok) messenger.showSnackBar(const SnackBar(content: Text('Tidak bisa membuka browser')));
+  }
+}
+
+/// A SIS book that is not on the server yet.
+class _WaitingCard extends StatelessWidget {
+  const _WaitingCard({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DashedBorder(AppColors.border),
+      child: Material(
+        color: AppColors.field,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _explain(context),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                DocTile(catBooks.firstWhere((b) => b.$1 == title).$2, muted: true),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.3, color: AppColors.muted),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const _Spinner(size: 14, width: 2),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Dokumen masih dalam proses unduh',
+                              style: TextStyle(fontSize: 12, color: AppColors.muted),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _explain(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(16)),
+                alignment: Alignment.center,
+                child: const _Spinner(size: 30, width: 3),
+              ),
+              const SizedBox(height: 14),
+              Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 6),
+              Text(
+                'Dokumen masih dalam proses unduh.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: AppColors.inkSoft),
+              ),
+              const SizedBox(height: 18),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.navy,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Mengerti'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Spinner extends StatelessWidget {
+  const _Spinner({required this.size, required this.width});
+
+  final double size;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: size,
+      child: CircularProgressIndicator(strokeWidth: width, color: AppColors.orange, backgroundColor: AppColors.border),
+    );
+  }
+}
+
+class _DashedBorder extends CustomPainter {
+  const _DashedBorder(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final outline = Path()..addRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(16)).deflate(0.75));
+    for (final metric in outline.computeMetrics()) {
+      for (var d = 0.0; d < metric.length; d += 9) {
+        canvas.drawPath(metric.extractPath(d, d + 5), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorder old) => old.color != color;
 }
 
 class _DownloadingRow extends StatelessWidget {

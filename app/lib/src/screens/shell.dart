@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../store.dart';
 import '../theme.dart';
+import '../widgets/app_icons.dart';
 import 'chat_screen.dart';
 import 'home_screen.dart';
 import 'search_screen.dart';
@@ -158,11 +159,11 @@ class _NavBar extends StatelessWidget {
   final ValueChanged<int> onSelect;
 
   static const _items = [
-    (Icons.home_outlined, Icons.home, 'Home'),
-    (Icons.search, Icons.search, 'Cari'),
-    (Icons.auto_awesome, Icons.auto_awesome, 'nyel AI'),
-    (Icons.fact_check_outlined, Icons.fact_check, 'Standar'),
-    (Icons.event_note_outlined, Icons.event_note, 'Servis'),
+    (AppGlyph.home, 'Home'),
+    (AppGlyph.search, 'Cari'),
+    (AppGlyph.nyel, 'nyel AI'),
+    (AppGlyph.standar, 'Standar'),
+    (AppGlyph.servis, 'Servis'),
   ];
 
   /// How far the nyel AI button rises above the bar.
@@ -203,7 +204,7 @@ class _NavBar extends StatelessWidget {
                     child: Semantics(
                       selected: i == current,
                       button: true,
-                      label: _items[i].$3,
+                      label: _items[i].$2,
                       excludeSemantics: true,
                       child: i == _HomeShellState.chatTab
                           ? _AiButton(item: _items[i], active: i == current, onTap: () => onSelect(i))
@@ -229,7 +230,7 @@ class _NavBar extends StatelessWidget {
 class _AiButton extends StatelessWidget {
   const _AiButton({required this.item, required this.active, required this.onTap});
 
-  final (IconData, IconData, String) item;
+  final (AppGlyph, String) item;
   final bool active;
   final VoidCallback onTap;
 
@@ -248,13 +249,13 @@ class _AiButton extends StatelessWidget {
               color: AppColors.orange,
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.surface, width: 4),
-              boxShadow: const [BoxShadow(color: Color(0x40F08A1C), blurRadius: 12, offset: Offset(0, 4))],
+              boxShadow: const [BoxShadow(color: Color(0x29101828), blurRadius: 6, offset: Offset(0, 2))],
             ),
-            child: const Icon(Icons.auto_awesome, color: Colors.white, size: 28),
+            child: const Center(child: AppIcon(AppGlyph.nyel, color: Colors.white, size: 28)),
           ),
           const SizedBox(height: 2),
           Text(
-            item.$3,
+            item.$2,
             style: TextStyle(
               fontSize: 12,
               color: AppColors.orangeText,
@@ -271,7 +272,7 @@ class _AiButton extends StatelessWidget {
 class _NavItem extends StatelessWidget {
   const _NavItem({required this.item, required this.active});
 
-  final (IconData, IconData, String) item;
+  final (AppGlyph, String) item;
   final bool active;
 
   @override
@@ -287,10 +288,10 @@ class _NavItem extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(active ? item.$2 : item.$1, color: color, size: 22),
+          AppIcon(item.$1, color: color, size: 22),
           const SizedBox(height: 1),
           Text(
-            item.$3,
+            item.$2,
             style: TextStyle(
               fontSize: 12,
               color: color,

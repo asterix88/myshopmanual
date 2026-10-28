@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../models.dart';
 import '../search.dart';
+import '../store.dart';
 import '../theme.dart';
+import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
+import '../widgets/rise.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
 
@@ -77,21 +80,23 @@ class _SearchScreenState extends State<SearchScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Cari', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
-                    Text(
-                      'Di semua manual, termasuk yang belum diunduh',
-                      style: TextStyle(fontSize: 13, color: AppColors.muted),
-                    ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _field,
                       textInputAction: TextInputAction.search,
                       onChanged: (_) => _schedule(),
-                      onSubmitted: (_) => _run(),
+                      onSubmitted: (text) {
+                        store.addRecentSearch(text);
+                        _run();
+                      },
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: AppColors.background,
-                        hintText: 'Contoh: hydraulic oil filter',
-                        prefixIcon: Icon(Icons.search, color: AppColors.muted),
+                        hintText: 'Part number, kode error, komponen',
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: AppIcon(AppGlyph.search, size: 20, color: AppColors.muted),
+                        ),
                         suffixIcon: _field.text.isEmpty
                             ? null
                             : IconButton(
@@ -147,14 +152,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               )
             else if (result == null)
-              const SliverToBoxAdapter(
-                child: EmptyState(
-                  icon: Icons.manage_search,
-                  title: 'Ketik kata yang dicari',
-                  message: 'Hasil muncul dari semua manual, lengkap dengan halamannya. '
-                      'Manual yang belum diunduh dibuka lewat internet.',
-                ),
-              )
+              SliverToBoxAdapter(child: _start(store))
             else if (result.hits.isEmpty)
               SliverToBoxAdapter(
                 child: EmptyState(icon: Icons.search_off, title: 'Tidak ada hasil untuk "$_query"'),
@@ -165,6 +163,89 @@ class _SearchScreenState extends State<SearchScreen> {
             SliverToBoxAdapter(child: SizedBox(height: 24 + MediaQuery.paddingOf(context).bottom)),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Before typing: the last searches, one tap to search again.
+  Widget _start(AppStore store) {
+    final recent = store.recentSearches;
+    final files = store.catalog.files.length;
+    final onPhone = store.local.length;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (recent.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+              child: Text('TERAKHIR DICARI',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1, color: AppColors.muted)),
+            ),
+            AppCard(
+              child: Column(
+                children: [
+                  for (final (i, q) in recent.indexed)
+                    Rise(
+                      key: ValueKey('recent-$q'),
+                      delay: Rise.stagger(i),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                _field.text = q;
+                                store.addRecentSearch(q);
+                                _run();
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+                                child: Row(
+                                  children: [
+                                    AppIcon(AppGlyph.clock, size: 18, color: AppColors.muted),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(q,
+                                          maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Hapus dari riwayat',
+                            onPressed: () => store.removeRecentSearch(q),
+                            icon: Icon(Icons.close, size: 18, color: AppColors.faint),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ] else
+            Padding(
+              padding: const EdgeInsets.only(top: 32),
+              child: Column(
+                children: [
+                  DocTile(AppGlyph.search, size: 56),
+                  const SizedBox(height: 12),
+                  const Text('Cari di semua manual', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          if (files > 0)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 14, 4, 0),
+              child: Text(
+                onPhone > 0 ? '$files manual, $onPhone tersimpan di HP' : '$files manual',
+                textAlign: recent.isEmpty ? TextAlign.center : TextAlign.start,
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -202,20 +283,33 @@ class _SearchScreenState extends State<SearchScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: AppCard(
               child: InkWell(
-                onTap: () => openViewer(context, file, page: first.page, query: _query),
+                onTap: () {
+                  store.addRecentSearch(_query);
+                  openViewer(context, file, page: first.page, query: _query);
+                },
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+                      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
                       child: Row(
                         children: [
+                          DocTile(docGlyph(file), size: 40),
+                          const SizedBox(width: 12),
                           Expanded(
-                            child: Text(file.title,
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(store.unitNameOf(file),
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
+                                        color: AppColors.muted)),
+                                Text(file.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          Pill.docType(file.type),
                         ],
                       ),
                     ),
@@ -240,8 +334,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 const SizedBox(height: 6),
                                 Text(
                                   '$count halaman ditemukan',
-                                  style: TextStyle(
-                                      fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.orangeText),
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.navy),
                                 ),
                               ],
                             ),

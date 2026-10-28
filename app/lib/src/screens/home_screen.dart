@@ -8,6 +8,7 @@ import '../auth.dart';
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
+import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
 import 'shell.dart';
 import '../widgets/entrance.dart';
@@ -60,7 +61,7 @@ class HomeScreen extends StatelessWidget {
                       isLabelVisible: updateCount > 0,
                       label: Text('$updateCount'),
                       backgroundColor: const Color(0xFFE8541E),
-                      child: const Icon(Icons.notifications, color: Colors.white, size: 26),
+                      child: const AppIcon(AppGlyph.bell, color: Colors.white, size: 26),
                     ),
                   ),
                   _menu(context, store),
@@ -322,7 +323,7 @@ class _Header extends StatelessWidget {
                 padding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
                 child: Row(
                   children: [
-                    Icon(Icons.search, size: 20, color: Color(0xFF6B7178)),
+                    AppIcon(AppGlyph.search, size: 20, color: Color(0xFF6B7178)),
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -549,17 +550,28 @@ class _FolderCard extends StatelessWidget {
           // The machine picture fills the top of the card.
           Stack(
             children: [
+              // The picture stands on a plain grey tile, as in the unit lists.
               Container(
                 height: 104,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppColors.navySoft, Color.lerp(AppColors.navySoft, AppColors.navy, 0.12)!],
-                  ),
+                color: AppColors.field,
+                child: Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    Positioned(
+                      left: 30,
+                      right: 30,
+                      bottom: 12,
+                      child: Container(
+                        height: 9,
+                        decoration: const BoxDecoration(
+                          borderRadius: BorderRadius.all(Radius.elliptical(60, 5)),
+                          boxShadow: [BoxShadow(color: Color(0x29101828), blurRadius: 5)],
+                        ),
+                      ),
+                    ),
+                    Padding(padding: const EdgeInsets.only(bottom: 10), child: MachineIcon(machine, width: 124)),
+                  ],
                 ),
-                alignment: Alignment.center,
-                child: MachineIcon(machine, width: 140),
               ),
               if (updates > 0)
                 Positioned(
@@ -567,7 +579,7 @@ class _FolderCard extends StatelessWidget {
                   right: 8,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: const Color(0xFFE8541E), borderRadius: BorderRadius.circular(6)),
+                    decoration: BoxDecoration(color: AppColors.update, borderRadius: BorderRadius.circular(6)),
                     child: Text(
                       '$updates baru',
                       style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Colors.white),

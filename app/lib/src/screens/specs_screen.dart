@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models.dart';
 import '../specs.dart';
+import '../widgets/app_icons.dart';
 import '../widgets/excavator_loader.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
@@ -33,9 +34,9 @@ class _SpecsScreenState extends State<SpecsScreen> {
   int _partsSession = 0;
 
   static const _tabs = [
-    (Icons.build_outlined, 'Torsi'),
-    (Icons.water_drop_outlined, 'Kapasitas'),
-    (Icons.speed, 'Nilai standar'),
+    (AppGlyph.torque, 'Torsi'),
+    (AppGlyph.oil, 'Kapasitas'),
+    (AppGlyph.gauge, 'Nilai standar'),
   ];
 
   Future<void> _loadFallback(Unit unit) async {

@@ -52,3 +52,41 @@ class UnitIcon extends StatelessWidget {
     );
   }
 }
+
+/// A machine picture standing on a light grey tile with a soft shadow under
+/// its tracks, so pictures of different sizes look alike in lists.
+class PictureStage extends StatelessWidget {
+  const PictureStage({super.key, required this.child, this.width = 112, this.height = 76});
+
+  final Widget child;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(color: AppColors.field, borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          Positioned(
+            left: width * 0.16,
+            right: width * 0.16,
+            bottom: height * 0.09,
+            child: Container(
+              height: 8,
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.elliptical(60, 4)),
+                boxShadow: [BoxShadow(color: Color(0x29101828), blurRadius: 5)],
+              ),
+            ),
+          ),
+          Padding(padding: EdgeInsets.only(bottom: height * 0.1), child: child),
+        ],
+      ),
+    );
+  }
+}

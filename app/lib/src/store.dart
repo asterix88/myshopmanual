@@ -107,6 +107,12 @@ class AppStore extends ChangeNotifier {
   Catalog catalog = Catalog.empty;
   Map<String, LocalManual> local = {};
   Set<String> seenKeys = {};
+
+  /// Updates cleared with the bin on the update list: not listed again.
+  Set<String> dismissedUpdates = {};
+
+  /// The Cari tab's last searches, newest first.
+  List<String> recentSearches = [];
   bool _seenInitialized = false;
   LastRead? lastRead;
 
@@ -161,6 +167,8 @@ class AppStore extends ChangeNotifier {
           e.key: LocalManual.fromJson(e.value as Map<String, dynamic>),
       };
       seenKeys = {...(json['seen'] as List? ?? []).cast<String>()};
+      dismissedUpdates = {...(json['dismissed'] as List? ?? []).cast<String>()};
+      recentSearches = (json['searches'] as List? ?? []).cast<String>();
       _seenInitialized = json['seen_initialized'] as bool? ?? false;
       final lr = json['last_read'];
       lastRead = lr == null ? null : LastRead.fromJson(lr as Map<String, dynamic>);
@@ -391,6 +399,8 @@ class AppStore extends ChangeNotifier {
       'server': serverUrl,
       'local': {for (final e in local.entries) e.key: e.value.toJson()},
       'seen': seenKeys.toList(),
+      'dismissed': dismissedUpdates.toList(),
+      'searches': recentSearches,
       'seen_initialized': _seenInitialized,
       'last_read': lastRead?.toJson(),
       'bookmarks': bookmarks,
@@ -498,8 +508,33 @@ class AppStore extends ChangeNotifier {
   /// has seen it once; after that there is nothing left to do about it.
   List<ManualUpdate> get listedUpdates => [
         for (final u in updates)
-          if (u.kind != UpdateKind.withdrawn || !seenKeys.contains(u.seenKey)) u,
+          if ((u.kind != UpdateKind.withdrawn || !seenKeys.contains(u.seenKey)) &&
+              !dismissedUpdates.contains(u.seenKey))
+            u,
       ];
+
+  /// Empties the update list (the bin on it); manuals on the phone stay.
+  void clearUpdates() {
+    dismissedUpdates.addAll(listedUpdates.map((u) => u.seenKey));
+    markUpdatesSeen();
+    _scheduleSave();
+    notifyListeners();
+  }
+
+  /// Remembers a search for the Cari tab's start page.
+  void addRecentSearch(String query) {
+    final q = query.trim();
+    if (q.length < 2) return;
+    recentSearches = [q, ...recentSearches.where((s) => s.toLowerCase() != q.toLowerCase())].take(8).toList();
+    _scheduleSave();
+    notifyListeners();
+  }
+
+  void removeRecentSearch(String query) {
+    recentSearches = [...recentSearches]..remove(query);
+    _scheduleSave();
+    notifyListeners();
+  }
 
   void markUpdatesSeen() {
     final before = seenKeys.length;

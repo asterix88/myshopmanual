@@ -5,6 +5,7 @@ import '../models.dart';
 import '../page_image.dart';
 import '../store.dart';
 import '../theme.dart';
+import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
 import '../widgets/unit_icon.dart';
 import 'shell.dart';
@@ -24,7 +25,7 @@ class UnitTabsPage extends StatelessWidget {
 
   final List<Unit> units;
   final Unit? unit;
-  final List<(IconData?, String)> tabs;
+  final List<(AppGlyph?, String)> tabs;
   final List<Widget> views;
 
   /// Shown instead of the tabs when there are none (or no unit).
@@ -124,7 +125,7 @@ class UnitTabsPage extends StatelessWidget {
                         tabAlignment: tabs.length > 4 ? TabAlignment.start : null,
                         labelColor: AppColors.navy,
                         unselectedLabelColor: AppColors.muted,
-                        indicatorColor: AppColors.orange,
+                        indicatorColor: AppColors.navy,
                         indicatorWeight: 3,
                         indicatorSize: TabBarIndicatorSize.label,
                         dividerColor: AppColors.line,
@@ -134,7 +135,12 @@ class UnitTabsPage extends StatelessWidget {
                           for (final (icon, label) in tabs)
                             icon == null
                                 ? Tab(height: 48, text: label)
-                                : Tab(height: 58, icon: Icon(icon, size: 20), text: label),
+                                : Tab(
+                                    height: 58,
+                                    // The tab's own color: navy when picked, grey otherwise.
+                                    icon: Builder(builder: (c) => AppIcon(icon, size: 20, color: IconTheme.of(c).color)),
+                                    text: label,
+                                  ),
                         ],
                       ),
                   ],
@@ -231,7 +237,7 @@ class PageRowList extends StatelessWidget {
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.6,
-                        color: AppColors.orangeText,
+                        color: AppColors.muted,
                       ),
                     ),
                   ),
@@ -315,7 +321,7 @@ class UnitDrawer extends StatelessWidget {
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.1,
-                      color: AppColors.orangeText,
+                      color: AppColors.muted,
                     ),
                   ),
                 ),
@@ -466,7 +472,7 @@ class _SpecViewerScreenState extends State<SpecViewerScreen> {
                 else
                   const Spacer(),
                 const SizedBox(width: 12),
-                // The round sparkle, like nyel AI everywhere else.
+                // The round nyel AI button, as everywhere else.
                 AiCircleButton(onPressed: _askAi),
               ],
             ),
@@ -477,8 +483,8 @@ class _SpecViewerScreenState extends State<SpecViewerScreen> {
   }
 }
 
-/// The round orange nyel AI button with the sparkle, as in the middle of
-/// the tab bar.
+/// The round orange nyel AI button with its logo, as in the middle of the
+/// tab bar.
 class AiCircleButton extends StatelessWidget {
   const AiCircleButton({super.key, required this.onPressed, this.tooltip = 'Tanya nyel AI'});
 
@@ -489,18 +495,17 @@ class AiCircleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: tooltip,
+      // As tall as the "Buka manual lengkap" button beside it, flat.
       child: Material(
         color: AppColors.orange,
         shape: const CircleBorder(),
-        elevation: 4,
-        shadowColor: const Color(0x80F08A1C),
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onPressed,
           child: const SizedBox(
-            width: 56,
-            height: 56,
-            child: Icon(Icons.auto_awesome, color: Colors.white, size: 28),
+            width: 48,
+            height: 48,
+            child: Center(child: AppIcon(AppGlyph.nyel, color: Colors.white, size: 24)),
           ),
         ),
       ),
