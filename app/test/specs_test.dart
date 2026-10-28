@@ -189,4 +189,46 @@ void main() {
     expect(input.controller.text, contains('TEST1-1'));
     root.deleteSync(recursive: true);
   });
+
+  testWidgets('Servis shows Caterpillar tabs by name, ordered by hours', (tester) async {
+    Pdfrx.pdfiumModulePath ??= File('build/native_assets/linux/libpdfium.so').absolute.path;
+    Pdfrx.cacheDirectoryPath ??= Directory.systemTemp.createTempSync('pdfcache').path;
+    final catalog = catalogWithSpec();
+    final unit = (catalog['units'] as List).single as Map<String, dynamic>;
+    (unit['spec'] as Map<String, dynamic>)['service'] = [
+      {'hours': 0, 'title': 'Maintenance Interval Schedule', 'file': 'OMM_Test_Unit', 'page': 100, 'at': 1, 'count': 1, 'item': false},
+      {'hours': 1000000, 'tab': 'Saat perlu', 'title': 'When Required', 'file': 'OMM_Test_Unit', 'page': 100, 'at': 1, 'count': 1, 'item': false},
+      {'hours': 1000000, 'tab': 'Saat perlu', 'title': 'Fuses - Replace', 'file': 'OMM_Test_Unit', 'page': 130, 'at': 2, 'count': 1, 'item': true},
+      {'hours': 500, 'tab': 'Initial 500', 'title': 'Initial 500 Service Hours', 'file': 'OMM_Test_Unit', 'page': 101, 'at': 1, 'count': 1, 'item': false},
+      {'hours': 500, 'tab': 'Initial 500', 'title': 'Final Drive Oil - Change', 'file': 'OMM_Test_Unit', 'page': 140, 'at': 3, 'count': 1, 'item': true},
+      {'hours': 500, 'title': 'Every 500 Service Hours', 'file': 'OMM_Test_Unit', 'page': 101, 'at': 1, 'count': 1, 'item': false},
+      {'hours': 500, 'title': 'Swing Bearing - Lubricate', 'file': 'OMM_Test_Unit', 'page': 150, 'at': 3, 'count': 1, 'item': true},
+    ];
+    late AppStore store;
+    final root = Directory.systemTemp.createTempSync('specs');
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
+      await store.setServerUrl('https://example.test');
+      await store.fetchSpecPacks();
+    });
+    await tester.pumpWidget(MyManualApp(store: store));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Servis').last);
+    await tester.pumpAndSettle();
+
+    final initial = tester.getTopLeft(find.text('Initial 500')).dx;
+    final hm500 = tester.getTopLeft(find.text('HM 500')).dx;
+    final required = tester.getTopLeft(find.text('Saat perlu')).dx;
+    expect(initial < hm500 && hm500 < required, isTrue);
+    // The first tab (Initial 500) holds only its own items.
+    expect(find.text('Final Drive Oil - Change'), findsOneWidget);
+    expect(find.text('Swing Bearing - Lubricate'), findsNothing);
+    await tester.tap(find.text('HM 500'));
+    await tester.pumpAndSettle();
+    expect(find.text('Swing Bearing - Lubricate'), findsOneWidget);
+    await tester.tap(find.text('Saat perlu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Fuses - Replace'), findsOneWidget);
+    root.deleteSync(recursive: true);
+  });
 }
