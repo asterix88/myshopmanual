@@ -43,7 +43,7 @@ void main() {
   });
 
   test('a row title loses the unit after its colon', () {
-    expect(rowTitle('STANDARD VALUE TABLE FOR ENGINE: PC210-10M0'), 'STANDARD VALUE TABLE FOR ENGINE');
+    expect(rowTitle('STANDARD VALUE TABLE FOR ENGINE: PC210-10M0'), 'Standard Value Table for Engine');
     expect(rowTitle('Standard value table: PC210-10M0, PC210LC-10M0'), 'Standard value table');
     expect(rowTitle('Table of fuel, coolant and lubricants'), 'Table of fuel, coolant and lubricants');
     expect(rowTitle('Engine: oil pressure'), 'Engine: oil pressure');
