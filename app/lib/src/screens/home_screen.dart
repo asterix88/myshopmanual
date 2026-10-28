@@ -10,6 +10,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import 'shell.dart';
+import '../widgets/entrance.dart';
 import '../widgets/excavator_loader.dart';
 import '../widgets/machine_icon.dart';
 import '../widgets/tool_icons.dart';
@@ -24,9 +25,12 @@ import 'updates_screen.dart';
 import 'viewer_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, required this.onOpenSearch});
+  const HomeScreen({super.key, required this.onOpenSearch, this.entrance = false});
 
   final VoidCallback onOpenSearch;
+
+  /// The header drops in and the page rises after it (once, on arrival).
+  final bool entrance;
 
   @override
   Widget build(BuildContext context) {
@@ -38,48 +42,59 @@ class HomeScreen extends StatelessWidget {
       child: Scaffold(
         body: Column(
           children: [
-            _Header(
-              name: store.session?.name,
-              onSearch: onOpenSearch,
-              actions: [
-                IconButton(
-                  tooltip: updateCount == 0 ? 'Update manual' : 'Update manual, $updateCount baru',
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const UpdatesScreen()),
+            Entrance(
+              play: entrance,
+              from: -1,
+              fade: false,
+              duration: const Duration(milliseconds: 500),
+              child: _Header(
+                name: store.session?.name,
+                onSearch: onOpenSearch,
+                actions: [
+                  IconButton(
+                    tooltip: updateCount == 0 ? 'Update manual' : 'Update manual, $updateCount baru',
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const UpdatesScreen()),
+                    ),
+                    icon: Badge(
+                      isLabelVisible: updateCount > 0,
+                      label: Text('$updateCount'),
+                      backgroundColor: const Color(0xFFE8541E),
+                      child: const Icon(Icons.notifications, color: Colors.white, size: 26),
+                    ),
                   ),
-                  icon: Badge(
-                    isLabelVisible: updateCount > 0,
-                    label: Text('$updateCount'),
-                    backgroundColor: const Color(0xFFE8541E),
-                    child: const Icon(Icons.notifications, color: Colors.white, size: 26),
-                  ),
-                ),
-                _menu(context, store),
-              ],
+                  _menu(context, store),
+                ],
+              ),
             ),
             Expanded(
-              child: RefreshIndicator(
-                onRefresh: store.refresh,
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  // The bottom bar is drawn over the page (see HomeShell).
-                  padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
-                  children: [
-                    if (store.online == false) _OfflineBanner(store: store),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (store.lastRead != null) _ContinueReading(lastRead: store.lastRead!),
-                          _MachineFolders(store: store),
-                          const SizedBox(height: 20),
-                          const _HomeLabel('Fitur lainnya'),
-                          const _Tools(),
-                        ],
+              child: Entrance(
+                play: entrance,
+                from: 0.04,
+                delay: const Duration(milliseconds: 250),
+                child: RefreshIndicator(
+                  onRefresh: store.refresh,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    // The bottom bar is drawn over the page (see HomeShell).
+                    padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
+                    children: [
+                      if (store.online == false) _OfflineBanner(store: store),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (store.lastRead != null) _ContinueReading(lastRead: store.lastRead!),
+                            _MachineFolders(store: store),
+                            const SizedBox(height: 20),
+                            const _HomeLabel('Fitur lainnya'),
+                            const _Tools(),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
