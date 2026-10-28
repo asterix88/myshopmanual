@@ -1220,9 +1220,9 @@ class _Label extends StatelessWidget {
 
 /// A form above a sticky button.
 class _FormPage extends StatelessWidget {
-  const _FormPage({required this.children, required this.cta});
+  const _FormPage({required this.fields, required this.cta});
 
-  final List<Widget> children;
+  final List<Widget> fields;
   final Widget cta;
 
   @override
@@ -1233,7 +1233,7 @@ class _FormPage extends StatelessWidget {
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: fields),
           ),
         ),
         Container(
@@ -1796,7 +1796,7 @@ class _TakeFormState extends State<TakeForm> {
     final ready = label.startsWith('Ambil ');
     void changed() => setState(() {});
     return _FormPage(
-      children: [
+      fields: [
         const _Label('PART'),
         _PartSlot(cetok: cetok, part: part, choice: widget.choice),
         if (part != null)
@@ -1953,7 +1953,7 @@ class _MoveFormState extends State<MoveForm> {
     final ready = label.startsWith('Transfer ');
     void changed() => setState(() {});
     return _FormPage(
-      children: [
+      fields: [
         const _Label('PART'),
         _PartSlot(cetok: cetok, part: part, choice: widget.choice),
         if (part != null)
@@ -2202,7 +2202,7 @@ class _AddFormState extends State<AddForm> {
     final ready = label.startsWith('Simpan ');
     void changed() => setState(() {});
     return _FormPage(
-      children: [
+      fields: [
         const _Label('UNIT'),
         Wrap(
           spacing: 6,
