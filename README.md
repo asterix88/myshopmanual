@@ -22,6 +22,18 @@ python tools/build_packages.py source dist --only PC210
 python tools/search.py dist/units/PC210/index.sqlite "track tension"
 ```
 
+### PDF hasil scan (OCR)
+
+PDF tanpa lapisan teks (hasil scan, atau hasil "Microsoft Print to PDF") tetap diunggah,
+tetapi tidak bisa dicari. Kalau **Tesseract OCR** terpasang di PC, `update.bat` membacanya
+sendiri: teks hasil OCR masuk ke indeks pencarian file itu (PDF-nya tidak diubah), jadi Cari
+dan nyel AI bisa memakainya. Pasang sekali saja dari
+<https://github.com/UB-Mannheim/tesseract/wiki> (installer Windows, pilih bahasa English),
+lalu jalankan `update.bat` seperti biasa.
+
+OCR butuh sekitar 1-2 detik per halaman. Hasilnya disimpan di `dist/.ocr/` dan hanya diulang
+kalau PDF sumbernya berubah. Untuk melewatinya: `update.bat --no-ocr`.
+
 Folder unit boleh berisi `unit.json`, misalnya `{"name": "PC210-10M0", "kind": "Excavator"}`.
 `kind` menentukan folder di beranda (Excavator atau Bulldozer). Kalau kosong, aplikasi menebak dari
 kode model: PC, CAT, ZX, EX masuk EXCAVATOR; D85, D155, D375 masuk BULLDOZER; selain itu LAINNYA.
@@ -51,6 +63,24 @@ python tools/upload_r2.py dist --warm-all  # panaskan semua PDF di Cloudflare (t
    lain tetap ada di aplikasi seperti sebelumnya. Lewat Command Prompt bisa juga `update.bat --only PC210`.
    PDF boleh juga ditaruh di subfolder unit, misalnya `source\CAT395\System Diagram\`: file itu tetap
    masuk unit CAT395 dan tampil di bawah judul "System Diagram" di halaman unit.
+4. Dokumen Caterpillar dari SIS 2.0 (sis2.cat.com) bisa disimpan otomatis dengan `sis-download.bat`.
+   Chrome (atau Edge) terbuka dengan profil sendiri; login SIS di situ (diingat untuk berikutnya), cari dan
+   pasang filter, lalu di jendela hitam tekan Enter untuk mengambil daftar hasil (ulangi di tiap halaman
+   hasil) dan `m` untuk mulai. Tiap dokumen dibuka, tombol print SIS ditekan, dan hasilnya disimpan
+   sebagai PDF yang ada teksnya ke `source\<folder>\NNN Judul.pdf` sesuai urutan hasil. File yang sudah
+   ada dilewati, jadi kalau berhenti di tengah cukup dijalankan lagi. Satu jendela dipakai untuk banyak folder (skrip
+   menanyakan folder berikutnya), dan saat selesai atau `q`/Ctrl+C skrip logout dari SIS: jangan tutup jendela
+   hitam dengan X, karena sesi SIS yang tidak di-logout menumpuk dan akun bisa diblokir ("Active sessions
+   exceeded"). Kalau halaman SIS tidak sesuai
+   dugaan, script menulis `tools\sis-probe.txt` untuk dikirim ke developer. Perhatikan aturan pakai
+   SIS: download massal bisa dianggap melanggar dan akun bisa diblokir.
+5. Folder hasil `sis-download.bat` (yang berisi `daftar-dokumen.txt`) diunggah sebagai **satu manual**,
+   bukan satu file per dokumen. Bookmark-nya diatur `susunan.txt` di folder itu: `# Bab`, `## Kelompok`,
+   lalu baris `NNN Judul` per dokumen (nomor = nomor file). Kalau belum ada, `update.bat` membuatnya
+   sendiri (bab dari buku SIS, kelompok dari kata di judul); edit dengan Notepad lalu jalankan
+   `update-unit.bat` lagi. `// NNN ...` = dokumen itu tidak dipakai; file baru yang belum tercantum masuk
+   bab Others di akhir. Folder lama tanpa `daftar-dokumen.txt`: buat file kosong `susunan.txt` di folder
+   itu, lalu `update.bat` mengisinya dari nama file (satu bab per komponen).
 
 ## Server AI (`ai-worker/`)
 

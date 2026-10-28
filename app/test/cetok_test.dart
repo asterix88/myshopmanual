@@ -140,8 +140,8 @@ void main() {
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pumpAndSettle();
 
-    expect(find.text('Manual book'), findsOneWidget);
-    expect(find.text('Alat bantu'), findsOneWidget);
+    expect(find.text('Dokumen teknis'), findsOneWidget);
+    expect(find.text('Fitur lainnya'), findsOneWidget);
     // The small test screen has to scroll down to it.
     await tester.ensureVisible(find.text('Cetok Online'));
     await tester.pumpAndSettle();

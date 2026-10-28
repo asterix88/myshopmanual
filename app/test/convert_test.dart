@@ -49,9 +49,11 @@ void main() {
     expect(rowTitle('Engine: oil pressure'), 'Engine: oil pressure');
   });
 
-  test('Home greets by the first name', () {
-    expect(greeting('AHMAD ANAS SUKUMA'), 'Halo, Ahmad');
-    expect(greeting(null), 'Halo');
+  test('Home greets by the time of day and the first name', () {
+    expect(greeting('AHMAD ANAS SUKUMA', DateTime(2026, 10, 27, 12)), 'Selamat siang, Ahmad');
+    expect(greeting('budi', DateTime(2026, 10, 27, 7)), 'Selamat pagi, Budi');
+    expect(greeting(null, DateTime(2026, 10, 27, 16)), 'Selamat sore');
+    expect(greeting('Anas', DateTime(2026, 10, 27, 21)), 'Selamat malam, Anas');
   });
 
   testWidgets('Konversi opens from Home, converts as the number is typed and remembers the units', (tester) async {
