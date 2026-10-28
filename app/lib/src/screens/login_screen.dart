@@ -173,83 +173,116 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     final headerHeight = top + (screen * 0.27).clamp(172.0, 230.0);
     final keyboard = MediaQuery.viewInsetsOf(context).bottom > 0;
     final growTo = introArtHeight(context);
+    final machineWidth = screen < 640 ? 170.0 : 200.0;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
       child: Scaffold(
         backgroundColor: AppColors.surface,
-        body: Stack(
+        // While the keyboard is open the header folds into a slim bar (k
+        // goes to 1), so "Selamat datang", NRP and PIN stay in view.
+        body: TweenAnimationBuilder<double>(
+          tween: Tween(end: keyboard ? 1 : 0),
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+          builder: (context, k, _) => _layout(
+            k: k,
+            keyboard: keyboard,
+            headerHeight: headerHeight + (top + _barHeight - headerHeight) * k,
+            growTo: growTo,
+            machineWidth: machineWidth + (_barMachineWidth - machineWidth) * k,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The slim header bar under the status bar, and the PC210 in it.
+  static const _barHeight = 68.0;
+  static const _barMachineWidth = 92.0;
+
+  Widget _layout({
+    required double k,
+    required bool keyboard,
+    required double headerHeight,
+    required double growTo,
+    required double machineWidth,
+  }) {
+    return Stack(
+      children: [
+        Column(
           children: [
-            Column(
-              children: [
-                AnimatedBuilder(
-                  animation: Listenable.merge([_arrive, _leave]),
-                  builder: (context, _) {
-                    final drop = Curves.easeOutCubic.transform((_arrive.value / 0.45).clamp(0.0, 1.0));
-                    final grow = Curves.easeInOutCubic.transform(_leave.value);
-                    final height = headerHeight + (growTo - headerHeight) * grow;
-                    return Transform.translate(
-                      offset: Offset(0, -height * (1 - drop)),
-                      child: SizedBox(
-                        height: height,
-                        child: _Header(fade: grow),
-                      ),
-                    );
-                  },
-                ),
-                Expanded(
-                  child: SafeArea(
-                    top: false,
-                    bottom: keyboard,
-                    // The form in the middle of the space below the header.
-                    child: LayoutBuilder(
-                      builder: (context, box) => SingleChildScrollView(
+            AnimatedBuilder(
+              animation: Listenable.merge([_arrive, _leave]),
+              builder: (context, _) {
+                final drop = Curves.easeOutCubic.transform((_arrive.value / 0.45).clamp(0.0, 1.0));
+                final grow = Curves.easeInOutCubic.transform(_leave.value);
+                final height = headerHeight + (growTo - headerHeight) * grow;
+                return Transform.translate(
+                  offset: Offset(0, -height * (1 - drop)),
+                  child: SizedBox(
+                    height: height,
+                    child: _Header(fade: grow, compact: k),
+                  ),
+                );
+              },
+            ),
+            Expanded(
+              child: SafeArea(
+                top: false,
+                bottom: keyboard,
+                // The form in the middle of the space below the header.
+                child: LayoutBuilder(
+                  builder: (context, box) => SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: box.maxHeight),
+                      child: Align(
+                        alignment: Alignment.lerp(Alignment.center, Alignment.topCenter, k)!,
                         child: ConstrainedBox(
-                          constraints: BoxConstraints(minHeight: box.maxHeight),
-                          child: Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 420),
-                              child: Padding(padding: const EdgeInsets.fromLTRB(24, 20, 24, 12), child: _form()),
-                            ),
+                          constraints: const BoxConstraints(maxWidth: 420),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+                            child: _form(keyboard: keyboard),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-                if (!keyboard)
-                  SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: FadeTransition(
-                        opacity: ReverseAnimation(_leave),
-                        child: Text(versionLabel, style: TextStyle(fontSize: 11.5, color: AppColors.muted)),
-                      ),
-                    ),
+              ),
+            ),
+            if (!keyboard)
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: FadeTransition(
+                    opacity: ReverseAnimation(_leave),
+                    child: Text(versionLabel, style: TextStyle(fontSize: 11.5, color: AppColors.muted)),
                   ),
-              ],
-            ),
-            // The PC210 drives into the header from the right and off again.
-            AnimatedBuilder(
-              animation: Listenable.merge([_arrive, _leave]),
-              builder: (context, child) {
-                final inT = Curves.easeOutCubic.transform(((_arrive.value - 0.25) / 0.6).clamp(0.0, 1.0));
-                final outT = Curves.easeInCubic.transform(_leave.value);
-                return Positioned(
-                  top: headerHeight - 134,
-                  right: -12 - 90 * (1 - inT) - 380 * outT,
-                  child: Opacity(opacity: inT, child: child),
-                );
-              },
-              child: IgnorePointer(child: Image.asset('assets/units/pc210.png', width: screen < 640 ? 170 : 200)),
-            ),
+                ),
+              ),
           ],
         ),
-      ),
+        // The PC210 drives into the header from the right and off again.
+        AnimatedBuilder(
+          animation: Listenable.merge([_arrive, _leave]),
+          builder: (context, child) {
+            final inT = Curves.easeOutCubic.transform(((_arrive.value - 0.25) / 0.6).clamp(0.0, 1.0));
+            final outT = Curves.easeInCubic.transform(_leave.value);
+            return Positioned(
+              // Its tracks rest on the header's bottom edge.
+              top: headerHeight - machineWidth * 0.67,
+              right: -12 + 26 * k - 90 * (1 - inT) - 380 * outT,
+              child: Opacity(opacity: inT, child: child),
+            );
+          },
+          child: IgnorePointer(child: Image.asset('assets/units/pc210.png', width: machineWidth)),
+        ),
+      ],
     );
   }
 
-  Widget _form() {
+  Widget _form({bool keyboard = false}) {
     var n = 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -280,7 +313,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             onChanged: (_) {
               if (_nrpError != null) setState(() => _nrpError = null);
             },
-            onSubmitted: (_) => _pinFocus.requestFocus(),
+            // PIN typed first: the keyboard's Next logs in, as the button is hidden.
+            onSubmitted: (_) => _pin.text.length == pinLength ? _login() : _pinFocus.requestFocus(),
             decoration: _inputDecoration(error: _nrpError != null).copyWith(
               hintText: nrpHint,
               hintStyle: nrpHintStyle,
@@ -329,26 +363,30 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           ),
         ),
         _InlineError(_error),
-        const SizedBox(height: 18),
-        _part(
-          n++,
-          _MorphButton(key: const Key('login-submit'), label: 'Masuk', busy: _busy, done: _done, onPressed: _login),
-        ),
-        const SizedBox(height: 6),
-        _part(
-          n++,
-          Center(
-            child: TextButton(
-              key: const Key('login-forgot'),
-              onPressed: _busy || _done ? null : _forgot,
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.navy,
-                textStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w600),
+        // The PIN logs in by itself on its last digit, so while the keyboard
+        // is open the button and Lupa PIN make room for the fields.
+        if (!keyboard) ...[
+          const SizedBox(height: 18),
+          _part(
+            n++,
+            _MorphButton(key: const Key('login-submit'), label: 'Masuk', busy: _busy, done: _done, onPressed: _login),
+          ),
+          const SizedBox(height: 6),
+          _part(
+            n++,
+            Center(
+              child: TextButton(
+                key: const Key('login-forgot'),
+                onPressed: _busy || _done ? null : _forgot,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.navy,
+                  textStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w600),
+                ),
+                child: const Text('Lupa PIN?'),
               ),
-              child: const Text('Lupa PIN?'),
             ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -358,9 +396,13 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 /// slowly in the corner. [fade] hides the text while the band grows into
 /// the introduction's.
 class _Header extends StatefulWidget {
-  const _Header({required this.fade});
+  const _Header({required this.fade, this.compact = 0});
 
   final double fade;
+
+  /// 1 while the keyboard is open: the logo row centred in a slim bar,
+  /// the tagline folded away.
+  final double compact;
 
   @override
   State<_Header> createState() => _HeaderState();
@@ -402,10 +444,11 @@ class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
             ),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(24, top + 28, 24, 0),
+            padding: EdgeInsets.fromLTRB(24, top + 28 - 12 * widget.compact, 24, 0),
             child: Opacity(
               opacity: 1 - widget.fade.clamp(0.0, 1.0),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -432,12 +475,23 @@ class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  const SizedBox(
-                    width: 150,
-                    child: Text(
-                      'Shop manual dalam genggaman',
-                      style: TextStyle(fontSize: 12.5, height: 1.45, color: Color(0xB8FFFFFF)),
+                  ClipRect(
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      heightFactor: 1 - widget.compact,
+                      child: Opacity(
+                        opacity: 1 - widget.compact,
+                        child: const Padding(
+                          padding: EdgeInsets.only(top: 10),
+                          child: SizedBox(
+                            width: 150,
+                            child: Text(
+                              'Shop manual dalam genggaman',
+                              style: TextStyle(fontSize: 12.5, height: 1.45, color: Color(0xB8FFFFFF)),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],
