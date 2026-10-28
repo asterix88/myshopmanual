@@ -257,12 +257,39 @@ class PageRowList extends StatelessWidget {
 /// header already shows: "STANDARD VALUE TABLE FOR ENGINE: PC210-10M0" ->
 /// "STANDARD VALUE TABLE FOR ENGINE".
 String rowTitle(String title) {
+  title = tidyTitle(title);
   final colon = title.lastIndexOf(':');
   if (colon <= 0) return title;
   final tail = title.substring(colon + 1).trim();
   final isUnit = RegExp(r'^[A-Z]{1,4}\d[A-Z0-9-]*(,\s*[A-Z]{1,4}\d[A-Z0-9-]*)*$', caseSensitive: false).hasMatch(tail);
   return isUnit ? title.substring(0, colon).trim() : title;
 }
+
+/// Komatsu manuals write their bookmarks in capitals; shown like CAT's
+/// ("Check Level of Battery Electrolyte"). Titles with any small letter,
+/// and words with digits or known abbreviations, stay as they are.
+String tidyTitle(String title) {
+  if (!title.contains(RegExp('[A-Z]')) || title.contains(RegExp('[a-z]'))) return title;
+  var first = true;
+  return title.replaceAllMapped(RegExp(r"[A-Z0-9][A-Z0-9']*"), (m) {
+    final word = m[0]!;
+    final start = first;
+    first = false;
+    if (word.contains(RegExp('[0-9]')) || _abbreviations.contains(word)) return word;
+    final lower = word.toLowerCase();
+    // After a hyphen or slash a word still starts with a capital.
+    final joined = m.start > 0 && '-/'.contains(title[m.start - 1]);
+    if (!start && !joined && _smallWords.contains(lower)) return lower;
+    return '${lower[0].toUpperCase()}${lower.substring(1)}';
+  });
+}
+
+const _smallWords = {'a', 'an', 'and', 'as', 'at', 'by', 'for', 'from', 'in', 'into', 'of', 'on', 'or', 'per', 'the', 'to', 'with'};
+
+const _abbreviations = {
+  'HM', 'AC', 'PTO', 'PPC', 'EPC', 'TVC', 'LS', 'CLSS', 'EGR', 'KDPF', 'KCCV', 'DEF', 'SCR', 'KOMTRAX', 'ECM',
+  'ECU', 'GPS', 'LED', 'RPM', 'SAE', 'API', 'ISO', 'PC', 'HST', 'ROPS', 'FOPS', 'CO2', 'TWS', 'II', 'III', 'IV',
+};
 
 /// Opens [row] from the unit's spek.pdf when it is on the phone, else the
 /// page in the full manual.
@@ -421,9 +448,9 @@ class _SpecViewerScreenState extends State<SpecViewerScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15)),
+            Text(tidyTitle(widget.title), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15)),
             Text(
-              [?file?.title, 'hlm ${widget.sourcePage}'].join(' · '),
+              [?file?.title, 'hlm ${widget.sourcePage}'].join(', '),
               style: TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
             ),
           ],
@@ -437,11 +464,14 @@ class _SpecViewerScreenState extends State<SpecViewerScreen> {
           backgroundColor: AppColors.viewerBackground,
           margin: 8,
           sizeDelegateProvider: const PdfViewerSizeDelegateProviderLegacy(maxScale: 16),
-          viewerOverlayBuilder: (context, size, handleLinkTap) => [pageScrollThumb(_controller)],
         ),
       ),
       bottomNavigationBar: Container(
-        color: AppColors.surface,
+        // A thin line between the page and the bar, as in the mockup.
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          border: Border(top: BorderSide(color: AppColors.line)),
+        ),
         child: SafeArea(
           top: false,
           child: Padding(
@@ -459,7 +489,8 @@ class _SpecViewerScreenState extends State<SpecViewerScreen> {
                         shape: const StadiumBorder(),
                       ),
                       onPressed: () => openViewer(context, file, page: widget.sourcePage),
-                      icon: const Icon(Icons.menu_book_outlined, size: 20),
+                      // MyManual's own book (navy lines, orange text lines).
+                      icon: const AppIcon(AppGlyph.omm, size: 20),
                       // One line on a narrow phone.
                       label: const Text(
                         'Buka manual lengkap',
@@ -556,7 +587,7 @@ class _GroupCardState extends State<GroupCard> {
                       children: [
                         Flexible(
                           child: Text(
-                            widget.title,
+                            tidyTitle(widget.title),
                             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.navy),
                           ),
                         ),
@@ -606,7 +637,7 @@ class GroupItemTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                  Text(tidyTitle(item.title), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
                   if (item.subtitle case final sub?)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),

@@ -17,7 +17,15 @@ class UpdatesScreen extends StatefulWidget {
 
 class _UpdatesScreenState extends State<UpdatesScreen> {
   late List<ManualUpdate> _shown;
+
+  /// Not seen before this visit: listed first, with an orange dot.
+  Set<String> _fresh = {};
   AppStore? _store;
+
+  void _freeze(AppStore store) {
+    _shown = store.listedUpdates;
+    _fresh = {for (final u in _shown) if (store.isUnseen(u)) u.seenKey};
+  }
 
   @override
   void didChangeDependencies() {
@@ -25,7 +33,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
     if (_store == null) {
       _store = StoreScope.read(context);
       // Freeze the list for this visit, then mark it seen so the bell clears.
-      _shown = _store!.listedUpdates;
+      _freeze(_store!);
       WidgetsBinding.instance.addPostFrameCallback((_) => _store!.markUpdatesSeen());
     }
   }
@@ -60,7 +68,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           await store.refresh();
-          setState(() => _shown = store.listedUpdates);
+          setState(() => _freeze(store));
           store.markUpdatesSeen();
         },
         child: ListView(
@@ -76,20 +84,28 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
               ),
             if (_shown.isEmpty)
               const EmptyState(icon: Icons.notifications_none, title: 'Tidak ada update')
-            else ...[
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  '${_shown.length} perubahan file manual di server.',
-                  style: TextStyle(fontSize: 12, color: AppColors.muted),
-                ),
-              ),
-              for (final update in _shown)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _UpdateCard(update: update),
-                ),
-            ],
+            else
+              for (final (label, fresh) in [('BARU', true), ('SEBELUMNYA', false)])
+                if (_shown.where((u) => _fresh.contains(u.seenKey) == fresh).toList() case final group
+                    when group.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8, top: 4),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                  ),
+                  for (final update in group)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _UpdateCard(update: update, fresh: fresh),
+                    ),
+                ],
           ],
         ),
       ),
@@ -151,9 +167,12 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
 }
 
 class _UpdateCard extends StatelessWidget {
-  const _UpdateCard({required this.update});
+  const _UpdateCard({required this.update, required this.fresh});
 
   final ManualUpdate update;
+
+  /// Not seen before this visit of the list.
+  final bool fresh;
 
   @override
   Widget build(BuildContext context) {
@@ -220,6 +239,14 @@ class _UpdateCard extends StatelessWidget {
               const Spacer(),
               if (file.updatedAt != null)
                 Text(_date(file.updatedAt!), style: TextStyle(fontSize: 11, color: AppColors.muted)),
+              if (fresh) ...[
+                const SizedBox(width: 8),
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(color: AppColors.orange, shape: BoxShape.circle),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 10),

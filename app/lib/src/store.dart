@@ -111,6 +111,10 @@ class AppStore extends ChangeNotifier {
   /// Updates cleared with the bin on the update list: not listed again.
   Set<String> dismissedUpdates = {};
 
+  /// Every update the bell has announced, newest first: the update list
+  /// keeps them after they are seen, until the bin clears them.
+  List<ManualUpdate> updateLog = [];
+
   /// The Cari tab's last searches, newest first.
   List<String> recentSearches = [];
   bool _seenInitialized = false;
@@ -168,6 +172,10 @@ class AppStore extends ChangeNotifier {
       };
       seenKeys = {...(json['seen'] as List? ?? []).cast<String>()};
       dismissedUpdates = {...(json['dismissed'] as List? ?? []).cast<String>()};
+      updateLog = [
+        for (final e in json['update_log'] as List? ?? const [])
+          if (_logEntry(e as Map<String, dynamic>) case final u?) u,
+      ];
       recentSearches = (json['searches'] as List? ?? []).cast<String>();
       _seenInitialized = json['seen_initialized'] as bool? ?? false;
       final lr = json['last_read'];
@@ -400,6 +408,10 @@ class AppStore extends ChangeNotifier {
       'local': {for (final e in local.entries) e.key: e.value.toJson()},
       'seen': seenKeys.toList(),
       'dismissed': dismissedUpdates.toList(),
+      'update_log': [
+        for (final u in updateLog)
+          {'kind': u.kind.name, 'unit_id': u.file.unitId, 'unit_name': u.unitName, 'file': u.file.toJson()},
+      ],
       'searches': recentSearches,
       'seen_initialized': _seenInitialized,
       'last_read': lastRead?.toJson(),
@@ -471,6 +483,7 @@ class AppStore extends ChangeNotifier {
         _seenInitialized = true;
         await _save();
       }
+      if (_remember(updates)) _scheduleSave();
       online = true;
       lastChecked = DateTime.now();
       lastError = null;
@@ -504,14 +517,39 @@ class AppStore extends ChangeNotifier {
           if (!seenKeys.contains(u.seenKey)) u,
       ];
 
-  /// What the update list shows. A withdrawn manual is listed until the user
-  /// has seen it once; after that there is nothing left to do about it.
-  List<ManualUpdate> get listedUpdates => [
-        for (final u in updates)
-          if ((u.kind != UpdateKind.withdrawn || !seenKeys.contains(u.seenKey)) &&
-              !dismissedUpdates.contains(u.seenKey))
-            u,
-      ];
+  /// What the update list shows, newest first: changes still pending and
+  /// the ones already seen, until the bin clears them.
+  List<ManualUpdate> get listedUpdates {
+    final listed = <String>{};
+    return [
+      for (final u in [...updates, ...updateLog])
+        if (!dismissedUpdates.contains(u.seenKey) && listed.add(u.seenKey)) u,
+    ];
+  }
+
+  /// Not looked at yet: marked on the update list.
+  bool isUnseen(ManualUpdate update) => !seenKeys.contains(update.seenKey);
+
+  /// Adds [pending] updates not logged yet to the front of [updateLog].
+  bool _remember(List<ManualUpdate> pending) {
+    final logged = {for (final u in updateLog) u.seenKey};
+    final fresh = [for (final u in pending) if (!logged.contains(u.seenKey)) u];
+    if (fresh.isEmpty) return false;
+    updateLog = [...fresh, ...updateLog].take(200).toList();
+    return true;
+  }
+
+  static ManualUpdate? _logEntry(Map<String, dynamic> json) {
+    try {
+      return ManualUpdate(
+        kind: UpdateKind.values.byName(json['kind'] as String),
+        file: ManualFile.fromJson(json['unit_id'] as String, json['file'] as Map<String, dynamic>),
+        unitName: json['unit_name'] as String,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Empties the update list (the bin on it); manuals on the phone stay.
   void clearUpdates() {
@@ -539,12 +577,24 @@ class AppStore extends ChangeNotifier {
   void markUpdatesSeen() {
     final before = seenKeys.length;
     final pending = updates;
+    final logged = _remember(pending);
     seenKeys.addAll(catalog.files.map((f) => f.key));
     seenKeys.addAll(pending.map((u) => u.seenKey));
-    if (seenKeys.length != before) {
+    if (seenKeys.length != before || logged) {
       _scheduleSave();
       notifyListeners();
     }
+  }
+
+  /// Opening a unit counts as seeing its updates: its badges and its part
+  /// of the bell's count go; the update list keeps them.
+  void markUnitUpdatesSeen(String unitId) {
+    final pending = [for (final u in unseenUpdates) if (u.file.unitId == unitId) u];
+    if (pending.isEmpty) return;
+    _remember(pending);
+    seenKeys.addAll(pending.map((u) => u.seenKey));
+    _scheduleSave();
+    notifyListeners();
   }
 
   Unit? unitById(String id) {

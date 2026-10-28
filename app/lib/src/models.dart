@@ -59,7 +59,7 @@ class ManualFile {
   factory ManualFile.fromJson(String unitId, Map<String, dynamic> json) => ManualFile(
         unitId: unitId,
         id: json['id'] as String,
-        title: json['title'] as String,
+        title: ManualFile.fullTitle(json['title'] as String),
         type: DocType.of(json['type'] as String?, json['title'] as String),
         pages: json['pages'] as int,
         searchable: json['searchable'] as bool? ?? true,
@@ -68,6 +68,15 @@ class ManualFile {
         updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? ''),
         group: json['group'] as String? ?? '',
       );
+
+  /// A manual named only by its abbreviation (a folder called "OMM") gets
+  /// its full name.
+  static String fullTitle(String title) => switch (title.trim().toLowerCase()) {
+        'omm' || 'o&m' => 'Operation & Maintenance Manual',
+        'sm' => 'Shop Manual',
+        'pb' => 'Partsbook',
+        _ => title,
+      };
 
   /// Order of files on a unit page: subfolders first, then the files placed
   /// directly in the unit folder; inside each, Shop Manual, OMM, Partsbook,
