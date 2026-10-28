@@ -126,6 +126,9 @@ class Cetok extends ChangeNotifier {
   /// The name last used for a transaction, filled in next time.
   String name = '';
 
+  /// The last purposes typed for Ambil, newest first, offered as shortcuts.
+  List<String> recentNotes = const [];
+
   bool _loaded = false;
   bool _again = false;
 
@@ -141,6 +144,7 @@ class Cetok extends ChangeNotifier {
           final at = json['updated'] as String?;
           updated = at == null ? null : DateTime.tryParse(at);
           name = json['name'] as String? ?? '';
+          recentNotes = [for (final n in json['notes'] as List? ?? const []) '$n'];
           showAll = json['show_all'] as bool? ?? false;
           notifyListeners();
         }
@@ -180,8 +184,14 @@ class Cetok extends ChangeNotifier {
   }
 
   /// Takes [qty] of [part] out of stock.
-  Future<void> take(CetokPart part, {required int qty, required String note, required String name}) =>
-      _write('ambil_barang', {'p_id': part.id, 'p_qty': qty, 'p_note': note.trim(), 'p_nama': name.trim()}, name);
+  Future<void> take(CetokPart part, {required int qty, required String note, required String name}) async {
+    await _write('ambil_barang', {'p_id': part.id, 'p_qty': qty, 'p_note': note.trim(), 'p_nama': name.trim()}, name);
+    final used = note.trim().toUpperCase();
+    if (used.isEmpty) return;
+    recentNotes = [used, ...recentNotes.where((n) => n != used)].take(3).toList();
+    notifyListeners();
+    unawaited(_save());
+  }
 
   /// Moves [qty] of [part] to another location and/or status.
   Future<void> move(
@@ -288,6 +298,7 @@ class Cetok extends ChangeNotifier {
         'parts': [for (final p in parts) p.toJson()],
         'updated': updated?.toIso8601String(),
         'name': name,
+        'notes': recentNotes,
         'show_all': showAll,
       }));
       await tmp.rename(cachePath);

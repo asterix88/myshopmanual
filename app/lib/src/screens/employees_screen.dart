@@ -203,7 +203,7 @@ Future<void> _showPin(BuildContext context, Employee e, String pin) {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('${e.name} · ${e.nrp}', style: TextStyle(fontSize: 13.5, color: AppColors.muted)),
+          Text('${e.name} · ${e.nrp}', style: TextStyle(fontSize: 13, color: AppColors.muted)),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -216,7 +216,7 @@ Future<void> _showPin(BuildContext context, Employee e, String pin) {
                     decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(12)),
                     child: Text(
                       pin[i],
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.navy),
+                      style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: AppColors.navy),
                     ),
                   ),
                 ),
@@ -281,7 +281,7 @@ class _ResetRequestState extends State<_ResetRequest> {
                 backgroundColor: AppColors.navySoft,
                 child: Text(
                   initials,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.navy),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.navy),
                 ),
               ),
               const SizedBox(width: 12),
@@ -289,10 +289,10 @@ class _ResetRequestState extends State<_ResetRequest> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(e.name, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600)),
+                    Text(e.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                     Text(
                       'NRP ${e.nrp} · ${_when(e.resetAt!)}',
-                      style: TextStyle(fontSize: 12.5, color: AppColors.muted),
+                      style: TextStyle(fontSize: 13, color: AppColors.muted),
                     ),
                   ],
                 ),
@@ -368,7 +368,7 @@ class _EmployeeRow extends StatelessWidget {
               children: [
                 Text(
                   e.admin ? '${e.name} (admin)' : e.name,
-                  style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
                 Text(detail, style: TextStyle(fontSize: 12, color: AppColors.muted)),
@@ -501,7 +501,7 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(e.name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navy)),
+            Text(e.name, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.navy)),
             const SizedBox(height: 12),
             Table(
               columnWidths: const {0: IntrinsicColumnWidth()},

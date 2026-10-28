@@ -10,7 +10,7 @@ import 'package:mymanual/src/screens/unit_tabs.dart';
 import 'package:mymanual/src/store.dart';
 import 'package:mymanual/src/units.dart';
 
-import 'shell_test.dart' show shownOpacity;
+import 'shell_test.dart' show shown;
 import 'store_test.dart' show fixtureServer;
 
 String convert(UnitKind kind, double value, String from, String to) =>
@@ -106,8 +106,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('home-search')));
     await tester.pumpAndSettle();
-    expect(shownOpacity(tester, SearchScreen), 1);
-    expect(shownOpacity(tester, HomeScreen), 0);
+    expect(shown(SearchScreen), isTrue);
+    expect(shown(HomeScreen), isFalse);
     root.deleteSync(recursive: true);
   });
 }

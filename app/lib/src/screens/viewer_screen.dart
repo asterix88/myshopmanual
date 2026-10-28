@@ -15,6 +15,7 @@ import '../search.dart';
 import '../specs.dart';
 import '../store.dart';
 import '../theme.dart';
+import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
 import '../widgets/excavator_loader.dart';
 import 'chat_screen.dart';
@@ -516,7 +517,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
                                 : 'Torsi tidak terbaca, silakan langsung cek dokumen',
                     maxLines: 1,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12.5, color: Colors.white),
+                    style: const TextStyle(fontSize: 13, color: Colors.white),
                   ),
                 ),
               ),
@@ -631,18 +632,17 @@ class _ViewerScreenState extends State<ViewerScreen> {
           IconButton(
             tooltip: 'Cari di file ini',
             onPressed: _toggleSearch,
-            icon: Icon(_searching ? Icons.search_off : Icons.search),
+            icon: _searching ? const Icon(Icons.search_off) : AppIcon(AppGlyph.search, color: AppColors.ink, size: 22),
           ),
           IconButton(
             tooltip: bookmarked ? 'Hapus tanda halaman ini' : 'Tandai halaman ini',
             onPressed: () => store.toggleBookmark(file.key, _page),
-            icon: Icon(bookmarked ? Icons.bookmark : Icons.bookmark_border,
-                color: bookmarked ? AppColors.orange : null),
+            icon: AppIcon(bookmarked ? AppGlyph.bookmarkOn : AppGlyph.bookmark, color: AppColors.ink, accent: AppColors.orange, size: 22),
           ),
           IconButton(
             tooltip: 'Penanda',
             onPressed: () => _showBookmarks(file),
-            icon: const Icon(Icons.toc),
+            icon: AppIcon(AppGlyph.contents, color: AppColors.ink, size: 22),
           ),
         ],
         bottom: _searching
@@ -801,7 +801,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
             }
           },
           onSubmitted: (text) => _runSearch(text),
-          style: const TextStyle(fontSize: 14),
+          style: const TextStyle(fontSize: 13),
           decoration: InputDecoration(
             isDense: true,
             filled: true,
@@ -836,9 +836,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
     return Container(
       key: const Key('match-pill'),
       decoration: BoxDecoration(
-        color: const Color(0xF0202124),
+        color: AppColors.navy,
         borderRadius: BorderRadius.circular(26),
-        boxShadow: const [BoxShadow(color: Color(0x40000000), blurRadius: 8, offset: Offset(0, 3))],
+        boxShadow: const [BoxShadow(color: Color(0x40101828), blurRadius: 6, offset: Offset(0, 2))],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -898,15 +898,15 @@ class _AiButton extends StatelessWidget {
         key: const Key('viewer-ai'),
         color: AppColors.orange,
         shape: const CircleBorder(),
-        elevation: 4,
-        shadowColor: const Color(0x80F08A1C),
+        elevation: 2,
+        shadowColor: const Color(0x66101828),
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onPressed,
           child: const SizedBox(
             width: 56,
             height: 56,
-            child: Icon(Icons.auto_awesome, color: Colors.white, size: 28),
+            child: Center(child: AppIcon(AppGlyph.nyel, color: Colors.white, size: 28)),
           ),
         ),
       ),
@@ -995,7 +995,7 @@ class _PageBarState extends State<_PageBar> {
                   textAlign: TextAlign.center,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   onSubmitted: _go,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     isDense: true,
                     filled: true,
@@ -1012,7 +1012,7 @@ class _PageBarState extends State<_PageBar> {
                   ),
                 ),
               ),
-              Text(' / ${widget.pageCount}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              Text(' / ${widget.pageCount}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -1060,7 +1060,7 @@ class _BookmarksSheetState extends State<_BookmarksSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Penanda', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                Text('Penanda', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                 Text('Daftar isi bawaan dari file PDF', style: TextStyle(fontSize: 12, color: AppColors.muted)),
               ],
             ),

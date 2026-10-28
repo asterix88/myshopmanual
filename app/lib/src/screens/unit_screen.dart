@@ -1,12 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models.dart';
 import '../public_downloads.dart';
 import '../store.dart';
 import '../theme.dart';
+import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
+import '../widgets/unit_icon.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
 
@@ -73,6 +76,9 @@ class _UnitScreenState extends State<UnitScreen> {
         : inFolder.where((f) => f.title.toLowerCase().contains(query)).toList();
     final subfolders = query.isEmpty ? _subfolders(all, widget.folder) : const <(String, List<ManualFile>)>[];
     final onPhone = files.where((f) => store.isDownloaded(f.key)).toList();
+    final atTop = widget.folder.isEmpty && query.isEmpty && !_editing;
+    // CAT units always show their 7 SIS books, also the ones not uploaded yet.
+    final slots = atTop && isCat(unit) ? catSlots(files) : null;
 
     return PopScope(
       canPop: !_editing,
@@ -92,6 +98,11 @@ class _UnitScreenState extends State<UnitScreen> {
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ),
+            if (atTop)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _SummaryCard(unit: unit, count: inFolder.length),
+              ),
             if (!_editing && inFolder.length >= _filterFrom)
               Padding(
                 padding: const EdgeInsets.only(bottom: 14),
@@ -99,7 +110,7 @@ class _UnitScreenState extends State<UnitScreen> {
                   controller: _filter,
                   onChanged: (_) => setState(() {}),
                   textInputAction: TextInputAction.search,
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: 13),
                   decoration: InputDecoration(
                     isDense: true,
                     filled: true,
@@ -139,20 +150,28 @@ class _UnitScreenState extends State<UnitScreen> {
                 padding: EdgeInsets.only(top: 8),
                 child: SectionLabel('Manual'),
               ),
-            for (final file in files)
-              Padding(
-                key: file.key == widget.focus ? _focusKey : null,
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _editing
-                    ? _SelectableFile(
-                        file: file,
-                        enabled: store.isDownloaded(file.key),
-                        selected: _selected.contains(file.key),
-                        onChanged: (v) => setState(() => v ? _selected.add(file.key) : _selected.remove(file.key)),
-                      )
-                    : _FileCard(file: file, unit: unit),
-              ),
-            if (files.isEmpty && subfolders.isEmpty)
+            if (slots != null)
+              for (final (title, file) in slots)
+                Padding(
+                  key: file != null && file.key == widget.focus ? _focusKey : null,
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: file == null ? _WaitingCard(title: title) : _FileCard(file: file, unit: unit),
+                )
+            else
+              for (final file in files)
+                Padding(
+                  key: file.key == widget.focus ? _focusKey : null,
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _editing
+                      ? _SelectableFile(
+                          file: file,
+                          enabled: store.isDownloaded(file.key),
+                          selected: _selected.contains(file.key),
+                          onChanged: (v) => setState(() => v ? _selected.add(file.key) : _selected.remove(file.key)),
+                        )
+                      : _FileCard(file: file, unit: unit),
+                ),
+            if (files.isEmpty && subfolders.isEmpty && slots == null)
               query.isEmpty
                   ? const EmptyState(icon: Icons.folder_off_outlined, title: 'Folder ini kosong')
                   : const EmptyState(icon: Icons.search_off, title: 'Tidak ada file dengan nama itu'),
@@ -223,7 +242,7 @@ class _UnitScreenState extends State<UnitScreen> {
             const SizedBox(height: 2),
             Text(
               running ? 'Mengunduh…' : 'Unduh semua',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
             ),
           ],
         ),
@@ -237,7 +256,7 @@ class _UnitScreenState extends State<UnitScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Unduh ${missing.length} file?', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+        title: Text('Unduh ${missing.length} file?', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
         content: Text('Total ${formatSize(size)}'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
@@ -317,151 +336,96 @@ class _FileCard extends StatelessWidget {
     final canRead = downloaded || (store.online == true && remote != null);
     final partial = downloaded || progress != null ? 0 : store.partialBytes(file);
 
+    // Option A: the card itself opens the manual (online when not on the
+    // phone); one round button on the right downloads, shows progress and,
+    // once the manual is on the phone, copies it to the Download folder.
     return AppCard(
       onTap: canRead ? () => openViewer(context, file, page: lastPage) : null,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+      child: ListenableBuilder(
+        listenable: PublicDownloads.instance,
+        builder: (context, _) {
+          final name = PublicDownloads.fileName(file.title);
+          final canSave = downloaded && !hasNewVersion && PublicDownloads.instance.canSave(name);
+          final Widget? status;
+          if (progress != null) {
+            status = Text(
+              'Mengunduh ${(progress.fraction * 100).round()}%',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.navy),
+            );
+          } else if (!downloaded) {
+            status = partial > 0
+                ? Text(
+                    'Terunduh ${formatSize(partial)} dari ${formatSize(file.downloadSize)}',
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  )
+                : null;
+          } else if (hasNewVersion) {
+            status = Text(
+              'Versi baru tersedia',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.update),
+            );
+          } else if (withdrawn) {
+            status = Text('Sudah ditarik dari server', style: TextStyle(fontSize: 12, color: AppColors.muted));
+          } else if (lastPage != null) {
+            status = Text('Terakhir dibuka: hlm $lastPage', style: TextStyle(fontSize: 12, color: AppColors.muted));
+          } else {
+            status = Row(
+              children: [
+                Icon(Icons.check_circle, size: 14, color: AppColors.green),
+                const SizedBox(width: 4),
+                Text(
+                  'Siap dibuka offline',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.green),
+                ),
+              ],
+            );
+          }
+          final Widget? action;
+          if (progress != null) {
+            action = _ProgressButton(fraction: progress.fraction, onPressed: () => store.pauseDownload(file.key));
+          } else if (!downloaded || hasNewVersion) {
+            action = _RoundButton(
+              tooltip: hasNewVersion ? 'Perbarui' : partial > 0 ? 'Lanjutkan unduhan' : 'Unduh',
+              onPressed: () => _download(context, store),
+              child: Icon(Icons.download_rounded, size: 22, color: AppColors.navy),
+            );
+          } else if (canSave) {
+            action = _RoundButton(
+              tooltip: 'Simpan file',
+              onPressed: () => _saveToDownloads(context, store, name),
+              child: const _SaveToFolderIcon(),
+            );
+          } else {
+            action = null;
+          }
+          return Row(
             children: [
+              DocTile(docGlyph(file)),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(file.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                    Text(
-                      '${file.pages} halaman · ${formatSize(file.downloadSize)}',
-                      style: TextStyle(fontSize: 12, color: AppColors.muted),
-                    ),
+                    Text(file.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.3)),
+                    if (progress == null && !downloaded)
+                      Text(
+                        '${file.pages} halaman · ${formatSize(file.downloadSize)}',
+                        style: TextStyle(fontSize: 12, color: AppColors.muted),
+                      ),
                     if (!file.searchable)
                       Text(
                         'Gambar atau hasil scan: tidak bisa melakukan pencarian',
                         style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
+                    if (status != null) ...[const SizedBox(height: 2), status],
                   ],
                 ),
               ),
-              if (file.type != DocType.other) ...[const SizedBox(width: 10), Pill.docType(file.type)],
+              if (action != null) ...[const SizedBox(width: 8), action],
             ],
-          ),
-          if (partial > 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                'Terunduh ${formatSize(partial)} dari ${formatSize(file.downloadSize)}, bisa dilanjutkan',
-                style: TextStyle(fontSize: 12, color: AppColors.muted),
-              ),
-            ),
-          const SizedBox(height: 8),
-          if (progress != null)
-            _DownloadingRow(
-              progress: progress,
-              onPause: () => store.pauseDownload(file.key),
-              onCancel: () => store.cancelDownload(file.key),
-            )
-          else if (!downloaded)
-            // Compact buttons, each where the left and right half of the card
-            // start, as they sat when they filled those halves.
-            Row(
-              children: [
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 32),
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
-                        backgroundColor: AppColors.navy,
-                        shape: const StadiumBorder(),
-                      ),
-                      onPressed: canRead ? () => openViewer(context, file, page: lastPage) : null,
-                      icon: const Icon(Icons.menu_book_outlined, size: 15),
-                      label: const Text('Baca online', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 32),
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
-                        side: BorderSide(color: AppColors.navy, width: 1.2),
-                        foregroundColor: AppColors.navy,
-                        shape: const StadiumBorder(),
-                      ),
-                      onPressed: () => _download(context, store),
-                      icon: const Icon(Icons.download, size: 15),
-                      label: Text(
-                        partial > 0 ? 'Lanjutkan unduhan' : 'Unduh',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          else
-            // Copy to the phone's Download folder: a small icon, hidden once
-            // the copy is there and back if it gets deleted.
-            ListenableBuilder(
-              listenable: PublicDownloads.instance,
-              builder: (context, _) {
-                final name = PublicDownloads.fileName(file.title);
-                final canSave = PublicDownloads.instance.canSave(name);
-                final note = withdrawn
-                    ? 'Sudah ditarik dari server'
-                    : lastPage != null
-                        ? 'Terakhir dibuka: hlm $lastPage'
-                        : 'Siap dibuka offline';
-                final ready = !withdrawn && lastPage == null;
-                return Row(
-                  children: [
-                    if (ready) ...[
-                      Icon(Icons.check_circle, size: 16, color: AppColors.green),
-                      const SizedBox(width: 6),
-                    ],
-                    Expanded(
-                      child: Text(
-                        note,
-                        style: ready
-                            ? TextStyle(fontSize: 12, color: AppColors.green, fontWeight: FontWeight.w500)
-                            : TextStyle(fontSize: 12, color: AppColors.muted),
-                      ),
-                    ),
-                    if (hasNewVersion)
-                      TextButton(
-                        onPressed: () => _download(context, store),
-                        child: const Text('Perbarui', style: TextStyle(fontWeight: FontWeight.w600)),
-                      ),
-                    if (canSave)
-                      IconButton(
-                        tooltip: 'Simpan file',
-                        style: IconButton.styleFrom(
-                          fixedSize: const Size(40, 40),
-                          minimumSize: const Size(40, 40),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(color: AppColors.border),
-                          ),
-                        ),
-                        // A folder with a down arrow: save to the Download folder.
-                        icon: const _SaveToFolderIcon(),
-                        onPressed: () => _saveToDownloads(context, store, name),
-                      ),
-                  ],
-                );
-              },
-            ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -527,40 +491,295 @@ class _FileCard extends StatelessWidget {
   }
 }
 
-class _DownloadingRow extends StatelessWidget {
-  const _DownloadingRow({required this.progress, required this.onPause, required this.onCancel});
+/// CAT's SIS books, in the order the unit page lists them.
+const catBooks = [
+  ('Operation & Maintenance Manual', AppGlyph.omm),
+  ('Partsbook', AppGlyph.partsbook),
+  ('System Operation', AppGlyph.systemOperation),
+  ('Testing & Adjusting', AppGlyph.testing),
+  ('Disassembly & Assembly', AppGlyph.disassembly),
+  ('Troubleshooting', AppGlyph.troubleshooting),
+  ('Schematic Diagram', AppGlyph.diagram),
+];
 
-  final DownloadProgress progress;
-  final VoidCallback onPause;
-  final VoidCallback onCancel;
+bool isCat(Unit unit) => UnitIcon.modelCode(unit.id).startsWith('CAT');
+
+/// One row per SIS book with its manual (null: not uploaded yet), then the
+/// unit's other manuals, so none goes missing.
+List<(String, ManualFile?)> catSlots(List<ManualFile> files) {
+  final left = [...files];
+  final rows = <(String, ManualFile?)>[];
+  for (final (title, glyph) in catBooks) {
+    final i = left.indexWhere((f) => docGlyph(f) == glyph);
+    rows.add((title, i < 0 ? null : left.removeAt(i)));
+  }
+  return [...rows, for (final f in left) (f.title, f)];
+}
+
+/// The top of a unit page: how many documents it has and its picture; for
+/// CAT also a link to Caterpillar's own SIS.
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({required this.unit, required this.count});
+
+  final Unit unit;
+  final int count;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Mengunduh ${formatSize(progress.received)} dari ${formatSize(progress.total)}',
-          style: TextStyle(fontSize: 12, color: AppColors.muted),
-        ),
-        Row(
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: progress.fraction,
-                  minHeight: 6,
-                  color: const Color(0xFF2F80ED),
-                  backgroundColor: AppColors.divider,
+    return Container(
+      decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(16)),
+      padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'DOKUMEN TEKNIS',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1, color: Color(0xFFC9D3E3)),
                 ),
+                const SizedBox(height: 6),
+                Text(
+                  '$count dokumen',
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white),
+                ),
+                if (isCat(unit)) ...[
+                  const SizedBox(height: 10),
+                  const Text('Lihat lebih lengkap di', style: TextStyle(fontSize: 11, color: Color(0xFFC9D3E3))),
+                  const SizedBox(height: 6),
+                  Material(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    shape: const StadiumBorder(),
+                    child: InkWell(
+                      customBorder: const StadiumBorder(),
+                      onTap: () => _openSis(context),
+                      child: const Padding(
+                        padding: EdgeInsets.fromLTRB(8, 5, 10, 5),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.language, size: 14, color: Colors.white),
+                            SizedBox(width: 6),
+                            Text(
+                              'sis2.cat.com',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
+                            ),
+                            SizedBox(width: 6),
+                            Icon(Icons.north_east, size: 13, color: Color(0xFFF5B26B)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          UnitIcon(unitId: unit.id, width: 124, height: 76),
+        ],
+      ),
+    );
+  }
+
+  static Future<void> _openSis(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await launchUrl(Uri.parse('https://sis2.cat.com'), mode: LaunchMode.externalApplication)
+        .catchError((_) => false);
+    if (!ok) messenger.showSnackBar(const SnackBar(content: Text('Tidak bisa membuka browser')));
+  }
+}
+
+/// A SIS book that is not on the server yet.
+class _WaitingCard extends StatelessWidget {
+  const _WaitingCard({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DashedBorder(AppColors.border),
+      child: Material(
+        color: AppColors.field,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _explain(context),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                DocTile(catBooks.firstWhere((b) => b.$1 == title).$2, muted: true),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.3, color: AppColors.muted),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.schedule, size: 14, color: AppColors.faint),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Waiting for update from server',
+                              style: TextStyle(fontSize: 12, color: AppColors.muted),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _explain(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(16)),
+                alignment: Alignment.center,
+                child: const _Spinner(size: 30, width: 3),
+              ),
+              const SizedBox(height: 14),
+              Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 6),
+              Text(
+                'Waiting for update from server.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: AppColors.inkSoft),
+              ),
+              const SizedBox(height: 18),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.navy,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Mengerti'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Spinner extends StatelessWidget {
+  const _Spinner({required this.size, required this.width});
+
+  final double size;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: size,
+      child: CircularProgressIndicator(strokeWidth: width, color: AppColors.orange, backgroundColor: AppColors.border),
+    );
+  }
+}
+
+class _DashedBorder extends CustomPainter {
+  const _DashedBorder(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final outline = Path()..addRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(16)).deflate(0.75));
+    for (final metric in outline.computeMetrics()) {
+      for (var d = 0.0; d < metric.length; d += 9) {
+        canvas.drawPath(metric.extractPath(d, d + 5), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorder old) => old.color != color;
+}
+
+/// The round 44 px button on the right of a file card.
+class _RoundButton extends StatelessWidget {
+  const _RoundButton({required this.tooltip, required this.onPressed, required this.child});
+
+  final String tooltip;
+  final VoidCallback onPressed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      style: IconButton.styleFrom(
+        fixedSize: const Size(44, 44),
+        minimumSize: const Size(44, 44),
+        shape: CircleBorder(side: BorderSide(color: AppColors.border, width: 1.5)),
+      ),
+      icon: child,
+      onPressed: onPressed,
+    );
+  }
+}
+
+/// A download in progress: a ring that fills up; tapping it pauses.
+class _ProgressButton extends StatelessWidget {
+  const _ProgressButton({required this.fraction, required this.onPressed});
+
+  final double fraction;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: 'Jeda',
+      style: IconButton.styleFrom(fixedSize: const Size(44, 44), minimumSize: const Size(44, 44)),
+      onPressed: onPressed,
+      icon: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox.square(
+            dimension: 40,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(end: fraction),
+              duration: const Duration(milliseconds: 250),
+              builder: (context, value, _) => CircularProgressIndicator(
+                value: value,
+                strokeWidth: 3,
+                color: AppColors.navy,
+                backgroundColor: AppColors.divider,
               ),
             ),
-            TextButton(onPressed: onPause, child: const Text('Jeda')),
-            TextButton(onPressed: onCancel, child: const Text('Batal')),
-          ],
-        ),
-      ],
+          ),
+          Icon(Icons.pause_rounded, size: 18, color: AppColors.navy),
+        ],
+      ),
     );
   }
 }
@@ -634,7 +853,7 @@ class _FolderCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 Text(
                   hasUpdate
                       ? 'Ada update manual'
