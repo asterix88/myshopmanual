@@ -22,8 +22,19 @@ final _notifications = FlutterLocalNotificationsPlugin();
 
 /// Called once when the app starts: sets up notifications, asks for
 /// permission (Android 13+) and schedules the background check.
-/// [onOpenUpdates] runs when the user taps the notification.
-Future<void> startUpdateNotifications({required void Function() onOpenUpdates}) async {
+/// [onOpenUpdates] runs when the user taps the notification;
+/// [onPermissionAnswered] once the permission question is out of the way.
+Future<void> startUpdateNotifications({
+  required void Function() onOpenUpdates,
+  void Function()? onPermissionAnswered,
+}) async {
+  var answered = false;
+  void permissionDone() {
+    if (answered) return;
+    answered = true;
+    onPermissionAnswered?.call();
+  }
+
   try {
     await _notifications.initialize(
       settings: const InitializationSettings(android: AndroidInitializationSettings('ic_notification')),
@@ -39,6 +50,7 @@ Future<void> startUpdateNotifications({required void Function() onOpenUpdates}) 
     await _notifications
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
+    permissionDone();
     await Workmanager().initialize(updateCheckDispatcher);
     await Workmanager().registerPeriodicTask(
       _task,
@@ -50,6 +62,8 @@ Future<void> startUpdateNotifications({required void Function() onOpenUpdates}) 
   } on Object catch (e) {
     // The app works without notifications.
     Diagnostics.log('update notifications not started: $e');
+  } finally {
+    permissionDone();
   }
 }
 

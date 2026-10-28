@@ -90,6 +90,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
                 children: [
+                  ..._requests(employees),
                   TextField(
                     onChanged: (v) => setState(() => _query = v),
                     decoration: InputDecoration(
@@ -139,6 +140,38 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     );
   }
 
+  /// "Permintaan reset PIN": employees who tapped Lupa PIN, newest first.
+  List<Widget> _requests(List<Employee> employees) {
+    final asked = [for (final e in employees) if (e.resetAt != null && e.active) e]
+      ..sort((a, b) => b.resetAt!.compareTo(a.resetAt!));
+    if (asked.isEmpty) return const [];
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(2, 2, 2, 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Permintaan reset PIN',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.navy),
+              ),
+            ),
+            Pill('${asked.length}', background: AppColors.orange, foreground: Colors.white),
+          ],
+        ),
+      ),
+      for (final e in asked) ...[
+        _ResetRequest(
+          key: ValueKey('reset-${e.nrp}'),
+          employee: e,
+          onDone: () => setState(() => e.resetAt = null),
+        ),
+        const SizedBox(height: 10),
+      ],
+      const SizedBox(height: 10),
+    ];
+  }
+
   Future<void> _open(Employee e) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -146,6 +179,160 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       builder: (_) => _EmployeeSheet(employee: e, onChanged: () => setState(() {})),
+    );
+  }
+}
+
+String _when(DateTime t) {
+  final now = DateTime.now();
+  String two(int n) => n.toString().padLeft(2, '0');
+  final time = '${two(t.hour)}.${two(t.minute)}';
+  final days = DateTime(now.year, now.month, now.day).difference(DateTime(t.year, t.month, t.day)).inDays;
+  if (days == 0) return time;
+  if (days == 1) return 'Kemarin $time';
+  return '${t.day}/${t.month} $time';
+}
+
+/// Shows a temporary PIN the admin made, to pass on to the employee.
+Future<void> _showPin(BuildContext context, Employee e, String pin) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('PIN sementara'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('${e.name} · ${e.nrp}', style: TextStyle(fontSize: 13.5, color: AppColors.muted)),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              for (var i = 0; i < pin.length; i++) ...[
+                if (i > 0) const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    height: 60,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(12)),
+                    child: Text(
+                      pin[i],
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.navy),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+      actions: [
+        TextButton.icon(
+          onPressed: () => Clipboard.setData(ClipboardData(text: pin)),
+          icon: const Icon(Icons.copy_rounded, size: 18),
+          label: const Text('Salin'),
+        ),
+        FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Selesai')),
+      ],
+    ),
+  );
+}
+
+/// One "Lupa PIN" request: make a temporary PIN, or dismiss it.
+class _ResetRequest extends StatefulWidget {
+  const _ResetRequest({super.key, required this.employee, required this.onDone});
+
+  final Employee employee;
+  final VoidCallback onDone;
+
+  @override
+  State<_ResetRequest> createState() => _ResetRequestState();
+}
+
+class _ResetRequestState extends State<_ResetRequest> {
+  bool _busy = false;
+
+  Future<void> _run(Future<void> Function(AppStore store, Session session) action) async {
+    final store = StoreScope.read(context);
+    final session = store.session;
+    if (session == null) return;
+    setState(() => _busy = true);
+    try {
+      await action(store, session);
+    } on AuthException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final e = widget.employee;
+    final initials = e.name.trim().split(RegExp(r'\s+')).take(2).map((w) => w.isEmpty ? '' : w[0]).join().toUpperCase();
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 21,
+                backgroundColor: AppColors.navySoft,
+                child: Text(
+                  initials,
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.navy),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(e.name, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600)),
+                    Text(
+                      'NRP ${e.nrp} · ${_when(e.resetAt!)}',
+                      style: TextStyle(fontSize: 12.5, color: AppColors.muted),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _busy
+                      ? null
+                      : () => _run((store, session) async {
+                            await store.auth.dismissReset(session, e.nrp);
+                            widget.onDone();
+                          }),
+                  child: const Text('Abaikan'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: FilledButton(
+                  key: Key('reset-pin-${e.nrp}'),
+                  onPressed: _busy
+                      ? null
+                      : () => _run((store, session) async {
+                            final pin = await store.auth.newPin(session, e.nrp);
+                            if (!context.mounted) return;
+                            await _showPin(context, e, pin);
+                            widget.onDone();
+                          }),
+                  child: const Text('Buat PIN sementara'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -257,8 +444,8 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
   Future<void> _newPin() async {
     final e = widget.employee;
     if (!await _confirm(
-      'Buat PIN awal baru?',
-      'PIN ${e.name} yang lama tidak berlaku lagi. Ia masuk dengan PIN awal baru lalu membuat PIN sendiri.',
+      'Buat PIN sementara?',
+      'PIN lama ${e.name} tidak berlaku lagi.',
       'Buat PIN',
     )) {
       return;
@@ -266,33 +453,9 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
     await _run((store, session) async {
       final pin = await store.auth.newPin(session, e.nrp);
       if (!mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('PIN awal ${e.name}'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SelectableText(
-                pin,
-                style: TextStyle(fontSize: 34, fontWeight: FontWeight.w700, letterSpacing: 8, color: AppColors.navy),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'Berikan PIN ini langsung ke ${e.name}. PIN hanya untuk satu kali masuk dan harus diganti saat itu.',
-                style: const TextStyle(fontSize: 13),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Clipboard.setData(ClipboardData(text: pin)),
-              child: const Text('Salin PIN'),
-            ),
-            FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Selesai')),
-          ],
-        ),
-      );
+      await _showPin(context, e, pin);
+      e.resetAt = null;
+      widget.onChanged();
     });
   }
 
@@ -352,7 +515,7 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: _busy ? null : _newPin,
-              child: const Text('Buat PIN awal baru'),
+              child: const Text('Buat PIN sementara'),
             ),
             if (!me) ...[
               const SizedBox(height: 8),

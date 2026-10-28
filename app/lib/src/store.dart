@@ -109,6 +109,13 @@ class AppStore extends ChangeNotifier {
   Set<String> seenKeys = {};
   bool _seenInitialized = false;
   LastRead? lastRead;
+
+  /// When the app was last in use on this phone; the opening animation only
+  /// plays after a day or more away.
+  DateTime? lastActive;
+
+  /// The four introduction pages after the first login were seen or skipped.
+  bool introSeen = false;
   Map<String, List<int>> bookmarks = {};
   String serverUrl = defaultServerUrl;
 
@@ -162,6 +169,8 @@ class AppStore extends ChangeNotifier {
           e.key: (e.value as List).cast<int>(),
       };
       _deviceId = json['device_id'] as String? ?? '';
+      lastActive = DateTime.tryParse(json['last_active'] as String? ?? '');
+      introSeen = json['intro_seen'] as bool? ?? false;
       // Light unless the user picked another look in the menu (Anas, 9 Oct
       // 2026); older versions saved 'system' without asking.
       themeChosen = json['theme_chosen'] as bool? ?? false;
@@ -283,6 +292,27 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Whether opening the app now plays the opening animation: always before
+  /// logging in, otherwise only after a day or more since the app was last
+  /// used (a quick return goes straight to Home).
+  bool wantsSplash(DateTime now) {
+    final last = lastActive;
+    return !loggedIn || last == null || now.difference(last) >= const Duration(days: 1);
+  }
+
+  /// The app is in use (started, or going to the background).
+  void markActive() {
+    lastActive = DateTime.now();
+    // Straight away: the phone may stop the app soon after it leaves view.
+    unawaited(_save());
+  }
+
+  Future<void> finishIntro() async {
+    introSeen = true;
+    notifyListeners();
+    await _save();
+  }
+
   /// Logs out when the session ran out while the phone was offline.
   Future<void> checkSessionExpiry() async {
     if (session?.expired ?? false) await signOut();
@@ -344,7 +374,12 @@ class AppStore extends ChangeNotifier {
     _saveTimer = Timer(const Duration(milliseconds: 400), _save);
   }
 
-  Future<void> _save() async {
+  Future<void> _saving = Future.value();
+
+  /// One write at a time: two at once would share the .tmp file.
+  Future<void> _save() => _saving = _saving.catchError((_) {}).then((_) => _write());
+
+  Future<void> _write() async {
     await _root.create(recursive: true);
     final tmp = File('${_stateFile.path}.tmp');
     await tmp.writeAsString(_stateJson());
@@ -360,6 +395,8 @@ class AppStore extends ChangeNotifier {
       'last_read': lastRead?.toJson(),
       'bookmarks': bookmarks,
       'device_id': _deviceId,
+      if (lastActive case final t?) 'last_active': t.toIso8601String(),
+      'intro_seen': introSeen,
       'theme': themeMode,
       'theme_chosen': themeChosen,
       'ai_day': _aiDay,

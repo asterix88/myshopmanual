@@ -24,7 +24,10 @@ class StoreScope extends InheritedNotifier<AppStore> {
 /// Bottom navigation: Home, Cari, nyel AI (raised, in the middle), Standar,
 /// Servis.
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key});
+  const HomeShell({super.key, this.entrance = false});
+
+  /// Slide Home in (after the opening animation or the introduction).
+  final bool entrance;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -58,7 +61,7 @@ class _HomeShellState extends State<HomeShell> {
         body: Stack(
           children: [
             for (final (i, page) in [
-              HomeScreen(onOpenSearch: () => setState(() => _tab = 1)),
+              HomeScreen(onOpenSearch: () => setState(() => _tab = 1), entrance: widget.entrance),
               const SearchScreen(),
               const ChatScreen(),
               const SpecsScreen(),
