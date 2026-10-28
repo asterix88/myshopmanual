@@ -467,11 +467,7 @@ class _SpecViewerScreenState extends State<SpecViewerScreen> {
         ),
       ),
       bottomNavigationBar: Container(
-        // A thin line between the page and the bar, as in the mockup.
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: Border(top: BorderSide(color: AppColors.line)),
-        ),
+        color: AppColors.surface,
         child: SafeArea(
           top: false,
           child: Padding(
