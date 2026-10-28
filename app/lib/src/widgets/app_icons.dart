@@ -53,7 +53,7 @@ class _P extends _Part {
 }
 
 class _C extends _Part {
-  const _C(this.x, this.y, this.r, {super.width, super.accent, super.fill});
+  const _C(this.x, this.y, this.r, {super.accent, super.fill});
 
   final double x, y, r;
 
@@ -62,7 +62,7 @@ class _C extends _Part {
 }
 
 class _R extends _Part {
-  const _R(this.x, this.y, this.w, this.h, this.r, {this.turn = 0, super.width, super.accent});
+  const _R(this.x, this.y, this.w, this.h, this.r, {this.turn = 0});
 
   final double x, y, w, h, r;
 
