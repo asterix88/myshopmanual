@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../auth.dart';
 import '../diagnostics.dart';
+import '../haptics.dart';
 import '../widgets/excavator_loader.dart';
 import '../widgets/logo_mark.dart';
 import 'intro_screen.dart';
@@ -101,13 +103,18 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     } on AuthException catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.message;
+          // An NRP that is not on the employee list shows under the NRP.
+          if (e.code == 'unknown') {
+            _nrpError = e.message;
+          } else {
+            _error = e.message;
+          }
           if (e.code == 'pin') {
             _pin.clear();
             _shakes++;
-            HapticFeedback.heavyImpact();
           }
         });
+        if (e.code == 'pin' || e.code == 'unknown') unawaited(buzzError());
         if (e.code == 'pin') _pinFocus.requestFocus();
       }
     } finally {

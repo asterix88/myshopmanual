@@ -5,6 +5,9 @@ import android.app.ApplicationExitInfo
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -52,6 +55,15 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mymanual/haptics").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "error" -> {
+                    buzzError()
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
         keepAlive = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mymanual/keepalive")
         keepAlive!!.setMethodCallHandler { call, result ->
             // Stop goes through the service too: it arrives after start, so the
@@ -70,6 +82,25 @@ class MainActivity : FlutterActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+    }
+
+    /** Two short buzzes for a wrong PIN. The vibrator itself, because
+     *  Flutter's haptic feedback stays silent when the phone's touch
+     *  vibration setting is off. */
+    @Suppress("DEPRECATION")
+    private fun buzzError() {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+        } else {
+            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+        if (!vibrator.hasVibrator()) return
+        val timings = longArrayOf(0, 70, 80, 90)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createWaveform(timings, intArrayOf(0, 255, 0, 255), -1))
+        } else {
+            vibrator.vibrate(timings, -1)
         }
     }
 

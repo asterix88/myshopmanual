@@ -203,7 +203,7 @@ function touch(e: Employee, device: unknown): boolean {
   return changed;
 }
 
-const notFound = () => json({ error: "unknown", message: "NRP tidak terdaftar, hubungi admin." }, 403);
+const notFound = () => json({ error: "unknown", message: "NRP tidak terdaftar." }, 403);
 const inactive = () => json({ error: "inactive", message: "NRP ini sudah tidak aktif, hubungi admin." }, 403);
 
 async function body(request: Request): Promise<Record<string, unknown> | null> {
