@@ -180,7 +180,8 @@ MAX_SPEC_PAGES = 40
 
 DOC_TYPES = [
     ("shop_manual", re.compile(r"shop\s*manual|\bsm\b|\bsen\d", re.I)),
-    ("omm", re.compile(r"\bomm\b|operation|\bpen\d", re.I)),
+    # "Operation", but not Caterpillar's "Systems Operation".
+    ("omm", re.compile(r"\bomm\b|(?<!system )(?<!systems )operation|\bpen\d", re.I)),
     ("partsbook", re.compile(r"part|\bpb\b", re.I)),
 ]
 

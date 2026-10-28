@@ -623,7 +623,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
           children: [
             Text(file.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15)),
             Text(
-              [store.unitNameOf(file), file.type.label, if (_online) 'online'].join(' · '),
+              [store.unitNameOf(file), if (file.type != DocType.other) file.type.label, if (_online) 'online'].join(' · '),
               style: TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
             ),
           ],
