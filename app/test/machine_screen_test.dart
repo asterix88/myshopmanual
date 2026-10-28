@@ -185,9 +185,11 @@ void main() {
         greaterThan(tester.getTopLeft(find.text('Schematic Diagram')).dy));
 
     await tester.tap(find.text('Schematic Diagram'));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Dokumen masih dalam proses unduh.'), findsOneWidget);
     await tester.tap(find.text('Mengerti'));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Mengerti'), findsNothing);
   });
