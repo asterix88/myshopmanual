@@ -173,8 +173,7 @@ class AppStore extends ChangeNotifier {
       seenKeys = {...(json['seen'] as List? ?? []).cast<String>()};
       dismissedUpdates = {...(json['dismissed'] as List? ?? []).cast<String>()};
       updateLog = [
-        for (final e in json['update_log'] as List? ?? const [])
-          if (_logEntry(e as Map<String, dynamic>) case final u?) u,
+        for (final e in json['update_log'] as List? ?? const []) ?_logEntry(e as Map<String, dynamic>),
       ];
       recentSearches = (json['searches'] as List? ?? []).cast<String>();
       _seenInitialized = json['seen_initialized'] as bool? ?? false;
