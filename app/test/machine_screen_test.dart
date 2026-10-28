@@ -179,7 +179,7 @@ void main() {
     expect(find.text('2 dokumen'), findsOneWidget);
     expect(find.text('sis2.cat.com'), findsOneWidget);
     expect(find.text('Partsbook'), findsOneWidget);
-    expect(find.text('Dokumen masih dalam proses unduh'), findsNWidgets(6));
+    expect(find.text('Waiting for update from server'), findsNWidgets(6));
     // A file that is none of the books stays listed after them.
     expect(tester.getTopLeft(find.text('Training hydraulic')).dy,
         greaterThan(tester.getTopLeft(find.text('Schematic Diagram')).dy));
@@ -187,7 +187,7 @@ void main() {
     await tester.tap(find.text('Schematic Diagram'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('Dokumen masih dalam proses unduh.'), findsOneWidget);
+    expect(find.text('Waiting for update from server.'), findsOneWidget);
     await tester.tap(find.text('Mengerti'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));

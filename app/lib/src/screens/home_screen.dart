@@ -553,6 +553,7 @@ class _FolderCard extends StatelessWidget {
               // The picture stands on a plain grey tile, as in the unit lists.
               Container(
                 height: 104,
+                width: double.infinity,
                 color: AppColors.field,
                 child: Stack(
                   alignment: Alignment.bottomCenter,
@@ -641,7 +642,7 @@ class _Tools extends StatelessWidget {
           Expanded(
             child: _ToolTile(
               key: const Key('tool-cetok'),
-              icon: const ToolIcon.partSearch(),
+              icon: const ToolIcon.box(),
               title: 'Cetok Online',
               onTap: () => openCetok(context),
             ),

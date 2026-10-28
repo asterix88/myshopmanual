@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 /// navy square. Both are drawn on a 24 x 24 grid.
 class ToolIcon extends StatelessWidget {
   const ToolIcon.gauge({super.key, this.size = 48}) : _painter = const _GaugePainter();
-  const ToolIcon.partSearch({super.key, this.size = 48}) : _painter = const _PartSearchPainter();
+  const ToolIcon.box({super.key, this.size = 48}) : _painter = const _BoxPainter();
 
   final double size;
   final CustomPainter _painter;
@@ -57,28 +57,35 @@ class _GaugePainter extends CustomPainter {
   bool shouldRepaint(_GaugePainter oldDelegate) => false;
 }
 
-/// Cetok Online: a magnifying glass over an orange hex nut, for finding a
-/// part in stock.
-class _PartSearchPainter extends CustomPainter {
-  const _PartSearchPainter();
+/// Cetok Online: a parts box with an orange tag, for the parts stock.
+class _BoxPainter extends CustomPainter {
+  const _BoxPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
     final u = size.width / 24;
-    final lens = Offset(10.5 * u, 10.5 * u);
-    final nut = Path();
-    for (var i = 0; i < 6; i++) {
-      final a = math.pi / 3 * i;
-      final p = lens + Offset(math.cos(a), math.sin(a)) * 3.4 * u;
-      i == 0 ? nut.moveTo(p.dx, p.dy) : nut.lineTo(p.dx, p.dy);
-    }
-    nut.close();
-    canvas.drawPath(nut, Paint()..color = _orange);
-    canvas.drawCircle(lens, 1.2 * u, Paint()..color = _navy);
-    canvas.drawCircle(lens, 6.6 * u, _stroke(u, 2.2, Colors.white));
-    canvas.drawLine(Offset(15.4 * u, 15.4 * u), Offset(20.2 * u, 20.2 * u), _stroke(u, 3, Colors.white));
+    final line = _stroke(u, 1.8, Colors.white)..strokeJoin = StrokeJoin.round;
+    final box = Path()
+      ..moveTo(4 * u, 8 * u)
+      ..lineTo(12 * u, 3.5 * u)
+      ..lineTo(20 * u, 8 * u)
+      ..lineTo(20 * u, 16.5 * u)
+      ..lineTo(12 * u, 21 * u)
+      ..lineTo(4 * u, 16.5 * u)
+      ..close();
+    final edges = Path()
+      ..moveTo(4 * u, 8 * u)
+      ..lineTo(12 * u, 12.5 * u)
+      ..lineTo(20 * u, 8 * u)
+      ..moveTo(12 * u, 12.5 * u)
+      ..lineTo(12 * u, 21 * u);
+    canvas.drawPath(box, line);
+    canvas.drawPath(edges, line);
+    final tag = Offset(17.5 * u, 17 * u);
+    canvas.drawCircle(tag, 3.2 * u, Paint()..color = _navy);
+    canvas.drawCircle(tag, 3.2 * u, _stroke(u, 1.8, _orange));
   }
 
   @override
-  bool shouldRepaint(_PartSearchPainter oldDelegate) => false;
+  bool shouldRepaint(_BoxPainter oldDelegate) => false;
 }

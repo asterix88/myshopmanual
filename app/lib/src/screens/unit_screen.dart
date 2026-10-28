@@ -336,14 +336,70 @@ class _FileCard extends StatelessWidget {
     final canRead = downloaded || (store.online == true && remote != null);
     final partial = downloaded || progress != null ? 0 : store.partialBytes(file);
 
+    // Option A: the card itself opens the manual (online when not on the
+    // phone); one round button on the right downloads, shows progress and,
+    // once the manual is on the phone, copies it to the Download folder.
     return AppCard(
       onTap: canRead ? () => openViewer(context, file, page: lastPage) : null,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+      child: ListenableBuilder(
+        listenable: PublicDownloads.instance,
+        builder: (context, _) {
+          final name = PublicDownloads.fileName(file.title);
+          final canSave = downloaded && !hasNewVersion && PublicDownloads.instance.canSave(name);
+          final Widget? status;
+          if (progress != null) {
+            status = Text(
+              'Mengunduh ${(progress.fraction * 100).round()}%',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.navy),
+            );
+          } else if (!downloaded) {
+            status = partial > 0
+                ? Text(
+                    'Terunduh ${formatSize(partial)} dari ${formatSize(file.downloadSize)}',
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  )
+                : null;
+          } else if (hasNewVersion) {
+            status = Text(
+              'Versi baru tersedia',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.update),
+            );
+          } else if (withdrawn) {
+            status = Text('Sudah ditarik dari server', style: TextStyle(fontSize: 12, color: AppColors.muted));
+          } else if (lastPage != null) {
+            status = Text('Terakhir dibuka: hlm $lastPage', style: TextStyle(fontSize: 12, color: AppColors.muted));
+          } else {
+            status = Row(
+              children: [
+                Icon(Icons.check_circle, size: 14, color: AppColors.green),
+                const SizedBox(width: 4),
+                Text(
+                  'Siap dibuka offline',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.green),
+                ),
+              ],
+            );
+          }
+          final Widget? action;
+          if (progress != null) {
+            action = _ProgressButton(fraction: progress.fraction, onPressed: () => store.pauseDownload(file.key));
+          } else if (!downloaded || hasNewVersion) {
+            action = _RoundButton(
+              tooltip: hasNewVersion ? 'Perbarui' : partial > 0 ? 'Lanjutkan unduhan' : 'Unduh',
+              onPressed: () => _download(context, store),
+              child: Icon(Icons.download_rounded, size: 22, color: AppColors.navy),
+            );
+          } else if (canSave) {
+            action = _RoundButton(
+              tooltip: 'Simpan file',
+              onPressed: () => _saveToDownloads(context, store, name),
+              child: const _SaveToFolderIcon(),
+            );
+          } else {
+            action = null;
+          }
+          return Row(
             children: [
               DocTile(docGlyph(file)),
               const SizedBox(width: 12),
@@ -352,136 +408,24 @@ class _FileCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(file.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.3)),
-                    Text(
-                      '${file.pages} halaman · ${formatSize(file.downloadSize)}',
-                      style: TextStyle(fontSize: 12, color: AppColors.muted),
-                    ),
+                    if (progress == null && !downloaded)
+                      Text(
+                        '${file.pages} halaman · ${formatSize(file.downloadSize)}',
+                        style: TextStyle(fontSize: 12, color: AppColors.muted),
+                      ),
                     if (!file.searchable)
                       Text(
                         'Gambar atau hasil scan: tidak bisa melakukan pencarian',
                         style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
+                    if (status != null) ...[const SizedBox(height: 2), status],
                   ],
                 ),
               ),
+              if (action != null) ...[const SizedBox(width: 8), action],
             ],
-          ),
-          if (partial > 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                'Terunduh ${formatSize(partial)} dari ${formatSize(file.downloadSize)}, bisa dilanjutkan',
-                style: TextStyle(fontSize: 12, color: AppColors.muted),
-              ),
-            ),
-          const SizedBox(height: 12),
-          if (progress != null)
-            _DownloadingRow(
-              progress: progress,
-              onPause: () => store.pauseDownload(file.key),
-              onCancel: () => store.cancelDownload(file.key),
-            )
-          else if (!downloaded)
-            // Compact buttons, each where the left and right half of the card
-            // start, as they sat when they filled those halves.
-            Row(
-              children: [
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 32),
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
-                        backgroundColor: AppColors.navy,
-                        shape: const StadiumBorder(),
-                      ),
-                      onPressed: canRead ? () => openViewer(context, file, page: lastPage) : null,
-                      icon: const Icon(Icons.menu_book_outlined, size: 15),
-                      label: const Text('Baca online', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 32),
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
-                        side: BorderSide(color: AppColors.navy, width: 1.2),
-                        foregroundColor: AppColors.navy,
-                        shape: const StadiumBorder(),
-                      ),
-                      onPressed: () => _download(context, store),
-                      icon: const Icon(Icons.download, size: 15),
-                      label: Text(
-                        partial > 0 ? 'Lanjutkan unduhan' : 'Unduh',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          else
-            // Copy to the phone's Download folder: a small icon, hidden once
-            // the copy is there and back if it gets deleted.
-            ListenableBuilder(
-              listenable: PublicDownloads.instance,
-              builder: (context, _) {
-                final name = PublicDownloads.fileName(file.title);
-                final canSave = PublicDownloads.instance.canSave(name);
-                final note = withdrawn
-                    ? 'Sudah ditarik dari server'
-                    : lastPage != null
-                        ? 'Terakhir dibuka: hlm $lastPage'
-                        : 'Siap dibuka offline';
-                final ready = !withdrawn && lastPage == null;
-                return Row(
-                  children: [
-                    if (ready) ...[
-                      Icon(Icons.check_circle, size: 20, color: AppColors.green),
-                      const SizedBox(width: 8),
-                    ],
-                    Expanded(
-                      child: Text(
-                        note,
-                        style: ready
-                            ? TextStyle(fontSize: 13, color: AppColors.green, fontWeight: FontWeight.w600)
-                            : TextStyle(fontSize: 12, color: AppColors.muted),
-                      ),
-                    ),
-                    if (hasNewVersion)
-                      TextButton(
-                        onPressed: () => _download(context, store),
-                        child: const Text('Perbarui', style: TextStyle(fontWeight: FontWeight.w600)),
-                      ),
-                    if (canSave)
-                      IconButton(
-                        tooltip: 'Simpan file',
-                        style: IconButton.styleFrom(
-                          fixedSize: const Size(44, 44),
-                          minimumSize: const Size(44, 44),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(color: AppColors.border),
-                          ),
-                        ),
-                        // A folder with a down arrow: save to the Download folder.
-                        icon: const _SaveToFolderIcon(),
-                        onPressed: () => _saveToDownloads(context, store, name),
-                      ),
-                  ],
-                );
-              },
-            ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -676,14 +620,14 @@ class _WaitingCard extends StatelessWidget {
                         title,
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.3, color: AppColors.muted),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Row(
                         children: [
-                          const _Spinner(size: 14, width: 2),
-                          const SizedBox(width: 8),
+                          Icon(Icons.schedule, size: 14, color: AppColors.faint),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              'Dokumen masih dalam proses unduh',
+                              'Waiting for update from server',
                               style: TextStyle(fontSize: 12, color: AppColors.muted),
                             ),
                           ),
@@ -721,7 +665,7 @@ class _WaitingCard extends StatelessWidget {
               Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
               const SizedBox(height: 6),
               Text(
-                'Dokumen masih dalam proses unduh.',
+                'Waiting for update from server.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: AppColors.inkSoft),
               ),
@@ -781,40 +725,61 @@ class _DashedBorder extends CustomPainter {
   bool shouldRepaint(_DashedBorder old) => old.color != color;
 }
 
-class _DownloadingRow extends StatelessWidget {
-  const _DownloadingRow({required this.progress, required this.onPause, required this.onCancel});
+/// The round 44 px button on the right of a file card.
+class _RoundButton extends StatelessWidget {
+  const _RoundButton({required this.tooltip, required this.onPressed, required this.child});
 
-  final DownloadProgress progress;
-  final VoidCallback onPause;
-  final VoidCallback onCancel;
+  final String tooltip;
+  final VoidCallback onPressed;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Mengunduh ${formatSize(progress.received)} dari ${formatSize(progress.total)}',
-          style: TextStyle(fontSize: 12, color: AppColors.muted),
-        ),
-        Row(
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: progress.fraction,
-                  minHeight: 6,
-                  color: const Color(0xFF2F80ED),
-                  backgroundColor: AppColors.divider,
-                ),
+    return IconButton(
+      tooltip: tooltip,
+      style: IconButton.styleFrom(
+        fixedSize: const Size(44, 44),
+        minimumSize: const Size(44, 44),
+        shape: CircleBorder(side: BorderSide(color: AppColors.border, width: 1.5)),
+      ),
+      icon: child,
+      onPressed: onPressed,
+    );
+  }
+}
+
+/// A download in progress: a ring that fills up; tapping it pauses.
+class _ProgressButton extends StatelessWidget {
+  const _ProgressButton({required this.fraction, required this.onPressed});
+
+  final double fraction;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: 'Jeda',
+      style: IconButton.styleFrom(fixedSize: const Size(44, 44), minimumSize: const Size(44, 44)),
+      onPressed: onPressed,
+      icon: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox.square(
+            dimension: 40,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(end: fraction),
+              duration: const Duration(milliseconds: 250),
+              builder: (context, value, _) => CircularProgressIndicator(
+                value: value,
+                strokeWidth: 3,
+                color: AppColors.navy,
+                backgroundColor: AppColors.divider,
               ),
             ),
-            TextButton(onPressed: onPause, child: const Text('Jeda')),
-            TextButton(onPressed: onCancel, child: const Text('Batal')),
-          ],
-        ),
-      ],
+          ),
+          Icon(Icons.pause_rounded, size: 18, color: AppColors.navy),
+        ],
+      ),
     );
   }
 }
