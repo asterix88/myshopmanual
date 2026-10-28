@@ -145,8 +145,8 @@ class _PartsbookSearchScreenState extends State<PartsbookSearchScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Cari di Partsbook',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2)),
-                            Text('Semua unit model', style: TextStyle(fontSize: 11.5, color: Color(0xFFC9D3E3))),
+                                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2)),
+                            Text('Semua unit model', style: TextStyle(fontSize: 12, color: Color(0xFFC9D3E3))),
                           ],
                         ),
                       ),
@@ -164,7 +164,7 @@ class _PartsbookSearchScreenState extends State<PartsbookSearchScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(part.numbers.join(', '),
-                                  style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: Colors.white)),
+                                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white)),
                               Text(part.desc,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -277,7 +277,7 @@ class _ResultCard extends StatelessWidget {
                       Text(store.unitNameOf(file),
                           style: TextStyle(
                               fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5, color: AppColors.muted)),
-                      Text(file.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      Text(file.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),

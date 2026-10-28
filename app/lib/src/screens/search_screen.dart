@@ -79,7 +79,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Cari', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
+                    const Text('Cari', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _field,
@@ -207,7 +207,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Text(q,
-                                          maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
+                                          maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
                                     ),
                                   ],
                                 ),
@@ -306,7 +306,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                         fontWeight: FontWeight.w600,
                                         letterSpacing: 0.5,
                                         color: AppColors.muted)),
-                                Text(file.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                                Text(file.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                               ],
                             ),
                           ),

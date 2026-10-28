@@ -158,14 +158,14 @@ class _Header extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Cetok Online',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2)),
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2)),
                     Text(
                       cetok.loading
                           ? 'Memperbarui stok…'
                           : cetok.updated == null
                               ? 'Stok part gudang'
                               : 'Diperbarui ${_time(cetok.updated!)}',
-                      style: const TextStyle(fontSize: 11.5, color: _headerSoft),
+                      style: const TextStyle(fontSize: 12, color: _headerSoft),
                     ),
                   ],
                 ),
@@ -291,7 +291,7 @@ class _Segment extends StatelessWidget {
                   children: [
                     Icon(icon, size: 18, color: color),
                     const SizedBox(width: 5),
-                    Text(label, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: color)),
+                    Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color)),
                   ],
                 ),
               ),
@@ -527,7 +527,7 @@ class _StockTabState extends State<_StockTab> {
                               Text(
                                 cetok.parts.isEmpty ? 'Belum ada data stok' : 'Tidak ada part',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink),
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.ink),
                               ),
                               const SizedBox(height: 4),
                               if (cetok.parts.isNotEmpty)
@@ -577,7 +577,7 @@ class _SearchBox extends StatelessWidget {
       autofocus: autofocus,
       textInputAction: TextInputAction.search,
       onChanged: (_) => onChanged(),
-      style: TextStyle(fontSize: 13.5, color: AppColors.ink),
+      style: TextStyle(fontSize: 13, color: AppColors.ink),
       decoration: _input(hint).copyWith(
         prefixIcon: Icon(Icons.search, size: 20, color: AppColors.muted),
         suffixIcon: controller.text.isEmpty
@@ -631,7 +631,7 @@ class _Chip extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontSize: small ? 11.5 : 12.5,
+                    fontSize: small ? 12 : 13,
                     fontWeight: FontWeight.w500,
                     color: selected ? Colors.white : (small ? AppColors.navy : AppColors.ink),
                   ),
@@ -765,7 +765,7 @@ class _LocationSheetState extends State<_LocationSheet> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Text('Lokasi', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.ink)),
+              child: Text('Lokasi', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.ink)),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -798,7 +798,7 @@ class _LocationSheetState extends State<_LocationSheet> {
                                 child: Text(
                                   label,
                                   style: TextStyle(
-                                    fontSize: 13.5,
+                                    fontSize: 13,
                                     fontWeight: on ? FontWeight.w600 : FontWeight.w500,
                                     color: on ? AppColors.navy : AppColors.ink,
                                   ),
@@ -961,7 +961,7 @@ class PartCard extends StatelessWidget {
                   part.loc.isEmpty ? '–' : part.loc,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+                  style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1035,7 +1035,7 @@ Future<void> showPartSheet(
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1, color: AppColors.muted)),
             const SizedBox(height: 2),
             for (final n in part.numbers)
-              SelectableText(n, style: TextStyle(fontSize: 21, fontWeight: FontWeight.w700, color: AppColors.navy)),
+              SelectableText(n, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.navy)),
             Text(part.desc, style: TextStyle(fontSize: 13, color: AppColors.inkSoft)),
             const SizedBox(height: 16),
             Row(
@@ -1097,7 +1097,7 @@ Future<void> showPartSheet(
                 foregroundColor: AppColors.navy,
                 side: BorderSide(color: AppColors.navy, width: 1.5),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
               onPressed: () {
                 Navigator.pop(sheet);
@@ -1157,7 +1157,7 @@ class _BigButton extends StatelessWidget {
         disabledForegroundColor: AppColors.muted,
         minimumSize: const Size.fromHeight(48),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
       onPressed: onPressed,
       icon: Icon(icon, size: 18),
@@ -1171,7 +1171,7 @@ class _BigButton extends StatelessWidget {
 
 InputDecoration _input(String hint) => InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(fontSize: 13.5, color: AppColors.faint, fontWeight: FontWeight.w400),
+      hintStyle: TextStyle(fontSize: 13, color: AppColors.faint, fontWeight: FontWeight.w400),
       isDense: true,
       filled: true,
       fillColor: AppColors.surface,
@@ -1201,7 +1201,7 @@ class _Field extends StatelessWidget {
         controller: controller,
         textCapitalization: _upper,
         onChanged: (_) => onChanged(),
-        style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.ink),
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
         decoration: _input(hint),
       );
 }
@@ -1339,7 +1339,7 @@ Future<bool> _confirm(
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(width: 96, child: Text(k, style: TextStyle(fontSize: 12.5, color: AppColors.muted))),
+                          SizedBox(width: 96, child: Text(k, style: TextStyle(fontSize: 13, color: AppColors.muted))),
                           Expanded(
                             child: Text(v,
                                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink)),
@@ -1431,7 +1431,7 @@ class _Stepper extends StatelessWidget {
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               textAlign: TextAlign.center,
               onChanged: (_) => onChanged(),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.ink),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.ink),
               decoration: const InputDecoration(border: InputBorder.none, isDense: true),
             ),
           ),
@@ -1656,10 +1656,10 @@ class _PickedPart extends StatelessWidget {
             children: [
               Text('${part.qty}',
                   style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 22,
                       fontWeight: FontWeight.w700,
                       color: part.qty <= 0 ? AppColors.danger : AppColors.ink)),
-              Text('stok', style: TextStyle(fontSize: 10, color: AppColors.muted)),
+              Text('stok', style: TextStyle(fontSize: 11, color: AppColors.muted)),
             ],
           ),
           TextButton(onPressed: onChange, child: const Text('Ganti')),
@@ -1825,7 +1825,7 @@ class _TakeFormState extends State<TakeForm> {
                       runSpacing: 6,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Text('Terakhir', style: TextStyle(fontSize: 11.5, color: AppColors.muted)),
+                        Text('Terakhir', style: TextStyle(fontSize: 12, color: AppColors.muted)),
                         for (final n in cetok.recentNotes)
                           _Chip(
                             label: n,
@@ -2231,7 +2231,7 @@ class _AddFormState extends State<AddForm> {
                       Expanded(
                         child: Text(
                           'Sudah ada: ${known.qty} pcs di ${known.loc.isEmpty ? '–' : known.loc}. Nama part diisi otomatis.',
-                          style: TextStyle(fontSize: 11.5, color: AppColors.green),
+                          style: TextStyle(fontSize: 12, color: AppColors.green),
                         ),
                       ),
                     ],

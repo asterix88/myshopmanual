@@ -108,7 +108,7 @@ class HighlightedSnippet extends StatelessWidget {
       TextSpan(children: spans),
       maxLines: maxLines,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(fontSize: 12.5, height: 1.5, color: AppColors.inkSoft),
+      style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.inkSoft),
     );
   }
 }

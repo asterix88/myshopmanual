@@ -102,7 +102,7 @@ class UnitTabsPage extends StatelessWidget {
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: const TextStyle(
-                                                fontSize: 19,
+                                                fontSize: 17,
                                                 fontWeight: FontWeight.w700,
                                                 height: 1.15,
                                               ),
@@ -309,7 +309,7 @@ class UnitDrawer extends StatelessWidget {
           children: [
             const Padding(
               padding: EdgeInsets.fromLTRB(10, 4, 10, 4),
-              child: Text('Pilih unit', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+              child: Text('Pilih unit', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
             ),
             for (final machine in Machine.values)
               if (groups[machine] case final list?) ...[
@@ -342,7 +342,7 @@ class UnitDrawer extends StatelessWidget {
                               child: Text(
                                 u.name,
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.w600,
                                   color: u.id == current ? AppColors.navy : AppColors.ink,
                                 ),
@@ -557,7 +557,7 @@ class _GroupCardState extends State<GroupCard> {
                         Flexible(
                           child: Text(
                             widget.title,
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.navy),
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.navy),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -606,7 +606,7 @@ class GroupItemTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                  Text(item.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
                   if (item.subtitle case final sub?)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),

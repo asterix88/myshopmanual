@@ -85,7 +85,7 @@ class UnitRow extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(unit.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
+                    Text(unit.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
                     if (hasUpdate)
                       Text(
                         'Ada update manual',

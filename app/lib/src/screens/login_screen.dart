@@ -19,7 +19,7 @@ const pinLength = 4;
 /// Example in the empty NRP field: small and faint, so it does not read
 /// as an NRP already typed.
 const nrpHint = 'Cth : 25002476';
-TextStyle get nrpHintStyle => TextStyle(fontSize: 13.5, fontWeight: FontWeight.w400, color: AppColors.faint);
+TextStyle get nrpHintStyle => TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.faint);
 
 /// Navy band behind the logo on the login screen and the introduction.
 LinearGradient get headerGradient => LinearGradient(
@@ -257,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                   padding: const EdgeInsets.only(bottom: 12),
                   child: FadeTransition(
                     opacity: ReverseAnimation(_leave),
-                    child: Text(versionLabel, style: TextStyle(fontSize: 11.5, color: AppColors.muted)),
+                    child: Text(versionLabel, style: TextStyle(fontSize: 12, color: AppColors.muted)),
                   ),
                 ),
               ),
@@ -292,14 +292,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           Text(
             'Selamat datang',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: FontWeight.w700,
               color: AppColors.dark ? AppColors.ink : AppColors.navy,
             ),
           ),
         ),
         const SizedBox(height: 2),
-        _part(n++, Text('Masuk dengan NRP dan PIN Anda', style: TextStyle(fontSize: 13.5, color: AppColors.muted))),
+        _part(n++, Text('Masuk dengan NRP dan PIN Anda', style: TextStyle(fontSize: 13, color: AppColors.muted))),
         const SizedBox(height: 22),
         _part(n++, const _FieldLabel('NRP')),
         _part(
@@ -320,7 +320,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               hintStyle: nrpHintStyle,
               prefixIcon: Icon(Icons.badge_outlined, color: AppColors.muted, size: 21),
             ),
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
           ),
         ),
         _InlineError(_nrpError),
@@ -338,7 +338,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.navy,
                     visualDensity: VisualDensity.compact,
-                    textStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 12.5, fontWeight: FontWeight.w500),
+                    textStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w500),
                   ),
                   icon: Icon(_showPin ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 17),
                   label: Text(_showPin ? 'Sembunyikan' : 'Lihat'),
@@ -380,7 +380,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 onPressed: _busy || _done ? null : _forgot,
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.navy,
-                  textStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 13.5, fontWeight: FontWeight.w600),
+                  textStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600),
                 ),
                 child: const Text('Lupa PIN?'),
               ),
@@ -471,7 +471,7 @@ class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
                             ),
                           ],
                         ),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white),
                       ),
                     ],
                   ),
@@ -487,7 +487,7 @@ class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
                             width: 150,
                             child: Text(
                               'Shop manual dalam genggaman',
-                              style: TextStyle(fontSize: 12.5, height: 1.45, color: Color(0xB8FFFFFF)),
+                              style: TextStyle(fontSize: 13, height: 1.45, color: Color(0xB8FFFFFF)),
                             ),
                           ),
                         ),
@@ -545,7 +545,7 @@ class _InlineError extends StatelessWidget {
             Icon(Icons.error_outline, size: 16, color: AppColors.danger),
             const SizedBox(width: 6),
             Expanded(
-              child: Text(text, style: TextStyle(fontSize: 12.5, color: AppColors.danger)),
+              child: Text(text, style: TextStyle(fontSize: 13, color: AppColors.danger)),
             ),
           ],
         ),
@@ -596,7 +596,7 @@ class _MorphButton extends StatelessWidget {
                   : Text(
                       label,
                       maxLines: 1,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
                     ),
             ),
           ),
@@ -681,10 +681,10 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
       children: [
         Text(
           'Lupa PIN',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.ink),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.ink),
         ),
         const SizedBox(height: 6),
-        Text('Admin akan membuatkan PIN sementara.', style: TextStyle(fontSize: 14, color: AppColors.muted)),
+        Text('Admin akan membuatkan PIN sementara.', style: TextStyle(fontSize: 13, color: AppColors.muted)),
         const SizedBox(height: 28),
         const _FieldLabel('NRP'),
         Shake(
@@ -701,7 +701,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
               hintStyle: nrpHintStyle,
               prefixIcon: Icon(Icons.badge_outlined, color: AppColors.muted, size: 21),
             ),
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
           ),
         ),
         if (_error != null) ...[const SizedBox(height: 14), ErrorBox(_error!)],
@@ -735,7 +735,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
         Text(
           'Minta PIN sementara ke admin.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: AppColors.muted),
+          style: TextStyle(fontSize: 13, color: AppColors.muted),
         ),
         const Spacer(),
         _WideButton(
@@ -892,7 +892,7 @@ class _ChoosePinScreenState extends State<ChoosePinScreen> {
                           const SizedBox(width: 6),
                           Text(
                             'PIN cocok',
-                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppColors.green),
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.green),
                           ),
                         ],
                       ),
@@ -1123,7 +1123,7 @@ class ErrorBox extends StatelessWidget {
           Icon(Icons.error_outline, size: 19, color: AppColors.danger),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(message, style: TextStyle(fontSize: 13.5, height: 1.45, color: AppColors.danger)),
+            child: Text(message, style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.danger)),
           ),
         ],
       ),
@@ -1150,7 +1150,7 @@ class _WideButton extends StatelessWidget {
           backgroundColor: color ?? AppColors.orange,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          textStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 16, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600),
         ),
         onPressed: busy ? null : onPressed,
         child: busy

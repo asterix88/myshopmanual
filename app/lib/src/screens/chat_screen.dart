@@ -351,7 +351,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     children: [
                       Text(
                         'nyel AI',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.navy),
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.navy),
                       ),
                       Text(
                         'Teman diskusi masalah teknismu :)',
@@ -537,7 +537,7 @@ class _AttachedPage extends StatelessWidget {
                           '${store.unitNameOf(file)} · ${file.title}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11.5, color: AppColors.inkSoft),
+                          style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
                         ),
                       ],
                     ),
@@ -713,7 +713,7 @@ class _Bubble extends StatelessWidget {
   /// one ending in ':'), bullet points and numbered steps with their text
   /// indented, so a long answer reads like a tidy note.
   Widget _answerText(String text) {
-    final style = TextStyle(fontSize: 14, height: 1.5, color: entry.failed ? AppColors.danger : AppColors.ink);
+    final style = TextStyle(fontSize: 13, height: 1.5, color: entry.failed ? AppColors.danger : AppColors.ink);
     final blocks = <Widget>[];
     var gap = false;
     for (final raw in text.split('\n')) {
@@ -796,7 +796,7 @@ class _Bubble extends StatelessWidget {
               cursorColor: AppColors.orange,
               child: SelectableText.rich(
                 TextSpan(children: _spans([(text: entry.text, bold: false)])),
-                style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
+                style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
               ),
             ),
           ),
@@ -898,7 +898,7 @@ class _AnswerFooter extends StatelessWidget {
                       Expanded(
                         child: Text(
                           'Sebagian dari pengetahuan umum, belum dicek di manual. Cek manual unit sebelum dipakai.',
-                          style: TextStyle(fontSize: 11.5, height: 1.35, color: AppColors.muted),
+                          style: TextStyle(fontSize: 12, height: 1.35, color: AppColors.muted),
                         ),
                       ),
                     ],
@@ -915,7 +915,7 @@ class _AnswerFooter extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     rating == 'good' ? 'Membantu' : 'Dilaporkan',
-                    style: TextStyle(fontSize: 11.5, color: AppColors.muted),
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
                   ),
                 ],
               ),
@@ -1150,7 +1150,7 @@ class _InputBar extends StatelessWidget {
                   // next to the field sends the question.
                   keyboardType: TextInputType.multiline,
                   textInputAction: TextInputAction.newline,
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: 13),
                   decoration: InputDecoration(
                     isDense: true,
                     filled: true,

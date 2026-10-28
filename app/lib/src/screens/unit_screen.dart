@@ -110,7 +110,7 @@ class _UnitScreenState extends State<UnitScreen> {
                   controller: _filter,
                   onChanged: (_) => setState(() {}),
                   textInputAction: TextInputAction.search,
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: 13),
                   decoration: InputDecoration(
                     isDense: true,
                     filled: true,
@@ -242,7 +242,7 @@ class _UnitScreenState extends State<UnitScreen> {
             const SizedBox(height: 2),
             Text(
               running ? 'Mengunduh…' : 'Unduh semua',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
             ),
           ],
         ),
@@ -256,7 +256,7 @@ class _UnitScreenState extends State<UnitScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Unduh ${missing.length} file?', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+        title: Text('Unduh ${missing.length} file?', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
         content: Text('Total ${formatSize(size)}'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
@@ -598,7 +598,7 @@ class _SummaryCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   '$count dokumen',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white),
                 ),
                 if (isCat(unit)) ...[
                   const SizedBox(height: 10),
@@ -888,7 +888,7 @@ class _FolderCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                Text(name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 Text(
                   hasUpdate
                       ? 'Ada update manual'

@@ -119,7 +119,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         opacity: _at(_tag),
                         child: const Text(
                           'Shop manual dalam genggaman',
-                          style: TextStyle(fontSize: 13.5, color: Color(0xFF6B7480)),
+                          style: TextStyle(fontSize: 13, color: Color(0xFF6B7480)),
                         ),
                       ),
                     ),
@@ -149,7 +149,7 @@ class _Wordmark extends StatelessWidget {
           ),
         ],
       ),
-      style: TextStyle(fontSize: 31, fontWeight: FontWeight.w700, letterSpacing: -0.4, color: Color(0xFF1E3A64)),
+      style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700, letterSpacing: -0.4, color: Color(0xFF1E3A64)),
     );
   }
 }

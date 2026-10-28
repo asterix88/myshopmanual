@@ -251,7 +251,7 @@ class _Slide extends StatelessWidget {
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: 23,
+                      fontSize: 22,
                       height: 1.25,
                       fontWeight: FontWeight.w700,
                       color: AppColors.dark ? AppColors.ink : AppColors.navy,
@@ -263,7 +263,7 @@ class _Slide extends StatelessWidget {
                   play: current,
                   dy: 10,
                   delay: 0.38,
-                  child: Text(body, style: TextStyle(fontSize: 14, height: 1.55, color: AppColors.muted)),
+                  child: Text(body, style: TextStyle(fontSize: 13, height: 1.55, color: AppColors.muted)),
                 ),
               ],
             ),
@@ -318,7 +318,7 @@ class _Card extends StatelessWidget {
         boxShadow: const [BoxShadow(color: Color(0x47050F23), blurRadius: 26, offset: Offset(0, 10))],
       ),
       child: DefaultTextStyle.merge(
-        style: TextStyle(fontSize: 12.5, color: AppColors.ink),
+        style: TextStyle(fontSize: 13, color: AppColors.ink),
         child: child,
       ),
     );
@@ -342,7 +342,7 @@ class _Pill extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
           color: orange ? AppColors.orangeText : AppColors.inkSoft,
         ),
@@ -379,7 +379,7 @@ class _ManualsCard extends StatelessWidget {
         children: [
           Text(
             'PC2000',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.navy),
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.navy),
           ),
           Text('Excavator · 3 dokumen', style: TextStyle(fontSize: 11, color: AppColors.muted)),
           _row('Shop Manual', const _Pill('Diunduh')),
@@ -502,7 +502,7 @@ class _ChatArt extends StatelessWidget {
             ),
             child: const Text(
               'Travel kiri lambat, kanan normal. Cek apa dulu?',
-              style: TextStyle(fontSize: 12.5, height: 1.5, color: Colors.white),
+              style: TextStyle(fontSize: 13, height: 1.5, color: Colors.white),
             ),
           ),
           const SizedBox(height: 10),
@@ -526,7 +526,7 @@ class _ChatArt extends StatelessWidget {
                 children: [
                   Text(
                     'Mulai dari tekanan travel motor kiri, lalu bandingkan dengan nilai standar di manual.',
-                    style: TextStyle(fontSize: 12.5, height: 1.5, color: AppColors.ink),
+                    style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.ink),
                   ),
                   const SizedBox(height: 8),
                   Container(
@@ -553,7 +553,7 @@ class _TorqueCard extends StatelessWidget {
   const _TorqueCard();
 
   Widget _line(String part, String value) {
-    final mono = TextStyle(fontFamily: 'monospace', fontSize: 10.5, height: 1.6, color: AppColors.inkSoft);
+    final mono = TextStyle(fontFamily: 'monospace', fontSize: 11, height: 1.6, color: AppColors.inkSoft);
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: 6),
@@ -589,7 +589,7 @@ class _TorqueCard extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
           color: orange ? AppColors.orangeText : AppColors.navy,
         ),
@@ -606,10 +606,10 @@ class _TorqueCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Track roller',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.navy),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.navy),
                 ),
               ),
-              Text('Installation · contoh', style: TextStyle(fontSize: 10.5, color: AppColors.faint)),
+              Text('Installation · contoh', style: TextStyle(fontSize: 11, color: AppColors.faint)),
             ],
           ),
           const SizedBox(height: 2),

@@ -517,7 +517,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
                                 : 'Torsi tidak terbaca, silakan langsung cek dokumen',
                     maxLines: 1,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12.5, color: Colors.white),
+                    style: const TextStyle(fontSize: 13, color: Colors.white),
                   ),
                 ),
               ),
@@ -801,7 +801,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
             }
           },
           onSubmitted: (text) => _runSearch(text),
-          style: const TextStyle(fontSize: 14),
+          style: const TextStyle(fontSize: 13),
           decoration: InputDecoration(
             isDense: true,
             filled: true,
@@ -995,7 +995,7 @@ class _PageBarState extends State<_PageBar> {
                   textAlign: TextAlign.center,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   onSubmitted: _go,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   decoration: InputDecoration(
                     isDense: true,
                     filled: true,
@@ -1012,7 +1012,7 @@ class _PageBarState extends State<_PageBar> {
                   ),
                 ),
               ),
-              Text(' / ${widget.pageCount}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              Text(' / ${widget.pageCount}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -1060,7 +1060,7 @@ class _BookmarksSheetState extends State<_BookmarksSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Penanda', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                Text('Penanda', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                 Text('Daftar isi bawaan dari file PDF', style: TextStyle(fontSize: 12, color: AppColors.muted)),
               ],
             ),
