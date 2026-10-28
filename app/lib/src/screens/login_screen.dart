@@ -109,13 +109,12 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           } else {
             _error = e.message;
           }
-          if (e.code == 'pin') {
-            _pin.clear();
-            _shakes++;
-          }
+          // A refused PIN or NRP: the PIN is typed again.
+          if (e.code == 'pin' || e.code == 'unknown') _pin.clear();
+          if (e.code == 'pin') _shakes++;
         });
-        if (e.code == 'pin' || e.code == 'unknown') unawaited(buzzError());
         if (e.code == 'pin') _pinFocus.requestFocus();
+        if (e.code == 'pin' || e.code == 'unknown') unawaited(buzzError());
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -278,7 +277,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             },
             onSubmitted: (_) => _pinFocus.requestFocus(),
             decoration: _inputDecoration(error: _nrpError != null).copyWith(
-              hintText: 'Contoh 12345678',
+              hintText: 'Contoh 25002476',
               prefixIcon: Icon(Icons.badge_outlined, color: AppColors.muted, size: 21),
             ),
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
