@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show Drag;
 import 'package:flutter/material.dart';
 
 import '../store.dart';
