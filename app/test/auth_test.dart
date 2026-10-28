@@ -298,6 +298,7 @@ void main() {
     await tester.pumpWidget(MyManualApp(store: store, requireLogin: true));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('login-nrp')), '21045678');
+    await tester.ensureVisible(find.byKey(const Key('login-forgot')));
     await tester.tap(find.byKey(const Key('login-forgot')));
     await tester.pumpAndSettle();
     expect(find.text('Lupa PIN'), findsOneWidget);

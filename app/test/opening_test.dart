@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -110,8 +111,9 @@ void main() {
     await tester.runAsync(() async {
       store = await AppStore.open(root: root, client: fixtureServer());
       await store.signIn(testSession(), refreshNow: false);
-      await store.finishIntro();
+      // Saves run in order, so this also waits for markActive's save.
       store.markActive();
+      await store.finishIntro();
     });
     final splash = store.wantsSplash(DateTime.now());
     await tester.pumpWidget(MyManualApp(store: store, requireLogin: true, splash: splash, intro: true));
@@ -119,5 +121,23 @@ void main() {
     expect(find.byType(SplashScreen), findsNothing);
     expect(find.text('Dokumen teknis'), findsOneWidget);
     await tester.runAsync(() async => store.dispose());
+  });
+
+  testWidgets('the opening animation waits for the notification permission question', (tester) async {
+    final ready = Completer<void>();
+    var done = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SplashScreen(ready: ready.future, onDone: () => done = true),
+      ),
+    );
+    await tester.pump(SplashScreen.duration * 2);
+    expect(done, isFalse);
+    ready.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(SplashScreen.duration);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(done, isTrue);
   });
 }

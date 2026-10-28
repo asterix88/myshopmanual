@@ -16,9 +16,13 @@ const splashLogoSize = 92.0;
 /// tightening the nut, then the name slides out beside it. Shown when the app
 /// starts after a day or more, or before logging in.
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key, required this.onDone});
+  const SplashScreen({super.key, required this.onDone, this.ready});
 
   final VoidCallback onDone;
+
+  /// Holds the logo still until this completes (the notification
+  /// permission dialog on the first start).
+  final Future<void>? ready;
 
   static const duration = Duration(milliseconds: 3300);
 
@@ -39,9 +43,17 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    _c.forward().whenComplete(() {
-      if (mounted) widget.onDone();
-    });
+    _start();
+  }
+
+  Future<void> _start() async {
+    await widget.ready;
+    if (!mounted) return;
+    // A short beat after the dialog closes, so the turn is seen.
+    if (widget.ready != null) await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (!mounted) return;
+    await _c.forward();
+    if (mounted) widget.onDone();
   }
 
   @override
@@ -82,6 +94,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
+                    // Fill the screen so the logo sits in its middle, where
+                    // the Android launch screen drew it.
+                    const SizedBox.expand(),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

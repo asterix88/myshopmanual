@@ -27,12 +27,16 @@ Future<void> main() async {
   // goes straight to Home behind the Android launch screen.
   final splash = store.wantsSplash(DateTime.now());
   store.markActive();
-  runApp(MyManualApp(store: store, requireLogin: true, splash: splash, intro: true));
+  // The opening animation waits until the notification permission question
+  // (Android 13+, first start) is answered, so the dialog does not cover it.
+  final permission = Completer<void>();
+  runApp(MyManualApp(store: store, requireLogin: true, splash: splash, intro: true, splashReady: permission.future));
   // Tapping an update notification opens the update list.
   unawaited(startUpdateNotifications(
     onOpenUpdates: () => _navigator.currentState?.push(
       MaterialPageRoute(builder: (_) => UpdatesScreen()),
     ),
+    onPermissionAnswered: permission.complete,
   ));
   // Tapping the download notification shows the manual being downloaded.
   unawaited(KeepAlive.listen(() {
@@ -76,6 +80,7 @@ class MyManualApp extends StatefulWidget {
     this.requireLogin = false,
     this.splash = false,
     this.intro = false,
+    this.splashReady,
   });
 
   final AppStore store;
@@ -86,6 +91,9 @@ class MyManualApp extends StatefulWidget {
 
   /// Start with the opening animation.
   final bool splash;
+
+  /// The opening animation holds its first frame until this completes.
+  final Future<void>? splashReady;
 
   /// Show the introduction pages after the first login (the real app; tests
   /// go straight to Home).
@@ -168,6 +176,7 @@ class _MyManualAppState extends State<MyManualApp> with WidgetsBindingObserver {
             theme: buildTheme(dark: dark),
             home: switch (phase) {
               'splash' => SplashScreen(
+                  ready: widget.splashReady,
                   onDone: () => setState(() {
                     _splashing = false;
                     _homeEntrance = true;

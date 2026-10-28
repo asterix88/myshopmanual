@@ -158,7 +158,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
     final screen = MediaQuery.sizeOf(context).height;
-    final headerHeight = top + 172;
+    // Taller phones get a taller header, so the form is not left high up.
+    final headerHeight = top + (screen * 0.27).clamp(172.0, 230.0);
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom > 0;
     final growTo = introArtHeight(context);
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent),
@@ -186,16 +188,34 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 Expanded(
                   child: SafeArea(
                     top: false,
-                    child: SingleChildScrollView(
-                      child: Center(
+                    bottom: keyboard,
+                    // The form in the middle of the space below the header.
+                    child: LayoutBuilder(
+                      builder: (context, box) => SingleChildScrollView(
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 420),
-                          child: Padding(padding: const EdgeInsets.fromLTRB(24, 26, 24, 16), child: _form()),
+                          constraints: BoxConstraints(minHeight: box.maxHeight),
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 420),
+                              child: Padding(padding: const EdgeInsets.fromLTRB(24, 20, 24, 12), child: _form()),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
+                if (!keyboard)
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: FadeTransition(
+                        opacity: ReverseAnimation(_leave),
+                        child: Text(versionLabel, style: TextStyle(fontSize: 11.5, color: AppColors.muted)),
+                      ),
+                    ),
+                  ),
               ],
             ),
             // The PC210 drives into the header from the right and off again.
@@ -205,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 final inT = Curves.easeOutCubic.transform(((_arrive.value - 0.25) / 0.6).clamp(0.0, 1.0));
                 final outT = Curves.easeInCubic.transform(_leave.value);
                 return Positioned(
-                  top: top + 38,
+                  top: headerHeight - 134,
                   right: -12 - 90 * (1 - inT) - 380 * outT,
                   child: Opacity(opacity: inT, child: child),
                 );
@@ -316,13 +336,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               child: const Text('Lupa PIN?'),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        const SizedBox(height: 16),
-        Text(
-          versionLabel,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 11.5, color: AppColors.muted),
         ),
       ],
     );
