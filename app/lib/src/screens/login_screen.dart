@@ -16,6 +16,11 @@ import '../theme.dart';
 /// Digits in a PIN (the server checks the same).
 const pinLength = 4;
 
+/// Example in the empty NRP field: small and faint, so it does not read
+/// as an NRP already typed.
+const nrpHint = 'Cth : 25002476';
+TextStyle get nrpHintStyle => TextStyle(fontSize: 13.5, fontWeight: FontWeight.w400, color: AppColors.faint);
+
 /// Navy band behind the logo on the login screen and the introduction.
 LinearGradient get headerGradient => LinearGradient(
   begin: Alignment.topLeft,
@@ -277,7 +282,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             },
             onSubmitted: (_) => _pinFocus.requestFocus(),
             decoration: _inputDecoration(error: _nrpError != null).copyWith(
-              hintText: 'Contoh 25002476',
+              hintText: nrpHint,
+              hintStyle: nrpHintStyle,
               prefixIcon: Icon(Icons.badge_outlined, color: AppColors.muted, size: 21),
             ),
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
@@ -561,6 +567,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
   bool _busy = false;
   bool _sent = false;
   String? _error;
+  int _shakes = 0;
 
   @override
   void dispose() {
@@ -583,7 +590,13 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
       await StoreScope.read(context).auth.forgotPin(_nrp.text);
       if (mounted) setState(() => _sent = true);
     } on AuthException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          if (e.code == 'unknown') _shakes++;
+        });
+        if (e.code == 'unknown') unawaited(buzzError());
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -620,16 +633,22 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
         Text('Admin akan membuatkan PIN sementara.', style: TextStyle(fontSize: 14, color: AppColors.muted)),
         const SizedBox(height: 28),
         const _FieldLabel('NRP'),
-        TextField(
-          key: const Key('forgot-nrp'),
-          controller: _nrp,
-          autofocus: _nrp.text.isEmpty,
-          textCapitalization: TextCapitalization.characters,
-          autocorrect: false,
-          onSubmitted: (_) => _send(),
-          decoration: _inputDecoration(error: _error != null)
-              .copyWith(prefixIcon: Icon(Icons.badge_outlined, color: AppColors.muted, size: 21)),
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        Shake(
+          shakes: _shakes,
+          child: TextField(
+            key: const Key('forgot-nrp'),
+            controller: _nrp,
+            autofocus: _nrp.text.isEmpty,
+            textCapitalization: TextCapitalization.characters,
+            autocorrect: false,
+            onSubmitted: (_) => _send(),
+            decoration: _inputDecoration(error: _error != null).copyWith(
+              hintText: nrpHint,
+              hintStyle: nrpHintStyle,
+              prefixIcon: Icon(Icons.badge_outlined, color: AppColors.muted, size: 21),
+            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
         ),
         if (_error != null) ...[const SizedBox(height: 14), ErrorBox(_error!)],
         const Spacer(),
@@ -1016,6 +1035,47 @@ class _WideButton extends StatelessWidget {
               )
             : Text(label),
       ),
+    );
+  }
+}
+
+/// Shakes its child from side to side, dying away, each time [shakes] goes up
+/// (a refused NRP; the PIN boxes do the same for a wrong PIN).
+class Shake extends StatefulWidget {
+  const Shake({super.key, required this.shakes, required this.child});
+
+  final int shakes;
+  final Widget child;
+
+  @override
+  State<Shake> createState() => _ShakeState();
+}
+
+class _ShakeState extends State<Shake> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 520));
+
+  @override
+  void didUpdateWidget(Shake old) {
+    super.didUpdateWidget(old);
+    if (widget.shakes > old.shakes && !MediaQuery.disableAnimationsOf(context)) _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, child) {
+        final t = _c.value;
+        final dx = _c.isAnimating ? 11 * (1 - t) * math.sin(t * math.pi * 6) : 0.0;
+        return Transform.translate(offset: Offset(dx, 0), child: child);
+      },
+      child: widget.child,
     );
   }
 }
