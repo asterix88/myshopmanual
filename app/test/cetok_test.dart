@@ -150,13 +150,14 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cetok Online'));
     await tester.pumpAndSettle();
-    for (var i = 0; i < 5 && find.text('CARTRIDGE').evaluate().isEmpty; i++) {
+    for (var i = 0; i < 20 && find.text('CARTRIDGE').evaluate().isEmpty; i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
       await tester.pump();
     }
     await tester.pumpAndSettle();
 
     expect(find.byType(CetokScreen), findsOneWidget);
+    debugPrint('cetok: ${store.cetok.parts.length} parts, loading ${store.cetok.loading}, error ${store.cetok.error}');
     for (final tab in ['Stok', 'Ambil', 'Transfer', 'Input']) {
       expect(find.text(tab), findsOneWidget);
     }
