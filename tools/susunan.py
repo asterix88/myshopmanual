@@ -438,11 +438,74 @@ SYSTEMS_OPERATION = {
     "by_date": False,
 }
 
+# Troubleshooting: every book has the same kinds of documents, so each
+# chapter gets the same groups (general, codes, symptoms, tests, ECM).
+TS_GENERAL = (r"^General Information|^General Troubleshooting|Service Tools|Diagnostic Capabilities|Connector Locations"
+              r"|Component Location|System Schematic|System Overview|Machine Preparation|Visual Inspection"
+              r"|Basic Troubleshooting|Welding|Wiring Information|Connector Contact|Service Information Report"
+              r"|Emerging Symptom|^Electrical Connectors$|Electronic Service Tools$|Engine Monitoring System")
+TS_CODES = (r"Diagnostic Trouble Codes|^(?!Symptom).*Event Code|Diagnostic Code List|Troubleshooting Faults"
+            r"|^Mid \d|^Air Conditioning \d")
+TS_SYMPTOMS = (r"Symptom|Troubleshooting$|\b(Is|Has|Contains|Problem|Stalls|Misfires|Overspeeds|Cranks)\b|Does Not"
+               r"|Will Not|Fails|Not Available|Not Obtained|Discrepancy|Erratic$|Smoke|Shutdown Occurs")
+TS_TESTS = r"- Test|- Inspect|- Calibrate"
+TS_ECM = (r"ECM|Software|Firmware|Password|Parameters|Configure|Configuration|Install|Replace|Reset|Access|Setup"
+          r"|Enable|Retrieve|Zsnap|Trim")
+TS_CHAPTERS = ["Machine Electronic Control", "Engine (C15/C18)", "Cat Grade 2D / 3D", "Air Conditioning & Heating"]
+
+
+def ts_groups(chapter: str) -> list[tuple]:
+    extra = [(chapter, "GNSS & radio", r"Gnss|Radio|A6N2", None)] if chapter == "Cat Grade 2D / 3D" else []
+    return [
+        (chapter, "General information", TS_GENERAL, None),
+        (chapter, "Diagnostic & event codes", TS_CODES, None),
+        (chapter, "Symptom troubleshooting", TS_SYMPTOMS, None),
+        (chapter, "Circuit tests", TS_TESTS, None),
+        *extra,
+        (chapter, "ECM, software & setup", TS_ECM, None),
+    ]
+
+
+TROUBLESHOOTING = {
+    "books": {
+        "M0158762": "Machine Electronic Control",
+        "M0118623": "Machine Electronic Control",
+        "RENR5033": "Engine (C15/C18)",
+        "M0082989": "Cat Grade 2D / 3D",
+        "UENR4125": "Air Conditioning & Heating",
+        "M0085479": "Air Conditioning & Heating",
+        "M0083909": "Machine Security System",
+        "RENR7911": "Product Link",
+        "RENR8143": "Product Link",
+        "M0119606": "Work Area Vision",
+        "M0069884": "A-Stop System",
+    },
+    "chapters": TS_CHAPTERS + ["Machine Security System", "Product Link", "Work Area Vision", "A-Stop System"],
+    "titles": [],
+    "groups": [g for chapter in TS_CHAPTERS for g in ts_groups(chapter)] + [
+        ("Product Link", "PL121S / PL300", r"", ("RENR7911",)),
+        ("Product Link", "PL522 / PL523", r"", ("RENR8143",)),
+    ],
+    "lead": [
+        (None, r"^General Information"),
+        (None, r"^General Troubleshooting"),
+        (None, r"^Diagnostic Capabilities"),
+        (None, r"^Service Tools"),
+        (None, r"Code List$"),
+    ],
+    # SIS shows no book for many documents of the machine's own
+    # electronic control troubleshooting.
+    "default": "Machine Electronic Control",
+    "no_book": [],
+    "by_date": False,
+}
+
 # Book name (the words before " - ") -> rule set.
 PROFILES = {
     "Testing And Adjusting": TESTING_ADJUSTING,
     "Operation And Maintenance Manual": OPERATION_MAINTENANCE,
     "Systems Operation": SYSTEMS_OPERATION,
+    "Troubleshooting": TROUBLESHOOTING,
 }
 # A kind of document without rules yet: a chapter per SIS book.
 NO_RULES = {"books": {}, "chapters": [], "titles": [], "groups": [], "default": OTHERS,
