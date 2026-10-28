@@ -532,6 +532,77 @@ def logout(context) -> None:
         pass
 
 
+LIST_FILE = "daftar-dokumen.txt"
+
+
+def doc_key(href: str) -> str:
+    """What stays the same for a document between searches: its SIS number
+    (i0...), else the whole link."""
+    m = re.search(r"serviceIeSystemControlNumber=(i\d+)", href)
+    return m.group(1) if m else href
+
+
+def read_list(folder: Path) -> list[dict]:
+    """The folder's daftar-dokumen.txt: number, file title, book | date and
+    the SIS number (lists written before it was added have none)."""
+    path = folder / LIST_FILE
+    rows = []
+    if not path.exists():
+        return rows
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        m = re.match(r"(\d+) (.*?)\.pdf(?: \| (.*))?$", line.strip())
+        if not m:
+            continue
+        rest = (m.group(3) or "").split(" | ")
+        key = rest.pop() if rest and re.fullmatch(r"i\d+|https?://\S+", rest[-1]) else ""
+        rows.append({"n": int(m.group(1)), "title": m.group(2), "info": " | ".join(rest), "key": key})
+    return rows
+
+
+def assign_numbers(folder: Path, found: list) -> list[tuple[int, str, str, str]]:
+    """(number, href, title, info) per document found. A document already in
+    daftar-dokumen.txt keeps its number: by its SIS number, or for an older
+    list by the same title, book and date (the first one not yet taken).
+    New documents get the numbers after the highest one used so far."""
+    old = read_list(folder)
+    by_key = {r["key"]: r["n"] for r in old if r["key"]}
+    by_text: dict[tuple, list[int]] = {}
+    for r in old:
+        if not r["key"]:
+            by_text.setdefault((r["title"].lower(), r["info"]), []).append(r["n"])
+    used = {r["n"] for r in old}
+    used |= {int(m.group(1)) for f in folder.glob("*.pdf") if (m := re.match(r"(\d+) ", f.name))}
+    taken: set[int] = set()
+    out, new = [], []
+    for href, title, info in found:
+        key = doc_key(href)
+        n = by_key.get(key)
+        if n is None:
+            free = [x for x in by_text.get((safe_name(title).lower(), info), []) if x not in taken]
+            n = free[0] if free else None
+        if n is None or n in taken:
+            new.append((href, title, info))
+            continue
+        taken.add(n)
+        out.append((n, href, title, info))
+    next_n = max(used | taken, default=0) + 1
+    for href, title, info in new:
+        out.append((next_n, href, title, info))
+        next_n += 1
+    return sorted(out)
+
+
+def write_list(folder: Path, numbered: list) -> None:
+    """daftar-dokumen.txt: every document of this search with its number,
+    book | date and SIS number. Entries of earlier runs that this search did
+    not show are kept, so their files stay explained."""
+    rows = {r["n"]: f"{r['n']:03d} {r['title']}.pdf | {r['info']}" + (f" | {r['key']}" if r["key"] else "")
+            for r in read_list(folder)}
+    for n, href, title, info in numbered:
+        rows[n] = f"{n:03d} {safe_name(title)}.pdf | {info} | {doc_key(href)}"
+    (folder / LIST_FILE).write_text("\n".join(rows[n] for n in sorted(rows)) + "\n", encoding="utf-8")
+
+
 def download_folder(p, context, folder: Path) -> bool:
     """Collects the results pages and saves their documents into folder.
     Returns False when the user quits."""
@@ -572,31 +643,23 @@ def download_folder(p, context, folder: Path) -> bool:
         else:
             say("  Kalau hasilnya lebih dari satu halaman, pindah ke halaman berikutnya lalu Enter lagi.")
 
-    # The whole list next to the PDFs, so same-titled documents can be told
-    # apart (book, M0... number, date) and sorted out by hand.
-    with (folder / "daftar-dokumen.txt").open("w", encoding="utf-8") as f:
-        for n, (_, title, info) in enumerate(found, 1):
-            f.write(f"{n:03d} {safe_name(title)}.pdf | {info}\n")
-    say(f"Daftar lengkap: {folder / 'daftar-dokumen.txt'}")
+    # Each document keeps the number it got the first time: SIS lists the
+    # same search in another order on another day, so numbering by position
+    # would rename files (and download them again) on every run.
+    numbered = assign_numbers(folder, found)
+    write_list(folder, numbered)
+    say(f"Daftar lengkap: {folder / LIST_FILE}")
 
     renderer = launch_browser(p, headless=True)
     done = skipped = failed = 0
-    total = len(found)
-    saved = {re.sub(r"^\d+ ", "", f.stem).lower() for f in folder.glob("*.pdf")}
-    title_count: dict[str, int] = {}
-    for _, title, _ in found:
-        key = safe_name(title).lower()
-        title_count[key] = title_count.get(key, 0) + 1
+    total = len(numbered)
     try:
-        for n, (href, title, _) in enumerate(found, 1):
+        for i, (n, href, title, _) in enumerate(numbered, 1):
             target = folder / f"{n:03d} {safe_name(title)}.pdf"
-            # Already saved. A title that is unique in the list also counts
-            # under another number (the list order can change between runs).
-            key = safe_name(title).lower()
-            if target.exists() or (title_count[key] == 1 and key in saved):
+            if target.exists():
                 skipped += 1
                 continue
-            say(f"[{n}/{total}] {title}")
+            say(f"[{i}/{total}] {n:03d} {title}")
             if save_document(context, work, renderer, href, title, target):
                 done += 1
             else:

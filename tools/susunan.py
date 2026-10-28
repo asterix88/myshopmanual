@@ -235,6 +235,8 @@ def read_list(folder: Path) -> list[dict]:
     rows = []
     for line in (folder / LIST_FILE).read_text(encoding="utf-8-sig").splitlines():
         parts = [p.strip() for p in line.split(" | ")]
+        if len(parts) > 1 and re.fullmatch(r"i\d+|https?://\S+", parts[-1]):
+            parts.pop()  # the SIS number sis-download.bat adds at the end
         m = DOC_NUMBER.match(parts[0])
         if not m:
             continue
