@@ -181,6 +181,8 @@ def merge_folder(folder: Path, target: Path, title: str) -> tuple[bool, list[str
 #             book that belongs to that book
 #   by_date:  a document without a book belongs to the book that alone
 #             has documents of the same date
+#   lead:     (optional) (chapter or None = any, title pattern): titles that
+#             go first in a group, in this order
 # Inside a group, documents are sorted by title.
 
 TESTING_ADJUSTING = {
@@ -353,10 +355,94 @@ OPERATION_MAINTENANCE = {
     "by_date": True,
 }
 
+# Systems Operation: the same books as Testing And Adjusting, so the same
+# chapters; the machine systems book is grouped per hydraulic circuit, each
+# group led by its General Information, Location Of Components and system
+# description (see "lead").
+SYSTEMS_OPERATION = {
+    "books": {
+        "M0118653": "Hydraulic & Machine Systems",
+        "M0109908": "Work Tool Control",
+        "M0081165": "Monitoring System",
+        "M0082989": "Cat Grade 2D / 3D",
+        "UENR4125": "Air Conditioning & Heating",
+        "M0085479": "Air Conditioning & Heating",
+        "M0083909": "Machine Security System",
+        "RENR7911": "Product Link",
+        "RENR8143": "Product Link",
+        "UENR0997": "Engine (C15/C18)",
+        "SENR9832": "Engine (C15/C18)",
+        "M0119606": "Work Area Vision",
+        "M0069884": "A-Stop System",
+        "SENR7733": "General Information",
+        "SENR3981": "General Information",
+    },
+    "chapters": [
+        "General Information", "Engine (C15/C18)", "Hydraulic & Machine Systems", "Work Tool Control",
+        "Monitoring System", "Cat Grade 2D / 3D", "Air Conditioning & Heating", "Machine Security System",
+        "Product Link", "Work Area Vision", "A-Stop System",
+    ],
+    "titles": [
+        ("General Information", r"^Graphic Color Codes$", ("M0118653",)),
+    ],
+    "groups": [
+        ("Engine (C15/C18)", "General & electronic control", r"^General Information$|Electronic Control", None),
+        ("Engine (C15/C18)", "Fuel system", r"Fuel", None),
+        ("Engine (C15/C18)", "Air inlet & exhaust", r"Air Inlet|Exhaust", None),
+        ("Engine (C15/C18)", "Lubrication system", r"Lubrication", None),
+        ("Engine (C15/C18)", "Cooling system", r"Cooling", None),
+        ("Engine (C15/C18)", "Basic engine", r"Basic Engine|Compression Brake", None),
+        ("Engine (C15/C18)", "Electrical system", r"Electrical", None),
+        ("Hydraulic & Machine Systems", "Machine system", r"Machine System|Engine Control", None),
+        ("Hydraulic & Machine Systems", "Main pump system", r"Main Pump|Main Hydraulic Pump|Pump Control", None),
+        ("Hydraulic & Machine Systems", "Pilot system",
+         r"Pilot System|Piston Pump \(Pilot\)|Accumulator \(Pilot\)", None),
+        ("Hydraulic & Machine Systems", "Main control valve", r"Main Control Valve|Relief Valve|Check Valve \(Load\)", None),
+        ("Hydraulic & Machine Systems", "Boom system", r"Boom", None),
+        ("Hydraulic & Machine Systems", "Stick system", r"Stick", None),
+        ("Hydraulic & Machine Systems", "Bucket system", r"Bucket", None),
+        ("Hydraulic & Machine Systems", "Swing system", r"Swing", None),
+        ("Hydraulic & Machine Systems", "Travel system", r"Travel|Final Drive|Swivel", None),
+        ("Hydraulic & Machine Systems", "Return system", r"Return|Hydraulic Tank|Oil Cooler", None),
+        ("Hydraulic & Machine Systems", "Fan system", r"Fan", None),
+        ("Monitoring System", "General & display",
+         r"^General Information$|System Schematic|Data Link|Warning Operation|Prestart|Password|Special Instructions"
+         r"|^Information$|Application Menu", None),
+        ("Monitoring System", "Menus & settings", r"Setting|Feature Menu|Configuration|Calibration", None),
+        ("Monitoring System", "Machine functions",
+         r"\(Aec\)|^Auto |Heavy Lift|Straight Travel|Fine Swing|Boom Low|Bucket Cylinder Lock|Smart Boom|Work Light"
+         r"|Light Flash|Overload|Crane|Tiltrotator|Coupler|^Work Tool$|Vacuum|Regeneration", None),
+        ("Monitoring System", "Assist, E-Fence & payload", r"Assist|E-Fence|Payload|Coaching", None),
+        ("Monitoring System", "Vision & people detection", r"Visibility|Detect", None),
+        ("Monitoring System", "Maintenance & software",
+         r"Maintenance|Hydraulic Health|PM Service|^Service|Software|Remote Flash", None),
+        ("Monitoring System", "Audio, phone & air conditioner", r"Air Conditioner|Audio|Phone", None),
+        ("Air Conditioning & Heating", "General",
+         r"General Information|Air Conditioning And Heating System$|Glossary|Service Intervals|Identifying|Condensate"
+         r"|Cab Pressurization", None),
+        ("Air Conditioning & Heating", "Refrigerant circuit", r"Refrigerant|Compressor|Condenser|Evaporator|Dryer|Orifice", None),
+        ("Air Conditioning & Heating", "Controls & electrical", r"Control|Sensor|Relay|Schematic|Blower|Fan|Motor", None),
+        ("Air Conditioning & Heating", "Heating", r"Heater", None),
+        ("Product Link", "PL121S / PL300", r"", ("RENR7911",)),
+        ("Product Link", "PL522 / PL523", r"", ("RENR8143",)),
+    ],
+    "lead": [
+        (None, r"^General Information"),
+        ("Engine (C15/C18)", r"^Fuel System$"),
+        ("Hydraulic & Machine Systems", r"^Location Of Components"),
+        ("Hydraulic & Machine Systems", r"^(Machine|Pilot|Boom|Stick|Bucket|Swing|Travel|Return Hydraulic|Fan Hydraulic)"
+                                        r" System$|^Main Control Valve$|^Main Hydraulic Pump$"),
+    ],
+    "default": "Engine (C15/C18)",  # SIS shows no book for most engine documents
+    "no_book": [],
+    "by_date": False,
+}
+
 # Book name (the words before " - ") -> rule set.
 PROFILES = {
     "Testing And Adjusting": TESTING_ADJUSTING,
     "Operation And Maintenance Manual": OPERATION_MAINTENANCE,
+    "Systems Operation": SYSTEMS_OPERATION,
 }
 # A kind of document without rules yet: a chapter per SIS book.
 NO_RULES = {"books": {}, "chapters": [], "titles": [], "groups": [], "default": OTHERS,
@@ -453,6 +539,11 @@ def draft_susunan(folder: Path) -> str:
         groups = list(dict.fromkeys(g for ch, g, _, _ in profile["groups"] if ch == chapter))
         return groups.index(name) if name in groups else len(groups)
 
+    def lead_key(chapter: str, title: str) -> int:
+        lead = profile.get("lead", [])
+        return next((i for i, (ch, pattern) in enumerate(lead)
+                     if ch in (None, chapter) and re.search(pattern, title, re.I)), len(lead))
+
     lines = [
         "// Susunan manual: # = bab, ## = kelompok, lalu nomor file dan judul bookmark.",
         "// Pindahkan baris untuk mengubah urutan atau kelompok; ganti judul setelah nomor untuk",
@@ -462,7 +553,7 @@ def draft_susunan(folder: Path) -> str:
     for chapter in sorted(tree, key=chapter_key):
         lines += ["", f"# {chapter}"]
         for group in sorted(tree[chapter], key=lambda g: group_key(chapter, g)):
-            docs = sorted(tree[chapter][group], key=lambda r: (r["title"].lower(), r["number"]))
+            docs = sorted(tree[chapter][group], key=lambda r: (lead_key(chapter, r["title"]), r["title"].lower(), r["number"]))
             books = {}
             for r in docs:
                 if r["code"]:
