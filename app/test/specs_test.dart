@@ -71,6 +71,8 @@ void main() {
 
 
   Future<void> settle(WidgetTester tester) async {
+    // The tab is built once the pages slide to it, then reads its data.
+    await tester.pumpAndSettle();
     for (var i = 0; i < 5; i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
       await tester.pump();
