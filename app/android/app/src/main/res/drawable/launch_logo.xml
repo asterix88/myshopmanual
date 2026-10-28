@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The logo on the launch screen, the same shapes and size as LogoMark in
+     lib/src/widgets/logo_mark.dart, so the opening animation starts from it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="92dp"
+    android:height="92dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path
+        android:strokeColor="#FFF08A1C"
+        android:strokeWidth="9.5"
+        android:strokeLineCap="round"
+        android:pathData="M70.07,27.71A30,30 0,1 1,29.16,28.42"/>
+    <path
+        android:fillColor="#FFF08A1C"
+        android:strokeColor="#FFF08A1C"
+        android:strokeWidth="3.5"
+        android:strokeLineJoin="round"
+        android:pathData="M21.5,20.5L37.8,20.1L36.8,36.3Z"/>
+    <path
+        android:strokeColor="#FF1E3A64"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round"
+        android:pathData="M50,34L63.86,42L63.86,58L50,66L36.14,58L36.14,42Z"/>
+    <path
+        android:fillColor="#FF1E3A64"
+        android:fillType="evenOdd"
+        android:pathData="M50,34L63.86,42L63.86,58L50,66L36.14,58L36.14,42Z M44,50a6,6 0,1 0,12,0a6,6 0,1 0,-12,0Z"/>
+</vector>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- splashBackground in lib/src/screens/splash_screen.dart -->
+    <color name="splash_background">#F5F6F8</color>
+</resources>

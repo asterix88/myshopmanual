@@ -7,9 +7,11 @@ import 'package:pdfrx/pdfrx.dart';
 
 import 'src/diagnostics.dart';
 import 'src/keep_alive.dart';
+import 'src/screens/intro_screen.dart';
 import 'src/screens/login_screen.dart';
 import 'src/screens/unit_screen.dart';
 import 'src/screens/shell.dart';
+import 'src/screens/splash_screen.dart';
 import 'src/screens/updates_screen.dart';
 import 'src/store.dart';
 import 'src/theme.dart';
@@ -21,12 +23,20 @@ Future<void> main() async {
   await Diagnostics.start();
   await _clearOldPdfCache();
   final store = await AppStore.open()..autoFetchAiIndexes = true;
-  runApp(MyManualApp(store: store, requireLogin: true));
+  // The opening animation only after a day or more away; a quick return
+  // goes straight to Home behind the Android launch screen.
+  final splash = store.wantsSplash(DateTime.now());
+  store.markActive();
+  // The opening animation waits until the notification permission question
+  // (Android 13+, first start) is answered, so the dialog does not cover it.
+  final permission = Completer<void>();
+  runApp(MyManualApp(store: store, requireLogin: true, splash: splash, intro: true, splashReady: permission.future));
   // Tapping an update notification opens the update list.
   unawaited(startUpdateNotifications(
     onOpenUpdates: () => _navigator.currentState?.push(
       MaterialPageRoute(builder: (_) => UpdatesScreen()),
     ),
+    onPermissionAnswered: permission.complete,
   ));
   // Tapping the download notification shows the manual being downloaded.
   unawaited(KeepAlive.listen(() {
@@ -64,7 +74,14 @@ var _navigator = GlobalKey<NavigatorState>();
 String? _navigatorLook;
 
 class MyManualApp extends StatefulWidget {
-  const MyManualApp({super.key, required this.store, this.requireLogin = false});
+  const MyManualApp({
+    super.key,
+    required this.store,
+    this.requireLogin = false,
+    this.splash = false,
+    this.intro = false,
+    this.splashReady,
+  });
 
   final AppStore store;
 
@@ -72,11 +89,26 @@ class MyManualApp extends StatefulWidget {
   /// (always in the real app; tests start logged in).
   final bool requireLogin;
 
+  /// Start with the opening animation.
+  final bool splash;
+
+  /// The opening animation holds its first frame until this completes.
+  final Future<void>? splashReady;
+
+  /// Show the introduction pages after the first login (the real app; tests
+  /// go straight to Home).
+  final bool intro;
+
   @override
   State<MyManualApp> createState() => _MyManualAppState();
 }
 
 class _MyManualAppState extends State<MyManualApp> with WidgetsBindingObserver {
+  late bool _splashing = widget.splash;
+
+  /// Home slides in once, after the opening animation or the introduction.
+  bool _homeEntrance = false;
+
   @override
   void initState() {
     super.initState();
@@ -97,6 +129,13 @@ class _MyManualAppState extends State<MyManualApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) widget.store.checkSessionExpiry();
+    if (state == AppLifecycleState.paused) widget.store.markActive();
+  }
+
+  bool _takeEntrance() {
+    final entrance = _homeEntrance;
+    _homeEntrance = false;
+    return entrance;
   }
 
   @override
@@ -113,8 +152,18 @@ class _MyManualAppState extends State<MyManualApp> with WidgetsBindingObserver {
             _ => WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark,
           };
           final showLogin = widget.requireLogin && !store.loggedIn;
-          // Screens read AppColors directly, so switching rebuilds the app.
-          final look = '$dark $showLogin';
+          final showIntro = widget.intro && store.loggedIn && !store.introSeen;
+          if (showIntro) _homeEntrance = true;
+          final phase = _splashing
+              ? 'splash'
+              : showLogin
+                  ? 'login'
+                  : showIntro
+                      ? 'intro'
+                      : 'home';
+          // Screens read AppColors directly, so switching rebuilds the app;
+          // so does each step from the opening animation to Home.
+          final look = '$dark $phase';
           if (_navigatorLook != look) {
             if (_navigatorLook != null) _navigator = GlobalKey<NavigatorState>();
             _navigatorLook = look;
@@ -125,7 +174,18 @@ class _MyManualAppState extends State<MyManualApp> with WidgetsBindingObserver {
             navigatorKey: _navigator,
             debugShowCheckedModeBanner: false,
             theme: buildTheme(dark: dark),
-            home: showLogin ? const LoginScreen() : const HomeShell(),
+            home: switch (phase) {
+              'splash' => SplashScreen(
+                  ready: widget.splashReady,
+                  onDone: () => setState(() {
+                    _splashing = false;
+                    _homeEntrance = true;
+                  }),
+                ),
+              'login' => const LoginScreen(),
+              'intro' => const IntroScreen(),
+              _ => HomeShell(entrance: _takeEntrance()),
+            },
           );
         },
       ),
