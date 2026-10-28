@@ -168,6 +168,10 @@ void main() {
       store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
       await store.setServerUrl('https://example.test');
     });
+    // Tall enough for every card: the list only builds what fits on screen.
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(StoreScope(store: store, child: const MaterialApp(home: UnitScreen(unitId: 'CAT395'))));
     // The waiting cards spin, so no pumpAndSettle.
     await tester.pump(const Duration(milliseconds: 500));
@@ -177,7 +181,6 @@ void main() {
     expect(find.text('Partsbook'), findsOneWidget);
     expect(find.text('Dokumen masih dalam proses unduh'), findsNWidgets(6));
     // A file that is none of the books stays listed after them.
-    await tester.dragUntilVisible(find.text('Training hydraulic'), find.byType(ListView), const Offset(0, -300));
     expect(tester.getTopLeft(find.text('Training hydraulic')).dy,
         greaterThan(tester.getTopLeft(find.text('Schematic Diagram')).dy));
 
