@@ -146,6 +146,20 @@ SERVICE_CHART = re.compile(
     r"|maintenance (?:chart|table)", re.I)
 # Pages kept per maintenance item, and for an interval's own heading page.
 MAX_SERVICE_ITEM_PAGES = 10
+# Caterpillar OMMs (merged from SIS documents, see susunan.py) have one
+# document "Maintenance Interval Schedule" listing the items per interval:
+# "Every 500 Service Hours", "Initial 500 Service Hours", "Every 3 Years",
+# "When Required". Each item is the title of a document in the same OMM.
+CAT_SCHEDULE = re.compile(r"^Maintenance Interval Schedule\b", re.I)
+CAT_INTERVAL = re.compile(
+    r"^(?:(?P<kind>Every|Initial)\s+(?P<hours>\d[\d ]*)\s+Service Hours\b.*"
+    r"|Every\s+(?P<years>\d+)\s+Years?|(?P<required>When Required))$", re.I)
+# Page header / footer lines SIS prints on every page.
+CAT_FOOTER = re.compile(r"^(?:PAP-|SMCS|i\d+$|M\d{7}$|©|\d{4}/\d\d/\d\d$|\d\d:\d\d|\d\d/\d\d/\d{4}$"
+                        r"|Maintenance Interval Schedule \()", re.I)
+# Sort keys (hours) for the intervals without hours: after every hour tab.
+CAT_HOURS_PER_YEAR = 8760
+CAT_WHEN_REQUIRED = 1_000_000
 # Manuals without bookmarks for the items under "EVERY 250 HOURS SERVICE"
 # (D155A-6, D375A-6 OMM): the items are the upper-case lines on those pages
 # that start with one of these words, e.g. "REPLACE FUEL PRE-FILTER CARTRIDGE".
@@ -469,11 +483,81 @@ def service_items_from_text(texts: list[str], first: int, last: int, hours: int)
     return found
 
 
+def _title_key(title: str) -> str:
+    """"Air Conditioner/Cab Heater Filter - Inspect/Replace" and "Air
+    Conditioner cab Heater Filter - Inspect replace" give the same key."""
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", title.lower()).split())
+
+
+def cat_schedule(toc: list[list], page_count: int, texts: list[str]) -> list[dict]:
+    """The Servis tabs of a Caterpillar OMM: its Maintenance Interval
+    Schedule document (hours 0, shown on every tab), each interval heading
+    and the items under it, an item pointing at the OMM document of the
+    same title. Several schedules (supplements have their own): the one
+    with the most items. Empty when the manual has none."""
+    best: list[dict] = []
+    for i, (level, title, page) in enumerate(toc):
+        if not CAT_SCHEDULE.match(title.strip()) or not 1 <= page <= page_count:
+            continue
+        last = min(_section_end(toc, i, page_count), page + MAX_SPEC_PAGES - 1)
+        # The documents an item can name: those of the same chapter first.
+        chapter = next((j for j in range(i, -1, -1) if toc[j][0] == 1), None)
+        chapter_end = next((j for j in range(i + 1, len(toc)) if toc[j][0] == 1), len(toc))
+        docs = [j for j in range(len(toc)) if j != i and 1 <= toc[j][2] <= page_count]
+        if chapter is not None:
+            docs.sort(key=lambda j: not chapter < j < chapter_end)
+        found = [{"hours": 0, "title": title.strip(), "page": page, "item": False, "last": last}]
+        interval = None
+        used: set[int] = set()
+        for n in range(page, last + 1):
+            if n > len(texts):
+                break
+            for line in texts[n - 1].splitlines():
+                line = " ".join(line.split())
+                if not line or CAT_FOOTER.match(line):
+                    continue
+                m = CAT_INTERVAL.match(line)
+                if m:
+                    if m["required"]:
+                        hours, tab = CAT_WHEN_REQUIRED, "Saat perlu"
+                    elif m["years"]:
+                        hours, tab = int(m["years"]) * CAT_HOURS_PER_YEAR, f"{m['years']} Tahun"
+                    else:
+                        hours = int(m["hours"].replace(" ", ""))
+                        tab = f"Initial {hours}" if m["kind"].lower() == "initial" else None
+                    interval = {"hours": hours, **({"tab": tab} if tab else {})}
+                    found.append({**interval, "title": line, "page": n, "item": False, "last": n})
+                    used = set()
+                    continue
+                if interval is None or " - " not in line or not line[0].isalpha():
+                    continue
+                key = _title_key(line)
+                match = [j for j in docs if _title_key(toc[j][1]) == key] \
+                    or [j for j in docs if _title_key(toc[j][1]).startswith(key + " ")]
+                # The same item twice (two filters): the next document of that title.
+                j = next((j for j in match if j not in used), match[0] if match else None)
+                if j is None:
+                    found.append({**interval, "title": line, "page": n, "item": True, "last": n})
+                    continue
+                used.add(j)
+                doc_page = toc[j][2]
+                found.append({**interval, "title": line, "page": doc_page, "item": True,
+                              "last": min(_section_end(toc, j, page_count), doc_page + MAX_SERVICE_ITEM_PAGES - 1)})
+        if sum(e["item"] for e in found) > sum(e["item"] for e in best):
+            best = found
+    return best
+
+
 def service_ranges(toc: list[list], page_count: int, texts: list[str] | None = None) -> list[dict]:
     """The maintenance schedule in [toc]: the chart (hours 0) and, for each
     "every N hours service" bookmark, its heading and the items under it,
     each with its first and last page. Items come from child bookmarks, or
-    from the page [texts] when the heading has none."""
+    from the page [texts] when the heading has none. A Caterpillar OMM
+    comes from its Maintenance Interval Schedule (cat_schedule)."""
+    if texts:
+        cat = cat_schedule(toc, page_count, texts)
+        if cat:
+            return cat
     found = []
     for i, (level, title, page) in enumerate(toc):
         title = " ".join(title.split())
@@ -605,6 +689,7 @@ def build_spec_pack(sources: list[tuple], target: Path,
                 "at": at[(file_id, e["page"])],
                 "count": e["last"] - e["page"] + 1,
                 "item": e["item"],
+                **({"tab": e["tab"]} if "tab" in e else {}),
             })
     entries.sort(key=lambda e: e["section"])  # stable: manual order inside a section
     toc = []
@@ -767,7 +852,8 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
     if has_spec:
         spec = {**file_entry(spec_path, f"units/{unit_id}/spek.pdf"), "pages": spec_pages, "service": service_pages,
                 "parts": parts}
-        intervals = sorted({e["hours"] for e in service_pages if e["hours"]})
+        intervals = list(dict.fromkeys(e.get("tab") or e["hours"] for e in sorted(service_pages, key=lambda e: e["hours"])
+                                       if e["hours"]))
         print(f"  spek.pdf      {len(spec_pages):4} spec pages, {len(parts)} remove & install, service HM {intervals or '-'}, "
               f"{spec['size'] / 1e6:.1f} MB")
     else:

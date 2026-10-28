@@ -197,6 +197,7 @@ class ServicePage {
     required this.page,
     required this.at,
     required this.item,
+    this.tab,
   });
 
   factory ServicePage.fromJson(Map<String, dynamic> json) => ServicePage(
@@ -206,6 +207,7 @@ class ServicePage {
         page: json['page'] as int,
         at: json['at'] as int,
         item: json['item'] as bool? ?? false,
+        tab: json['tab'] as String?,
       );
 
   final int hours;
@@ -214,6 +216,13 @@ class ServicePage {
   final int page;
   final int at;
   final bool item;
+
+  /// The tab's name when it is not "HM [hours]" (Caterpillar: "Initial
+  /// 500", "3 Tahun", "Saat perlu"); [hours] then only orders the tabs.
+  final String? tab;
+
+  /// Which tab the page is on.
+  String get tabLabel => tab ?? 'HM $hours';
 }
 
 class SpecPackPage {
