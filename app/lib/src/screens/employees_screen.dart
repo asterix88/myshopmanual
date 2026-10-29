@@ -6,6 +6,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/excavator_loader.dart';
+import 'home_screen.dart' show titleCase;
 import 'shell.dart';
 
 enum _Filter { all, active, fresh, off }
@@ -25,6 +26,9 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
   String? _error;
   String _query = '';
   _Filter _filter = _Filter.all;
+
+  /// A section ("s:WHEEL") or department ("d:PLANT") picked; null = all.
+  String? _group;
 
   @override
   void initState() {
@@ -52,9 +56,43 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
 
   bool _matches(Employee e) => _inFilter(e, _filter) && _found(e);
 
-  bool _found(Employee e) {
+  bool _found(Employee e) => _inGroup(e, _group) && _typed(e);
+
+  bool _typed(Employee e) {
     final q = _query.trim().toLowerCase();
     return q.isEmpty || e.name.toLowerCase().contains(q) || e.nrp.toLowerCase().contains(q);
+  }
+
+  static bool _inGroup(Employee e, String? group) => switch (group) {
+        null => true,
+        final g when g.startsWith('s:') => e.sections.contains(g.substring(2)),
+        final g => e.department == g.substring(2),
+      };
+
+  /// Section and department chips, when there is more than one of either.
+  List<Widget> _groups(List<Employee> employees) {
+    final sections = {for (final e in employees) ...e.sections}.toList()..sort();
+    final departments = {for (final e in employees) if (e.department.isNotEmpty) e.department}.toList()..sort();
+    final groups = [
+      if (sections.length > 1) for (final s in sections) ('s:$s', 'Section ${titleCase(s)}'),
+      if (departments.length > 1) for (final d in departments) ('d:$d', titleCase(d)),
+    ];
+    if (groups.isEmpty) return const [];
+    return [
+      const SizedBox(height: 6),
+      Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          for (final (key, label) in groups)
+            ChoiceChip(
+              label: Text('$label ${employees.where((e) => _inGroup(e, key) && _typed(e)).length}'),
+              selected: _group == key,
+              onSelected: (on) => setState(() => _group = on ? key : null),
+            ),
+        ],
+      ),
+    ];
   }
 
   static bool _inFilter(Employee e, _Filter filter) => switch (filter) {
@@ -127,6 +165,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                         ),
                     ],
                   ),
+                  ..._groups(employees),
                   const SizedBox(height: 12),
                   for (final e in employees.where(_matches)) ...[
                     _EmployeeRow(employee: e, onTap: () => _open(e)),
@@ -354,9 +393,10 @@ class _EmployeeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final e = employee;
+    final where = [e.sections.map(titleCase).join(', '), if (e.department.isNotEmpty) titleCase(e.department)].join(' · ');
     final detail = e.isNew
-        ? '${e.nrp} · belum login'
-        : '${e.nrp} · ${e.devices.length} HP · ${_lastSeen(e.lastSeen)}';
+        ? '${e.nrp} · belum login · $where'
+        : '${e.nrp} · ${e.devices.length} HP · ${_lastSeen(e.lastSeen)} · $where';
     return AppCard(
       onTap: onTap,
       padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),

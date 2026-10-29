@@ -8,6 +8,8 @@
 // in the last day, so a phone that is online swaps its token every day
 // (/auth/refresh), and that swap is where a deactivated NRP is turned away.
 
+import { DEFAULT_SECTION, cleanSections, type Allowed } from "./sections";
+
 export interface AuthEnv {
   AUTH: KVNamespace;
   // The admin code; also lets update.bat import the employee list.
@@ -22,7 +24,14 @@ const FRESH_SECONDS = 24 * 3600;
 const SETUP_SECONDS = 15 * 60;
 export const AI_DAILY_LIMIT = 10;
 
-export type Session = { n: string; nm: string; a: boolean; iat: number; exp: number; t?: "setup" };
+// s: the employee's sections (sections.ts); missing in tokens from before
+// sections, which are TRACK.
+export type Session = { n: string; nm: string; a: boolean; s?: string[]; iat: number; exp: number; t?: "setup" };
+
+/// The sections whose manuals [s] may see; null = all (admins).
+export function allowedOf(s: Session): Allowed {
+  return s.a ? null : s.s?.length ? s.s : [DEFAULT_SECTION];
+}
 
 type Device = { model: string; seen: number };
 
@@ -31,6 +40,10 @@ type Employee = {
   name: string;
   admin: boolean;
   active: boolean;
+  // From the Section and Departemen columns; missing for employees
+  // imported before them (TRACK, no department).
+  sections?: string[];
+  department?: string;
   // Set by the import when the row is missing, or by an admin in the app;
   // a row deactivated by an admin stays so even if it is still in the file.
   off_by?: "import" | "admin";
@@ -56,6 +69,8 @@ type Row = {
   name: string;
   admin: boolean;
   active: boolean;
+  sections: string[];
+  dept?: string;
   status: "new" | "active";
   seen: number;
   devices: string[];
@@ -159,12 +174,16 @@ function rowOf(e: Employee): Row {
     name: e.name,
     admin: e.admin,
     active: e.active,
+    sections: sectionsOf(e),
+    ...(e.department ? { dept: e.department } : {}),
     status: e.must_change && Object.keys(e.devices).length === 0 ? "new" : "active",
     seen: e.last_seen,
     devices: Object.values(e.devices).map((d) => d.model).slice(0, 8),
     ...(e.reset_at ? { reset: e.reset_at } : {}),
   };
 }
+
+const sectionsOf = (e: Employee) => (e.sections?.length ? e.sections : [DEFAULT_SECTION]);
 
 async function load(env: AuthEnv, nrp: string): Promise<Employee | null> {
   return (await env.AUTH.get<Employee>(`emp:${nrp}`, "json")) ?? null;
@@ -176,8 +195,12 @@ async function save(env: AuthEnv, e: Employee): Promise<void> {
 
 async function issue(env: AuthEnv, e: Employee): Promise<Response> {
   const iat = now();
-  const token = await sign(env, { n: e.nrp, nm: e.name, a: e.admin, iat, exp: iat + SESSION_DAYS * 86400 });
-  return json({ status: "ok", token, nrp: e.nrp, name: e.name, admin: e.admin, iat, exp: iat + SESSION_DAYS * 86400 });
+  const sections = sectionsOf(e);
+  const token = await sign(env, { n: e.nrp, nm: e.name, a: e.admin, s: sections, iat, exp: iat + SESSION_DAYS * 86400 });
+  return json({
+    status: "ok", token, nrp: e.nrp, name: e.name, admin: e.admin, sections,
+    ...(e.department ? { department: e.department } : {}), iat, exp: iat + SESSION_DAYS * 86400,
+  });
 }
 
 /// Remembers the phone and when it was last online; written at most once a
@@ -354,7 +377,8 @@ async function importList(request: Request, env: AuthEnv): Promise<Response> {
   const b = await body(request);
   const list = Array.isArray(b?.employees) ? (b!.employees as Record<string, unknown>[]) : null;
   if (!list) return json({ error: "bad_request" }, 400);
-  const rows = new Map<string, { name: string; pin: string; admin: boolean }>();
+  type Imported = { name: string; pin: string; admin: boolean; sections: string[] | null; department: string | null };
+  const rows = new Map<string, Imported>();
   const problems: string[] = [];
   for (const r of list) {
     const nrp = cleanNrp(r.nrp);
@@ -364,7 +388,12 @@ async function importList(request: Request, env: AuthEnv): Promise<Response> {
       problems.push(`${nrp}: PIN awal harus ${PIN_LENGTH} angka`);
       continue;
     }
-    rows.set(nrp, { name: String(r.name ?? "").trim() || nrp, pin, admin: r.admin === true });
+    rows.set(nrp, {
+      name: String(r.name ?? "").trim() || nrp, pin, admin: r.admin === true,
+      // null: an upload_karyawan.py from before these columns; keep what is saved.
+      sections: cleanSections(r.sections),
+      department: typeof r.department === "string" ? r.department.trim().toUpperCase() : null,
+    });
   }
   if (rows.size === 0) return json({ error: "empty", message: "Daftar karyawan kosong.", problems }, 400);
   if (![...rows.values()].some((r) => r.admin)) {
@@ -388,15 +417,25 @@ async function importList(request: Request, env: AuthEnv): Promise<Response> {
       const hash = await pinHash(env, salt, r.pin);
       await save(env, {
         nrp, name: r.name, admin: r.admin, active: true, pin: hash, salt, must_change: true,
+        ...(r.sections ? { sections: r.sections } : {}),
+        ...(r.department ? { department: r.department } : {}),
         file_pin: await pinHash(env, "file", r.pin), fails: 0, lock_until: 0, last_seen: 0, devices: {},
       });
       result.added++;
       continue;
     }
     let changed = false;
-    if (e.name !== r.name || e.admin !== r.admin) {
+    const sections = r.sections ?? e.sections;
+    const department = r.department === null ? e.department : r.department || undefined;
+    if (
+      e.name !== r.name || e.admin !== r.admin || department !== e.department ||
+      (sections ?? []).join(",") !== (e.sections ?? []).join(",")
+    ) {
       e.name = r.name;
       e.admin = r.admin;
+      if (sections) e.sections = sections;
+      if (department) e.department = department;
+      else delete e.department;
       changed = true;
       result.updated++;
     }

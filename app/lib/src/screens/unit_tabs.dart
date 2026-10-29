@@ -333,7 +333,7 @@ class UnitDrawer extends StatelessWidget {
               padding: EdgeInsets.fromLTRB(10, 4, 10, 4),
               child: Text('Pilih unit', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
             ),
-            for (final machine in Machine.values)
+            for (final machine in Machine.ordered(units))
               if (groups[machine] case final list?) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(10, 16, 10, 6),
