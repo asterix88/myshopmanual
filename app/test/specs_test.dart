@@ -170,13 +170,13 @@ void main() {
 
     expect(find.text('HM 250'), findsOneWidget);
     expect(find.text('HM 500'), findsOneWidget);
-    expect(find.text('MAINTENANCE SCHEDULE CHART'), findsOneWidget);
-    expect(find.text('CHECK ENGINE OIL LEVEL'), findsOneWidget);
+    expect(find.text('Maintenance Schedule Chart'), findsOneWidget);
+    expect(find.text('Check Engine Oil Level'), findsOneWidget);
     await tester.tap(find.text('HM 500'));
     await tester.pumpAndSettle();
-    expect(find.text('REPLACE FUEL MAIN FILTER'), findsOneWidget);
+    expect(find.text('Replace Fuel Main Filter'), findsOneWidget);
 
-    await tester.tap(find.text('REPLACE FUEL MAIN FILTER'));
+    await tester.tap(find.text('Replace Fuel Main Filter'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(tester.widget<SpecViewerScreen>(find.byType(SpecViewerScreen)).page, 3);

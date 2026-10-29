@@ -366,7 +366,9 @@ void main() {
       expect(store.listedUpdates, hasLength(1));
       store.markUpdatesSeen();
       expect(store.unseenUpdates, isEmpty);
-      expect(store.listedUpdates, isEmpty);
+      // Seen, but kept on the list until the bin clears it.
+      expect(store.listedUpdates, hasLength(1));
+      expect(store.isUnseen(store.listedUpdates.single), isFalse);
       expect(store.isDownloaded(store.local.keys.single), isTrue);
       store.dispose();
 
@@ -386,7 +388,33 @@ void main() {
       expect(store.unseenUpdates.single.kind, UpdateKind.newVersion);
       store.markUpdatesSeen();
       expect(store.unseenUpdates, isEmpty);
-      expect(store.listedUpdates.single.kind, UpdateKind.newVersion);
+      expect(store.listedUpdates.map((u) => u.kind), [UpdateKind.newVersion, UpdateKind.withdrawn]);
+      store.clearUpdates();
+      expect(store.listedUpdates, isEmpty);
+      store.dispose();
+    });
+
+    test('opening a unit clears its updates from the bell; the list keeps them', () async {
+      final catalog = fixtureCatalog();
+      var store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
+      await store.setServerUrl('https://example.test');
+      store.dispose();
+
+      final unit = (catalog['units'] as List).single as Map<String, dynamic>;
+      final extra = {...(unit['files'] as List).single as Map<String, dynamic>, 'id': 'Shop_Manual_New'};
+      unit['files'] = [...unit['files'] as List, extra];
+      store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
+      await store.refresh();
+      final update = store.unseenUpdates.single;
+      store.markUnitUpdatesSeen(update.file.unitId);
+      expect(store.unseenUpdates, isEmpty);
+      expect(store.listedUpdates.single.seenKey, update.seenKey);
+      store.dispose();
+
+      // The list survives a restart.
+      store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
+      await store.refresh();
+      expect(store.listedUpdates.single.seenKey, update.seenKey);
       store.dispose();
     });
   });
