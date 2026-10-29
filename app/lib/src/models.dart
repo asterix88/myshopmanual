@@ -112,6 +112,11 @@ class ManualFile {
   /// Unique across the whole catalog.
   String get key => '$unitId/$id';
 
+  /// The kind of document as shown beside a page: "OMM", "Shop Manual",
+  /// or the manual's own title ("Troubleshooting", "System Operation")
+  /// instead of "Lainnya".
+  String get typeLabel => type == DocType.other ? title : type.label;
+
   int get downloadSize => pdf.size + index.size;
 
   Map<String, dynamic> toJson() => {

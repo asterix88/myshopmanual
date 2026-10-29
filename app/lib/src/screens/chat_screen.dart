@@ -815,7 +815,7 @@ class _Bubble extends StatelessWidget {
               side: BorderSide.none,
               avatar: AppIcon(docGlyph(page.file), size: 16),
               label: Text(
-                '${page.unitName} · ${page.file.type.label} · hlm ${page.page}',
+                '${page.unitName} · ${page.file.typeLabel} · hlm ${page.page}',
                 style: TextStyle(fontSize: 12, color: AppColors.navy),
               ),
               onPressed: () => openViewer(context, page.file, page: page.page),
@@ -854,7 +854,7 @@ class _Bubble extends StatelessWidget {
                       side: BorderSide.none,
                       avatar: AppIcon(docGlyph(s.file), size: 16),
                       label: Text(
-                        '${s.unitName} · ${s.file.type.label} · hlm ${s.page}',
+                        '${s.unitName} · ${s.file.typeLabel} · hlm ${s.page}',
                         style: TextStyle(fontSize: 12, color: AppColors.navy),
                       ),
                       onPressed: () => openViewer(context, s.file, page: s.page),
@@ -1045,7 +1045,7 @@ class _PagePictureState extends State<_PagePicture> {
                 children: [
                   Expanded(
                     child: Text(
-                      '${source.unitName} · ${source.file.type.label} · hlm ${source.page}',
+                      '${source.unitName} · ${source.file.typeLabel} · hlm ${source.page}',
                       style: TextStyle(fontSize: 12, color: AppColors.navy),
                     ),
                   ),
