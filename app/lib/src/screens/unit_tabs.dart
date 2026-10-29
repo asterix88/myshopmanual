@@ -64,14 +64,9 @@ class UnitTabsPage extends StatelessWidget {
                 child: Column(
                   children: [
                     Padding(
-                      padding: EdgeInsets.fromLTRB(4, 10, 12, showTabs ? 0 : 10),
+                      padding: EdgeInsets.fromLTRB(12, 10, 12, showTabs ? 0 : 10),
                       child: Row(
                         children: [
-                          IconButton(
-                            tooltip: 'Pilih unit',
-                            onPressed: () => Scaffold.of(context).openDrawer(),
-                            icon: const Icon(Icons.menu),
-                          ),
                           if (unit != null)
                             Flexible(
                               child: InkWell(
