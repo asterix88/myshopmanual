@@ -40,6 +40,10 @@ class _UnitScreenState extends State<UnitScreen> {
   @override
   void initState() {
     super.initState();
+    // Opened: this unit's updates count as seen (badges and bell clear).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) StoreScope.read(context).markUnitUpdatesSeen(widget.unitId);
+    });
     if (widget.focus != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final target = _focusKey.currentContext;
@@ -346,7 +350,8 @@ class _FileCard extends StatelessWidget {
         listenable: PublicDownloads.instance,
         builder: (context, _) {
           final name = PublicDownloads.fileName(file.title);
-          final canSave = downloaded && !hasNewVersion && PublicDownloads.instance.canSave(name);
+          // Not for CAT's SIS books: they stay inside the app.
+          final canSave = downloaded && !hasNewVersion && !isCat(unit) && PublicDownloads.instance.canSave(name);
           final Widget? status;
           if (progress != null) {
             status = Text(

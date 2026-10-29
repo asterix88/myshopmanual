@@ -116,7 +116,14 @@ class _HomeShellState extends State<HomeShell> {
               for (final (i, page) in pages.indexed)
                 // Each tab keeps its scroll position and typed search; only
                 // the shown one runs its animations.
-                _KeepAlive(child: TickerMode(enabled: i == _tab, child: page)),
+                _KeepAlive(
+                  // A tab off screen holds no focus: its search box must not
+                  // take the keyboard back when a page or menu closes.
+                  child: ExcludeFocus(
+                    excluding: i != _tab,
+                    child: TickerMode(enabled: i == _tab, child: page),
+                  ),
+                ),
             ],
           ),
         ),

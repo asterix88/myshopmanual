@@ -92,7 +92,9 @@ class _SearchScreenState extends State<SearchScreen> {
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: AppColors.background,
-                        hintText: 'Part number, kode error, komponen',
+                        hintText: 'Cth: Part number, kode error, nama komponen',
+                        hintStyle: TextStyle(fontSize: 13, color: AppColors.faint),
+                        hintMaxLines: 1,
                         prefixIcon: Padding(
                           padding: const EdgeInsets.all(12),
                           child: AppIcon(AppGlyph.search, size: 20, color: AppColors.muted),

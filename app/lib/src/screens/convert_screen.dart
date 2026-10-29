@@ -93,7 +93,6 @@ class _ConvertScreenState extends State<ConvertScreen> {
                   value: TextField(
                     key: const Key('convert-input'),
                     controller: _text,
-                    autofocus: true,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                     onChanged: (_) => setState(() {}),
                     style: TextStyle(fontSize: 30, fontWeight: FontWeight.w600, color: AppColors.ink),
