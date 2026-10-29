@@ -38,10 +38,10 @@ MODEL = "deepseek:deepseek-v4-flash,openai/gpt-oss-120b,qwen/qwen3.8-27b,openai/
 # Used instead of MODEL once the AI has looked at a page picture: only these
 # models can see pictures.
 VISION_MODEL = "deepseek:deepseek-v4-flash,qwen/qwen3.8-27b"
-# "1" once every mechanic has the app version with the NRP login: nyel AI
-# then refuses phones that are not logged in. Until then older apps still
-# work.
-REQUIRE_LOGIN = "0"
+# "1": nyel AI refuses phones that are not logged in (app versions from
+# before the NRP login). Set by Anas on 29 Oct 2026 with sections, since a
+# section's manuals must only reach its NRPs.
+REQUIRE_LOGIN = "1"
 
 # Secrets, never in this file:
 #   DEEPSEEK_API_KEY  key from platform.deepseek.com, uploaded by the workflow

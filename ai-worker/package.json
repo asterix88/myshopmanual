@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "deploy": "wrangler deploy",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/sections.test.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261004.1",

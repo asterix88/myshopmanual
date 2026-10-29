@@ -1,0 +1,29 @@
+name: Server and tools checks
+
+# On pull requests: type-checks the AI/files server and runs the tests that
+# need no Cloudflare or PDFs (who sees which section, how source\ folders
+# are read).
+on:
+  pull_request:
+    paths: ['ai-worker/**', 'tools/**', '.github/workflows/checks.yml']
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: ai-worker
+      - run: npx tsc --noEmit
+        working-directory: ai-worker
+      - run: npm test
+        working-directory: ai-worker
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install openpyxl
+      - run: python -m unittest discover -s tools -p 'test_*.py' -v
