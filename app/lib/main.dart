@@ -129,7 +129,10 @@ class _MyManualAppState extends State<MyManualApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) widget.store.checkSessionExpiry();
-    if (state == AppLifecycleState.paused) widget.store.markActive();
+    if (state == AppLifecycleState.paused) {
+      widget.store.markActive();
+      unawaited(widget.store.usage.send());
+    }
   }
 
   bool _takeEntrance() {

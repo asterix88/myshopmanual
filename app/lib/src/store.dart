@@ -9,11 +9,13 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'ai.dart' show aiUrl;
 import 'auth.dart';
 import 'cetok.dart';
 import 'diagnostics.dart';
 import 'keep_alive.dart';
 import 'models.dart';
+import 'usage.dart';
 
 /// Server address: the Worker that serves the R2 bucket to logged-in phones
 /// (ai-worker/src/files.ts), unless a build overrides it with
@@ -307,6 +309,7 @@ class AppStore extends ChangeNotifier {
   /// phone are removed too.
   Future<void> signOut({bool revoked = false}) async {
     session = null;
+    await usage.clear();
     try {
       if (await _sessionFile.exists()) await _sessionFile.delete();
       // The conversation belongs to the one who logged out.
@@ -389,6 +392,14 @@ class AppStore extends ChangeNotifier {
 
   /// Where the nyel AI conversation is kept between app starts.
   String get chatHistoryPath => p.join(_root.path, 'chat.json');
+
+  /// What the user did, sent for the admins' usage statistics.
+  late final UsageLog usage = UsageLog(
+    path: p.join(_root.path, 'usage.json'),
+    client: _client,
+    endpoint: Uri.parse('$aiUrl/stats'),
+    enabled: () => loggedIn,
+  );
 
   /// Cetok Online's parts stock (its own server), opened from the Home tab.
   late final Cetok cetok = Cetok(
@@ -521,6 +532,7 @@ class AppStore extends ChangeNotifier {
       online = true;
       lastChecked = DateTime.now();
       lastError = null;
+      unawaited(usage.send());
       if (autoFetchAiIndexes) {
         unawaited(fetchAllAiIndexes());
         unawaited(fetchSpecPacks());
@@ -723,6 +735,7 @@ class AppStore extends ChangeNotifier {
       }
       local[file.key] = LocalManual(file: file, unitName: unitName);
       seenKeys.add(file.key);
+      usage.downloaded(file);
       await _save();
     } on DownloadCancelled {
       // Cancelled on purpose: free the space. Paused keeps the parts.

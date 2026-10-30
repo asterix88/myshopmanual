@@ -139,6 +139,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
     final store = _store;
     final manual = store.localManual(widget.fileKey);
     _file = manual?.file ?? store.catalog.file(widget.fileKey);
+    if (_file != null) store.usage.opened(_file!);
     _online = manual == null;
     if (_online) {
       final dir = Directory(store.pdfBlockDir(_file!));
@@ -589,6 +590,24 @@ class _ViewerScreenState extends State<ViewerScreen> {
   void _saveLastRead() {
     _saveTimer = null;
     _store.setLastRead(widget.fileKey, _page, section: _sectionFor(_page));
+    _countChapter();
+  }
+
+  String? _chapter;
+
+  /// The top-level bookmark of the page the reader stopped on, counted once
+  /// per visit for the usage statistics.
+  void _countChapter() {
+    if (_toc.isEmpty || _file == null) return;
+    final top = _toc.map((e) => e.level).reduce((a, b) => a < b ? a : b);
+    String? chapter;
+    for (final entry in _toc) {
+      if (entry.page > _page) break;
+      if (entry.level == top) chapter = entry.title;
+    }
+    if (chapter == null || chapter == _chapter) return;
+    _chapter = chapter;
+    _store.usage.chapter(_file!, chapter);
   }
 
   void _toggleSearch() {

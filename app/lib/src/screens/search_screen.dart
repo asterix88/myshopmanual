@@ -28,9 +28,13 @@ class _SearchScreenState extends State<SearchScreen> {
   Timer? _debounce;
   int _session = 0;
 
+  /// Counts a search for the usage statistics once the typing stopped.
+  Timer? _countTimer;
+
   @override
   void dispose() {
     _debounce?.cancel();
+    _countTimer?.cancel();
     _field.dispose();
     super.dispose();
   }
@@ -56,6 +60,10 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() {
       _query = query;
       _result = result;
+    });
+    _countTimer?.cancel();
+    _countTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted && _query == query) StoreScope.read(context).usage.searched(query, result.hits.length);
     });
   }
 

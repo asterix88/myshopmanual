@@ -121,7 +121,7 @@ async function overview(env: StatsEnv, f: db.Filter) {
 
   const staff = [...employees].filter(([, r]) => r.active);
   const all = [...new Set(staff.flatMap(([, r]) => r.sections))].filter((x) => x !== SHARED_SECTION);
-  const sections = [...ORDER.filter((x) => all.includes(x)), ...all.filter((x) => !ORDER.includes(x)).sort()];
+  const sections = [...ORDER, ...all.filter((x) => !ORDER.includes(x)).sort()];
   const inSection = (r: Row) => !f.section || r.sections.includes(f.section);
   const users = staff.filter(([, r]) => inSection(r));
   const busy = new Set(o.people.map((p) => p.nrp));
