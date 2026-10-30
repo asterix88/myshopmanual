@@ -65,7 +65,7 @@ type Employee = {
 };
 
 /// What the admin screen lists, kept in the KV entry's metadata.
-type Row = {
+export type Row = {
   name: string;
   admin: boolean;
   active: boolean;
@@ -493,11 +493,34 @@ export async function countQuestion(env: AuthEnv, s: Session): Promise<Response 
   return () => put(asked);
 }
 
-async function admin(request: Request, env: AuthEnv, path: string): Promise<Response> {
+/// The caller's session when it belongs to an active admin; otherwise the
+/// response to send.
+export async function requireAdmin(
+  env: AuthEnv,
+  request: Request,
+): Promise<{ session: Session; error?: undefined } | { session?: undefined; error: Response }> {
   const auth = await requireSession(env, request);
-  if (auth.error) return auth.error;
+  if (auth.error) return auth;
   const me = await load(env, auth.session.n);
-  if (!me || !me.active || !me.admin) return json({ error: "forbidden", message: "Khusus admin." }, 403);
+  if (!me || !me.active || !me.admin) return { error: json({ error: "forbidden", message: "Khusus admin." }, 403) };
+  return auth;
+}
+
+/// Every employee as the admin screen lists them, by NRP.
+export async function employeeRows(env: AuthEnv): Promise<Map<string, Row>> {
+  const rows = new Map<string, Row>();
+  let cursor: string | undefined;
+  do {
+    const page: KVNamespaceListResult<Row, string> = await env.AUTH.list<Row>({ prefix: "emp:", cursor });
+    for (const k of page.keys) if (k.metadata) rows.set(k.name.slice(4), k.metadata);
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return rows;
+}
+
+async function admin(request: Request, env: AuthEnv, path: string): Promise<Response> {
+  const auth = await requireAdmin(env, request);
+  if (auth.error) return auth.error;
 
   if (path === "/admin/employees") {
     const asked = new Map<string, number>();
@@ -508,16 +531,7 @@ async function admin(request: Request, env: AuthEnv, path: string): Promise<Resp
       for (const k of page.keys) asked.set(k.name.slice(prefix.length), k.metadata?.n ?? 0);
       cursor = page.list_complete ? undefined : page.cursor;
     } while (cursor);
-    const employees: unknown[] = [];
-    cursor = undefined;
-    do {
-      const page: KVNamespaceListResult<Row, string> = await env.AUTH.list<Row>({ prefix: "emp:", cursor });
-      for (const k of page.keys) {
-        const nrp = k.name.slice(4);
-        if (k.metadata) employees.push({ nrp, ...k.metadata, ai_today: asked.get(nrp) ?? 0 });
-      }
-      cursor = page.list_complete ? undefined : page.cursor;
-    } while (cursor);
+    const employees = [...(await employeeRows(env))].map(([nrp, row]) => ({ nrp, ...row, ai_today: asked.get(nrp) ?? 0 }));
     return json({ employees, ai_limit: AI_DAILY_LIMIT });
   }
 
@@ -547,7 +561,7 @@ async function admin(request: Request, env: AuthEnv, path: string): Promise<Resp
 
   // /admin/active
   const active = b!.active === true;
-  if (!active && e.nrp === me.nrp) {
+  if (!active && e.nrp === auth.session.n) {
     return json({ error: "self", message: "Admin tidak bisa menonaktifkan NRP-nya sendiri." }, 400);
   }
   e.active = active;

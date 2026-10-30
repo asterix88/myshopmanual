@@ -27,6 +27,16 @@ bucket_name = "mymanual"
 binding = "AUTH"
 id = "AUTH_KV_ID"
 
+# Usage statistics for admins (src/stats.ts): one Durable Object with its
+# own SQLite database, made on the first deploy.
+[[durable_objects.bindings]]
+name = "STATS"
+class_name = "Stats"
+
+[[migrations]]
+tag = "stats-v1"
+new_sqlite_classes = ["Stats"]
+
 [vars]
 # Any OpenAI-compatible chat API with tool calling works. MODEL is a list
 # tried in order: when one model is busy, out of credit or retired, the next

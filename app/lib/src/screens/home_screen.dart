@@ -22,6 +22,7 @@ import 'convert_screen.dart';
 import 'employees_screen.dart';
 import 'machine_screen.dart';
 import 'report_screen.dart';
+import 'stats_screen.dart';
 import 'updates_screen.dart';
 import 'viewer_screen.dart';
 
@@ -112,6 +113,7 @@ class HomeScreen extends StatelessWidget {
       onSelected: (value) => switch (value) {
         'report' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportScreen())),
         'employees' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EmployeesScreen())),
+        'stats' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StatsScreen())),
         'answers' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnswerReportsScreen())),
         'theme' => _chooseTheme(context, store),
         'cetok' => showDialog<void>(context: context, builder: (_) => const _CetokDataDialog()),
@@ -146,6 +148,8 @@ class HomeScreen extends StatelessWidget {
           ),
         if (store.session?.admin ?? false)
           const PopupMenuItem(value: 'employees', child: Text('Kelola karyawan')),
+        if (store.session?.admin ?? false)
+          const PopupMenuItem(value: 'stats', child: Text('Statistik pemakaian')),
         if (store.session?.admin ?? false)
           const PopupMenuItem(value: 'answers', child: Text('Penilaian nyel AI')),
         if (store.session?.admin ?? false)
