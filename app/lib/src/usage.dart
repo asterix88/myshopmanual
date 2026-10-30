@@ -57,12 +57,19 @@ class UsageLog {
         await tmp.rename(path);
       });
 
-  Future<void> _add(Map<String, dynamic> event) async {
-    if (!enabled()) return;
-    final queue = await _load();
-    queue.add({'at': DateTime.now().millisecondsSinceEpoch, ...event});
-    if (queue.length > maxKept) queue.removeRange(0, queue.length - maxKept);
-    await _write().catchError((Object e) => debugPrint('usage log not saved: $e'));
+  Future<void> _adding = Future.value();
+
+  /// Adds events one after another, so they stay in the order they happened
+  /// while the file is still being read.
+  Future<void> _add(Map<String, dynamic> event) {
+    if (!enabled()) return Future.value();
+    final entry = {'at': DateTime.now().millisecondsSinceEpoch, ...event};
+    return _adding = _adding.catchError((_) {}).then((_) async {
+      final queue = await _load();
+      queue.add(entry);
+      if (queue.length > maxKept) queue.removeRange(0, queue.length - maxKept);
+      await _write().catchError((Object e) => debugPrint('usage log not saved: $e'));
+    });
   }
 
   static Map<String, dynamic> _file(ManualFile f) => {'file': f.key, 'unit': f.unitId, 'title': f.title};
