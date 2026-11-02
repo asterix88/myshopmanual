@@ -133,6 +133,14 @@ class HomeScreen extends StatelessWidget {
                   session.admin ? 'NRP ${session.nrp} · Admin' : 'NRP ${session.nrp}',
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
+                if (session.sections.isNotEmpty)
+                  Text(
+                    [
+                      'Section ${session.sections.map(titleCase).join(', ')}',
+                      if (session.department.isNotEmpty) titleCase(session.department),
+                    ].join(' · '),
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  ),
               ],
             ),
           ),
@@ -433,8 +441,10 @@ class _ContinueReading extends StatelessWidget {
   }
 }
 
-/// The home screen's folders, two to a row: EXCAVATOR and BULLDOZER, plus
-/// LAINNYA when a unit fits neither.
+/// The home screen's folders, two to a row: the kelompok folders of the
+/// NRP's section (EXCAVATOR and BULLDOZER for Track; HD, DT, GRADER for
+/// Wheel), plus LAINNYA when a unit fits none. An NRP with several sections
+/// picks one above the folders.
 class _MachineFolders extends StatelessWidget {
   const _MachineFolders({required this.store});
 
@@ -442,12 +452,9 @@ class _MachineFolders extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final units = store.units;
-    final machines = [
-      Machine.excavator,
-      Machine.bulldozer,
-      if (units.any((u) => u.machine == Machine.other)) Machine.other,
-    ];
+    final units = store.homeUnits;
+    final sections = store.sections;
+    final machines = Machine.ordered(units);
     Widget card(Machine machine) => _FolderCard(
       machine: machine,
       units: [for (final u in units) if (u.machine == machine) u],
@@ -463,6 +470,22 @@ class _MachineFolders extends StatelessWidget {
               ? null
               : Text('${units.length} model unit', style: TextStyle(fontSize: 12, color: AppColors.muted)),
         ),
+        if (sections.length > 1)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final section in sections)
+                  ChoiceChip(
+                    label: Text(titleCase(section)),
+                    selected: section == store.homeSection,
+                    onSelected: (_) => store.setHomeSection(section),
+                  ),
+              ],
+            ),
+          ),
         for (var i = 0; i < machines.length; i += 2)
           Padding(
             padding: EdgeInsets.only(top: i == 0 ? 0 : 12),

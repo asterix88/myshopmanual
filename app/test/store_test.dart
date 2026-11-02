@@ -73,6 +73,21 @@ void main() {
       expect(unit('CATD9', 'Bulldozer').machine, Machine.bulldozer);
       expect(unit('X1', 'Excavator').machine, Machine.excavator);
     });
+
+    test('the kelompok folder of the source layout wins over both', () {
+      final hd = Unit.fromJson({'id': 'HD785-7', 'section': 'wheel', 'kelompok': 'hd', 'files': const []});
+      expect(hd.section, 'WHEEL');
+      expect(hd.machine, const Machine('HD'));
+      final old = Unit.fromJson({'id': 'PC210', 'files': const []});
+      expect(old.section, defaultSection);
+      expect(old.machine, Machine.excavator);
+    });
+
+    test('Home order: Excavator, Bulldozer, others A-Z, Lainnya last', () {
+      Unit k(String id, String kelompok) => Unit(id: id, name: id, kind: '', files: const [], kelompok: kelompok);
+      final units = [k('X', 'LAINNYA'), k('G', 'GRADER'), k('D85', ''), k('H', 'HD'), k('PC210', '')];
+      expect(Machine.ordered(units).map((m) => m.label), ['EXCAVATOR', 'BULLDOZER', 'GRADER', 'HD', 'LAINNYA']);
+    });
   });
 
   group('updates', () {
@@ -188,6 +203,43 @@ void main() {
       expect(store.isDownloaded(file.key), isFalse);
       expect(File(store.pdfPath(file)).existsSync(), isFalse);
       expect(store.lastRead, isNull);
+      store.dispose();
+    });
+
+    test('an NRP with two sections picks one on Home; SEMUA shows in both', () async {
+      Map<String, dynamic> unit(String id, String section, String kelompok) =>
+          {'id': id, 'section': section, 'kelompok': kelompok, 'files': const []};
+      final catalog = {
+        'generated_at': '2026-10-29T00:00:00Z',
+        'units': [unit('PC210', 'TRACK', 'EXCAVATOR'), unit('HD785', 'WHEEL', 'HD'), unit('MLU', 'SEMUA', 'UMUM')],
+      };
+      final store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
+      await store.setServerUrl('https://example.test');
+      expect(store.sections, ['TRACK', 'WHEEL']);
+      expect(store.homeSection, 'TRACK');
+      expect(store.homeUnits.map((u) => u.id), unorderedEquals(['PC210', 'MLU']));
+      store.setHomeSection('WHEEL');
+      expect(store.homeUnits.map((u) => u.id), unorderedEquals(['HD785', 'MLU']));
+      store.dispose();
+    });
+
+    test('manuals of a section the NRP left are removed from the phone', () async {
+      final catalog = fixtureCatalog();
+      var store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
+      await store.setServerUrl('https://example.test');
+      final file = store.catalog.files.single;
+      await store.download(file, unitName: 'TEST1-1');
+      store.dispose();
+
+      // The NRP moved to another section: the server hides TEST1.
+      store = await AppStore.open(
+        root: root,
+        client: fixtureServer(catalog: {...catalog, 'units': const [], 'hidden_units': ['TEST1']}),
+      );
+      await store.refresh();
+      expect(store.isDownloaded(file.key), isFalse);
+      expect(File(store.pdfPath(file)).existsSync(), isFalse);
+      expect(store.units, isEmpty);
       store.dispose();
     });
 

@@ -4,18 +4,18 @@ import '../models.dart';
 
 /// The folder picture for a machine kind: the PC2000 for excavators and the
 /// D375 for bulldozers (the unit pictures in assets/units), a plain folder
-/// for anything else.
+/// for anything else (HD, DT, Grader until they have pictures).
 class MachineIcon extends StatelessWidget {
   const MachineIcon(this.machine, {super.key, this.width = 96});
 
   final Machine machine;
   final double width;
 
-  static const _pictures = {Machine.excavator: 'assets/units/pc2000.png', Machine.bulldozer: 'assets/units/d375.png'};
+  static const _pictures = {'EXCAVATOR': 'assets/units/pc2000.png', 'BULLDOZER': 'assets/units/d375.png'};
 
   @override
   Widget build(BuildContext context) {
-    final picture = _pictures[machine];
+    final picture = _pictures[machine.label];
     return SizedBox(
       width: width,
       height: width * 2 / 3,

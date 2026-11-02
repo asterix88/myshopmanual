@@ -274,7 +274,15 @@ class SpecPackPage {
 }
 
 class Unit {
-  const Unit({required this.id, required this.name, required this.kind, required this.files, this.spec});
+  const Unit({
+    required this.id,
+    required this.name,
+    required this.kind,
+    required this.files,
+    this.spec,
+    this.section = defaultSection,
+    this.kelompok = '',
+  });
 
   factory Unit.fromJson(Map<String, dynamic> json) {
     final id = json['id'] as String;
@@ -286,8 +294,19 @@ class Unit {
         for (final f in json['files'] as List) ManualFile.fromJson(id, f as Map<String, dynamic>),
       ],
       spec: json['spec'] == null ? null : SpecPack.fromJson(json['spec'] as Map<String, dynamic>),
+      section: (json['section'] as String? ?? '').trim().toUpperCase().ifEmpty(defaultSection),
+      kelompok: (json['kelompok'] as String? ?? '').trim().toUpperCase(),
     );
   }
+
+  /// The section whose NRPs see this unit (tools/sections.py): TRACK,
+  /// WHEEL, ... or [sharedSection]. The server sends a phone only the units
+  /// of its sections.
+  final String section;
+
+  /// The Home folder from the source layout (SECTION TRACK/EXCAVATOR/PC210);
+  /// empty for units straight in source\, whose folder is guessed.
+  final String kelompok;
 
   /// Null in catalogs built before spek.pdf existed, or when no manual of
   /// this unit bookmarks a spec page.
@@ -318,19 +337,53 @@ class Unit {
   Machine get machine => Machine.of(this);
 }
 
-/// The kind of machine a unit is, shown as a folder on the home screen.
-enum Machine {
-  excavator('EXCAVATOR'),
-  bulldozer('BULLDOZER'),
-  other('LAINNYA');
+/// The section of units and NRPs from before sections.
+const defaultSection = 'TRACK';
 
+/// Units that every NRP sees (Panduan MLU, Basic Electric, ...).
+const sharedSection = 'SEMUA';
+
+extension on String {
+  String ifEmpty(String other) => isEmpty ? other : this;
+}
+
+/// A folder on the home screen: the kelompok folder of the source layout
+/// (EXCAVATOR, HD, GRADER, ...), or for units without one the kind of
+/// machine guessed from the model code.
+class Machine {
   const Machine(this.label);
+
+  static const excavator = Machine('EXCAVATOR');
+  static const bulldozer = Machine('BULLDOZER');
+  static const other = Machine('LAINNYA');
 
   final String label;
 
-  /// Uses the unit's `kind` from unit.json when set, otherwise guesses from
-  /// the model code: PC, CAT, ZX, EX are excavators; D85, D155 are dozers.
+  @override
+  bool operator ==(Object other) => other is Machine && other.label == label;
+
+  @override
+  int get hashCode => label.hashCode;
+
+  @override
+  String toString() => label;
+
+  /// The folders of [units] in Home order: Excavator, Bulldozer, the
+  /// others A-Z, LAINNYA last.
+  static List<Machine> ordered(Iterable<Unit> units) {
+    int rank(Machine m) => m == excavator ? 0 : m == bulldozer ? 1 : m == other ? 3 : 2;
+    return {for (final u in units) u.machine}.toList()
+      ..sort((a, b) {
+        final r = rank(a).compareTo(rank(b));
+        return r != 0 ? r : a.label.compareTo(b.label);
+      });
+  }
+
+  /// The unit's kelompok when the source layout names one; otherwise its
+  /// `kind` from unit.json, otherwise a guess from the model code: PC, CAT,
+  /// ZX, EX are excavators; D85, D155 are dozers.
   static Machine of(Unit unit) {
+    if (unit.kelompok.isNotEmpty) return Machine(unit.kelompok);
     final kind = unit.kind.toLowerCase();
     if (kind.contains('excavator')) return Machine.excavator;
     if (kind.contains('dozer')) return Machine.bulldozer;
@@ -342,17 +395,23 @@ enum Machine {
 }
 
 class Catalog {
-  const Catalog({required this.generatedAt, required this.units});
+  const Catalog({required this.generatedAt, required this.units, this.hiddenUnits = const {}});
 
   factory Catalog.fromJson(Map<String, dynamic> json) => Catalog(
         generatedAt: DateTime.tryParse(json['generated_at'] as String? ?? ''),
         units: [for (final u in json['units'] as List) Unit.fromJson(u as Map<String, dynamic>)],
+        hiddenUnits: {for (final id in json['hidden_units'] as List? ?? const []) id as String},
       );
 
   static const empty = Catalog(generatedAt: null, units: []);
 
   final DateTime? generatedAt;
   final List<Unit> units;
+
+  /// Units of sections this NRP does not have (moved to another section):
+  /// their manuals are removed from the phone. A unit taken off the server
+  /// is not listed here; its downloaded manuals stay.
+  final Set<String> hiddenUnits;
 
   Iterable<ManualFile> get files => units.expand((u) => u.files);
 

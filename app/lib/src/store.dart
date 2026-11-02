@@ -191,6 +191,7 @@ class AppStore extends ChangeNotifier {
       themeChosen = json['theme_chosen'] as bool? ?? false;
       themeMode = themeChosen ? json['theme'] as String? ?? 'light' : 'light';
       _aiDay = json['ai_day'] as String? ?? '';
+      _homeSection = json['home_section'] as String? ?? '';
       if (json['convert'] case {'kind': final String kind, 'from': final String from, 'to': final String to}) {
         lastConvert = (kind: kind, from: from, to: to);
       }
@@ -238,6 +239,34 @@ class AppStore extends ChangeNotifier {
     _aiAsked++;
     _scheduleSave();
     notifyListeners();
+  }
+
+  /// The sections in the catalog besides SEMUA, A-Z: one for most NRPs;
+  /// more for an NRP with several sections, and for admins, who see all.
+  List<String> get sections =>
+      ({for (final u in units) u.section}..remove(sharedSection)).toList()..sort();
+
+  String _homeSection = '';
+
+  /// The section whose folders Home shows when there is more than one.
+  String get homeSection {
+    final all = sections;
+    if (all.contains(_homeSection)) return _homeSection;
+    return all.contains(defaultSection) ? defaultSection : all.firstOrNull ?? defaultSection;
+  }
+
+  void setHomeSection(String section) {
+    _homeSection = section;
+    _scheduleSave();
+    notifyListeners();
+  }
+
+  /// The units Home lists: those of [homeSection] and SEMUA.
+  List<Unit> get homeUnits {
+    final all = units;
+    if (sections.length <= 1) return all;
+    final section = homeSection;
+    return [for (final u in all) if (u.section == section || u.section == sharedSection) u];
   }
 
   /// 'system' (follow the phone), 'light' or 'dark'.
@@ -421,6 +450,7 @@ class AppStore extends ChangeNotifier {
       'theme': themeMode,
       'theme_chosen': themeChosen,
       'ai_day': _aiDay,
+      if (_homeSection.isNotEmpty) 'home_section': _homeSection,
       'ai_asked': _aiAsked,
       if (lastConvert case final c?) 'convert': {'kind': c.kind, 'from': c.from, 'to': c.to},
     };
@@ -475,6 +505,11 @@ class AppStore extends ChangeNotifier {
       catalog = Catalog.fromJson(jsonDecode(body) as Map<String, dynamic>);
       await _root.create(recursive: true);
       await _catalogFile.writeAsString(body);
+      final otherSection = [
+        for (final m in local.values)
+          if (catalog.hiddenUnits.contains(m.file.unitId)) m.file.key,
+      ];
+      if (otherSection.isNotEmpty) await deleteManuals(otherSection);
       if (!_seenInitialized) {
         // First connection: everything on the server is the starting point,
         // not "new", so the bell only lights for later changes.

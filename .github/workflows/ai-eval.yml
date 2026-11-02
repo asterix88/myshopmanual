@@ -38,7 +38,8 @@ jobs:
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
         run: |
           npm ci
-          printf 'GROQ_API_KEY=%s\nDEEPSEEK_API_KEY=%s\nTAVILY_API_KEY=%s\n' "$GROQ_API_KEY" "$DEEPSEEK_API_KEY" "$TAVILY_API_KEY" > .dev.vars
+          # The test asks without logging in; the deployed server requires a login.
+          printf 'GROQ_API_KEY=%s\nDEEPSEEK_API_KEY=%s\nTAVILY_API_KEY=%s\nREQUIRE_LOGIN=0\n' "$GROQ_API_KEY" "$DEEPSEEK_API_KEY" "$TAVILY_API_KEY" > .dev.vars
           nohup npx wrangler dev --local --port 8787 > /tmp/wrangler.log 2>&1 &
           for i in $(seq 1 60); do curl -s http://127.0.0.1:8787/ && break; sleep 2; done
 

@@ -3,13 +3,20 @@
 
 The file has a header row with these columns (any order, any case):
 
-    NRP | Nama | PIN awal | Admin
+    NRP | Nama | PIN awal | Admin | Section | Departemen
 
 - PIN awal: 4 digits, given to the employee for the first login; the app
   then asks for a new PIN. Changing it in the file later resets that
   employee's PIN to the new starting PIN.
 - Admin: "ya" for employees who manage the list in the app (menu
   Kelola karyawan). At least one is needed.
+- Section: which manuals the employee sees, e.g. TRACK or WHEEL; more
+  than one separated by commas ("TRACK, WHEEL"). The names are those of the
+  "SECTION <name>" folders in source/ (see tools/sections.py); SEMUA is seen
+  by everyone anyway. Admins see every section. Without a Section column
+  everyone is TRACK; with one, an empty cell stops the upload.
+- Departemen: only shown in the app's Kelola karyawan (and for its
+  filter); it does not change what the employee sees.
 - An employee removed from the file can no longer log in; putting the row
   back lets them in again.
 
@@ -24,6 +31,7 @@ import argparse
 import csv
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -39,7 +47,24 @@ COLUMNS = {
     "name": ("nama", "name", "nama karyawan"),
     "pin": ("pin awal", "pin", "pin_awal"),
     "admin": ("admin",),
+    "sections": ("section", "sections", "seksi"),
+    "department": ("departemen", "department", "dept"),
 }
+
+DEFAULT_SECTION = "TRACK"
+SECTION_NAME = re.compile(r"^[A-Z0-9][A-Z0-9 _-]*$")
+
+
+def parse_sections(text: str) -> list[str]:
+    """"Track, wheel" -> ["TRACK", "WHEEL"]; "SECTION TRACK" is TRACK too."""
+    names = []
+    for part in re.split(r"[,;/+]", text):
+        name = " ".join(part.split()).upper()
+        if name.startswith("SECTION "):
+            name = name[len("SECTION "):]
+        if name and name not in names:
+            names.append(name)
+    return names
 
 
 def cell_text(value) -> str:
@@ -83,6 +108,7 @@ def parse(rows: list[list[str]]) -> tuple[list[dict], list[str]]:
         return row[i] if i is not None and i < len(row) else ""
 
     employees, seen = [], set()
+    fatal = False
     for n, row in enumerate(rows[header_at + 1:], start=header_at + 2):
         nrp = get(row, "nrp").upper()
         if not nrp:
@@ -97,13 +123,33 @@ def parse(rows: list[list[str]]) -> tuple[list[dict], list[str]]:
         if nrp in seen:
             problems.append(f"Baris {n}: NRP {nrp} dobel.")
             continue
+        if where["sections"] is None:
+            sections = [DEFAULT_SECTION]
+        else:
+            sections = parse_sections(get(row, "sections"))
+            if not sections:
+                problems.append(f"Baris {n} ({nrp}): kolom Section kosong.")
+                fatal = True
+                continue
+            bad = [s for s in sections if not SECTION_NAME.match(s)]
+            if bad:
+                problems.append(f"Baris {n} ({nrp}): nama section tidak dikenali: {', '.join(bad)}")
+                fatal = True
+                continue
         seen.add(nrp)
         employees.append({
+            "sections": sections,
+            "department": " ".join(get(row, "department").split()).upper(),
             "nrp": nrp,
             "name": get(row, "name") or nrp,
             "pin": pin,
             "admin": get(row, "admin").lower() in ("ya", "y", "yes", "admin", "1", "true", "v", "x"),
         })
+    if where["sections"] is None:
+        problems.append(f"Kolom 'Section' belum ada: semua karyawan dianggap section {DEFAULT_SECTION}.")
+    if fatal:
+        # A skipped row would log that employee out, so nothing is uploaded.
+        return [], problems + ["Perbaiki kolom Section di baris di atas, lalu jalankan lagi."]
     return employees, problems
 
 
@@ -121,6 +167,12 @@ def main() -> int:
         print("PERIKSA  " + p)
     admins = [e["name"] for e in employees if e["admin"]]
     print(f"{len(employees)} karyawan, admin: {', '.join(admins) or '-'}")
+    counts: dict[str, int] = {}
+    for e in employees:
+        for section in e["sections"]:
+            counts[section] = counts.get(section, 0) + 1
+    if counts:
+        print("Per section: " + ", ".join(f"{k} {v}" for k, v in sorted(counts.items())))
     if not employees:
         return 1
     if not admins:

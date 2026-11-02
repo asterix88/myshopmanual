@@ -6,7 +6,8 @@
 // manual copies the whole file into Cloudflare's cache near the reader, the
 // way the public bucket address did, so later pieces come from there.
 
-import { requireSession, type AuthEnv } from "./auth";
+import { allowedOf, requireSession, type AuthEnv } from "./auth";
+import { filterCatalog, sectionMap, sees, unitOfKey, type Allowed, type Catalog } from "./sections";
 
 export interface FilesEnv extends AuthEnv {
   BUCKET: R2Bucket;
@@ -32,6 +33,42 @@ function parseRange(header: string | null, size: number): Range | null | "bad" {
 
 const filling = new Set<string>();
 
+// Section of every unit, read from catalog.json and kept for a minute per
+// Worker instance, so a file request does not read the catalog each time.
+let sections: { at: number; map: Map<string, string> } | null = null;
+
+async function readCatalog(env: FilesEnv): Promise<Catalog | null> {
+  const object = await env.BUCKET.get("catalog.json");
+  if (!object) return null;
+  const catalog = (await object.json()) as Catalog;
+  sections = { at: Date.now(), map: sectionMap(catalog) };
+  return catalog;
+}
+
+async function unitAllowed(env: FilesEnv, unit: string, allowed: string[]): Promise<boolean> {
+  if (!sections || Date.now() - sections.at > 60_000) await readCatalog(env);
+  let section = sections?.map.get(unit);
+  // A unit added in the last minute: read the catalog again, at most every 5 s.
+  if (section === undefined && sections && Date.now() - sections.at > 5_000) {
+    await readCatalog(env);
+    section = sections?.map.get(unit);
+  }
+  return section !== undefined && sees(allowed, section);
+}
+
+async function catalogFor(env: FilesEnv, request: Request, allowed: Allowed): Promise<Response> {
+  if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405 });
+  const catalog = await readCatalog(env);
+  if (!catalog) return new Response("Not found", { status: 404 });
+  const text = JSON.stringify(filterCatalog(catalog, allowed));
+  const headers = new Headers({
+    "content-type": "application/json",
+    "cache-control": "private, no-store",
+    "content-length": String(new TextEncoder().encode(text).length),
+  });
+  return new Response(request.method === "HEAD" ? null : text, { headers });
+}
+
 const versionKey = (version: string, key: string) =>
   `https://files.mymanual.my.id/__cache/v/${version}/${encodeURIComponent(key)}`;
 
@@ -41,15 +78,24 @@ export async function handleFiles(request: Request, env: FilesEnv, ctx: Executio
   }
   // update.bat warms new manuals with the admin code; phones use their session.
   const code = request.headers.get("x-admin-code");
+  let allowed: Allowed = null;
   if (!(env.OWNER_CODE && code && code.trim() === env.OWNER_CODE.trim())) {
     const auth = await requireSession(env, request);
     if (auth.error) return auth.error;
+    allowed = allowedOf(auth.session);
   }
 
   const url = new URL(request.url);
   const key = decodeURIComponent(url.pathname.slice(1));
   if (!key || key.includes("..")) return new Response("Not found", { status: 404 });
   const started = Date.now();
+
+  // Each phone gets only its sections' units (sections.ts).
+  if (key === "catalog.json") return catalogFor(env, request, allowed);
+  const unit = unitOfKey(key);
+  if (unit !== null && allowed !== null && !(await unitAllowed(env, unit, allowed))) {
+    return new Response("Bukan section Anda", { status: 403 });
+  }
 
   // The app names the file's version (the start of its sha256 from the
   // catalog), so a piece already in the cache is served without asking the

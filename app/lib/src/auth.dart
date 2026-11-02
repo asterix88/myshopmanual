@@ -25,6 +25,8 @@ class Session {
     required this.admin,
     required this.issuedAt,
     required this.expiresAt,
+    this.sections = const [],
+    this.department = '',
   });
 
   factory Session.fromJson(Map<String, dynamic> json) => Session(
@@ -32,6 +34,8 @@ class Session {
         nrp: json['nrp'] as String,
         name: json['name'] as String? ?? json['nrp'] as String,
         admin: json['admin'] as bool? ?? false,
+        sections: [for (final s in json['sections'] as List? ?? const []) s as String],
+        department: json['department'] as String? ?? '',
         issuedAt: DateTime.fromMillisecondsSinceEpoch((json['iat'] as num).toInt() * 1000),
         expiresAt: DateTime.fromMillisecondsSinceEpoch((json['exp'] as num).toInt() * 1000),
       );
@@ -40,8 +44,13 @@ class Session {
   final String nrp;
   final String name;
 
-  /// Sees "Kelola karyawan" and has no daily nyel AI limit.
+  /// Sees "Kelola karyawan", every section, and has no daily nyel AI limit.
   final bool admin;
+
+  /// The Section column of karyawan.xlsx (TRACK, WHEEL, ...); empty in
+  /// sessions saved before sections. The server decides what it shows.
+  final List<String> sections;
+  final String department;
   final DateTime issuedAt;
 
   /// 30 days after the last swap: past it the app logs out by itself.
@@ -57,6 +66,8 @@ class Session {
         'nrp': nrp,
         'name': name,
         'admin': admin,
+        if (sections.isNotEmpty) 'sections': sections,
+        if (department.isNotEmpty) 'department': department,
         'iat': issuedAt.millisecondsSinceEpoch ~/ 1000,
         'exp': expiresAt.millisecondsSinceEpoch ~/ 1000,
       };
@@ -106,6 +117,8 @@ class Employee {
     required this.devices,
     required this.aiToday,
     this.resetAt,
+    this.sections = const [],
+    this.department = '',
   });
 
   factory Employee.fromJson(Map<String, dynamic> json) => Employee(
@@ -119,6 +132,8 @@ class Employee {
             : DateTime.fromMillisecondsSinceEpoch((json['seen'] as num).toInt() * 1000),
         devices: (json['devices'] as List? ?? const []).cast<String>(),
         aiToday: (json['ai_today'] as num? ?? 0).toInt(),
+        sections: [for (final s in json['sections'] as List? ?? const ['TRACK']) s as String],
+        department: json['dept'] as String? ?? '',
         resetAt: json['reset'] == null
             ? null
             : DateTime.fromMillisecondsSinceEpoch((json['reset'] as num).toInt() * 1000),
@@ -134,6 +149,10 @@ class Employee {
   final DateTime? lastSeen;
   final List<String> devices;
   final int aiToday;
+
+  /// Section and Departemen columns of karyawan.xlsx.
+  final List<String> sections;
+  final String department;
 
   /// When the employee tapped "Lupa PIN"; null when there is no request.
   DateTime? resetAt;

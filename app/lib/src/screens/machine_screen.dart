@@ -9,7 +9,7 @@ import '../widgets/unit_icon.dart';
 import 'shell.dart';
 import 'unit_screen.dart';
 
-/// One machine folder (EXCAVATOR, BULLDOZER): the unit models inside it.
+/// One Home folder (EXCAVATOR, BULLDOZER, HD, ...): the unit models inside it.
 class MachineScreen extends StatelessWidget {
   const MachineScreen({super.key, required this.machine});
 
@@ -18,7 +18,7 @@ class MachineScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    final units = store.units.where((u) => u.machine == machine).toList();
+    final units = store.homeUnits.where((u) => u.machine == machine).toList();
     return Scaffold(
       appBar: AppBar(
         title: Column(

@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
 """Build per-unit download packages for MyShopManual.
 
-Input layout (one folder per unit model, PDFs inside):
+Input layout (one folder per unit model, PDFs inside), grouped by section
+and by the folder (kelompok) the app shows on Home; see sections.py:
 
     source/
-      PC210/  Shop Manual PC210.pdf, OMM PC210.pdf, Partsbook PC210.pdf
-      D85/    ...
+      SECTION TRACK/
+        EXCAVATOR/
+          PC210/  Shop Manual PC210.pdf, OMM PC210.pdf, Partsbook PC210.pdf
+        BULLDOZER/
+          D85/    ...
+      SECTION WHEEL/
+        HD/
+          HD785-7/ ...
+
+Unit folders straight in source/ (the layout before sections) still work:
+they are section TRACK.
 
 Output layout (what gets uploaded to Cloudflare R2):
 
@@ -76,6 +86,7 @@ from pathlib import Path
 import pymupdf
 
 import susunan
+from sections import find_units, is_duplicate_problem
 
 # A page with fewer extracted characters than this is treated as image-only.
 MIN_CHARS_PER_PAGE = 40
@@ -871,23 +882,50 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
     }
 
 
+def placed(section: str, kelompok: str) -> dict:
+    """The catalog fields saying where a unit shows: its section, and the
+    Home folder when the source layout names one (otherwise the app guesses
+    it from the model code, as before sections)."""
+    return {"section": section, "kelompok": kelompok}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("source", type=Path, help="folder with one subfolder per unit")
-    parser.add_argument("dist", type=Path, help="output folder to upload")
+    parser.add_argument("source", type=Path, help="folder with the section and unit folders")
+    parser.add_argument("dist", type=Path, nargs="?", help="output folder to upload")
+    parser.add_argument("--list", action="store_true",
+                        help="only list the unit folders by section (for update-unit.bat)")
     parser.add_argument("--only", nargs="*", help="build only these unit ids")
     parser.add_argument("--skip-scanned", action="store_true",
                         help="leave out PDFs without a text layer instead of shipping them unsearchable")
     parser.add_argument("--no-ocr", action="store_true",
                         help="do not read scanned PDFs with Tesseract OCR")
     args = parser.parse_args()
+    found, problems = find_units(args.source)
+    if args.list:
+        section = None
+        for unit_dir, sec, kelompok in sorted(found, key=lambda u: (u[1], u[2], u[0].name)):
+            if sec != section:
+                print(f"  [{sec}]")
+                section = sec
+            print(f"    {unit_dir.name}" + (f"  ({kelompok})" if kelompok else ""))
+        return 0
+    if args.dist is None:
+        parser.error("the dist folder is missing")
+    for problem in problems:
+        print(f"PERINGATAN: {problem}" if not is_duplicate_problem(problem) else f"GAGAL: {problem}",
+              file=sys.stderr)
+    if any(is_duplicate_problem(p) for p in problems):
+        print("Ganti nama salah satu folder unit, lalu jalankan lagi.", file=sys.stderr)
+        return 1
+    place = {unit_dir.name: (sec, kelompok) for unit_dir, sec, kelompok in found}
     try:
         import pikepdf  # noqa: F401  (used by write_pdf)
     except ImportError:
         print("pikepdf belum terpasang: jalankan  pip install -r tools/requirements.txt", file=sys.stderr)
         return 1
 
-    unit_dirs = sorted(d for d in args.source.iterdir() if d.is_dir())
+    unit_dirs = [unit_dir for unit_dir, _, _ in found]
     if args.only:
         # Folder names typed on Windows may differ in case (pc210 vs PC210).
         wanted = {name.strip().upper() for name in args.only}
@@ -922,14 +960,15 @@ def main() -> int:
         started = time.time()
         unit = build_unit(unit_dir, args.dist, not args.skip_scanned,
                           previous_units.get(unit_dir.name, {}), now, ocr_exe)
-        built[unit["id"]] = unit
+        built[unit["id"]] = {**unit, **placed(*place[unit_dir.name])}
         print(f"  done in {time.time() - started:.1f}s, {unit['size'] / 1e6:.1f} MB")
 
     # Units not rebuilt this run stay listed while their source folder exists.
-    existing = {d.name for d in args.source.iterdir() if d.is_dir()}
+    # A unit folder moved to another section or kelompok moves in the
+    # catalog too, without being rebuilt.
     for unit_id, unit in previous_units.items():
-        if unit_id not in built and unit_id in existing:
-            built[unit_id] = unit
+        if unit_id not in built and unit_id in place:
+            built[unit_id] = {**unit, **placed(*place[unit_id])}
 
     catalog = {
         "schema": 1,
