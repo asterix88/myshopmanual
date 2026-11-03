@@ -7,6 +7,10 @@
 // Plain SQL on the SQLite of one Durable Object; the functions take the
 // database as a parameter so the tests run them on node:sqlite.
 
+/// The job site. Everyone is at SBS for now; each event carries it already,
+/// so other sites can join later without rewriting old data.
+export const DEFAULT_SITE = "SBS";
+
 export interface Sql {
   exec(query: string, ...bindings: unknown[]): { toArray(): Record<string, unknown>[] };
 }
@@ -29,7 +33,8 @@ export type StatEvent = {
   extra?: unknown;
 };
 
-export type Who = { nrp: string; name: string; sections: string[] };
+/// site: the job site (sections.ts DEFAULT_SITE until there are others).
+export type Who = { nrp: string; name: string; sections: string[]; site?: string };
 
 const KINDS = new Set<Kind>(["open", "chapter", "download", "search", "ai", "rate"]);
 const LIST = 20;
@@ -38,6 +43,7 @@ export function setup(sql: Sql): void {
   sql.exec(`CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY,
     at INTEGER NOT NULL,
+    site TEXT NOT NULL DEFAULT 'SBS',
     nrp TEXT NOT NULL,
     name TEXT NOT NULL,
     secs TEXT NOT NULL,
@@ -102,8 +108,8 @@ export function add(sql: Sql, who: Who, events: StatEvent[]): void {
     // in it. Phones without the picker leave it empty for several sections.
     const sec = e.sec && who.sections.includes(e.sec) ? e.sec : who.sections.length === 1 ? who.sections[0] : "";
     sql.exec(
-      "INSERT INTO events (at, nrp, name, secs, sec, kind, unit, file, title, q, hits, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      e.at, who.nrp, who.name, secs, sec, e.kind, e.unit ?? "", e.file ?? "", e.title ?? "", e.q ?? "", e.hits ?? 0,
+      "INSERT INTO events (at, site, nrp, name, secs, sec, kind, unit, file, title, q, hits, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      e.at, who.site ?? DEFAULT_SITE, who.nrp, who.name, secs, sec, e.kind, e.unit ?? "", e.file ?? "", e.title ?? "", e.q ?? "", e.hits ?? 0,
       e.extra === undefined ? "" : JSON.stringify(e.extra),
     );
   }

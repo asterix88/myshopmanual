@@ -186,3 +186,10 @@ test("the Excel report is a zip with one sheet per list", async () => {
   assert.match(text, /seal &lt;kit&gt; &amp; o-ring/);
   assert.match(text, /<v>12<\/v>/);
 });
+
+test("each event carries its job site (SBS for now)", () => {
+  const sql = fresh();
+  db.add(sql, ali, [{ at: now, kind: "search", q: "seal", hits: 1 }]);
+  db.add(sql, { ...budi, site: "MIFA" }, [{ at: now, kind: "search", q: "seal", hits: 1 }]);
+  assert.deepEqual(sql.exec("SELECT site FROM events ORDER BY id").toArray().map((r) => r.site), ["SBS", "MIFA"]);
+});
