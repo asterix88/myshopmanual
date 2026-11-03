@@ -19,6 +19,8 @@ export type Kind = "open" | "chapter" | "download" | "search" | "ai" | "rate";
 export type StatEvent = {
   at: number;
   kind: Kind;
+  /// The section open on the phone when it happened (Home's section picker).
+  sec?: string;
   unit?: string;
   file?: string;
   title?: string;
@@ -39,6 +41,7 @@ export function setup(sql: Sql): void {
     nrp TEXT NOT NULL,
     name TEXT NOT NULL,
     secs TEXT NOT NULL,
+    sec TEXT NOT NULL DEFAULT '',
     kind TEXT NOT NULL,
     unit TEXT NOT NULL DEFAULT '',
     file TEXT NOT NULL DEFAULT '',
@@ -72,6 +75,7 @@ export function clean(raw: unknown, now = Date.now()): StatEvent[] {
     const event: StatEvent = {
       at: at > now - 90 * 86400_000 && at <= now + 3600_000 ? Math.min(at, now) : now,
       kind,
+      sec: str(e.sec, 40).toUpperCase(),
       unit: str(e.unit, 80),
       file: str(e.file, 300),
       title: str(e.title, 200),
@@ -94,9 +98,12 @@ export function clean(raw: unknown, now = Date.now()): StatEvent[] {
 export function add(sql: Sql, who: Who, events: StatEvent[]): void {
   const secs = `,${who.sections.join(",")},`;
   for (const e of events) {
+    // Counted in the section that was open; an NRP with one section is always
+    // in it. Phones without the picker leave it empty for several sections.
+    const sec = e.sec && who.sections.includes(e.sec) ? e.sec : who.sections.length === 1 ? who.sections[0] : "";
     sql.exec(
-      "INSERT INTO events (at, nrp, name, secs, kind, unit, file, title, q, hits, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      e.at, who.nrp, who.name, secs, e.kind, e.unit ?? "", e.file ?? "", e.title ?? "", e.q ?? "", e.hits ?? 0,
+      "INSERT INTO events (at, nrp, name, secs, sec, kind, unit, file, title, q, hits, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      e.at, who.nrp, who.name, secs, sec, e.kind, e.unit ?? "", e.file ?? "", e.title ?? "", e.q ?? "", e.hits ?? 0,
       e.extra === undefined ? "" : JSON.stringify(e.extra),
     );
   }
@@ -105,9 +112,11 @@ export function add(sql: Sql, who: Who, events: StatEvent[]): void {
 /// since: ms (0 = all time); section: "" = every section.
 export type Filter = { since: number; section: string };
 
+/// The section filter uses the section that was open; events without one
+/// (several sections, older phone) count in each of the reader's sections.
 const where = (f: Filter, alias = "") =>
-  `${alias}at >= ${Math.floor(f.since)} AND (? = '' OR ${alias}secs LIKE ?)`;
-const binds = (f: Filter) => [f.section, `%,${f.section},%`];
+  `${alias}at >= ${Math.floor(f.since)} AND (? = '' OR ${alias}sec = ? OR (${alias}sec = '' AND ${alias}secs LIKE ?))`;
+const binds = (f: Filter) => [f.section, f.section, `%,${f.section},%`];
 
 type Row = Record<string, unknown>;
 const rows = (sql: Sql, query: string, ...b: unknown[]) => sql.exec(query, ...b).toArray();
@@ -143,7 +152,7 @@ export function overview(sql: Sql, f: Filter, sharedUnits: string[]) {
 
   const questions = rows(
     sql,
-    `SELECT id, at, nrp, name, secs, unit, q FROM events WHERE kind = 'ai' AND ${w} ORDER BY at DESC, id DESC LIMIT ${LIST}`,
+    `SELECT id, at, nrp, name, secs, sec, unit, q FROM events WHERE kind = 'ai' AND ${w} ORDER BY at DESC, id DESC LIMIT ${LIST}`,
     ...b,
   ).map(question);
 
@@ -197,6 +206,7 @@ export function overview(sql: Sql, f: Filter, sharedUnits: string[]) {
     missing,
     people,
     last: Object.fromEntries(lastSeen(sql)),
+    by_section: activeBySection(sql, f.since),
   };
 }
 
@@ -209,9 +219,22 @@ function parse(v: unknown): Extra {
   }
 }
 
+/// The section the event happened in, or the reader's sections when unknown.
+const sectionsOf = (r: Row) => (s(r.sec) ? [s(r.sec)] : secsOf(r.secs));
+
 const question = (r: Row) => ({
-  id: n(r.id), at: n(r.at), nrp: s(r.nrp), name: s(r.name), sections: secsOf(r.secs), unit: s(r.unit), q: s(r.q),
+  id: n(r.id), at: n(r.at), nrp: s(r.nrp), name: s(r.name), sections: sectionsOf(r), unit: s(r.unit), q: s(r.q),
 });
+
+/// Who used the app in each section since [since]: the section that was
+/// open, or each of the reader's sections when that is unknown.
+export function activeBySection(sql: Sql, since: number): Record<string, string[]> {
+  const out: Record<string, Set<string>> = {};
+  for (const r of rows(sql, `SELECT DISTINCT nrp, sec, secs FROM events WHERE kind != 'rate' AND at >= ${Math.floor(since)}`)) {
+    for (const sec of sectionsOf(r)) (out[sec] ??= new Set()).add(s(r.nrp));
+  }
+  return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, [...v]]));
+}
 
 /// The last time each NRP did anything, any period.
 export function lastSeen(sql: Sql): Map<string, number> {
@@ -262,7 +285,7 @@ export function person(sql: Sql, f: Filter, nrp: string) {
   ).map((r) => ({ file: s(r.file), unit: s(r.unit), title: s(r.title), n: n(r.n) }));
   const questions = rows(
     sql,
-    `SELECT id, at, nrp, name, secs, unit, q FROM events WHERE nrp = ? AND kind = 'ai' AND ${at} ORDER BY at DESC LIMIT 5`,
+    `SELECT id, at, nrp, name, secs, sec, unit, q FROM events WHERE nrp = ? AND kind = 'ai' AND ${at} ORDER BY at DESC LIMIT 5`,
     nrp,
   ).map(question);
   return {
@@ -273,7 +296,7 @@ export function person(sql: Sql, f: Filter, nrp: string) {
 
 /// One nyel AI question with its answer and the rating it got, if any.
 export function answer(sql: Sql, id: number) {
-  const r = rows(sql, "SELECT id, at, nrp, name, secs, unit, q, extra FROM events WHERE id = ? AND kind = 'ai'", id)[0];
+  const r = rows(sql, "SELECT id, at, nrp, name, secs, sec, unit, q, extra FROM events WHERE id = ? AND kind = 'ai'", id)[0];
   if (!r) return null;
   const x = parse(r.extra);
   const rate = rows(
@@ -293,9 +316,9 @@ export function answer(sql: Sql, id: number) {
 export function search(sql: Sql, f: Filter, q: string) {
   const who = rows(
     sql,
-    `SELECT nrp, name, secs, at FROM events WHERE kind = 'search' AND LOWER(q) = ? AND ${where(f)} ORDER BY at DESC LIMIT 30`,
+    `SELECT nrp, name, secs, sec, at FROM events WHERE kind = 'search' AND LOWER(q) = ? AND ${where(f)} ORDER BY at DESC LIMIT 30`,
     q.toLowerCase(), ...binds(f),
-  ).map((r) => ({ nrp: s(r.nrp), name: s(r.name), sections: secsOf(r.secs), at: n(r.at) }));
+  ).map((r) => ({ nrp: s(r.nrp), name: s(r.name), sections: sectionsOf(r), at: n(r.at) }));
   return { q: q.toLowerCase(), n: who.length, people: new Set(who.map((w) => w.nrp)).size, who };
 }
 

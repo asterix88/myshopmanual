@@ -64,6 +64,7 @@ const who = (s: Session): db.Who => ({ nrp: s.n, name: s.nm, sections: s.s?.leng
 
 /// A 👍/👎 on a nyel AI answer (src/feedback.ts).
 export async function recordRating(env: StatsEnv, s: Session, good: boolean, question: string): Promise<void> {
+  if (s.a) return;
   await stub(env).add(who(s), [{ at: Date.now(), kind: "rate", q: question.trim().slice(0, 1000), hits: good ? 1 : 0 }]);
 }
 
@@ -82,6 +83,8 @@ export async function handleStats(request: Request, env: StatsEnv, path: string)
   if (path === "/stats") {
     const auth = await requireSession(env, request);
     if (auth.error) return auth.error;
+    // Admins test the app; their use is not what the statistics are about.
+    if (auth.session.a) return json({ ok: true, saved: 0 });
     const events = db.clean(b.events);
     if (events.length) await stub(env).add(who(auth.session), events);
     return json({ ok: true, saved: events.length });
@@ -119,13 +122,14 @@ async function overview(env: StatsEnv, f: db.Filter) {
   const shared = (catalog?.units ?? []).filter((u) => unitSection(u) === SHARED_SECTION).map((u) => u.id);
   const o = await stub(env).overview(f, shared);
 
-  const staff = [...employees].filter(([, r]) => r.active);
+  // Admins are not counted (their use is not recorded either).
+  const staff = [...employees].filter(([, r]) => r.active && !r.admin);
   const all = [...new Set(staff.flatMap(([, r]) => r.sections))].filter((x) => x !== SHARED_SECTION);
   const sections = [...ORDER, ...all.filter((x) => !ORDER.includes(x)).sort()];
   const inSection = (r: Row) => !f.section || r.sections.includes(f.section);
   const users = staff.filter(([, r]) => inSection(r));
   const busy = new Set(o.people.map((p) => p.nrp));
-  const { last, ...rest } = o;
+  const { last, by_section, ...rest } = o;
 
   return {
     ...rest,
@@ -134,10 +138,13 @@ async function overview(env: StatsEnv, f: db.Filter) {
     active: users.filter(([nrp]) => busy.has(nrp)).length,
     per_section: (f.section ? [f.section] : sections).map((sec) => {
       const members = staff.filter(([, r]) => r.sections.includes(sec));
-      return { section: sec, total: members.length, active: members.filter(([nrp]) => busy.has(nrp)).length };
+      const there = new Set(by_section[sec] ?? []);
+      return { section: sec, total: members.length, active: members.filter(([nrp]) => there.has(nrp)).length };
     }),
     // Names from the employee list, which follows karyawan.xlsx.
-    people: o.people.map((p) => ({ ...p, name: employees.get(p.nrp)?.name ?? p.name })),
+    people: o.people
+      .filter((p) => !employees.get(p.nrp)?.admin)
+      .map((p) => ({ ...p, name: employees.get(p.nrp)?.name ?? p.name })),
     inactive: users
       .filter(([nrp]) => !busy.has(nrp))
       .map(([nrp, r]) => ({

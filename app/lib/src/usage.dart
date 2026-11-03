@@ -14,7 +14,13 @@ import 'models.dart';
 /// so what was done offline arrives later; the server adds who it was from
 /// the session.
 class UsageLog {
-  UsageLog({required this.path, required this.client, required this.endpoint, required this.enabled});
+  UsageLog({
+    required this.path,
+    required this.client,
+    required this.endpoint,
+    required this.enabled,
+    required this.section,
+  });
 
   final String path;
 
@@ -24,6 +30,10 @@ class UsageLog {
 
   /// Only logged-in phones send anything.
   final bool Function() enabled;
+
+  /// The section open on Home: an NRP with several sections is counted in
+  /// the one it was using.
+  final String Function() section;
 
   /// Events not sent yet, oldest first; the oldest go when there are too
   /// many (a phone offline for weeks).
@@ -63,7 +73,7 @@ class UsageLog {
   /// while the file is still being read.
   Future<void> _add(Map<String, dynamic> event) {
     if (!enabled()) return Future.value();
-    final entry = {'at': DateTime.now().millisecondsSinceEpoch, ...event};
+    final entry = {'at': DateTime.now().millisecondsSinceEpoch, 'sec': section(), ...event};
     return _adding = _adding.catchError((_) {}).then((_) async {
       final queue = await _load();
       queue.add(entry);

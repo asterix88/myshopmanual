@@ -398,7 +398,9 @@ class AppStore extends ChangeNotifier {
     path: p.join(_root.path, 'usage.json'),
     client: _client,
     endpoint: Uri.parse('$aiUrl/stats'),
-    enabled: () => loggedIn,
+    // Admins test the app; their use is not counted.
+    enabled: () => loggedIn && !(session?.admin ?? false),
+    section: () => homeSection,
   );
 
   /// Cetok Online's parts stock (its own server), opened from the Home tab.

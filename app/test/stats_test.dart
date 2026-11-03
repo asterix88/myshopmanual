@@ -92,6 +92,7 @@ void main() {
     await again.usage.send();
     expect(sent.map((e) => e['kind']), ['open', 'search', 'ai']);
     expect(sent.first['file'], f.key);
+    expect(sent.first['sec'], 'TRACK');
     sent.clear();
     await again.usage.send();
     expect(sent, isEmpty);

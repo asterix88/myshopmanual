@@ -142,3 +142,23 @@ test("topics count each question once and group fault codes", () => {
     ],
   );
 });
+
+test("an NRP with several sections counts in the section that was open", () => {
+  const sql = fresh();
+  const head = { nrp: "S9", name: "Sari", sections: ["TRACK", "WHEEL", "SUPPORT"] };
+  const hd = { file: "units/HD785/sm.pdf", unit: "HD785", title: "Shop Manual HD785" };
+  db.add(sql, head, db.clean([{ at: now - day, kind: "open", sec: "wheel", ...hd }], now));
+  // A section the NRP does not have is not trusted; an older phone sends none.
+  db.add(sql, head, db.clean([{ at: now - day, kind: "open", sec: "MINING", ...hd }], now));
+  const wheel = db.overview(sql, { since: 0, section: "WHEEL" }, []);
+  const track = db.overview(sql, { since: 0, section: "TRACK" }, []);
+  assert.equal(wheel.opens, 2);
+  assert.equal(track.opens, 1);
+  assert.deepEqual(wheel.by_section.WHEEL, ["S9"]);
+  assert.deepEqual(wheel.by_section.TRACK, ["S9"]);
+
+  // One section: always that one.
+  const sql2 = fresh();
+  db.add(sql2, ali, db.clean([{ at: now - day, kind: "search", q: "seal", hits: 0 }], now));
+  assert.equal(db.search(sql2, { since: 0, section: "TRACK" }, "seal").who[0].sections[0], "TRACK");
+});
