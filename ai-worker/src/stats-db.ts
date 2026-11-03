@@ -33,7 +33,7 @@ export type StatEvent = {
   extra?: unknown;
 };
 
-/// site: the job site (sections.ts DEFAULT_SITE until there are others).
+/// site: the job site (DEFAULT_SITE above until there are others).
 export type Who = { nrp: string; name: string; sections: string[]; site?: string };
 
 const KINDS = new Set<Kind>(["open", "chapter", "download", "search", "ai", "rate"]);
