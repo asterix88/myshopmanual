@@ -932,7 +932,7 @@ class _AiTab extends StatelessWidget {
                 ),
             ],
           ),
-        const SizedBox(height: 14),
+        const _Caps('Penilaian jawaban'),
         AppCard(
           padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
           child: Row(
