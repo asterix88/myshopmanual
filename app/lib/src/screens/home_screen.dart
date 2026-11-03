@@ -51,6 +51,8 @@ class HomeScreen extends StatelessWidget {
               duration: const Duration(milliseconds: 500),
               child: _Header(
                 name: store.session?.name,
+                section: store.sections.length > 1 ? store.homeSection : null,
+                onPickSection: () => pickSection(context, store),
                 onSearch: onOpenSearch,
                 actions: [
                   IconButton(
@@ -270,11 +272,21 @@ class _OfflineBanner extends StatelessWidget {
 }
 
 /// The navy top of Home: logo, "Selamat siang, Anas", the bell and menu,
-/// and the search box that opens the Cari tab.
+/// and the search box that opens the Cari tab. For an NRP with several
+/// sections the line under the name is the section shown ("Wheel ▾"), and
+/// tapping the logo or name opens [pickSection].
 class _Header extends StatelessWidget {
-  const _Header({required this.name, required this.onSearch, required this.actions});
+  const _Header({
+    required this.name,
+    required this.section,
+    required this.onPickSection,
+    required this.onSearch,
+    required this.actions,
+  });
 
   final String? name;
+  final String? section;
+  final VoidCallback onPickSection;
   final VoidCallback onSearch;
   final List<Widget> actions;
 
@@ -291,33 +303,84 @@ class _Header extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: ClipOval(child: Image.asset('assets/images/logo.png')),
-              ),
-              const SizedBox(width: 10),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // "My" white, "Manual" in the app's orange.
-                    Text.rich(
-                      TextSpan(
-                        text: 'My',
-                        children: [TextSpan(text: 'Manual', style: TextStyle(color: AppColors.orange))],
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: InkWell(
+                      key: const Key('home-brand'),
+                      onTap: section == null ? null : onPickSection,
+                      borderRadius: BorderRadius.circular(14),
+                      highlightColor: Colors.white.withValues(alpha: .10),
+                      splashColor: Colors.white.withValues(alpha: .14),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(2, 2, 10, 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 42,
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                              child: ClipOval(child: Image.asset('assets/images/logo.png')),
+                            ),
+                            const SizedBox(width: 10),
+                            Flexible(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // "My" white, "Manual" in the app's orange.
+                                  Text.rich(
+                                    TextSpan(
+                                      text: 'My',
+                                      children: [
+                                        TextSpan(
+                                          text: 'Manual',
+                                          style: TextStyle(color: AppColors.orange),
+                                        ),
+                                      ],
+                                    ),
+                                    style: const TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                  if (section case final s?)
+                                    Row(
+                                      key: const Key('home-section'),
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            titleCase(s),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(fontSize: 12, color: Color(0xFFC9D3E3)),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 2),
+                                        const AppIcon(AppGlyph.chevronDown, size: 16, color: Color(0xFFC9D3E3)),
+                                      ],
+                                    )
+                                  else
+                                    Text(
+                                      greeting(name),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 12, color: Color(0xFFC9D3E3)),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2),
                     ),
-                    Text(
-                      greeting(name),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, color: Color(0xFFC9D3E3)),
-                    ),
-                  ],
+                  ),
                 ),
               ),
               ...actions,
@@ -351,6 +414,106 @@ class _Header extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The "Pilih section" sheet: each of the NRP's sections with its Home
+/// folders, the shown one ticked. Picking another switches Home and says so.
+Future<void> pickSection(BuildContext context, AppStore store) async {
+  final current = store.homeSection;
+  final picked = await showModalBottomSheet<String>(
+    context: context,
+    showDragHandle: true,
+    backgroundColor: AppColors.surface,
+    builder: (context) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Pilih section',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.ink),
+              ),
+            ),
+            for (final section in store.sections)
+              _SectionRow(
+                section: section,
+                folders: [
+                  for (final m in Machine.ordered([
+                    for (final u in store.units)
+                      if (u.section == section) u,
+                  ]))
+                    titleCase(m.label),
+                ].join(', '),
+                selected: section == current,
+                onTap: () => Navigator.pop(context, section),
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
+  if (picked == null || picked == current || !context.mounted) return;
+  store.setHomeSection(picked);
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text('Section ${titleCase(picked)}'), duration: const Duration(seconds: 2)));
+}
+
+class _SectionRow extends StatelessWidget {
+  const _SectionRow({required this.section, required this.folders, required this.selected, required this.onTap});
+
+  final String section;
+  final String folders;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: selected ? AppColors.navySoft : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          key: Key('section-$section'),
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                AppIcon(AppGlyph.section, size: 22, color: AppColors.navy),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        titleCase(section),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.ink),
+                      ),
+                      if (folders.isNotEmpty)
+                        Text(
+                          folders,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12, color: AppColors.muted),
+                        ),
+                    ],
+                  ),
+                ),
+                if (selected) AppIcon(AppGlyph.check, size: 20, color: AppColors.navy),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -448,7 +611,7 @@ class _ContinueReading extends StatelessWidget {
 /// The home screen's folders, two to a row: the kelompok folders of the
 /// NRP's section (EXCAVATOR and BULLDOZER for Track; HD, DT, GRADER for
 /// Wheel), plus LAINNYA when a unit fits none. An NRP with several sections
-/// picks one above the folders.
+/// picks one from the header ([pickSection]).
 class _MachineFolders extends StatelessWidget {
   const _MachineFolders({required this.store});
 
@@ -457,11 +620,13 @@ class _MachineFolders extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final units = store.homeUnits;
-    final sections = store.sections;
     final machines = Machine.ordered(units);
     Widget card(Machine machine) => _FolderCard(
       machine: machine,
-      units: [for (final u in units) if (u.machine == machine) u],
+      units: [
+        for (final u in units)
+          if (u.machine == machine) u,
+      ],
       store: store,
     );
     return Column(
@@ -474,22 +639,6 @@ class _MachineFolders extends StatelessWidget {
               ? null
               : Text('${units.length} model unit', style: TextStyle(fontSize: 12, color: AppColors.muted)),
         ),
-        if (sections.length > 1)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final section in sections)
-                  ChoiceChip(
-                    label: Text(titleCase(section)),
-                    selected: section == store.homeSection,
-                    onSelected: (_) => store.setHomeSection(section),
-                  ),
-              ],
-            ),
-          ),
         for (var i = 0; i < machines.length; i += 2)
           Padding(
             padding: EdgeInsets.only(top: i == 0 ? 0 : 12),
@@ -514,8 +663,8 @@ class _MachineFolders extends StatelessWidget {
             padding: const EdgeInsets.only(top: 16),
             child: Text(
               store.online == false
-                      ? 'Sambungkan HP ke internet sekali untuk mengambil daftar manual.'
-                      : 'Belum ada manual di server.',
+                  ? 'Sambungkan HP ke internet sekali untuk mengambil daftar manual.'
+                  : 'Belum ada manual di server.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: AppColors.muted),
             ),
@@ -552,9 +701,10 @@ class _HomeLabel extends StatelessWidget {
 /// The type of the Home folder names (Excavator, Bulldozer).
 TextStyle get homeTitleStyle => TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.ink);
 
-/// EXCAVATOR -> Excavator.
-String titleCase(String label) =>
-    label.isEmpty ? label : '${label[0].toUpperCase()}${label.substring(1).toLowerCase()}';
+/// EXCAVATOR -> Excavator; short codes stay capitals (HD, DT).
+String titleCase(String label) => label.length <= 3
+    ? label.toUpperCase() // a code such as HD or DT
+    : '${label[0].toUpperCase()}${label.substring(1).toLowerCase()}';
 
 class _FolderCard extends StatelessWidget {
   const _FolderCard({required this.machine, required this.units, required this.store});
