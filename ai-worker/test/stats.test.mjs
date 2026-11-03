@@ -162,3 +162,27 @@ test("an NRP with several sections counts in the section that was open", () => {
   db.add(sql2, ali, db.clean([{ at: now - day, kind: "search", q: "seal", hits: 0 }], now));
   assert.equal(db.search(sql2, { since: 0, section: "TRACK" }, "seal").who[0].sections[0], "TRACK");
 });
+
+test("a period can end, for the trend and the monthly report", () => {
+  const sql = fresh();
+  seed(sql);
+  const week = db.totals(sql, { since: now - 7 * day, section: "" });
+  assert.deepEqual([week.opens, week.ai, week.nrps.sort()], [4, 2, ["A1", "B2"]]);
+  const before = db.totals(sql, { since: now - 60 * day, until: now - 7 * day, section: "" });
+  assert.deepEqual([before.opens, before.ai, before.nrps], [1, 0, ["A1"]]);
+  const o = db.overview(sql, { since: now - 60 * day, until: now - 7 * day, section: "" }, []);
+  assert.deepEqual([o.opens, o.people.length, o.by_section.TRACK], [1, 1, ["A1"]]);
+});
+
+test("the Excel report is a zip with one sheet per list", async () => {
+  const { xlsx } = await import("../src/xlsx.ts");
+  const bytes = xlsx([
+    { name: "Ringkasan", rows: [["Data", "Nilai"], ["Manual dibuka", 12]] },
+    { name: "Tidak ketemu", rows: [["Kata", "Dicari"], ["seal <kit> & o-ring", 3]] },
+  ]);
+  assert.equal(String.fromCharCode(bytes[0], bytes[1]), "PK");
+  const text = new TextDecoder().decode(bytes);
+  assert.match(text, /xl\/worksheets\/sheet2\.xml/);
+  assert.match(text, /seal &lt;kit&gt; &amp; o-ring/);
+  assert.match(text, /<v>12<\/v>/);
+});

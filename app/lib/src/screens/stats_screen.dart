@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
 
 import '../auth.dart';
 import '../models.dart';
+import '../public_downloads.dart';
 import '../stats.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -97,6 +100,13 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
       appBar: AppBar(
         title: const Text('Statistik pemakaian'),
         shape: Border(bottom: BorderSide(color: AppColors.line)),
+        actions: [
+          IconButton(
+            tooltip: 'Laporan bulanan Excel',
+            onPressed: _report,
+            icon: const Icon(Icons.file_download_outlined),
+          ),
+        ],
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -108,9 +118,9 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _Segmented(
-                  labels: const ['30 hari', 'Semua waktu'],
-                  selected: _filter.allTime ? 1 : 0,
-                  onSelected: (i) => _setFilter(StatsFilter(allTime: i == 1, section: _filter.section)),
+                  labels: StatsFilter.periodLabels,
+                  selected: StatsFilter.periods.indexOf(_filter.period),
+                  onSelected: (i) => _setFilter(_filter.copyWith(period: StatsFilter.periods[i])),
                 ),
                 const SizedBox(height: 10),
                 SingleChildScrollView(
@@ -123,7 +133,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                           child: _Chip(
                             label: section.isEmpty ? 'Semua' : section,
                             selected: _filter.section == section,
-                            onTap: () => _setFilter(StatsFilter(allTime: _filter.allTime, section: section)),
+                            onTap: () => _setFilter(_filter.copyWith(section: section)),
                           ),
                         ),
                     ],
@@ -136,14 +146,31 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                       child: _Number(
                         value: data == null ? '–' : '${data.active} / ${data.users}',
                         label: 'Pengguna aktif',
+                        trend: data?.trendActive,
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Expanded(child: _Number(value: data == null ? '–' : '${data.opens}', label: 'Manual dibuka')),
+                    Expanded(
+                      child: _Number(
+                        value: data == null ? '–' : '${data.opens}',
+                        label: 'Manual dibuka',
+                        trend: data?.trendOpens,
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    Expanded(child: _Number(value: data == null ? '–' : '${data.ai}', label: 'Tanya nyel AI')),
+                    Expanded(
+                      child: _Number(
+                        value: data == null ? '–' : '${data.ai}',
+                        label: 'Tanya nyel AI',
+                        trend: data?.trendAi,
+                      ),
+                    ),
                   ],
                 ),
+                if (data != null && data.needsAction) ...[
+                  const SizedBox(height: 8),
+                  _ActionCard(data: data, onTap: () => _act(data)),
+                ],
                 const SizedBox(height: 6),
               ],
             ),
@@ -181,11 +208,13 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
     if (data.isEmpty) {
       return _Empty(caption: '${_filter.section.isEmpty ? 'Semua section' : _filter.section} · ${_filter.periodLabel}');
     }
+    // With one section chosen, rows need not say it again.
+    final showSection = _filter.section.isEmpty;
     final views = [
       _ManualTab(data: data, onManual: _showManual),
-      _AiTab(data: data, onQuestion: _showAnswer),
+      _AiTab(data: data, onQuestion: _showAnswer, showSection: showSection),
       _SearchTab(data: data, onMissing: _showSearch),
-      _PeopleTab(data: data, onPerson: _openPerson, onInactive: _openInactive),
+      _PeopleTab(data: data, onPerson: _openPerson, onInactive: _openInactive, showSection: showSection),
     ];
     return TabBarView(
       controller: _tabs,
@@ -226,6 +255,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
 
   void _showSearch(String query) => _sheet(_SearchSheet(
         load: _api.search(_filter, query),
+        showSection: _filter.section.isEmpty,
         onHandled: () async {
           try {
             await _api.markHandled(query);
@@ -251,11 +281,101 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
       builder: (_) => _InactivePage(people: data.inactive, sections: _sections),
     ));
   }
+
+  /// "Perlu tindakan": to the searches that found nothing, or else to the
+  /// answers rated wrong.
+  void _act(StatsOverview data) {
+    if (data.missing.isNotEmpty) {
+      _tabs.animateTo(2);
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnswerReportsScreen()));
+    }
+  }
+
+  Future<void> _report() async {
+    final now = DateTime.now();
+    final months = [for (var i = 0; i < 3; i++) DateTime(now.year, now.month - i)];
+    final month = await showModalBottomSheet<DateTime>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: AppColors.surface,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 4),
+              child: Text('Laporan bulanan Excel', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text(
+                _filter.section.isEmpty ? 'Semua section' : _filter.section,
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+            ),
+            for (final (i, m) in months.indexed)
+              ListTile(
+                leading: Icon(Icons.table_chart_outlined, color: AppColors.navy),
+                title: Text(monthLabel(m)),
+                subtitle: i == 0 ? const Text('Bulan berjalan') : null,
+                onTap: () => Navigator.pop(context, m),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (month == null || !mounted) return;
+    final store = StoreScope.read(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final key = '${month.year}-${_two(month.month)}';
+    final name = 'Statistik MyManual $key${_filter.section.isEmpty ? '' : ' ${_filter.section}'}.xlsx';
+    final path = p.join(store.root.path, 'reports', name);
+    messenger.showSnackBar(const SnackBar(content: Text('Membuat laporan…')));
+    try {
+      await _api.report(key, _filter.section, path);
+      final downloads = PublicDownloads.instance;
+      if (await downloads.supported()) {
+        await downloads.save(path, name);
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(SnackBar(
+          content: const Text('Tersimpan di Download/MyManual'),
+          action: SnackBarAction(
+            label: 'Buka',
+            onPressed: () async {
+              if (!await downloads.open(name)) {
+                messenger.showSnackBar(const SnackBar(content: Text('Belum ada aplikasi untuk membuka Excel')));
+              }
+            },
+          ),
+        ));
+      } else {
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(SnackBar(content: Text('Tersimpan: $path')));
+      }
+    } on AuthException catch (e) {
+      messenger.hideCurrentSnackBar();
+      if (mounted) showError(context, e);
+    } on Exception {
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(const SnackBar(content: Text('Laporan tidak bisa disimpan')));
+    }
+  }
 }
 
 // ── Pieces ─────────────────────────────────────────────────────────────
 
 String _two(int n) => n.toString().padLeft(2, '0');
+
+const _months = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+
+/// "Oktober 2026".
+String monthLabel(DateTime m) => '${_months[m.month - 1]} ${m.year}';
 
 /// "10.42" today, "kemarin", "3 hari lalu", or a date.
 String whenLabel(DateTime? t, {DateTime? now}) {
@@ -338,10 +458,13 @@ class _Bar extends StatelessWidget {
 }
 
 class _Number extends StatelessWidget {
-  const _Number({required this.value, required this.label});
+  const _Number({required this.value, required this.label, this.trend});
 
   final String value;
   final String label;
+
+  /// Percent against the period before; null = nothing to compare with.
+  final int? trend;
 
   @override
   Widget build(BuildContext context) => AppCard(
@@ -358,9 +481,65 @@ class _Number extends StatelessWidget {
               ),
             ),
             Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: AppColors.muted)),
+            if (trend case final t?)
+              Text(
+                '${t >= 0 ? '▲' : '▼'} ${t.abs()}%',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: t >= 0 ? AppColors.green : AppColors.danger,
+                ),
+              ),
           ],
         ),
       );
+}
+
+/// One line under the numbers that leads to what an admin can fix.
+class _ActionCard extends StatelessWidget {
+  const _ActionCard({required this.data, required this.onTap});
+
+  final StatsOverview data;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = [
+      if (data.missing.isNotEmpty) '${data.missing.length} kata tidak ketemu',
+      if (data.bad > 0) '${data.bad} jawaban dinilai salah',
+    ];
+    return Material(
+      color: AppColors.orangeSoft,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 9, 8, 9),
+          child: Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: AppColors.orange, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(children: [
+                    const TextSpan(text: 'Perlu tindakan  ', style: TextStyle(fontWeight: FontWeight.w700)),
+                    TextSpan(text: parts.join(' · ')),
+                  ]),
+                  style: TextStyle(fontSize: 12, color: AppColors.ink),
+                ),
+              ),
+              Icon(Icons.chevron_right, size: 20, color: AppColors.orangeText),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _Segmented extends StatelessWidget {
@@ -675,18 +854,19 @@ class _ManualTab extends StatelessWidget {
 }
 
 class _QuestionTile extends StatelessWidget {
-  const _QuestionTile(this.q, {required this.onTap, this.showName = true});
+  const _QuestionTile(this.q, {required this.onTap, this.showName = true, this.showSection = true});
 
   final QuestionRow q;
   final VoidCallback onTap;
   final bool showName;
+  final bool showSection;
 
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final meta = [
       if (showName) q.name,
-      if (showName && q.sections.isNotEmpty) q.sections.join(', '),
+      if (showName && showSection && q.sections.isNotEmpty) q.sections.join(', '),
       if (q.unit.isNotEmpty) _unitName(store, q.unit),
       whenLabel(q.at),
     ];
@@ -718,10 +898,11 @@ class _QuestionTile extends StatelessWidget {
 }
 
 class _AiTab extends StatelessWidget {
-  const _AiTab({required this.data, required this.onQuestion});
+  const _AiTab({required this.data, required this.onQuestion, this.showSection = true});
 
   final StatsOverview data;
   final ValueChanged<int> onQuestion;
+  final bool showSection;
 
   @override
   Widget build(BuildContext context) {
@@ -789,7 +970,9 @@ class _AiTab extends StatelessWidget {
         if (data.questions.isEmpty)
           const _None('Belum ada pertanyaan.')
         else
-          _Rows([for (final q in data.questions) _QuestionTile(q, onTap: () => onQuestion(q.id))]),
+          _Rows([
+            for (final q in data.questions) _QuestionTile(q, showSection: showSection, onTap: () => onQuestion(q.id)),
+          ]),
       ],
     );
   }
@@ -872,11 +1055,12 @@ class _SearchTab extends StatelessWidget {
 }
 
 class _PeopleTab extends StatelessWidget {
-  const _PeopleTab({required this.data, required this.onPerson, required this.onInactive});
+  const _PeopleTab({required this.data, required this.onPerson, required this.onInactive, this.showSection = true});
 
   final StatsOverview data;
   final ValueChanged<String> onPerson;
   final VoidCallback onInactive;
+  final bool showSection;
 
   @override
   Widget build(BuildContext context) {
@@ -897,12 +1081,18 @@ class _PeopleTab extends StatelessWidget {
                         width: 76,
                         child: Text(s.section, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
                       ),
-                      Expanded(child: _Bar(s.total == 0 ? 0 : s.active / s.total)),
-                      SizedBox(
-                        width: 52,
-                        child: Text('${s.active}/${s.total}',
-                            textAlign: TextAlign.right, style: const TextStyle(fontSize: 12)),
-                      ),
+                      if (s.hasManual) ...[
+                        Expanded(child: _Bar(s.total == 0 ? 0 : s.active / s.total)),
+                        SizedBox(
+                          width: 52,
+                          child: Text('${s.active}/${s.total}',
+                              textAlign: TextAlign.right, style: const TextStyle(fontSize: 12)),
+                        ),
+                      ] else
+                        Expanded(
+                          child: Text('belum ada manual',
+                              textAlign: TextAlign.right, style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                        ),
                     ],
                   ),
                 ),
@@ -942,7 +1132,7 @@ class _PeopleTab extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                            Text('${p.nrp} · ${p.sections.join(', ')}',
+                            Text(showSection ? '${p.nrp} · ${p.sections.join(', ')}' : p.nrp,
                                 style: TextStyle(fontSize: 11, color: AppColors.muted)),
                           ],
                         ),
@@ -1212,10 +1402,11 @@ class _AnswerSheetState extends State<_AnswerSheet> {
 }
 
 class _SearchSheet extends StatelessWidget {
-  const _SearchSheet({required this.load, required this.onHandled});
+  const _SearchSheet({required this.load, required this.onHandled, this.showSection = true});
 
   final Future<SearchStats> load;
   final Future<void> Function() onHandled;
+  final bool showSection;
 
   @override
   Widget build(BuildContext context) => _Loading<SearchStats>(
@@ -1243,7 +1434,8 @@ class _SearchSheet extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(w.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                          Text(w.sections.join(', '), style: TextStyle(fontSize: 11, color: AppColors.muted)),
+                          if (showSection)
+                            Text(w.sections.join(', '), style: TextStyle(fontSize: 11, color: AppColors.muted)),
                         ],
                       ),
                     ),
@@ -1296,8 +1488,15 @@ class _PersonPage extends StatelessWidget {
                                 style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                             Text('${p.nrp} · ${p.sections.join(', ')}',
                                 style: TextStyle(fontSize: 12, color: AppColors.muted)),
-                            Text('Terakhir aktif ${whenLabel(p.last)}',
-                                style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              children: [
+                                Text('Terakhir aktif ${whenLabel(p.last)}',
+                                    style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                                _Tag(p.app.isEmpty ? 'app lama' : 'App ${p.app}', warn: p.app.isEmpty),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -1375,6 +1574,18 @@ class _InactivePage extends StatelessWidget {
       appBar: AppBar(
         title: Text('${people.length} belum aktif'),
         shape: Border(bottom: BorderSide(color: AppColors.line)),
+        actions: [
+          IconButton(
+            tooltip: 'Salin daftar',
+            icon: const Icon(Icons.copy_rounded),
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: inactiveText(people, order, groups)));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Daftar disalin')));
+              }
+            },
+          ),
+        ],
       ),
       body: ListView(
         padding: _listPadding,
@@ -1398,9 +1609,18 @@ class _InactivePage extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Text(
-                        p.never || p.last == null ? 'Belum pernah login' : 'Terakhir ${daysAgo(p.last)}',
-                        style: TextStyle(fontSize: 11, color: p.never ? AppColors.amber : AppColors.muted),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            p.never || p.last == null ? 'Belum pernah login' : 'Terakhir ${daysAgo(p.last)}',
+                            style: TextStyle(fontSize: 11, color: p.never ? AppColors.amber : AppColors.muted),
+                          ),
+                          if (p.oldApp && !p.never) ...[
+                            const SizedBox(height: 3),
+                            const _Tag('app lama', warn: true),
+                          ],
+                        ],
                       ),
                     ],
                   ),
@@ -1411,4 +1631,38 @@ class _InactivePage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A small label: the app version, or "app lama" in amber.
+class _Tag extends StatelessWidget {
+  const _Tag(this.text, {this.warn = false});
+
+  final String text;
+  final bool warn;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: warn ? AppColors.amberSoft : AppColors.greenSoft,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: warn ? AppColors.amber : AppColors.green),
+        ),
+      );
+}
+
+/// The "belum aktif" list as text for WhatsApp, by section.
+String inactiveText(List<InactiveRow> people, List<String> order, Map<String, List<InactiveRow>> groups) {
+  final b = StringBuffer('Belum aktif di MyManual (${people.length} orang)\n');
+  for (final section in order) {
+    b.write('\n*$section* (${groups[section]!.length})\n');
+    for (final (i, p) in groups[section]!.indexed) {
+      final note = p.never || p.last == null ? 'belum pernah login' : 'terakhir ${daysAgo(p.last)}';
+      b.write('${i + 1}. ${p.name} (${p.nrp}) - $note${p.oldApp && !p.never ? ', app lama' : ''}\n');
+    }
+  }
+  return b.toString().trimRight();
 }

@@ -33,7 +33,9 @@ export function allowedOf(s: Session): Allowed {
   return s.a ? null : s.s?.length ? s.s : [DEFAULT_SECTION];
 }
 
-type Device = { model: string; seen: number };
+/// app: the app version the phone last reported ("1.0.0 (57)"); missing
+/// for APKs from before the usage statistics.
+type Device = { model: string; seen: number; app?: string };
 
 type Employee = {
   nrp: string;
@@ -74,6 +76,8 @@ export type Row = {
   status: "new" | "active";
   seen: number;
   devices: string[];
+  /// The app version on the phone used last; missing = an older APK.
+  app?: string;
   reset?: number;
 };
 
@@ -179,8 +183,14 @@ function rowOf(e: Employee): Row {
     status: e.must_change && Object.keys(e.devices).length === 0 ? "new" : "active",
     seen: e.last_seen,
     devices: Object.values(e.devices).map((d) => d.model).slice(0, 8),
+    ...appOf(e),
     ...(e.reset_at ? { reset: e.reset_at } : {}),
   };
+}
+
+function appOf(e: Employee): { app?: string } {
+  const last = Object.values(e.devices).sort((a, b) => b.seen - a.seen)[0];
+  return last?.app ? { app: last.app } : {};
 }
 
 const sectionsOf = (e: Employee) => (e.sections?.length ? e.sections : [DEFAULT_SECTION]);
@@ -206,8 +216,9 @@ async function issue(env: AuthEnv, e: Employee): Promise<Response> {
 /// Remembers the phone and when it was last online; written at most once a
 /// day per phone to stay inside KV's free write allowance.
 function touch(e: Employee, device: unknown): boolean {
-  const d = (device ?? {}) as { id?: unknown; model?: unknown };
+  const d = (device ?? {}) as { id?: unknown; model?: unknown; app?: unknown };
   const id = String(d.id ?? "").slice(0, 64);
+  const app = String(d.app ?? "").slice(0, 40);
   const t = now();
   let changed = false;
   if (t - e.last_seen > 86400) {
@@ -216,8 +227,8 @@ function touch(e: Employee, device: unknown): boolean {
   }
   if (id) {
     const old = e.devices[id];
-    if (!old || t - old.seen > 86400) {
-      e.devices[id] = { model: String(d.model ?? "").slice(0, 60) || "HP", seen: t };
+    if (!old || t - old.seen > 86400 || (old.app ?? "") !== app) {
+      e.devices[id] = { model: String(d.model ?? "").slice(0, 60) || "HP", seen: t, ...(app ? { app } : {}) };
       // Phones not seen for 60 days are forgotten.
       for (const [k, v] of Object.entries(e.devices)) if (t - v.seen > 60 * 86400) delete e.devices[k];
       changed = true;

@@ -2,12 +2,15 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mymanual/src/auth.dart';
+import 'package:mymanual/src/screens/search_screen.dart';
 import 'package:mymanual/src/screens/shell.dart';
 import 'package:mymanual/src/screens/stats_screen.dart';
+import 'package:mymanual/src/stats.dart';
 import 'package:mymanual/src/store.dart';
 import 'package:mymanual/src/theme.dart';
 
@@ -41,13 +44,16 @@ Map<String, dynamic> overviewJson() => {
         {'q': 'xyz seal', 'n': 3, 'people': 2},
       ],
       'per_section': [
-        {'section': 'TRACK', 'active': 30, 'total': 40},
+        {'section': 'TRACK', 'active': 30, 'total': 40, 'has_manual': true},
+        {'section': 'SUPPORT', 'active': 0, 'total': 12, 'has_manual': false},
       ],
+      'trend': {'active': 12, 'opens': -8, 'ai': null},
       'people': [
         {'nrp': '1', 'name': 'Ali Akbar', 'sections': ['TRACK'], 'last': DateTime.now().millisecondsSinceEpoch, 'manuals': 12, 'ai': 3, 'searches': 4},
       ],
       'inactive': [
         {'nrp': '2', 'name': 'Budi', 'sections': ['WHEEL'], 'never': true, 'last': 0},
+        {'nrp': '3', 'name': 'Candra', 'sections': ['TRACK'], 'never': false, 'old_app': true, 'last': DateTime.now().millisecondsSinceEpoch},
       ],
     };
 
@@ -96,8 +102,21 @@ void main() {
     sent.clear();
     await again.usage.send();
     expect(sent, isEmpty);
+
+    // Logging out sends what is left first.
+    again.usage.searched('seal kit', 0);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await again.signOut();
+    expect(sent.map((e) => e['q']), ['seal kit']);
     store.dispose();
     again.dispose();
+  });
+
+  test('the phone tells the server its app version', () {
+    final json = const DeviceInfo('id', 'HP').toJson();
+    expect(json['model'], 'HP');
+    // Local and test builds have none; the APK workflow sets it.
+    expect(json.containsKey('app'), isFalse);
   });
 
   test('nothing is kept without a login', () async {
@@ -106,6 +125,63 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 50));
     expect(File('${root.path}/usage.json').existsSync(), isFalse);
     store.dispose();
+  });
+
+  test('the belum aktif list as text for WhatsApp', () {
+    final rows = [
+      InactiveRow({'nrp': '2', 'name': 'Budi', 'sections': ['WHEEL'], 'never': true, 'last': 0}),
+      InactiveRow({'nrp': '3', 'name': 'Candra', 'sections': ['TRACK'], 'old_app': true, 'last': DateTime.now().millisecondsSinceEpoch}),
+    ];
+    final text = inactiveText(rows, ['TRACK', 'WHEEL'], {'TRACK': [rows[1]], 'WHEEL': [rows[0]]});
+    expect(text, 'Belum aktif di MyManual (2 orang)\n\n*TRACK* (1)\n1. Candra (3) - terakhir hari ini, app lama\n\n*WHEEL* (1)\n1. Budi (2) - belum pernah login');
+    expect(monthLabel(DateTime(2026, 10)), 'Oktober 2026');
+  });
+
+  testWidgets('a search counts once it is finished, not the words on the way', (tester) async {
+    late AppStore store;
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer());
+      await store.signIn(testSession(), refreshNow: false);
+    });
+    await tester.pumpWidget(StoreScope(store: store, child: const MaterialApp(home: SearchScreen())));
+    Future<void> settle() async {
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
+      }
+    }
+
+    Future<List<String>> queued() async {
+      // The log is written with real file calls, which go on between pumps.
+      for (var i = 0; i < 6; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.pump();
+      }
+      final file = File('${root.path}/usage.json');
+      final text = file.existsSync() ? file.readAsStringSync() : '[]';
+      return [for (final e in jsonDecode(text) as List) (e as Map)['q'] as String];
+    }
+
+    for (final typed in ['re', 'reli', 'relief valve']) {
+      await tester.enterText(find.byType(TextField), typed);
+      await settle();
+    }
+    expect(await queued(), isEmpty);
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await settle();
+    expect(await queued(), ['relief valve']);
+
+    // Another search replaces it: the first one counts.
+    await tester.enterText(find.byType(TextField), 'seal');
+    await settle();
+    await tester.enterText(find.byType(TextField), 'track roller');
+    await settle();
+    expect(await queued(), ['relief valve', 'seal']);
+
+    // Leaving Cari counts the last one.
+    await tester.pumpWidget(const SizedBox());
+    expect(await queued(), ['relief valve', 'seal', 'track roller']);
+    await tester.runAsync(() async => store.dispose());
   });
 
   test('time labels', () {
@@ -156,6 +232,9 @@ void main() {
       await tester.pump();
     }
     expect(find.text('38 / 52'), findsOneWidget);
+    expect(find.text('▲ 12%'), findsOneWidget);
+    expect(find.text('▼ 8%'), findsOneWidget);
+    expect(find.textContaining('1 kata tidak ketemu · 6 jawaban dinilai salah', findRichText: true), findsOneWidget);
     expect(find.text('Shop Manual'), findsOneWidget);
     expect(find.text('Semua section · 9 orang'), findsOneWidget);
 
@@ -188,7 +267,39 @@ void main() {
     await tester.tap(find.text('Pengguna'));
     await tester.pumpAndSettle();
     expect(find.text('Ali Akbar'), findsOneWidget);
-    expect(find.text('1 belum aktif'), findsOneWidget);
+    expect(find.text('belum ada manual'), findsOneWidget);
+    expect(find.text('2 belum aktif'), findsOneWidget);
+    await tester.tap(find.text('2 belum aktif'));
+    await tester.pumpAndSettle();
+    expect(find.text('app lama'), findsOneWidget);
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String?;
+      return null;
+    });
+    await tester.tap(find.byTooltip('Salin daftar'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(copied, contains('Candra (3)'));
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    // "Perlu tindakan" leads to the searches that found nothing.
+    await tester.tap(find.text('Manual'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('kata tidak ketemu', findRichText: true));
+    await tester.pumpAndSettle();
+    expect(find.text('xyz seal'), findsOneWidget);
+    await tester.tap(find.text('Pengguna'));
+    await tester.pumpAndSettle();
+
+    // A week: asked with period 7.
+    await tester.tap(find.text('7 hari'));
+    for (var i = 0; i < 5; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+    }
+    expect(asked.last, contains('"period":"7"'));
 
     // Offline, another section: the cached numbers of that filter are not
     // there, so the period's last numbers are not mixed in; back on "Semua"

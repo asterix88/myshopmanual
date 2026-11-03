@@ -308,6 +308,13 @@ class AppStore extends ChangeNotifier {
   /// Logs out. [revoked]: the NRP was deactivated, so the manuals on the
   /// phone are removed too.
   Future<void> signOut({bool revoked = false}) async {
+    // What this user did offline is sent first, when the phone is online,
+    // so it is not lost; the rest is cleared so it is not counted for the
+    // next person who logs in on this phone.
+    final s = session;
+    if (s != null && !revoked && !s.expired) {
+      await usage.send().timeout(const Duration(seconds: 8), onTimeout: () {});
+    }
     session = null;
     await usage.clear();
     try {

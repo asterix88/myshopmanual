@@ -109,13 +109,17 @@ export function add(sql: Sql, who: Who, events: StatEvent[]): void {
   }
 }
 
-/// since: ms (0 = all time); section: "" = every section.
-export type Filter = { since: number; section: string };
+/// since: ms (0 = all time); until: ms, end of the period (none = now);
+/// section: "" = every section.
+export type Filter = { since: number; until?: number; section: string };
+
+const span = (f: Filter, alias = "") =>
+  `${alias}at >= ${Math.floor(f.since)}${f.until ? ` AND ${alias}at < ${Math.floor(f.until)}` : ""}`;
 
 /// The section filter uses the section that was open; events without one
 /// (several sections, older phone) count in each of the reader's sections.
 const where = (f: Filter, alias = "") =>
-  `${alias}at >= ${Math.floor(f.since)} AND (? = '' OR ${alias}sec = ? OR (${alias}sec = '' AND ${alias}secs LIKE ?))`;
+  `${span(f, alias)} AND (? = '' OR ${alias}sec = ? OR (${alias}sec = '' AND ${alias}secs LIKE ?))`;
 const binds = (f: Filter) => [f.section, f.section, `%,${f.section},%`];
 
 type Row = Record<string, unknown>;
@@ -206,8 +210,18 @@ export function overview(sql: Sql, f: Filter, sharedUnits: string[]) {
     missing,
     people,
     last: Object.fromEntries(lastSeen(sql)),
-    by_section: activeBySection(sql, f.since),
+    by_section: activeBySection(sql, f),
   };
+}
+
+/// The three headline numbers of a period, for the trend against the
+/// period before: manuals opened, nyel AI questions, and who did anything.
+export function totals(sql: Sql, f: Filter) {
+  const w = where(f);
+  const b = binds(f);
+  const r = rows(sql, `SELECT SUM(kind = 'open') AS opens, SUM(kind = 'ai') AS ai FROM events WHERE ${w}`, ...b)[0] ?? {};
+  const nrps = rows(sql, `SELECT DISTINCT nrp FROM events WHERE kind != 'rate' AND ${w}`, ...b).map((x) => s(x.nrp));
+  return { opens: n(r.opens), ai: n(r.ai), nrps };
 }
 
 type Extra = { answer?: string; sources?: string[]; queries?: string[] };
@@ -226,11 +240,11 @@ const question = (r: Row) => ({
   id: n(r.id), at: n(r.at), nrp: s(r.nrp), name: s(r.name), sections: sectionsOf(r), unit: s(r.unit), q: s(r.q),
 });
 
-/// Who used the app in each section since [since]: the section that was
+/// Who used the app in each section in the period: the section that was
 /// open, or each of the reader's sections when that is unknown.
-export function activeBySection(sql: Sql, since: number): Record<string, string[]> {
+export function activeBySection(sql: Sql, f: Filter): Record<string, string[]> {
   const out: Record<string, Set<string>> = {};
-  for (const r of rows(sql, `SELECT DISTINCT nrp, sec, secs FROM events WHERE kind != 'rate' AND at >= ${Math.floor(since)}`)) {
+  for (const r of rows(sql, `SELECT DISTINCT nrp, sec, secs FROM events WHERE kind != 'rate' AND ${span(f)}`)) {
     for (const sec of sectionsOf(r)) (out[sec] ??= new Set()).add(s(r.nrp));
   }
   return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, [...v]]));
@@ -269,7 +283,7 @@ export function manual(sql: Sql, f: Filter, file: string) {
 }
 
 export function person(sql: Sql, f: Filter, nrp: string) {
-  const at = `at >= ${Math.floor(f.since)}`;
+  const at = span(f);
   const head = rows(
     sql,
     `SELECT MAX(name) AS name, MAX(secs) AS secs, SUM(kind = 'open') AS manuals, SUM(kind = 'ai') AS ai,

@@ -56,7 +56,7 @@ class StatsApi {
     return data;
   }
 
-  static Map<String, dynamic> _filter(StatsFilter f) => {'period': f.allTime ? 'all' : '30', 'section': f.section};
+  static Map<String, dynamic> _filter(StatsFilter f) => {'period': f.period, 'section': f.section};
 
   /// Everything the four tabs show. Kept on the phone, so the last numbers
   /// stay on screen without internet ([cached]).
@@ -100,27 +100,62 @@ class StatsApi {
   Future<SearchStats> search(StatsFilter f, String query) async =>
       SearchStats(await _post('/admin/stats/search', {..._filter(f), 'q': query}));
 
+  /// The monthly Excel report ([month] '2026-10'), saved to [path].
+  Future<void> report(String month, String section, String path, {bool renewed = false}) async {
+    final session = store.session;
+    if (session == null) throw AuthException('login', 'Silakan masuk lagi.');
+    final http.Response response;
+    try {
+      response = await client
+          .post(
+            _base.resolve('/admin/stats/report'),
+            headers: {'content-type': 'application/json', sessionHeader: session.token},
+            body: jsonEncode({'month': month, 'section': section}),
+          )
+          .timeout(const Duration(seconds: 40));
+    } on Exception {
+      throw AuthException('network', 'Koneksi terputus');
+    }
+    if (response.statusCode == 401 && !renewed && await store.renewSession() != null) {
+      return report(month, section, path, renewed: true);
+    }
+    if (response.statusCode != 200) {
+      throw AuthException('server', 'Server sedang bermasalah (kode ${response.statusCode}).');
+    }
+    final file = File(path);
+    await file.parent.create(recursive: true);
+    await file.writeAsBytes(response.bodyBytes);
+  }
+
   /// "Tandai sudah ditangani": off the "Tidak ketemu" list until searched again.
   Future<void> markHandled(String query) => _post('/admin/stats/handled', {'q': query});
 }
 
 class StatsFilter {
-  const StatsFilter({this.allTime = false, this.section = ''});
+  const StatsFilter({this.period = '30', this.section = ''});
 
-  /// false = the last 30 days.
-  final bool allTime;
+  /// The periods offered, as sent to the server.
+  static const periods = ['7', '30', 'all'];
+  static const periodLabels = ['7 hari', '30 hari', 'Semua waktu'];
+
+  /// '7' or '30' days, or 'all'.
+  final String period;
 
   /// '' = every section.
   final String section;
 
-  String get key => '${allTime ? 'all' : '30'}:$section';
-  String get periodLabel => allTime ? 'Semua waktu' : '30 hari';
+  String get key => '$period:$section';
+  String get periodLabel => periodLabels[periods.indexOf(period).clamp(0, 2)];
+
+  StatsFilter copyWith({String? period, String? section}) =>
+      StatsFilter(period: period ?? this.period, section: section ?? this.section);
 }
 
 int _int(Object? v) => (v as num? ?? 0).toInt();
 String _str(Object? v) => v as String? ?? '';
 List<Map<String, dynamic>> _list(Object? v) => [for (final e in v as List? ?? const []) (e as Map).cast<String, dynamic>()];
 List<String> _strings(Object? v) => [for (final e in v as List? ?? const []) '$e'];
+int? _change(Object? v) => v is num ? v.toInt() : null;
 DateTime? _time(Object? v) => _int(v) == 0 ? null : DateTime.fromMillisecondsSinceEpoch(_int(v));
 
 class StatsOverview {
@@ -140,8 +175,16 @@ class StatsOverview {
         missing = [for (final s in _list(json['missing'])) SearchCount(s)],
         perSection = [
           for (final s in _list(json['per_section']))
-            (section: _str(s['section']), active: _int(s['active']), total: _int(s['total'])),
+            (
+              section: _str(s['section']),
+              active: _int(s['active']),
+              total: _int(s['total']),
+              hasManual: s['has_manual'] != false,
+            ),
         ],
+        trendActive = _change((json['trend'] as Map?)?['active']),
+        trendOpens = _change((json['trend'] as Map?)?['opens']),
+        trendAi = _change((json['trend'] as Map?)?['ai']),
         people = [for (final p in _list(json['people'])) PersonRow(p)],
         inactive = [for (final p in _list(json['inactive'])) InactiveRow(p)];
 
@@ -158,9 +201,19 @@ class StatsOverview {
   final List<QuestionRow> questions;
   final List<SearchCount> searches;
   final List<SearchCount> missing;
-  final List<({String section, int active, int total})> perSection;
+  /// hasManual false: the section has no manual of its own yet, so its
+  /// people are not counted as "belum aktif".
+  final List<({String section, int active, int total, bool hasManual})> perSection;
   final List<PersonRow> people;
   final List<InactiveRow> inactive;
+
+  /// Change against the period before, in percent; null without one.
+  final int? trendActive;
+  final int? trendOpens;
+  final int? trendAi;
+
+  /// "Perlu tindakan": searches that found nothing and answers rated wrong.
+  bool get needsAction => missing.isNotEmpty || bad > 0;
 
   bool get isEmpty => opens == 0 && ai == 0 && searches.isEmpty && people.isEmpty;
 }
@@ -239,6 +292,7 @@ class InactiveRow {
         name = _str(json['name']),
         sections = _strings(json['sections']),
         never = json['never'] == true,
+        oldApp = json['old_app'] == true,
         last = _time(json['last']);
 
   final String nrp;
@@ -247,6 +301,9 @@ class InactiveRow {
 
   /// Has never logged in.
   final bool never;
+
+  /// The phone has an APK from before the statistics, which records nothing.
+  final bool oldApp;
   final DateTime? last;
 }
 
@@ -279,6 +336,7 @@ class PersonStats {
         name = _str(json['name']),
         sections = _strings(json['sections']),
         last = _time(json['last']),
+        app = _str(json['app']),
         manualsOpened = _int(json['manuals_opened']),
         ai = _int(json['ai']),
         searches = _int(json['searches']),
@@ -292,6 +350,10 @@ class PersonStats {
   final String name;
   final List<String> sections;
   final DateTime? last;
+
+  /// The app version on the phone used last; '' = an APK from before the
+  /// statistics.
+  final String app;
   final int manualsOpened;
   final int ai;
   final int searches;

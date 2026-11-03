@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import 'ai.dart';
+import 'diagnostics.dart' show appVersion, buildNumber;
 
 /// Header that carries the session to the server (ai-worker/src/auth.ts).
 const sessionHeader = 'x-mymanual-session';
@@ -175,7 +176,13 @@ class DeviceInfo {
   final String id;
   final String model;
 
-  Map<String, String> toJson() => {'id': id, 'model': model};
+  /// The app version too ("1.0.0 (57)"), so the usage statistics can tell
+  /// a phone with an older APK, which records nothing.
+  Map<String, String> toJson() => {
+        'id': id,
+        'model': model,
+        if (appVersion.isNotEmpty) 'app': buildNumber.isEmpty ? appVersion : '$appVersion ($buildNumber)',
+      };
 
   static String newId() {
     final r = Random.secure();

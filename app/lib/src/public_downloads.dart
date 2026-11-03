@@ -77,6 +77,15 @@ class PublicDownloads extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// Whether this phone can save to Download (Android 10 and newer).
+  Future<bool> supported() async {
+    try {
+      return await _channel.invokeMethod<bool>('supported') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Free space on the phone's shared storage in bytes, or null if unknown.
   Future<int?> freeSpace() async {
     try {
