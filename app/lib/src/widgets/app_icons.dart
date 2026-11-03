@@ -186,7 +186,11 @@ enum AppGlyph {
     _P('M16.5 13.5V4h3v9.5zM16.5 13l-3.6 6.5c-1.4 0-2.4-1-2.1-2.6l.7-3.4H5.9a1.8 1.8 0 0 1-1.8-2.1l1.2-6.3A1.8 1.8 0 0 1 7.1 3.5h9.4',
         width: 1.7),
   ]),
-  send([_P('M4.5 12L20 4.5 16 20l-4-6.5z'), _P('M12 13.5l8-9')]);
+  send([_P('M4.5 12L20 4.5 16 20l-4-6.5z'), _P('M12 13.5l8-9')]),
+  chevronDown([_P('M7 10l5 5 5-5')]),
+  check([_P('M5 12.5l4.5 4.5L19 7.5', width: 2)]),
+  // A section: stacked layers, the lower one in the accent.
+  section([_P('M12 4l8.5 4.7L12 13.4 3.5 8.7z'), _P('M3.5 13.3L12 18l8.5-4.7', accent: true)]);
 
   const AppGlyph(this._parts);
 

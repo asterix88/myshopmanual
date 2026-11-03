@@ -110,4 +110,53 @@ void main() {
     expect(shown(HomeScreen), isFalse);
     root.deleteSync(recursive: true);
   });
+
+  testWidgets('one section keeps the greeting; tapping the name does nothing', (tester) async {
+    late AppStore store;
+    final root = Directory.systemTemp.createTempSync('convert');
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer());
+    });
+    await tester.pumpWidget(MyManualApp(store: store));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Selamat '), findsOneWidget);
+    expect(find.byKey(const Key('home-section')), findsNothing);
+    await tester.tap(find.byKey(const Key('home-brand')));
+    await tester.pumpAndSettle();
+    expect(find.text('Pilih section'), findsNothing);
+    root.deleteSync(recursive: true);
+  });
+
+  testWidgets('several sections: tap MyManual, pick a section', (tester) async {
+    Map<String, dynamic> unit(String id, String section, String kelompok) =>
+        {'id': id, 'section': section, 'kelompok': kelompok, 'files': const []};
+    final catalog = {
+      'generated_at': '2026-10-29T00:00:00Z',
+      'units': [unit('PC210', 'TRACK', 'EXCAVATOR'), unit('HD785', 'WHEEL', 'HD'), unit('GD825', 'WHEEL', 'GRADER')],
+    };
+    late AppStore store;
+    final root = Directory.systemTemp.createTempSync('convert');
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));
+      await store.setServerUrl('https://example.test');
+    });
+    await tester.pumpWidget(MyManualApp(store: store));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Selamat '), findsNothing);
+    expect(find.descendant(of: find.byKey(const Key('home-section')), matching: find.text('Track')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('home-brand')));
+    await tester.pumpAndSettle();
+    expect(find.text('Pilih section'), findsOneWidget);
+    expect(find.text('Grader, HD'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('section-WHEEL')));
+    await tester.pumpAndSettle();
+    expect(store.homeSection, 'WHEEL');
+    expect(find.text('Pilih section'), findsNothing);
+    expect(find.text('Section Wheel'), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('home-section')), matching: find.text('Wheel')), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    root.deleteSync(recursive: true);
+  });
 }
