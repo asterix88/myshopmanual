@@ -16,12 +16,12 @@ import '../widgets/excavator_loader.dart';
 import '../widgets/machine_icon.dart';
 import '../widgets/tool_icons.dart';
 import '../widgets/unit_icon.dart';
-import 'answer_reports_screen.dart';
 import 'cetok_screen.dart';
 import 'convert_screen.dart';
 import 'employees_screen.dart';
 import 'machine_screen.dart';
 import 'report_screen.dart';
+import 'stats_screen.dart';
 import 'updates_screen.dart';
 import 'viewer_screen.dart';
 
@@ -114,7 +114,7 @@ class HomeScreen extends StatelessWidget {
       onSelected: (value) => switch (value) {
         'report' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportScreen())),
         'employees' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EmployeesScreen())),
-        'answers' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnswerReportsScreen())),
+        'stats' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StatsScreen())),
         'theme' => _chooseTheme(context, store),
         'cetok' => showDialog<void>(context: context, builder: (_) => const _CetokDataDialog()),
         'logout' => _logout(context, store),
@@ -149,7 +149,8 @@ class HomeScreen extends StatelessWidget {
         if (store.session?.admin ?? false)
           const PopupMenuItem(value: 'employees', child: Text('Kelola karyawan')),
         if (store.session?.admin ?? false)
-          const PopupMenuItem(value: 'answers', child: Text('Penilaian nyel AI')),
+          const PopupMenuItem(value: 'stats', child: Text('Statistik pemakaian')),
+        // Penilaian nyel AI is in Statistik pemakaian, tab nyel AI (Anas, 3 Nov 2026).
         if (store.session?.admin ?? false)
           const PopupMenuItem(value: 'cetok', child: Text('Data Cetok Online')),
         const PopupMenuItem(value: 'theme', child: Text('Tampilan (terang / gelap)')),

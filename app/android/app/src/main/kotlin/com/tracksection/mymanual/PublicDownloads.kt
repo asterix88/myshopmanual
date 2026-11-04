@@ -29,6 +29,11 @@ object PublicDownloads {
 
     val supported get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 
+    /** Manuals, and the admins' monthly Excel report. */
+    private fun mimeOf(name: String) =
+        if (name.endsWith(".xlsx", ignoreCase = true)) "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        else "application/pdf"
+
     /** The saved copy named [name], or null when there is none (never saved,
      *  or deleted from the Download folder since). */
     fun find(context: Context, name: String): Uri? {
@@ -104,7 +109,7 @@ object PublicDownloads {
         find(context, name)?.let { resolver.delete(it, null, null) }
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeOf(name))
             put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/$FOLDER/")
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
@@ -143,7 +148,7 @@ object PublicDownloads {
     fun open(context: Context, name: String): Boolean {
         val uri = find(context, name) ?: return false
         val intent = Intent(Intent.ACTION_VIEW)
-            .setDataAndType(uri, "application/pdf")
+            .setDataAndType(uri, mimeOf(name))
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         return try {
             context.startActivity(intent)

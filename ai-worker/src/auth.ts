@@ -33,7 +33,9 @@ export function allowedOf(s: Session): Allowed {
   return s.a ? null : s.s?.length ? s.s : [DEFAULT_SECTION];
 }
 
-type Device = { model: string; seen: number };
+/// app: the app version the phone last reported ("1.0.0 (57)"); missing
+/// for APKs from before the usage statistics.
+type Device = { model: string; seen: number; app?: string };
 
 type Employee = {
   nrp: string;
@@ -65,7 +67,7 @@ type Employee = {
 };
 
 /// What the admin screen lists, kept in the KV entry's metadata.
-type Row = {
+export type Row = {
   name: string;
   admin: boolean;
   active: boolean;
@@ -74,6 +76,8 @@ type Row = {
   status: "new" | "active";
   seen: number;
   devices: string[];
+  /// The app version on the phone used last; missing = an older APK.
+  app?: string;
   reset?: number;
 };
 
@@ -179,8 +183,14 @@ function rowOf(e: Employee): Row {
     status: e.must_change && Object.keys(e.devices).length === 0 ? "new" : "active",
     seen: e.last_seen,
     devices: Object.values(e.devices).map((d) => d.model).slice(0, 8),
+    ...appOf(e),
     ...(e.reset_at ? { reset: e.reset_at } : {}),
   };
+}
+
+function appOf(e: Employee): { app?: string } {
+  const last = Object.values(e.devices).sort((a, b) => b.seen - a.seen)[0];
+  return last?.app ? { app: last.app } : {};
 }
 
 const sectionsOf = (e: Employee) => (e.sections?.length ? e.sections : [DEFAULT_SECTION]);
@@ -206,8 +216,9 @@ async function issue(env: AuthEnv, e: Employee): Promise<Response> {
 /// Remembers the phone and when it was last online; written at most once a
 /// day per phone to stay inside KV's free write allowance.
 function touch(e: Employee, device: unknown): boolean {
-  const d = (device ?? {}) as { id?: unknown; model?: unknown };
+  const d = (device ?? {}) as { id?: unknown; model?: unknown; app?: unknown };
   const id = String(d.id ?? "").slice(0, 64);
+  const app = String(d.app ?? "").slice(0, 40);
   const t = now();
   let changed = false;
   if (t - e.last_seen > 86400) {
@@ -216,8 +227,8 @@ function touch(e: Employee, device: unknown): boolean {
   }
   if (id) {
     const old = e.devices[id];
-    if (!old || t - old.seen > 86400) {
-      e.devices[id] = { model: String(d.model ?? "").slice(0, 60) || "HP", seen: t };
+    if (!old || t - old.seen > 86400 || (old.app ?? "") !== app) {
+      e.devices[id] = { model: String(d.model ?? "").slice(0, 60) || "HP", seen: t, ...(app ? { app } : {}) };
       // Phones not seen for 60 days are forgotten.
       for (const [k, v] of Object.entries(e.devices)) if (t - v.seen > 60 * 86400) delete e.devices[k];
       changed = true;
@@ -493,11 +504,34 @@ export async function countQuestion(env: AuthEnv, s: Session): Promise<Response 
   return () => put(asked);
 }
 
-async function admin(request: Request, env: AuthEnv, path: string): Promise<Response> {
+/// The caller's session when it belongs to an active admin; otherwise the
+/// response to send.
+export async function requireAdmin(
+  env: AuthEnv,
+  request: Request,
+): Promise<{ session: Session; error?: undefined } | { session?: undefined; error: Response }> {
   const auth = await requireSession(env, request);
-  if (auth.error) return auth.error;
+  if (auth.error) return auth;
   const me = await load(env, auth.session.n);
-  if (!me || !me.active || !me.admin) return json({ error: "forbidden", message: "Khusus admin." }, 403);
+  if (!me || !me.active || !me.admin) return { error: json({ error: "forbidden", message: "Khusus admin." }, 403) };
+  return auth;
+}
+
+/// Every employee as the admin screen lists them, by NRP.
+export async function employeeRows(env: AuthEnv): Promise<Map<string, Row>> {
+  const rows = new Map<string, Row>();
+  let cursor: string | undefined;
+  do {
+    const page: KVNamespaceListResult<Row, string> = await env.AUTH.list<Row>({ prefix: "emp:", cursor });
+    for (const k of page.keys) if (k.metadata) rows.set(k.name.slice(4), k.metadata);
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return rows;
+}
+
+async function admin(request: Request, env: AuthEnv, path: string): Promise<Response> {
+  const auth = await requireAdmin(env, request);
+  if (auth.error) return auth.error;
 
   if (path === "/admin/employees") {
     const asked = new Map<string, number>();
@@ -508,16 +542,7 @@ async function admin(request: Request, env: AuthEnv, path: string): Promise<Resp
       for (const k of page.keys) asked.set(k.name.slice(prefix.length), k.metadata?.n ?? 0);
       cursor = page.list_complete ? undefined : page.cursor;
     } while (cursor);
-    const employees: unknown[] = [];
-    cursor = undefined;
-    do {
-      const page: KVNamespaceListResult<Row, string> = await env.AUTH.list<Row>({ prefix: "emp:", cursor });
-      for (const k of page.keys) {
-        const nrp = k.name.slice(4);
-        if (k.metadata) employees.push({ nrp, ...k.metadata, ai_today: asked.get(nrp) ?? 0 });
-      }
-      cursor = page.list_complete ? undefined : page.cursor;
-    } while (cursor);
+    const employees = [...(await employeeRows(env))].map(([nrp, row]) => ({ nrp, ...row, ai_today: asked.get(nrp) ?? 0 }));
     return json({ employees, ai_limit: AI_DAILY_LIMIT });
   }
 
@@ -547,7 +572,7 @@ async function admin(request: Request, env: AuthEnv, path: string): Promise<Resp
 
   // /admin/active
   const active = b!.active === true;
-  if (!active && e.nrp === me.nrp) {
+  if (!active && e.nrp === auth.session.n) {
     return json({ error: "self", message: "Admin tidak bisa menonaktifkan NRP-nya sendiri." }, 400);
   }
   e.active = active;

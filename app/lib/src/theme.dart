@@ -44,6 +44,9 @@ abstract final class AppColors {
   /// Text saying a manual has an update.
   static Color get update => _pick(0xFFC2410C, 0xFFFF8A50);
   static Color get danger => _pick(0xFFC62828, 0xFFEF5350);
+  /// Warnings: offline, searches that found nothing.
+  static Color get amber => _pick(0xFFB7791F, 0xFFE0A955);
+  static Color get amberSoft => _pick(0xFFFDF3E1, 0xFF33280F);
   /// Behind matching words in search results.
   static Color get highlight => _pick(0xFFFFE066, 0xFF7A6400);
 }

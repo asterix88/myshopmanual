@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -357,9 +358,10 @@ void main() {
     });
     await tester.pumpAndSettle();
     // Budi tapped Lupa PIN: on top as a request, and in the list.
-    expect(find.text('Permintaan reset PIN'), findsOneWidget);
-    expect(find.text('Budi'), findsNWidgets(2));
-    expect(find.text('Belum login 1'), findsOneWidget);
+    expect(find.text('Minta reset PIN'), findsOneWidget);
+    expect(find.textContaining('Budi ·'), findsOneWidget);
+    expect(find.text('Budi'), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('status-fresh')), matching: find.text('1')), findsOneWidget);
     await tester.runAsync(() async {
       await tester.tap(find.byKey(const Key('reset-pin-21045678')));
       await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -372,7 +374,23 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await tester.pumpAndSettle();
-    expect(find.text('Permintaan reset PIN'), findsNothing);
+    expect(find.text('Minta reset PIN'), findsNothing);
+
+    // Belum login: only Rudi, and the list can be copied for WhatsApp.
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map)['text'] as String;
+      return null;
+    });
+    await tester.tap(find.byKey(const Key('status-fresh')));
+    await tester.pumpAndSettle();
+    expect(find.text('Budi'), findsNothing);
+    expect(find.text('1 BELUM LOGIN'), findsOneWidget);
+    await tester.tap(find.text('Salin daftar'));
+    await tester.pumpAndSettle();
+    expect(copied, 'Belum login\n1. Rudi (21051133)');
+    expect(find.text('1 nama disalin'), findsOneWidget);
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null);
 
     await tester.tap(find.text('Rudi'));
     await tester.pumpAndSettle();

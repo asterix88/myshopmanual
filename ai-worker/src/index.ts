@@ -1,8 +1,11 @@
 import { countQuestion, handleAuth, requireSession, SESSION_HEADER } from "./auth";
 import { feedback } from "./feedback";
-import { handleFiles, type FilesEnv } from "./files";
+import { handleFiles } from "./files";
+import { handleStats, recordRating, type StatsEnv } from "./stats";
 
-export interface Env extends FilesEnv {
+export { Stats } from "./stats";
+
+export interface Env extends StatsEnv {
   GROQ_API_KEY?: string;
   DEEPSEEK_API_KEY?: string;
   APP_TOKEN?: string;
@@ -298,6 +301,8 @@ async function handle(
   if (url.hostname.startsWith("files.")) return handleFiles(request, env, ctx);
   const auth = await handleAuth(request, env, url.pathname);
   if (auth) return auth;
+  const stats = await handleStats(request, env, url.pathname);
+  if (stats) return stats;
   if (request.method === "GET" && url.pathname === "/") {
     return json({ ok: true, model: env.MODEL });
   }
@@ -312,7 +317,9 @@ async function handle(
     }
     return json({ ok: !!env.OWNER_CODE && code.trim() === env.OWNER_CODE.trim() });
   }
-  if (url.pathname === "/feedback") return feedback(request, env);
+  if (url.pathname === "/feedback") {
+    return feedback(request, env, (s, good, question) => recordRating(env, s, good, question));
+  }
   if (request.method !== "POST" || url.pathname !== "/chat") {
     return json({ error: "not_found" }, 404);
   }

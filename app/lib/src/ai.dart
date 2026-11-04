@@ -221,6 +221,9 @@ class AiChat {
             '${f.searchable ? '' : ', pictures only: not searchable, use view_page'})',
     ];
 
+    // What the AI searched for, for the usage statistics' topics.
+    final queries = <String>[];
+    var unit = file?.unitId ?? '';
     for (var round = 0; round < maxRounds; round++) {
       onStatus?.call(round == 0 ? 'Memahami pertanyaan…' : 'Menyusun jawaban…');
       Diagnostics.log('ai round $round');
@@ -246,7 +249,25 @@ class AiChat {
 
       if (toolCalls.isEmpty) {
         store.countAiQuestion();
-        return _answer(message['content'] as String? ?? '');
+        final answer = _answer(message['content'] as String? ?? '');
+        if (!answer.failed) {
+          store.usage.asked(
+            question: question,
+            answer: answer.text,
+            sources: [
+              for (final s in answer.sources)
+                '${switch (s.file.type) {
+                  DocType.shopManual => 'SM',
+                  DocType.omm => 'OMM',
+                  DocType.partsbook => 'PB',
+                  DocType.other => s.file.title,
+                }} ${s.unitName} · hal. ${s.page}',
+            ],
+            queries: queries,
+            unit: unit,
+          );
+        }
+        return answer;
       }
       final pictures = <Map<String, dynamic>>[];
       for (final call in toolCalls) {
@@ -264,7 +285,10 @@ class AiChat {
           content = await _read((args['source'] as String? ?? '').trim(), onStatus: onStatus);
         } else {
           final query = (args['query'] as String? ?? '').trim();
-          content = await _search(query, (args['unit'] as String? ?? '').trim(), onStatus: onStatus);
+          final searchUnit = (args['unit'] as String? ?? '').trim();
+          if (query.isNotEmpty) queries.add(query);
+          if (unit.isEmpty) unit = searchUnit;
+          content = await _search(query, searchUnit, onStatus: onStatus);
         }
         _messages.add({'role': 'tool', 'tool_call_id': call['id'], 'content': content});
       }

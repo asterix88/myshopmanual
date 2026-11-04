@@ -1,4 +1,4 @@
-import { requireSession, type AuthEnv } from "./auth";
+import { requireSession, type AuthEnv, type Session } from "./auth";
 
 // Ratings of nyel AI answers: 👍 or 👎 "Jawaban salah". A phone sends the
 // rating, the question, the answer and the pages it cited; admins list them
@@ -30,7 +30,12 @@ function json(body: unknown, status = 200): Response {
 
 const text = (value: unknown, max = MAX_TEXT) => (typeof value === "string" ? value.slice(0, max) : "");
 
-export async function feedback(request: Request, env: AuthEnv): Promise<Response> {
+/// onRated: also counts the rating in the usage statistics.
+export async function feedback(
+  request: Request,
+  env: AuthEnv,
+  onRated?: (s: Session, good: boolean, question: string) => Promise<void>,
+): Promise<Response> {
   const auth = await requireSession(env, request);
   if (auth.error) return auth.error;
   const s = auth.session;
@@ -72,5 +77,6 @@ export async function feedback(request: Request, env: AuthEnv): Promise<Response
   if (!report.answer) return json({ error: "bad_request" }, 400);
   const key = `fb:${new Date(report.at).toISOString()}:${s.n}`;
   await env.AUTH.put(key, JSON.stringify(report), { expirationTtl: KEEP_SECONDS });
+  await onRated?.(s, report.rating === "good", report.question).catch(() => {});
   return json({ ok: true });
 }

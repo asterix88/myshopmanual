@@ -37,7 +37,7 @@ const filling = new Set<string>();
 // Worker instance, so a file request does not read the catalog each time.
 let sections: { at: number; map: Map<string, string> } | null = null;
 
-async function readCatalog(env: FilesEnv): Promise<Catalog | null> {
+export async function readCatalog(env: FilesEnv): Promise<Catalog | null> {
   const object = await env.BUCKET.get("catalog.json");
   if (!object) return null;
   const catalog = (await object.json()) as Catalog;

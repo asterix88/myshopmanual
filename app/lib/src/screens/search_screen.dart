@@ -20,7 +20,7 @@ class SearchScreen extends StatefulWidget {
   State<SearchScreen> createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> {
+class _SearchScreenState extends State<SearchScreen> with WidgetsBindingObserver {
   final _field = TextEditingController();
   DocType? _type;
   SearchResult? _result;
@@ -28,11 +28,55 @@ class _SearchScreenState extends State<SearchScreen> {
   Timer? _debounce;
   int _session = 0;
 
+  /// The search on screen, counted for the usage statistics once it is
+  /// finished: Enter, a result opened, the box cleared or a different
+  /// search typed, Cari left, or the app put away. Words typed on the way
+  /// ("reli" on the way to "relief valve") are not counted.
+  ({String query, int hits})? _uncounted;
+  AppStore? _store;
+  bool _visible = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _store = StoreScope.read(context);
+    // Another tab of the app is open now.
+    final visible = TickerMode.valuesOf(context).enabled;
+    if (_visible && !visible) _count();
+    _visible = visible;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) _count();
+  }
+
   @override
   void dispose() {
+    _count();
+    WidgetsBinding.instance.removeObserver(this);
     _debounce?.cancel();
     _field.dispose();
     super.dispose();
+  }
+
+  void _count() {
+    final search = _uncounted;
+    _uncounted = null;
+    if (search != null) _store?.usage.searched(search.query, search.hits);
+  }
+
+  /// "reli" and "relief valve" are one search being typed.
+  static bool _sameSearch(String a, String b) {
+    final x = a.toLowerCase();
+    final y = b.toLowerCase();
+    return x.startsWith(y) || y.startsWith(x);
   }
 
   void _schedule() {
@@ -44,6 +88,7 @@ class _SearchScreenState extends State<SearchScreen> {
     final query = _field.text.trim();
     final session = ++_session;
     if (query.isEmpty) {
+      _count();
       setState(() {
         _query = '';
         _result = null;
@@ -57,6 +102,8 @@ class _SearchScreenState extends State<SearchScreen> {
       _query = query;
       _result = result;
     });
+    if (_uncounted case final before? when !_sameSearch(before.query, query)) _count();
+    _uncounted = (query: query, hits: result.hits.length);
   }
 
   @override
@@ -85,9 +132,10 @@ class _SearchScreenState extends State<SearchScreen> {
                       controller: _field,
                       textInputAction: TextInputAction.search,
                       onChanged: (_) => _schedule(),
-                      onSubmitted: (text) {
+                      onSubmitted: (text) async {
                         store.addRecentSearch(text);
-                        _run();
+                        await _run();
+                        _count();
                       },
                       decoration: InputDecoration(
                         filled: true,
@@ -287,6 +335,7 @@ class _SearchScreenState extends State<SearchScreen> {
               child: InkWell(
                 onTap: () {
                   store.addRecentSearch(_query);
+                  _count();
                   openViewer(context, file, page: first.page, query: _query);
                 },
                 child: Column(
