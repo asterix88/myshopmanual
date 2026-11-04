@@ -120,6 +120,7 @@ class Employee {
     this.resetAt,
     this.sections = const [],
     this.department = '',
+    this.app = '',
   });
 
   factory Employee.fromJson(Map<String, dynamic> json) => Employee(
@@ -135,6 +136,7 @@ class Employee {
         aiToday: (json['ai_today'] as num? ?? 0).toInt(),
         sections: [for (final s in json['sections'] as List? ?? const ['TRACK']) s as String],
         department: json['dept'] as String? ?? '',
+        app: json['app'] as String? ?? '',
         resetAt: json['reset'] == null
             ? null
             : DateTime.fromMillisecondsSinceEpoch((json['reset'] as num).toInt() * 1000),
@@ -154,6 +156,9 @@ class Employee {
   /// Section and Departemen columns of karyawan.xlsx.
   final List<String> sections;
   final String department;
+
+  /// App version on the phone seen last ("1.0.0 (57)"); empty before 57.
+  final String app;
 
   /// When the employee tapped "Lupa PIN"; null when there is no request.
   DateTime? resetAt;
