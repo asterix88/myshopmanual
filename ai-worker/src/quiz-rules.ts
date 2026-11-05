@@ -6,5 +6,5 @@ const JEDA_HARI = [1, 3, 7, 14, 30, 60, 90];   // isi 7 angka: jeda level 0 samp
 export function daysUntilNext(level: number): number {
   if (level < 0) return JEDA_HARI[0];
   if (level >= JEDA_HARI.length) return JEDA_HARI[6];   // level di atas 6: pakai jeda terakhir
-  return JEDA_HARI[1];                                   // ambil angka ke-[level] dari daftar
+  return JEDA_HARI[level];                                   // ambil angka ke-[level] dari daftar
 }
