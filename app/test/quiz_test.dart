@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:mymanual/src/page_image.dart';
 import 'package:mymanual/src/quiz.dart';
+import 'package:mymanual/src/screens/quiz_admin_screen.dart';
+import 'package:pdfrx/pdfrx.dart';
 import 'package:mymanual/src/screens/quiz_hub_screen.dart';
 import 'package:mymanual/src/screens/quiz_screen.dart';
 import 'package:mymanual/src/screens/shell.dart';
@@ -176,6 +179,98 @@ void main() {
 
     expect(answers, [('q1', 0), ('q2', 1), ('q2', 0)]);
     expect(find.text('Selesai'), findsOneWidget);
+    await tester.runAsync(() async => store.dispose());
+  });
+
+  test('a quiz picture covers words but keeps callout numbers', () {
+    const text = '3. Main relief valve\n12';
+    final rects = [for (var i = 0; i < text.length; i++) PdfRect(i * 10.0, 100, i * 10.0 + 9, 90)];
+    final boxes = wordsToCover(text, rects);
+    // "Main", "relief", "valve"; not "3." and not "12".
+    expect(boxes.length, 3);
+    expect(boxes.first.left, 30);
+    expect(boxes.first.right, 69);
+  });
+
+  testWidgets('Draf: job progress, curator score, approve all that passed', (tester) async {
+    final approved = <String>[];
+    Map<String, dynamic> draft(String id, {bool passed = true, int score = 8}) => {
+          ...question(id),
+          'section': 'TRACK',
+          'status': 'draf',
+          'source': 'ai',
+          'check_note': 'Angka di jawaban ada di halaman sumber.',
+          'reports': 0,
+          'answered': 0,
+          'curator_score': score,
+          'curator_note': 'Jelas.',
+          'passed': passed,
+        };
+    final client = MockClient((request) async {
+      final body = request.body.isEmpty ? <String, dynamic>{} : jsonDecode(request.body) as Map<String, dynamic>;
+      return switch (request.url.path) {
+        '/admin/quiz/questions' => http.Response(
+            jsonEncode({
+              'questions': body['status'] == 'draf' ? [draft('q1'), draft('q2'), draft('q3', passed: false, score: 5)] : [],
+            }),
+            200),
+        '/admin/quiz/jobs' => http.Response(
+            jsonEncode({
+              'jobs': [
+                {'id': 'j1', 'unit': 'TEST1-1', 'title': 'Shop Manual', 'count': 30, 'status': 'jalan', 'pages': 10, 'pages_done': 4, 'passed': 9, 'flagged': 2, 'dropped': 1, 'created_at': DateTime.now().millisecondsSinceEpoch},
+              ],
+            }),
+            200),
+        '/admin/quiz/approve' => () {
+            approved.addAll([for (final id in body['ids'] as List) '$id']);
+            return http.Response(jsonEncode({'ok': true, 'published': 2, 'left': []}), 200);
+          }(),
+        _ => http.Response(jsonEncode({'reports': []}), 200),
+      };
+    });
+    final store = await openStore(tester, client, admin: true);
+    await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(home: QuizAdminScreen(client: client))));
+    await settle(tester);
+    expect(find.text('Sedang dibuat'), findsOneWidget);
+    expect(find.text('Halaman 4 dari 10 · 11 soal jadi'), findsOneWidget);
+    expect(find.text('Kurator 8/10'), findsWidgets);
+    expect(find.text('2 soal lolos kurator'), findsOneWidget);
+    await tester.tap(find.text('Setujui 2'));
+    await settle(tester);
+    await tester.tap(find.text('Setujui').last);
+    await settle(tester);
+    expect(approved, ['q1', 'q2']);
+    expect(find.text('2 soal diterbitkan'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
+
+  testWidgets('a picture question shows its picture from the server', (tester) async {
+    final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+    final asked = <String>[];
+    final client = MockClient((request) async {
+      asked.add(request.url.path);
+      return switch (request.url.path) {
+        '/quiz/session' => http.Response(
+            jsonEncode({
+              'id': 's1',
+              'questions': [
+                {...question('g1'), 'type': 'gambar', 'prompt': 'Komponen nomor 3 adalah?', 'image': 'quiz/img/g1.png'},
+              ],
+              'answered': [],
+            }),
+            200),
+        '/quiz/image/g1' => http.Response.bytes(png, 200, headers: {'content-type': 'image/png'}),
+        _ => http.Response(jsonEncode(homeJson()), 200),
+      };
+    });
+    final store = await openStore(tester, client);
+    await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(home: QuizPlayScreen(client: client))));
+    await settle(tester);
+    expect(find.text('Komponen nomor 3 adalah?'), findsOneWidget);
+    expect(asked, contains('/quiz/image/g1'));
+    expect(find.text('Ketuk untuk perbesar'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
     await tester.runAsync(() async => store.dispose());
   });
 }

@@ -2,10 +2,12 @@ import { countQuestion, handleAuth, requireSession, SESSION_HEADER } from "./aut
 import { feedback } from "./feedback";
 import { handleFiles } from "./files";
 import { handleQuiz, type QuizEnv } from "./quiz";
-import { scheduledQuiz } from "./quiz-cron";
+import { scheduledJobs, scheduledQuiz } from "./quiz-cron";
 import { handleStats, recordRating, type StatsEnv } from "./stats";
 
 export { Stats } from "./stats";
+
+const NIGHTLY_CRON = "0 21 * * *";
 
 export interface Env extends StatsEnv, QuizEnv {
   GROQ_API_KEY?: string;
@@ -292,8 +294,9 @@ export default {
     return response;
   },
   // The Quiz's nightly job (src/quiz-cron.ts), at the time in wrangler.toml.
-  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    ctx.waitUntil(scheduledQuiz(env));
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    // "0 21 * * *" = the nightly job; "* * * * *" = Buat draf kuis jobs.
+    ctx.waitUntil(controller.cron === NIGHTLY_CRON ? scheduledQuiz(env) : scheduledJobs(env));
   },
 } satisfies ExportedHandler<Env>;
 

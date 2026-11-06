@@ -1,15 +1,20 @@
+import 'dart:async';
 import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../models.dart';
+import '../page_image.dart';
 import '../quiz.dart';
 import '../search.dart';
+import '../store.dart';
 import '../theme.dart';
 import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
 import 'quiz_screen.dart';
+import 'quiz_job_screen.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
 
@@ -51,6 +56,12 @@ class _QuizAdminScreenState extends State<QuizAdminScreen> {
         backgroundColor: AppColors.background,
         appBar: QuizBar(
           title: 'Kelola soal quiz',
+          trailing: TextButton.icon(
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => QuizJobScreen(client: widget.client))),
+            icon: const AppIcon(AppGlyph.sparkle, color: Colors.white, size: 18),
+            label: const Text('Buat draf kuis', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          ),
           bottom: TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
@@ -84,7 +95,13 @@ class _QuestionsTab extends StatefulWidget {
 
 class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveClientMixin {
   List<AdminQuestion>? _list;
+  List<QuizJob> _jobs = const [];
   Object? _error;
+  String _type = '';
+  bool _bulk = false;
+  Timer? _poll;
+
+  bool get _drafts => widget.status == 'draf';
 
   @override
   bool get wantKeepAlive => true;
@@ -93,12 +110,29 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
   void initState() {
     super.initState();
     _load();
+    QuizApi.changed.addListener(_load);
+  }
+
+  @override
+  void dispose() {
+    QuizApi.changed.removeListener(_load);
+    _poll?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
     try {
       final list = await widget.api.questions(widget.status);
-      if (mounted) setState(() => _list = list);
+      final jobs = _drafts ? await widget.api.jobs() : const <QuizJob>[];
+      if (!mounted) return;
+      setState(() {
+        _list = list;
+        _jobs = jobs;
+        _error = null;
+      });
+      // While nyel AI is working, look again every 15 s.
+      _poll?.cancel();
+      if (jobs.any((j) => j.running)) _poll = Timer(const Duration(seconds: 15), _load);
     } catch (e) {
       if (mounted) setState(() => _error = e);
     }
@@ -106,6 +140,7 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
 
   Future<void> _decide(AdminQuestion q, String action, {Map<String, dynamic>? edit}) async {
     try {
+      if (action == 'setujui' && q.needsPicture) await _picture(q);
       await widget.api.decide(q.question.id, action, edit: edit);
       if (!mounted) return;
       final done = switch (action) {
@@ -116,9 +151,62 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
       };
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(done)));
       QuizApi.changed.value++;
-      await _load();
     } catch (e) {
       if (mounted) showError(context, e);
+    }
+  }
+
+  /// Draws a picture question's page with its words covered and sends it.
+  Future<void> _picture(AdminQuestion q) async {
+    final store = StoreScope.read(context);
+    final file = store.fileByKey(q.question.manualId);
+    if (file == null) throw Exception('Manual soal ini tidak ada di daftar. Gambarnya tidak bisa dibuat.');
+    await sendQuizPicture(store, widget.api, file, q.question.page, [q.question.id]);
+  }
+
+  /// "Setujui semua yang lolos": pictures first, then one call.
+  Future<void> _approveAll(List<AdminQuestion> passed) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Setujui ${passed.length} soal?'),
+        content: const Text('Soal yang lolos kurator langsung terbit ke quiz mekanik.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Setujui')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _bulk = true);
+    try {
+      final store = StoreScope.read(context);
+      // One drawing per page, shared by its picture questions.
+      final byPage = <String, List<AdminQuestion>>{};
+      for (final q in passed.where((q) => q.needsPicture)) {
+        byPage.putIfAbsent('${q.question.manualId}#${q.question.page}', () => []).add(q);
+      }
+      for (final group in byPage.values) {
+        final file = store.fileByKey(group.first.question.manualId);
+        if (file == null) continue;
+        try {
+          await sendQuizPicture(store, widget.api, file, group.first.question.page, [for (final q in group) q.question.id]);
+        } on Object {
+          // Left as a draft; the admin sees it after.
+        }
+      }
+      final result = await widget.api.approve([for (final q in passed) q.question.id]);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result.left.isEmpty
+            ? '${result.published} soal diterbitkan'
+            : '${result.published} soal diterbitkan, ${result.left.length} tetap di Draf'),
+      ));
+      QuizApi.changed.value++;
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _bulk = false);
     }
   }
 
@@ -133,8 +221,8 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final list = _list;
-    if (list == null) {
+    final all = _list;
+    if (all == null) {
       return _error == null
           ? const Center(child: CircularProgressIndicator())
           : EmptyState(
@@ -144,35 +232,184 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
               action: FilledButton(onPressed: _load, child: const Text('Coba lagi')),
             );
     }
+    final list = _type.isEmpty ? all : all.where((q) => q.question.type == _type).toList();
+    final passed = all.where((q) => q.passed).toList();
+    final counts = {for (final t in quizTypes.keys) t: all.where((q) => q.question.type == t).length};
+    final jobs = _jobs.where((j) => j.running || DateTime.now().difference(j.createdAt).inHours < 24).take(2);
     return RefreshIndicator(
       onRefresh: _load,
-      child: list.isEmpty
-          ? ListView(children: [
-              EmptyState(
-                icon: Icons.inbox_outlined,
-                title: 'Tidak ada soal',
-                message: widget.status == 'draf'
-                    ? 'Buat draf dari halaman manual: buka manual, lalu ketuk ikon Quiz di atas.'
-                    : null,
-              ),
-            ])
-          : ListView.separated(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 24 + MediaQuery.paddingOf(context).bottom),
-              itemCount: list.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 12),
-              itemBuilder: (context, i) => _QuestionCard(
-                item: list[i],
-                onAction: (action) => action == 'ubah' ? _edit(list[i]) : _decide(list[i], action),
+      child: ListView(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 24 + MediaQuery.paddingOf(context).bottom),
+        children: [
+          for (final job in jobs) ...[_JobCard(job: job), const SizedBox(height: 12)],
+          if (_drafts && passed.isNotEmpty) ...[
+            _BulkCard(
+              passed: passed.length,
+              toCheck: all.length - passed.length,
+              busy: _bulk,
+              onApprove: () => _approveAll(passed),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (all.isNotEmpty && counts.values.where((n) => n > 0).length > 1) ...[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final (t, label) in [('', 'Semua'), for (final e in quizTypes.entries) (e.key, e.value)])
+                    if (t.isEmpty || counts[t]! > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(t.isEmpty ? label : '$label ${counts[t]}'),
+                          selected: _type == t,
+                          onSelected: (_) => setState(() => _type = t),
+                        ),
+                      ),
+                ],
               ),
             ),
+            const SizedBox(height: 12),
+          ],
+          if (list.isEmpty)
+            EmptyState(
+              icon: Icons.inbox_outlined,
+              title: 'Tidak ada soal',
+              message: _drafts
+                  ? 'Ketuk "Buat draf kuis" di atas, atau buka manual lalu ketuk ikon Quiz.'
+                  : null,
+            )
+          else
+            for (final (i, q) in list.indexed) ...[
+              if (i > 0) const SizedBox(height: 12),
+              _QuestionCard(
+                item: q,
+                api: widget.api,
+                onAction: (action) => action == 'ubah' ? _edit(q) : _decide(q, action),
+              ),
+            ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Question types with their names on screen.
+const quizTypes = {'pg': 'Pilihan ganda', 'bs': 'Benar/Salah', 'gambar': 'Gambar'};
+
+/// Draws [page] of [file] as a quiz picture once and sends it for each of
+/// [ids] (the picture questions of that page).
+Future<void> sendQuizPicture(AppStore store, QuizApi api, ManualFile file, int page, List<String> ids) async {
+  final Uint8List png = await renderQuizPicture(store, file, page);
+  for (final id in ids) {
+    await api.uploadImage(id, png);
+  }
+}
+
+class _JobCard extends StatelessWidget {
+  const _JobCard({required this.job});
+
+  final QuizJob job;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (job.status) {
+      'antri' => ('Menunggu giliran', AppColors.muted),
+      'jalan' => ('Sedang dibuat', AppColors.navy),
+      'gagal' => ('Gagal', AppColors.danger),
+      _ => ('Selesai', AppColors.green),
+    };
+    final progress = job.pages == 0 ? 0.0 : job.pagesDone / job.pages;
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  [if (job.unit != null) job.unit!, job.title].join(' · '),
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+              ),
+              Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            job.error ??
+                (job.running
+                    ? 'Halaman ${job.pagesDone} dari ${job.pages} · ${job.kept} soal jadi'
+                    : '${job.passed} lolos kurator · ${job.flagged} perlu dicek · ${job.dropped} dibuang'),
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+          if (job.running) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: job.status == 'antri' ? null : progress,
+                minHeight: 6,
+                color: AppColors.navy,
+                backgroundColor: AppColors.line,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text('Boleh tutup aplikasi, nyel AI tetap bekerja di server.',
+                style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _BulkCard extends StatelessWidget {
+  const _BulkCard({required this.passed, required this.toCheck, required this.busy, required this.onApprove});
+
+  final int passed;
+  final int toCheck;
+  final bool busy;
+  final VoidCallback onApprove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+      decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(16)),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$passed soal lolos kurator',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                if (toCheck > 0)
+                  Text('$toCheck perlu dicek satu per satu',
+                      style: const TextStyle(fontSize: 12, color: Color(0xCCFFFFFF))),
+              ],
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.orange, foregroundColor: Colors.white),
+            onPressed: busy ? null : onApprove,
+            child: busy
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : Text('Setujui $passed'),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _QuestionCard extends StatelessWidget {
-  const _QuestionCard({required this.item, required this.onAction});
+  const _QuestionCard({required this.item, required this.api, required this.onAction});
 
   final AdminQuestion item;
+  final QuizApi api;
   final ValueChanged<String> onAction;
 
   @override
@@ -193,11 +430,25 @@ class _QuestionCard extends StatelessWidget {
             children: [
               if (q.unit != null) Pill(q.unit!, background: AppColors.navySoft, foreground: AppColors.navy),
               Text('${q.topicName} · ${item.section}', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+              Pill(quizTypes[q.type] ?? q.type, background: AppColors.greySoft, foreground: AppColors.inkSoft),
+              if (item.curatorScore case final score?)
+                Pill(
+                  'Kurator $score/10',
+                  background: score >= 7 ? AppColors.greenSoft : AppColors.amberSoft,
+                  foreground: score >= 7 ? AppColors.green : AppColors.amber,
+                ),
               if (item.source == 'ai') Pill('nyel AI', background: AppColors.orangeSoft, foreground: AppColors.orangeText),
             ],
           ),
           const SizedBox(height: 8),
           Text(q.prompt, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.4)),
+          if (q.type == 'gambar') ...[
+            const SizedBox(height: 8),
+            q.image == null
+                ? Text('Gambar dibuat dari halaman ${q.page} saat soal disetujui.',
+                    style: TextStyle(fontSize: 12, color: AppColors.muted))
+                : QuizPicture(api: api, questionId: q.id, height: 140),
+          ],
           const SizedBox(height: 8),
           for (final (i, c) in q.choices.indexed)
             Padding(
@@ -241,6 +492,10 @@ class _QuestionCard extends StatelessWidget {
               ),
             ),
           ),
+          if (item.curatorNote case final curator? when curator.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text('Kurator: $curator', style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.inkSoft)),
+          ],
           if (note != null) ...[
             const SizedBox(height: 6),
             Container(
@@ -495,6 +750,7 @@ class QuizGenerateSheet extends StatefulWidget {
 class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
   late final http.Client _client = widget.client ?? http.Client();
   String _topic = 'struktur';
+  String _kind = 'campur';
   int _count = 3;
   bool _busy = false;
   String? _status;
@@ -531,13 +787,24 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
         page: page,
         text: text,
         count: _count,
+        kind: _kind,
       );
+      if (result.pictures.isNotEmpty && mounted) {
+        setState(() => _status = 'Membuat gambar soal…');
+        try {
+          await sendQuizPicture(store, QuizApi(store, _client), file, page, result.pictures);
+        } on Object {
+          // Made again when the question is approved.
+        }
+      }
       if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      messenger.showSnackBar(SnackBar(
         content: Text(result.saved == 0
             ? 'Tidak ada soal yang layak dari halaman ini.'
-            : '${result.saved} draf soal dibuat. Tinjau di menu ⋮ > Kelola soal quiz.'),
+            : '${result.saved} draf soal dibuat${result.dropped > 0 ? ', ${result.dropped} dibuang kurator' : ''}. '
+                'Tinjau di menu ⋮ > Kelola soal quiz.'),
       ));
     } catch (e) {
       if (!mounted) return;
@@ -561,10 +828,33 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
             const Text('Buat soal quiz', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             Text(
-              'nyel AI membuat draf dari halaman ${widget.page}. Draf baru muncul ke mekanik setelah admin menyetujui.',
+              'nyel AI membuat draf dari halaman ${widget.page}, lalu kurator memeriksanya. Soal baru muncul ke mekanik setelah admin menyetujui.',
               style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.inkSoft),
             ),
             const SizedBox(height: 14),
+            const Text('Jenis soal', style: TextStyle(fontSize: 14)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                for (final (k, label) in [('campur', 'Campur'), for (final e in quizTypes.entries) (e.key, e.value)])
+                  ChoiceChip(
+                    label: Text(label),
+                    selected: _kind == k,
+                    onSelected: _busy ? null : (_) => setState(() => _kind = k),
+                  ),
+              ],
+            ),
+            if (_kind == 'gambar')
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  'Untuk halaman gambar dengan keterangan nomor. Mekanik melihat gambarnya tanpa tulisan.',
+                  style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.muted),
+                ),
+              ),
+            const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _topic,
               decoration: const InputDecoration(labelText: 'Topik'),

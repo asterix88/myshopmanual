@@ -150,8 +150,9 @@ class QuizApi {
 
   // ---- Admin ----
 
-  /// nyel AI writes draft questions from one manual page.
-  Future<({int saved, List<String> skipped})> generate({
+  /// nyel AI writes draft questions from one manual page; [kind] is campur,
+  /// pg, bs or gambar. The curator checks them before they are saved.
+  Future<GenerateResult> generate({
     required String section,
     required String unit,
     required String topic,
@@ -159,6 +160,7 @@ class QuizApi {
     required int page,
     required String text,
     required int count,
+    String kind = 'campur',
   }) async {
     final data = await _call('/admin/quiz/generate', {
       'section': section,
@@ -168,8 +170,108 @@ class QuizApi {
       'page': page,
       'text': text,
       'count': count,
+      'kind': kind,
     });
-    return (saved: (data['saved'] as num).toInt(), skipped: [for (final s in data['skipped'] as List) '$s']);
+    return GenerateResult(data);
+  }
+
+  /// "Buat draf kuis" step 1: nyel AI picks pages from the table of contents.
+  Future<List<PlannedPage>> plan({
+    required String unit,
+    required String topic,
+    required String toc,
+    required int pages,
+    required int count,
+    required QuizMix mix,
+  }) async {
+    final data = await _call('/admin/quiz/plan', {
+      'unit': unit,
+      'topic': topic,
+      'toc': toc,
+      'pages': pages,
+      'count': count,
+      'mix': mix.toJson(),
+    });
+    return [for (final p in data['pages'] as List) PlannedPage(p as Map<String, dynamic>)];
+  }
+
+  /// "Buat draf kuis" step 2: the pages with their text; the server goes on
+  /// by itself. Returns the job id.
+  Future<String> startJob({
+    required String section,
+    required String unit,
+    required String manualId,
+    required String title,
+    required String topic,
+    required int count,
+    required QuizMix mix,
+    required List<Map<String, dynamic>> pages,
+  }) async {
+    final data = await _call('/admin/quiz/job', {
+      'section': section,
+      'unit': unit,
+      'manual_id': manualId,
+      'title': title,
+      'topic': topic,
+      'count': count,
+      'mix': mix.toJson(),
+      'pages': pages,
+    });
+    return data['id'] as String;
+  }
+
+  Future<List<QuizJob>> jobs() async {
+    final data = await _call('/admin/quiz/jobs', {});
+    return [for (final j in data['jobs'] as List) QuizJob(j as Map<String, dynamic>)];
+  }
+
+  /// Publishes the drafts among [ids] that passed the curator (picture
+  /// questions need their picture first). Returns how many were published.
+  Future<({int published, List<String> left})> approve(List<String> ids) async {
+    final data = await _call('/admin/quiz/approve', {'ids': ids});
+    return (published: _int(data['published']), left: [for (final id in data['left'] as List? ?? const []) '$id']);
+  }
+
+  /// Sends the picture of a "gambar" question (PNG).
+  Future<void> uploadImage(String id, Uint8List png) async {
+    final session = store.session;
+    if (session == null) throw AuthException('login', 'Silakan masuk lagi.');
+    final http.Response response;
+    try {
+      response = await client
+          .put(
+            _base.resolve('/admin/quiz/image/${Uri.encodeComponent(id)}'),
+            headers: {'content-type': 'image/png', sessionHeader: session.token},
+            body: png,
+          )
+          .timeout(const Duration(seconds: 60));
+    } on Exception {
+      throw AuthException('network', 'Koneksi terputus');
+    }
+    if (response.statusCode != 200) {
+      throw AuthException('server', 'Gambar soal gagal dikirim (kode ${response.statusCode}).');
+    }
+  }
+
+  static final _images = <String, Uint8List>{};
+
+  /// The picture of a "gambar" question, kept in memory once loaded.
+  Future<Uint8List> image(String questionId) async {
+    final known = _images[questionId];
+    if (known != null) return known;
+    final session = store.session;
+    if (session == null) throw AuthException('login', 'Silakan masuk lagi.');
+    final http.Response response;
+    try {
+      response = await client
+          .get(_base.resolve('/quiz/image/${Uri.encodeComponent(questionId)}'), headers: {sessionHeader: session.token})
+          .timeout(const Duration(seconds: 30));
+    } on Exception {
+      throw AuthException('network', 'Koneksi terputus');
+    }
+    if (response.statusCode != 200) throw AuthException('server', 'Gambar soal tidak ada.');
+    if (_images.length > 30) _images.clear();
+    return _images[questionId] = response.bodyBytes;
   }
 
   Future<List<AdminQuestion>> questions(String status) async {
@@ -252,6 +354,7 @@ class QuizQuestion {
         explain = j['explain'] as String? ?? '',
         manualId = j['manual_id'] as String? ?? '',
         page = _int(j['page']),
+        image = j['image'] as String?,
         review = j['review'] == true,
         level = (j['level'] as num?)?.toInt();
 
@@ -267,6 +370,9 @@ class QuizQuestion {
   /// The manual's key on the phone ("PC210-10/sm") and page.
   final String manualId;
   final int page;
+
+  /// A "gambar" question's picture (its key on the server), or null.
+  final String? image;
 
   /// Asked again (was wrong, or its date has come).
   final bool review;
@@ -399,6 +505,93 @@ class AdminQuestion {
   int get reports => _int(json['reports']);
   int get answered => _int(json['answered']);
   int? get wrongPct => (json['wrong_pct'] as num?)?.toInt();
+  String? get jobId => json['job_id'] as String?;
+
+  /// 1..10 from the curator; null when it did not check the question.
+  int? get curatorScore => (json['curator_score'] as num?)?.toInt();
+  String? get curatorNote => json['curator_note'] as String?;
+
+  /// Curator 7+ and the numbers found on the page: "Setujui semua" takes it.
+  bool get passed => json['passed'] == true;
+  bool get needsPicture => question.type == 'gambar' && question.image == null;
+}
+
+class GenerateResult {
+  GenerateResult(Map<String, dynamic> j)
+      : saved = _int(j['saved']),
+        pictures = [for (final id in j['pictures'] as List? ?? const []) '$id'],
+        dropped = _int(j['dropped']);
+
+  final int saved;
+
+  /// Saved "gambar" questions, which still need their picture.
+  final List<String> pictures;
+
+  /// Thrown away by the curator.
+  final int dropped;
+}
+
+/// The share of each question type in "Buat draf kuis", in percent.
+class QuizMix {
+  const QuizMix({this.pg = 60, this.bs = 20, this.gambar = 20});
+
+  final int pg;
+  final int bs;
+  final int gambar;
+
+  Map<String, int> toJson() => {'pg': pg, 'bs': bs, 'gambar': gambar};
+
+  /// How many of [count] questions are of each type (like the server).
+  ({int pg, int bs, int gambar}) split(int count) {
+    final g = (count * gambar / 100).round();
+    final b = (count * bs / 100).round();
+    return (pg: count - g - b < 0 ? 0 : count - g - b, bs: b, gambar: g);
+  }
+}
+
+class PlannedPage {
+  PlannedPage(Map<String, dynamic> j)
+      : page = _int(j['page']),
+        kind = j['kind'] == 'gambar' ? 'gambar' : 'teks',
+        topic = j['topic'] as String? ?? 'struktur';
+
+  final int page;
+  final String kind;
+  final String topic;
+}
+
+class QuizJob {
+  QuizJob(Map<String, dynamic> j)
+      : id = j['id'] as String,
+        unit = j['unit'] as String?,
+        title = j['title'] as String? ?? '',
+        count = _int(j['count']),
+        status = j['status'] as String? ?? '',
+        pages = _int(j['pages']),
+        pagesDone = _int(j['pages_done']),
+        passed = _int(j['passed']),
+        flagged = _int(j['flagged']),
+        dropped = _int(j['dropped']),
+        error = j['error'] as String?,
+        createdAt = DateTime.fromMillisecondsSinceEpoch(_int(j['created_at']));
+
+  final String id;
+  final String? unit;
+  final String title;
+  final int count;
+
+  /// antri, jalan, selesai or gagal.
+  final String status;
+  final int pages;
+  final int pagesDone;
+  final int passed;
+  final int flagged;
+  final int dropped;
+  final String? error;
+  final DateTime createdAt;
+
+  bool get running => status == 'antri' || status == 'jalan';
+  int get kept => passed + flagged;
 }
 
 class QuizReport {

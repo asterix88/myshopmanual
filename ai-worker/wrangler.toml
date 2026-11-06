@@ -48,9 +48,10 @@ database_id = "8752ff6e-7d31-4156-9bd5-1e5b4bd0af78"
 migrations_dir = "migrations"
 
 # The Quiz's nightly job (src/quiz-cron.ts): 21.00 UTC = 04.00 WIB, when a
-# new quiz day starts.
+# new quiz day starts. Every minute: "Buat draf kuis" jobs (src/quiz-jobs.ts);
+# a minute with no job only reads one row.
 [triggers]
-crons = ["0 21 * * *"]
+crons = ["0 21 * * *", "* * * * *"]
 
 
 [vars]

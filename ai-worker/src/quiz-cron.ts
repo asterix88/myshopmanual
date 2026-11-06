@@ -7,6 +7,8 @@
 // - removes answers older than 6 months, old boards and abandoned sets
 
 import * as quiz from "./quiz-db.ts";
+import { askWith, type AiEnv } from "./quiz-ai.ts";
+import { runJobs } from "./quiz-jobs.ts";
 import { quizDay } from "./quiz-rules.ts";
 
 export async function runNightly(db: quiz.Db, now = Date.now()): Promise<void> {
@@ -19,4 +21,11 @@ export async function runNightly(db: quiz.Db, now = Date.now()): Promise<void> {
 
 export async function scheduledQuiz(env: { QUIZ: D1Database }): Promise<void> {
   await runNightly(quiz.d1(env.QUIZ));
+}
+
+/// Every minute: works on "Buat draf kuis" jobs for up to 12 minutes (a
+/// cron run may take 15), one job at a time.
+export async function scheduledJobs(env: { QUIZ: D1Database } & AiEnv): Promise<void> {
+  const worked = await runJobs(quiz.d1(env.QUIZ), askWith(env), Date.now() + 12 * 60_000);
+  if (worked) console.log("quiz jobs", worked);
 }
