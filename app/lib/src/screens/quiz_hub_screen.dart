@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../quiz.dart';
+import '../quiz_reminders.dart';
 import '../theme.dart';
 import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
@@ -286,6 +287,8 @@ class _QuizHubScreenState extends State<QuizHubScreen> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 20),
+                        QuizReminderSettings(home: home),
                         const SizedBox(height: 12),
                         Text(
                           'Rekor streak ${home.bestStreak} hari · Total ${home.xpTotal} XP',
@@ -346,16 +349,18 @@ class _StreakHeader extends StatelessWidget {
             children: [
               Flame(size: 36, look: home.streak > 0 ? FlameLook.done : FlameLook.off, onDark: true),
               const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Streak ${home.streak} hari',
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
-                  Text(
-                    home.done ? 'Quiz hari ini selesai' : 'Quiz hari ini belum dikerjakan',
-                    style: const TextStyle(fontSize: 12, color: Color(0xBFFFFFFF)),
-                  ),
-                ],
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Streak ${home.streak} hari',
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
+                    Text(
+                      home.done ? 'Quiz hari ini selesai' : 'Quiz hari ini belum dikerjakan',
+                      style: const TextStyle(fontSize: 12, color: Color(0xBFFFFFFF)),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -1154,3 +1159,147 @@ class _AvatarPickerScreenState extends State<AvatarPickerScreen> {
   }
 }
 
+/// "Pengingat" on the Quiz page: each mechanic sets their own reminders.
+class QuizReminderSettings extends StatefulWidget {
+  const QuizReminderSettings({super.key, required this.home});
+
+  final QuizHome home;
+
+  @override
+  State<QuizReminderSettings> createState() => _QuizReminderSettingsState();
+}
+
+class _QuizReminderSettingsState extends State<QuizReminderSettings> {
+  late ReminderSettings _settings = QuizReminders.load(StoreScope.read(context).root);
+
+  static const _times = [(5, 30), (6, 0), (6, 30), (7, 0), (12, 0), (16, 0)];
+
+  Future<void> _set(ReminderSettings settings) async {
+    setState(() => _settings = settings);
+    final root = StoreScope.read(context).root;
+    await QuizReminders.save(root, settings);
+    await QuizReminders.sync(root, QuizApi.lastHome ?? widget.home);
+  }
+
+  Future<void> _otherTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: _settings.hour, minute: _settings.minute),
+      helpText: 'Jam pengingat harian',
+      builder: (context, child) =>
+          MediaQuery(data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true), child: child!),
+    );
+    if (picked != null) await _set(_settings.copyWith(hour: picked.hour, minute: picked.minute));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _settings;
+    final preset = _times.any((t) => t.$1 == s.hour && t.$2 == s.minute);
+    final timeStyle = TextStyle(fontWeight: FontWeight.w600, color: AppColors.navy);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _Caps('Pengingat'),
+        AppCard(
+          child: Column(
+            children: [
+              _SwitchRow(
+                title: 'Pengingat harian',
+                subtitle: Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(text: 'Setiap hari pukul '),
+                      TextSpan(text: s.time, style: timeStyle),
+                    ],
+                  ),
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+                value: s.daily,
+                onChanged: (v) => _set(s.copyWith(daily: v)),
+              ),
+              Divider(height: 1, color: AppColors.divider),
+              _SwitchRow(
+                title: 'Peringatan streak',
+                subtitle: Text('Pukul 20.00 kalau belum quiz', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                value: s.streak,
+                onChanged: (v) => _set(s.copyWith(streak: v)),
+              ),
+            ],
+          ),
+        ),
+        if (s.daily) ...[
+          const SizedBox(height: 16),
+          const _Caps('Jam pengingat harian'),
+          AppCard(
+            padding: const EdgeInsets.all(12),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final (h, m) in _times)
+                  ChoiceChip(
+                    label: Text(ReminderSettings(hour: h, minute: m).time),
+                    selected: s.hour == h && s.minute == m,
+                    onSelected: (_) => _set(s.copyWith(hour: h, minute: m)),
+                  ),
+                ChoiceChip(
+                  label: Text(preset ? 'Lainnya…' : s.time),
+                  selected: !preset,
+                  onSelected: (_) => _otherTime(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _Caps extends StatelessWidget {
+  const _Caps(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+    child: Text(
+      text.toUpperCase(),
+      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.7, color: AppColors.muted),
+    ),
+  );
+}
+
+class _SwitchRow extends StatelessWidget {
+  const _SwitchRow({required this.title, required this.subtitle, required this.value, required this.onChanged});
+
+  final String title;
+  final Widget subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: () => onChanged(!value),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                subtitle,
+              ],
+            ),
+          ),
+          Switch(value: value, onChanged: onChanged, activeThumbColor: Colors.white, activeTrackColor: AppColors.navy),
+        ],
+      ),
+    ),
+  );
+}

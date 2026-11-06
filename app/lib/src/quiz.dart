@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import 'ai.dart' show aiUrl;
 import 'auth.dart';
+import 'quiz_reminders.dart';
 import 'store.dart';
 
 /// The Quiz: questions from the manuals, spaced repetition, XP and a
@@ -71,6 +72,7 @@ class QuizApi {
     await sendPending();
     final home = QuizHome(await _call('/quiz/home'));
     lastHome = home;
+    unawaited(QuizReminders.sync(store.root, home));
     return home;
   }
 

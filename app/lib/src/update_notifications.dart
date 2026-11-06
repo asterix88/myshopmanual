@@ -9,6 +9,7 @@ import 'package:workmanager/workmanager.dart';
 
 import 'diagnostics.dart';
 import 'models.dart';
+import 'quiz_reminders.dart' show quizPayload;
 import 'store.dart';
 
 /// Every few hours, with internet, the phone asks the server for its catalog
@@ -26,6 +27,7 @@ final _notifications = FlutterLocalNotificationsPlugin();
 /// [onPermissionAnswered] once the permission question is out of the way.
 Future<void> startUpdateNotifications({
   required void Function() onOpenUpdates,
+  void Function()? onOpenQuiz,
   void Function()? onPermissionAnswered,
 }) async {
   var answered = false;
@@ -40,12 +42,14 @@ Future<void> startUpdateNotifications({
       settings: const InitializationSettings(android: AndroidInitializationSettings('ic_notification')),
       onDidReceiveNotificationResponse: (response) {
         if (response.payload == updatesPayload) onOpenUpdates();
+        if (response.payload == quizPayload) onOpenQuiz?.call();
       },
     );
     final launch = await _notifications.getNotificationAppLaunchDetails();
-    if ((launch?.didNotificationLaunchApp ?? false) &&
-        launch?.notificationResponse?.payload == updatesPayload) {
-      onOpenUpdates();
+    if (launch?.didNotificationLaunchApp ?? false) {
+      final payload = launch?.notificationResponse?.payload;
+      if (payload == updatesPayload) onOpenUpdates();
+      if (payload == quizPayload) onOpenQuiz?.call();
     }
     await _notifications
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()

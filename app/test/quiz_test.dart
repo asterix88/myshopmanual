@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mymanual/src/page_image.dart';
 import 'package:mymanual/src/quiz.dart';
+import 'package:mymanual/src/quiz_reminders.dart';
 import 'package:mymanual/src/screens/quiz_admin_screen.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:mymanual/src/screens/quiz_hub_screen.dart';
@@ -272,5 +273,65 @@ void main() {
     expect(find.text('Ketuk untuk perbesar'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(() async => store.dispose());
+  });
+
+  group('quiz reminders', () {
+    QuizHome h({String daily = 'belum', int streak = 3, int questions = 30}) =>
+        QuizHome(homeJson(daily: daily, streak: streak, questions: questions));
+    final morning = DateTime(2026, 11, 6, 6, 0);
+
+    test('not done yet: today 07.00 with the streak, 20.00 warning, then each day at 07.00', () {
+      final plan = planReminders(morning, const ReminderSettings(), h());
+      expect(plan.first.at, DateTime(2026, 11, 6, 7));
+      expect(plan.first.body, '10 soal, sekitar 4 menit. Streak 3 hari.');
+      final warnings = plan.where((r) => r.title.startsWith('Streak')).toList();
+      expect(warnings.single.at, DateTime(2026, 11, 6, 20));
+      expect(warnings.single.title, 'Streak 3 hari belum aman');
+      final daily = plan.where((r) => r.title == 'Quiz harian menunggu').toList();
+      expect(daily.length, 7);
+      // Tomorrow the streak is only safe if today's quiz gets done.
+      expect(daily[1].body, '10 soal, sekitar 4 menit.');
+    });
+
+    test('done today: nothing today, tomorrow keeps the streak', () {
+      final plan = planReminders(DateTime(2026, 11, 6, 9), const ReminderSettings(), h(daily: 'selesai'));
+      expect(plan.every((r) => r.at.isAfter(DateTime(2026, 11, 7, 4))), isTrue);
+      expect(plan.first.at, DateTime(2026, 11, 7, 7));
+      expect(plan.first.body, endsWith('Streak 3 hari.'));
+      expect(plan.where((r) => r.title.startsWith('Streak')).single.at, DateTime(2026, 11, 7, 20));
+    });
+
+    test('settings: off, another time, no streak, no questions', () {
+      expect(planReminders(morning, const ReminderSettings(daily: false, streak: false), h()), isEmpty);
+      expect(planReminders(morning, const ReminderSettings(), h(questions: 0)), isEmpty);
+      final noStreak = planReminders(morning, const ReminderSettings(hour: 5, minute: 30), h(streak: 0));
+      expect(noStreak.any((r) => r.title.startsWith('Streak')), isFalse);
+      // 05.30 today has passed: the first one is tomorrow.
+      expect(noStreak.first.at, DateTime(2026, 11, 7, 5, 30));
+      expect(quizDayOf(DateTime(2026, 11, 7, 3, 59)), '2026-11-06');
+    });
+
+    testWidgets('the Quiz page saves the reminder time', (tester) async {
+      final client = MockClient((request) async => request.url.path == '/quiz/home'
+          ? http.Response(jsonEncode(homeJson()), 200)
+          : http.Response(jsonEncode({'rows': [], 'me': null}), 200));
+      tester.view.physicalSize = const Size(1080, 2400);
+      addTearDown(tester.view.resetPhysicalSize);
+      final store = await openStore(tester, client);
+      await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(home: QuizHubScreen(client: client))));
+      await settle(tester);
+      expect(find.text('Pengingat harian'), findsOneWidget);
+      await tester.ensureVisible(find.text('12.00'));
+      await tester.pump();
+      await tester.tap(find.text('12.00'));
+      await settle(tester);
+      expect(QuizReminders.load(root).hour, 12);
+      await tester.tap(find.text('Pengingat harian'));
+      await settle(tester);
+      expect(QuizReminders.load(root).daily, isFalse);
+      expect(find.text('12.00'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      await tester.runAsync(() async => store.dispose());
+    });
   });
 }
