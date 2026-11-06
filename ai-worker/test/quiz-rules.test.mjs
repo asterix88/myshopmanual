@@ -18,3 +18,4 @@ test("level 6 diulang 90 hari lagi", () => {
 
 test("level 9 tetap diulang 90 hari lagi", () => {
   assert.equal(daysUntilNext(9), 90);
+});
