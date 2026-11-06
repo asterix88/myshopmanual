@@ -1,11 +1,13 @@
 import 'package:flutter/gestures.dart' show Drag;
 import 'package:flutter/material.dart';
 
+import '../quiz_reminders.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets/app_icons.dart';
 import 'chat_screen.dart';
 import 'home_screen.dart';
+import 'quiz_screen.dart';
 import 'search_screen.dart';
 import 'service_screen.dart';
 import 'specs_screen.dart';
@@ -47,7 +49,22 @@ class _HomeShellState extends State<HomeShell> {
   static const chatTab = 2;
 
   @override
+  void initState() {
+    super.initState();
+    QuizReminders.openRequested.addListener(_openQuiz);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openQuiz());
+  }
+
+  /// A quiz reminder was tapped: today's quiz opens over Home.
+  void _openQuiz() {
+    if (!mounted || !QuizReminders.openRequested.value) return;
+    QuizReminders.openRequested.value = false;
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QuizPlayScreen()));
+  }
+
+  @override
   void dispose() {
+    QuizReminders.openRequested.removeListener(_openQuiz);
     _carried?.cancel();
     _pages.dispose();
     super.dispose();

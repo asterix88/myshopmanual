@@ -7,6 +7,7 @@ import 'package:pdfrx/pdfrx.dart';
 
 import 'src/diagnostics.dart';
 import 'src/keep_alive.dart';
+import 'src/quiz_reminders.dart';
 import 'src/screens/intro_screen.dart';
 import 'src/screens/login_screen.dart';
 import 'src/screens/unit_screen.dart';
@@ -31,11 +32,20 @@ Future<void> main() async {
   // (Android 13+, first start) is answered, so the dialog does not cover it.
   final permission = Completer<void>();
   runApp(MyManualApp(store: store, requireLogin: true, splash: splash, intro: true, splashReady: permission.future));
-  // Tapping an update notification opens the update list.
+  // Quiz reminders are planned on the phone; logging out takes them off.
+  QuizReminders.active = true;
+  var wasLoggedIn = store.loggedIn;
+  store.addListener(() {
+    if (wasLoggedIn && !store.loggedIn) unawaited(QuizReminders.sync(store.root, null));
+    wasLoggedIn = store.loggedIn;
+  });
+  // Tapping an update notification opens the update list; a quiz reminder
+  // opens today's quiz.
   unawaited(startUpdateNotifications(
     onOpenUpdates: () => _navigator.currentState?.push(
       MaterialPageRoute(builder: (_) => UpdatesScreen()),
     ),
+    onOpenQuiz: () => QuizReminders.openRequested.value = true,
     onPermissionAnswered: permission.complete,
   ));
   // Tapping the download notification shows the manual being downloaded.
