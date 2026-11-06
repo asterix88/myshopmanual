@@ -19,6 +19,7 @@ import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
 import '../widgets/excavator_loader.dart';
 import 'chat_screen.dart';
+import 'quiz_admin_screen.dart';
 import 'shell.dart';
 
 /// Opens a manual, optionally at [page] and with [query] highlighted. A
@@ -648,6 +649,17 @@ class _ViewerScreenState extends State<ViewerScreen> {
           ],
         ),
         actions: [
+          if (store.session?.admin ?? false)
+            IconButton(
+              tooltip: 'Buat soal quiz dari halaman ini',
+              onPressed: () => showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                builder: (_) => QuizGenerateSheet(file: file, page: _page),
+              ),
+              icon: AppIcon(AppGlyph.quiz, color: AppColors.ink, size: 22),
+            ),
           IconButton(
             tooltip: 'Cari di file ini',
             onPressed: _toggleSearch,

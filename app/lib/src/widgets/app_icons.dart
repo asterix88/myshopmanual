@@ -190,7 +190,25 @@ enum AppGlyph {
   chevronDown([_P('M7 10l5 5 5-5')]),
   check([_P('M5 12.5l4.5 4.5L19 7.5', width: 2)]),
   // A section: stacked layers, the lower one in the accent.
-  section([_P('M12 4l8.5 4.7L12 13.4 3.5 8.7z'), _P('M3.5 13.3L12 18l8.5-4.7', accent: true)]);
+  section([_P('M12 4l8.5 4.7L12 13.4 3.5 8.7z'), _P('M3.5 13.3L12 18l8.5-4.7', accent: true)]),
+  // Quiz (from the approved Quiz mockup v20).
+  quiz([
+    _R(4, 3.5, 16, 17, 2.5),
+    _P('M9.6 9.2a2.4 2.4 0 1 1 3.4 2.2c-.6.3-1 .8-1 1.5v.6', accent: true),
+    _C(12, 16.3, 1.1, accent: true, fill: true),
+  ]),
+  flame([_P('M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 1.6 1 2.5 2 3 .5-3 .5-5.5.5-8z')]),
+  trophy([_P('M8 4h8v5a4 4 0 0 1-8 0z'), _P('M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8')]),
+  unit([_P('M3 17h13l3-4h2'), _C(6, 18, 2), _C(14, 18, 2), _P('M5 13V8h6l2 5')]),
+  list([_P('M9 6h11M9 12h11M9 18h11'), _P('M4 6h.01M4 12h.01M4 18h.01', width: 2.4)]),
+  flag([_P('M5 21V4h11l-1.5 4L16 12H5')]),
+  book([_P('M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z'), _P('M5 17a3 3 0 0 1 3-3h10')]),
+  refresh([_P('M20 12a8 8 0 1 1-2.3-5.7'), _P('M20 4v5h-5')]),
+  close([_P('M6 6l12 12M18 6L6 18', width: 2)]),
+  cross([_P('M7 7l10 10M17 7L7 17', width: 2.4)]),
+  cloudOff([_P('M7 18h10a4 4 0 0 0 .8-7.9A6 6 0 0 0 7.2 8.4'), _P('M4.5 10.5A4 4 0 0 0 7 18'), _P('M3 3l18 18')]),
+  pencil([_P('M4 20h4L19 9l-4-4L4 16z')]),
+  sparkle([_P('M12 4l1.8 4.6L18.5 10l-4.7 1.6L12 16l-1.8-4.4L5.5 10l4.7-1.4z'), _P('M18 16l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z', accent: true)]);
 
   const AppGlyph(this._parts);
 

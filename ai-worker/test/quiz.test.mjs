@@ -144,6 +144,7 @@ test("next day: wrong answers come back as reviews, streak goes on", async () =>
   assert.equal(home.daily, "selesai");
   assert.equal(home.streak, 2);
   assert.equal(home.rank_week, 1);
+  assert.equal(home.questions, 30);
 });
 
 test("streak freeze after one missed day", async () => {
