@@ -104,6 +104,88 @@ Future<Uint8List> _render(PdfPage pdfPage, String region, double longest) async 
   throw StateError('unreachable');
 }
 
+/// The picture of a "gambar" quiz question: the whole page with every word
+/// covered in white, so the drawing keeps its callout numbers but the legend
+/// ("3. Main relief valve") does not give the answer away.
+Future<Uint8List> renderQuizPicture(AppStore store, ManualFile file, int page, {double longest = 1600}) =>
+    _oneAtATime(() async {
+      Diagnostics.log('quiz picture ${file.key} p$page');
+      PdfDocument? document;
+      try {
+        document = await _open(store, file);
+        final pdfPage = await _loadPage(document, page);
+        final scale = longest / math.max(pdfPage.width, pdfPage.height);
+        final width = (pdfPage.width * scale).round();
+        final height = (pdfPage.height * scale).round();
+        final rendered = await pdfPage.render(width: width, height: height, backgroundColor: 0xffffffff);
+        if (rendered == null) throw StateError('page $page could not be drawn');
+        final ui.Image picture;
+        try {
+          picture = await rendered.createImage();
+        } finally {
+          rendered.dispose();
+        }
+        final text = await pdfPage.loadText();
+        final recorder = ui.PictureRecorder();
+        final canvas = ui.Canvas(recorder)..drawImage(picture, ui.Offset.zero, ui.Paint());
+        picture.dispose();
+        final white = ui.Paint()..color = const ui.Color(0xffffffff);
+        for (final r in wordsToCover(text?.fullText ?? '', text?.charRects ?? const [])) {
+          canvas.drawRect(
+            ui.Rect.fromLTRB(r.left * scale - 1, (pdfPage.height - r.top) * scale - 1, r.right * scale + 1,
+                (pdfPage.height - r.bottom) * scale + 1),
+            white,
+          );
+        }
+        final covered = await recorder.endRecording().toImage(width, height);
+        final ByteData? data;
+        try {
+          data = await covered.toByteData(format: ui.ImageByteFormat.png);
+        } finally {
+          covered.dispose();
+        }
+        if (data == null) throw StateError('page $page could not be encoded');
+        return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      } finally {
+        await document?.dispose();
+      }
+    });
+
+/// The boxes of the words to cover on a quiz picture: every run of
+/// characters that has a letter in it. Numbers alone ("3", "12.") stay,
+/// since they are the drawing's callouts.
+List<PdfRect> wordsToCover(String text, List<PdfRect> rects) {
+  final out = <PdfRect>[];
+  final letter = RegExp(r'[A-Za-z]');
+  var start = -1;
+  void close(int end) {
+    if (start < 0) return;
+    final word = text.substring(start, end);
+    if (letter.hasMatch(word)) {
+      var box = rects[start];
+      for (var i = start + 1; i < end; i++) {
+        final r = rects[i];
+        box = PdfRect(math.min(box.left, r.left), math.max(box.top, r.top), math.max(box.right, r.right),
+            math.min(box.bottom, r.bottom));
+      }
+      out.add(box);
+    }
+    start = -1;
+  }
+
+  final n = math.min(text.length, rects.length);
+  for (var i = 0; i < n; i++) {
+    final blank = text[i].trim().isEmpty;
+    if (blank) {
+      close(i);
+    } else if (start < 0) {
+      start = i;
+    }
+  }
+  close(n);
+  return out;
+}
+
 /// A small picture of [page] for showing under an AI answer, drawn once and
 /// kept on the phone, so the chat does not keep big manuals open.
 Future<File> pageThumbnail(AppStore store, ManualFile file, int page) async {

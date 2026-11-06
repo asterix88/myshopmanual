@@ -1,100 +1,36 @@
-// The Quiz's admin endpoints: nyel AI drafts questions from a manual page,
-// an admin checks and approves them before mechanics see them (Anas's
+// The Quiz's admin endpoints: nyel AI drafts questions from the manuals, an
+// admin checks and approves them before mechanics see them (Anas's
 // decision in the Quiz PRD). All need an active admin's session.
 //
-//   POST /admin/quiz/generate           {section, unit, topic, manual_id, page, text, count}
-//                                       -> drafts saved with status "draf"
+//   POST /admin/quiz/generate           {section, unit, topic, manual_id, page, text, count, kind}
+//                                       one page -> drafts (kind: campur | pg | bs | gambar)
+//   POST /admin/quiz/plan               {unit, topic, toc, pages, count, mix} -> pages to use
+//   POST /admin/quiz/job                {section, unit, manual_id, title, topic, count, mix, pages}
+//                                       -> a "Buat draf kuis" job, run by the cron (quiz-jobs.ts)
+//   POST /admin/quiz/jobs               recent jobs with their progress
+//   POST /admin/quiz/approve            {ids} -> publishes those that passed the curator
+//   PUT  /admin/quiz/image/<id>         PNG body: the picture of a "gambar" question
 //   POST /admin/quiz/questions          {status, unit?} -> list (draf, terbit, ditarik, ...)
 //   POST /admin/quiz/add                an admin's own question {..., publish?}
 //   POST /admin/quiz/question/<id>      {action: setujui|ubah|tolak|tarik, question?}
 //   POST /admin/quiz/reports            open "Soal salah" reports
 //   POST /admin/quiz/leaderboard/hide   {nrp, hidden}
 //
-// The page text comes from the admin's phone, which already has every
-// manual's search index; the server checks that the numbers in the right
-// answer are on that page and writes what it found in check_note.
+// Page text comes from the admin's phone, which already has every manual's
+// search index; the server checks that the numbers in the right answer are
+// on that page and writes what it found in check_note.
 
-import { requireAdmin, type AuthEnv } from "./auth";
+import { requireAdmin } from "./auth";
+import { askWith, curate, planPages, selfCheck, wantedFor, writeQuestions, MAX_PAGE_TEXT } from "./quiz-ai.ts";
 import * as quiz from "./quiz-db.ts";
-import { numbersMissing, questionProblem, STATUSES, TOPICS, type QuestionInput } from "./quiz-rules.ts";
+import { createJob, listJobs, mixFrom, MAX_JOB_PAGES, MAX_JOB_QUESTIONS, PASS_SCORE, targets, type JobPage } from "./quiz-jobs.ts";
+import { questionProblem, STATUSES, TOPICS, type QuestionInput } from "./quiz-rules.ts";
 import { json, readBody, type QuizEnv } from "./quiz.ts";
 
-/// The AI settings the Worker already has (wrangler.toml, secrets).
-export interface AiEnv extends AuthEnv {
-  DEEPSEEK_API_KEY?: string;
-  GROQ_API_KEY?: string;
-  MODEL: string;
-  API_URL: string;
-}
+export type { AiEnv } from "./quiz-ai.ts";
 
-const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 const MAX_DRAFTS = 5;
-const MAX_PAGE_TEXT = 12_000;
-
-const TOPIC_NAMES: Record<string, string> = {
-  struktur: "structure and function",
-  torsi: "tightening torque",
-  kapasitas: "oil and fluid capacities",
-  standar: "standard values and pressures",
-  fault: "failure codes and troubleshooting",
-  servis: "periodic maintenance (service hours)",
-  sistem: "systems (hydraulic, electrical, power train)",
-};
-
-const GENERATE_PROMPT = `You write quiz questions for heavy-equipment mechanics, from one page of a Komatsu or Caterpillar technical manual. Each question checks one fact that a mechanic should remember on the job: a value with its unit and condition, the function of a component, the order of a procedure, what a failure code means, a service interval.
-
-Rules:
-- Use only what the page says. Every fact in the question, the right answer and the explanation must be on the page. Never use outside knowledge for the answer.
-- Write in Bahasa Indonesia, keeping technical terms, part names, codes and values exactly as the page writes them (in English when the page is English).
-- Type "pg": 4 choices, exactly one right. The wrong choices must be believable (near values, related parts), never silly. Type "bs": choices ["Benar", "Salah"].
-- The question must be answerable without seeing the page; name the unit and the component.
-- explain: one or two sentences saying why the right answer is right, as the page says it.
-- Different questions must check different facts.
-
-Reply with JSON only: {"questions": [{"type": "pg", "prompt": "...", "choices": ["...", "...", "...", "..."], "answer": 0, "explain": "..."}]} where answer is the index of the right choice (0 = first).`;
-
-type Draft = { type?: unknown; prompt?: unknown; choices?: unknown; answer?: unknown; explain?: unknown };
-
-/// Asks the models in MODEL in order (like nyel AI) for drafts; the first
-/// one that answers with JSON wins.
-async function askModels(env: AiEnv, user: string): Promise<Draft[] | null> {
-  for (const entry of env.MODEL.split(",").map((m) => m.trim()).filter(Boolean)) {
-    const deepseek = entry.startsWith("deepseek:");
-    const model = deepseek ? entry.slice("deepseek:".length) : entry;
-    const key = deepseek ? env.DEEPSEEK_API_KEY : env.GROQ_API_KEY;
-    if (!key) continue;
-    try {
-      const response = await fetch(deepseek ? DEEPSEEK_URL : env.API_URL, {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: GENERATE_PROMPT },
-            { role: "user", content: user },
-          ],
-          temperature: 0.4,
-          max_tokens: 3000,
-          response_format: { type: "json_object" },
-          ...(deepseek ? { thinking: { type: "disabled" } } : {}),
-          ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
-        }),
-        signal: AbortSignal.timeout(60_000),
-      });
-      if (!response.ok) {
-        console.log("quiz generate: model failed", entry, response.status);
-        continue;
-      }
-      const data = (await response.json()) as { choices?: { message?: { content?: string } }[] };
-      const text = data.choices?.[0]?.message?.content ?? "";
-      const parsed = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)) as { questions?: Draft[] };
-      if (Array.isArray(parsed.questions)) return parsed.questions;
-    } catch (e) {
-      console.log("quiz generate: model error", entry, String(e));
-    }
-  }
-  return null;
-}
+const MAX_IMAGE = 2_000_000;
 
 /// A question from a request body; null when a field is missing.
 function questionFrom(b: Record<string, unknown>): (QuestionInput & { image: string | null }) | null {
@@ -110,10 +46,12 @@ function questionFrom(b: Record<string, unknown>): (QuestionInput & { image: str
     explain: String(b.explain ?? ""),
     manual_id: String(b.manual_id ?? ""),
     page: Number(b.page),
-    image: String(b.image ?? "").trim() || null,
+    image: null,
   };
 }
 
+/// Manual: questions from the one page the admin has open, checked by the
+/// curator and the server, saved as drafts.
 async function generate(env: QuizEnv, b: Record<string, unknown>, by: string): Promise<Response> {
   const base = questionFrom({ ...b, choices: ["a", "b"], answer: 0, prompt: "x", explain: "x" });
   const text = String(b.text ?? "").slice(0, MAX_PAGE_TEXT);
@@ -121,44 +59,127 @@ async function generate(env: QuizEnv, b: Record<string, unknown>, by: string): P
   const problem = base && questionProblem(base);
   if (!base || problem) return json({ error: "bad_request", message: problem ?? "Data soal tidak lengkap." }, 400);
   if (text.trim().length < 80) return json({ error: "bad_request", message: "Teks halaman terlalu pendek untuk dibuat soal." }, 400);
+  const kind = ["pg", "bs", "gambar"].includes(String(b.kind)) ? String(b.kind) : "campur";
 
-  const drafts = await askModels(
-    env,
-    `Unit: ${base.unit ?? "umum (semua unit)"}\nTopic: ${TOPIC_NAMES[base.topic] ?? base.topic}\nWrite ${count} questions.\n\nManual page ${base.page}:\n${text}`,
-  );
-  if (!drafts) return json({ error: "upstream", message: "nyel AI belum bisa membuat soal sekarang. Coba lagi nanti." }, 502);
+  const ask = askWith(env);
+  const { image: _image, type: _type, prompt: _p, choices: _c, answer: _a, explain: _e, ...where } = base;
+  const out = await writeQuestions(ask, where, text, wantedFor(kind, count));
+  if (!out) return json({ error: "upstream", message: "nyel AI belum bisa membuat soal sekarang. Coba lagi nanti." }, 502);
+  const reviewed = await curate(ask, out.drafts, text);
 
   const db = quiz.d1(env.QUIZ);
-  const saved: string[] = [];
-  const skipped: string[] = [];
-  for (const d of drafts.slice(0, count)) {
-    const q = { ...base, type: String(d.type ?? "pg"), prompt: String(d.prompt ?? ""), choices: Array.isArray(d.choices) ? d.choices.map(String) : [], answer: Number(d.answer), explain: String(d.explain ?? "") };
-    if (q.type === "bs") q.choices = ["Benar", "Salah"];
-    const bad = questionProblem(q);
-    if (bad) {
-      skipped.push(bad);
-      continue;
-    }
-    const missing = numbersMissing(q.choices[q.answer], text);
-    const note = missing.length
-      ? `Cek angka: ${missing.join(", ")} tidak ditemukan di halaman ${q.page}.`
-      : "Angka di jawaban ada di halaman sumber.";
-    saved.push(await quiz.addQuestion(db, q, { status: "draf", source: "ai", by, check_note: note }));
+  const saved: { id: string; type: string }[] = [];
+  for (const q of reviewed.kept) {
+    const check = selfCheck(q, text);
+    const id = await quiz.addQuestion(db, q, {
+      status: "draf",
+      source: "ai",
+      by,
+      check_note: check.note,
+      curator_score: q.score,
+      curator_note: q.note,
+      passed: check.ok && q.score !== null && q.score >= PASS_SCORE,
+    });
+    saved.push({ id, type: q.type });
   }
-  return json({ ok: true, saved: saved.length, ids: saved, skipped });
+  return json({
+    ok: true,
+    saved: saved.length,
+    ids: saved.map((s) => s.id),
+    pictures: saved.filter((s) => s.type === "gambar").map((s) => s.id),
+    skipped: out.skipped,
+    dropped: reviewed.dropped,
+  });
+}
+
+/// "Buat draf kuis", step 1: pages to use, chosen from the table of contents.
+async function plan(env: QuizEnv, b: Record<string, unknown>): Promise<Response> {
+  const toc = String(b.toc ?? "");
+  const pages = Math.round(Number(b.pages) || 0);
+  const count = Math.max(1, Math.min(MAX_JOB_QUESTIONS, Math.round(Number(b.count) || 20)));
+  const topic = TOPICS.includes(String(b.topic)) ? String(b.topic) : "semua";
+  if (toc.trim().length < 20 || pages < 1) {
+    return json({ error: "bad_request", message: "File ini tidak punya daftar isi (bookmark), jadi halaman tidak bisa dipilih otomatis." }, 400);
+  }
+  const mix = mixFrom(b.mix);
+  // About 2-3 kept questions per page; a few spare pages for the curator.
+  const want = Math.min(MAX_JOB_PAGES, Math.ceil(count / 2.5) + 3);
+  const chosen = await planPages(askWith(env), toc, pages, want, topic, targets(count, mix, true).gambar > 0);
+  if (!chosen) return json({ error: "upstream", message: "nyel AI belum bisa memilih halaman sekarang. Coba lagi nanti." }, 502);
+  if (!chosen.length) return json({ error: "empty", message: "nyel AI tidak menemukan halaman yang cocok di daftar isi file ini." }, 404);
+  return json({ pages: chosen });
+}
+
+/// "Buat draf kuis", step 2: the pages with their text; the cron does the rest.
+async function startJob(env: QuizEnv, b: Record<string, unknown>, by: string): Promise<Response> {
+  const section = String(b.section ?? "").trim().toUpperCase();
+  const manualId = String(b.manual_id ?? "").trim();
+  const raw = Array.isArray(b.pages) ? (b.pages as Record<string, unknown>[]) : [];
+  const pages: JobPage[] = raw.map((p) => ({
+    page: Math.round(Number(p.page)),
+    kind: p.kind === "gambar" ? "gambar" : "teks",
+    topic: String(p.topic ?? "struktur"),
+    text: String(p.text ?? ""),
+  }));
+  const usable = pages.filter((p) => p.page >= 1 && p.text.trim().length >= 80);
+  if (!section || !manualId) return json({ error: "bad_request", message: "Data file tidak lengkap." }, 400);
+  if (!usable.length) return json({ error: "bad_request", message: "Halaman yang dipilih tidak punya teks (mungkin hasil scan)." }, 400);
+  const id = await createJob(
+    quiz.d1(env.QUIZ),
+    {
+      section,
+      unit: String(b.unit ?? "").trim() || null,
+      manual_id: manualId,
+      title: String(b.title ?? manualId).slice(0, 120),
+      topic: TOPICS.includes(String(b.topic)) ? String(b.topic) : "semua",
+      count: Number(b.count) || 20,
+      mix: mixFrom(b.mix),
+      pages: usable,
+    },
+    by,
+  );
+  return json({ ok: true, id, pages: usable.length });
+}
+
+/// The picture of a "gambar" question, made on the admin's phone: the
+/// manual page with its words covered, so the legend does not give the
+/// answer away. Kept in the bucket next to the manuals.
+async function putImage(request: Request, env: QuizEnv, id: string): Promise<Response> {
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  const png = bytes.length > 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+  if (!png || bytes.length > MAX_IMAGE) return json({ error: "bad_request", message: "Gambar harus PNG, maksimal 2 MB." }, 400);
+  const key = `quiz/img/${id}-${Date.now().toString(36)}.png`;
+  await env.BUCKET.put(key, bytes, { httpMetadata: { contentType: "image/png" } });
+  const ok = await quiz.setImage(quiz.d1(env.QUIZ), id, key);
+  if (!ok) {
+    await env.BUCKET.delete(key);
+    return json({ error: "not_found", message: "Soal tidak ditemukan." }, 404);
+  }
+  return json({ ok: true, image: key });
 }
 
 /// Handles /admin/quiz/*.
 export async function handleQuizAdmin(request: Request, env: QuizEnv, path: string): Promise<Response> {
-  if (request.method !== "POST" && request.method !== "GET") return json({ error: "method" }, 405);
+  if (request.method !== "POST" && request.method !== "GET" && request.method !== "PUT") return json({ error: "method" }, 405);
   const auth = await requireAdmin(env, request);
   if (auth.error) return auth.error;
   const by = auth.session.n;
+  if (path.startsWith("/admin/quiz/image/")) {
+    if (request.method !== "PUT") return json({ error: "method" }, 405);
+    return putImage(request, env, decodeURIComponent(path.slice("/admin/quiz/image/".length)));
+  }
   const b = await readBody(request);
   if (!b) return json({ error: "bad_request" }, 400);
   const db = quiz.d1(env.QUIZ);
 
   if (path === "/admin/quiz/generate") return generate(env, b, by);
+  if (path === "/admin/quiz/plan") return plan(env, b);
+  if (path === "/admin/quiz/job") return startJob(env, b, by);
+  if (path === "/admin/quiz/jobs") return json({ jobs: await listJobs(db) });
+  if (path === "/admin/quiz/approve") {
+    const ids = Array.isArray(b.ids) ? b.ids.map(String) : [];
+    return json({ ok: true, ...(await quiz.approvePassed(db, ids, by)) });
+  }
   if (path === "/admin/quiz/questions") {
     const status = String(b.status ?? "draf");
     if (!STATUSES.includes(status)) return json({ error: "bad_request" }, 400);

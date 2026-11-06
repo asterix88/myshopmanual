@@ -12,6 +12,7 @@
 //   POST /quiz/avatar       {avatar: 0..9}
 //   POST /quiz/settings     {reminder: "07:00"}
 //   POST /quiz/report       {question_id, note}
+//   GET  /quiz/image/<id>   the picture of a "gambar" question (PNG)
 
 import { allowedOf, employeeInfo, requireSession, type AuthEnv, type Session } from "./auth";
 import * as quiz from "./quiz-db.ts";
@@ -19,6 +20,8 @@ import { handleQuizAdmin, type AiEnv } from "./quiz-admin.ts";
 
 export interface QuizEnv extends AuthEnv, AiEnv {
   QUIZ: D1Database;
+  /// The manuals' bucket; pictures of "gambar" questions go in quiz/img/.
+  BUCKET: R2Bucket;
 }
 
 export function json(body: unknown, status = 200): Response {
@@ -70,6 +73,7 @@ export async function handleQuiz(request: Request, env: QuizEnv, path: string): 
   if (who instanceof Response) return who;
   const db = quiz.d1(env.QUIZ);
   await quiz.ensureUser(db, who);
+  if (path.startsWith("/quiz/image/")) return image(env, db, decodeURIComponent(path.slice("/quiz/image/".length)));
   const b = await readBody(request);
   if (!b) return json({ error: "bad_request" }, 400);
 
@@ -119,4 +123,17 @@ export async function handleQuiz(request: Request, env: QuizEnv, path: string): 
     }
   }
   return json({ error: "not_found" }, 404);
+}
+
+/// A question's picture, for any logged-in phone (pictures are parts of
+/// manual pages, which every section's mechanics may see in quiz form).
+async function image(env: QuizEnv, db: quiz.Db, id: string): Promise<Response> {
+  const row = await db.first("SELECT image FROM question WHERE id = ?", id);
+  const key = row?.image as string | null | undefined;
+  if (!key) return json({ error: "not_found" }, 404);
+  const object = await env.BUCKET.get(key);
+  if (!object) return json({ error: "not_found" }, 404);
+  return new Response(object.body, {
+    headers: { "content-type": "image/png", "cache-control": "private, max-age=604800" },
+  });
 }

@@ -9,7 +9,9 @@ import { runNightly } from "../src/quiz-cron.ts";
 
 function fresh() {
   const d = new DatabaseSync(":memory:");
-  d.exec(readFileSync(new URL("../migrations/0001_quiz.sql", import.meta.url), "utf8"));
+  for (const file of ["0001_quiz.sql", "0002_quiz_jobs.sql"]) {
+    d.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"));
+  }
   const run = (sql, b) => d.prepare(sql).run(...b.map((v) => (v === undefined ? null : v)));
   return {
     all: async (sql, ...b) => d.prepare(sql).all(...b),

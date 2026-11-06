@@ -586,6 +586,10 @@ export type QuestionRow = Question & {
   reports: number;
   answered: number;
   wrong_pct: number | null;
+  job_id: string | null;
+  curator_score: number | null;
+  curator_note: string | null;
+  passed: boolean;
 };
 
 export async function listQuestions(db: Db, status: string, unit: string | null): Promise<QuestionRow[]> {
@@ -609,6 +613,10 @@ export async function listQuestions(db: Db, status: string, unit: string | null)
     updated_at: Number(r.updated_at),
     reports: Number(r.reports),
     answered: Number(r.answered),
+    job_id: (r.job_id as string | null) ?? null,
+    curator_score: r.curator_score == null ? null : Number(r.curator_score),
+    curator_note: (r.curator_note as string | null) ?? null,
+    passed: Number(r.passed ?? 0) === 1,
     wrong_pct: r.wrong_rate == null ? null : Math.round(Number(r.wrong_rate) * 100),
   }));
 }
@@ -617,19 +625,54 @@ export async function listQuestions(db: Db, status: string, unit: string | null)
 export async function addQuestion(
   db: Db,
   q: QuestionInput & { image?: string | null },
-  meta: { status: "draf" | "terbit"; source: "ai" | "admin"; by: string; check_note?: string | null; now?: number; id?: string },
+  meta: {
+    status: "draf" | "terbit";
+    source: "ai" | "admin";
+    by: string;
+    check_note?: string | null;
+    now?: number;
+    id?: string;
+    job_id?: string | null;
+    curator_score?: number | null;
+    curator_note?: string | null;
+    passed?: boolean;
+  },
 ): Promise<string> {
   const id = meta.id ?? crypto.randomUUID();
   const now = meta.now ?? Date.now();
   await db.run(
     `INSERT INTO question (id, section, unit, topic, type, prompt, choices, answer, explain, manual_id, page, image,
-       status, source, check_note, created_by, reviewed_by, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       status, source, check_note, created_by, reviewed_by, created_at, updated_at, job_id, curator_score, curator_note, passed)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     id, q.section.toUpperCase(), q.unit || null, q.topic, q.type, q.prompt.trim(), JSON.stringify(q.choices.map((c) => c.trim())),
     q.answer, q.explain.trim(), q.manual_id.trim(), q.page, q.image ?? null, meta.status, meta.source, meta.check_note ?? null,
     meta.by, meta.status === "terbit" ? meta.by : null, now, now,
+    meta.job_id ?? null, meta.curator_score ?? null, meta.curator_note ?? null, meta.passed ? 1 : 0,
   );
   return id;
+}
+
+/// The picture of a "gambar" question (an R2 key, quiz/img/...).
+export async function setImage(db: Db, id: string, key: string, now = Date.now()): Promise<boolean> {
+  return (await db.run("UPDATE question SET image = ?, updated_at = ? WHERE id = ?", key, now, id)) > 0;
+}
+
+/// "Setujui semua yang lolos": publishes the drafts among [ids] that passed
+/// the curator and the checks; a picture question needs its picture first.
+/// Returns how many were published and the ids left as drafts.
+export async function approvePassed(db: Db, ids: string[], by: string, now = Date.now()): Promise<{ published: number; left: string[] }> {
+  let published = 0;
+  const left: string[] = [];
+  for (const id of ids.slice(0, 200)) {
+    const changed = await db.run(
+      `UPDATE question SET status = 'terbit', reviewed_by = ?, check_note = NULL, updated_at = ?
+       WHERE id = ? AND status = 'draf' AND passed = 1 AND (type <> 'gambar' OR image IS NOT NULL)`,
+      by, now, id,
+    );
+    if (changed) published++;
+    else left.push(id);
+  }
+  return { published, left };
 }
 
 /// An admin's decision on a question: setujui (publish), ubah (save edits,
@@ -649,7 +692,7 @@ export async function decide(
   if (edit) {
     statements.push([
       `UPDATE question SET section = ?, unit = ?, topic = ?, type = ?, prompt = ?, choices = ?, answer = ?, explain = ?,
-         manual_id = ?, page = ?, image = ?, updated_at = ? WHERE id = ?`,
+         manual_id = ?, page = ?, image = COALESCE(?, image), updated_at = ? WHERE id = ?`,
       edit.section.toUpperCase(), edit.unit || null, edit.topic, edit.type, edit.prompt.trim(),
       JSON.stringify(edit.choices.map((c) => c.trim())), edit.answer, edit.explain.trim(), edit.manual_id.trim(), edit.page,
       edit.image ?? null, now, id,
