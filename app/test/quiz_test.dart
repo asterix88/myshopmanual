@@ -183,6 +183,12 @@ void main() {
     await tester.runAsync(() async => store.dispose());
   });
 
+  test('an explanation starts with the fact', () {
+    expect(cleanExplain('Halaman menyatakan bahwa OLSS mengurangi kerugian.'), 'OLSS mengurangi kerugian.');
+    expect(cleanExplain('Menurut manual, relief valve membuka.'), 'Relief valve membuka.');
+    expect(cleanExplain('Relief valve membatasi tekanan.'), 'Relief valve membatasi tekanan.');
+  });
+
   test('a quiz picture covers words but keeps callout numbers', () {
     const text = '3. Main relief valve\n12';
     final rects = [for (var i = 0; i < text.length; i++) PdfRect(i * 10.0, 100, i * 10.0 + 9, 90)];
@@ -321,11 +327,15 @@ void main() {
       await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(home: QuizHubScreen(client: client))));
       await settle(tester);
       expect(find.text('Pengingat harian'), findsOneWidget);
-      await tester.ensureVisible(find.text('12.00'));
+      await tester.ensureVisible(find.text('07.00'));
       await tester.pump();
+      await tester.tap(find.text('07.00'));
+      await settle(tester);
+      expect(find.text('Jam pengingat'), findsOneWidget);
       await tester.tap(find.text('12.00'));
       await settle(tester);
       expect(QuizReminders.load(root).hour, 12);
+      expect(find.text('12.00'), findsOneWidget);
       await tester.tap(find.text('Pengingat harian'));
       await settle(tester);
       expect(QuizReminders.load(root).daily, isFalse);

@@ -123,6 +123,7 @@ test("finish: bonus, streak and the leaderboard", async () => {
   assert.equal(board.period, "W2026-45");
   assert.deepEqual(board.rows.map((r) => [r.rank, r.nrp, r.xp]), [[1, "A1", 135], [2, "B2", 91]]);
   assert.equal(board.me.nrp, "B2");
+  assert.equal(board.count, 2);
   // Wati (WHEEL) is on the same department board, across sections.
   assert.equal((await quiz.leaderboard(db, wati, "month", NOW)).rows.length, 2);
   // Hidden accounts leave the board.

@@ -210,8 +210,8 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
       builder: (context) => _Sheet(
         title: 'Keluar dari quiz?',
         message: widget.unit == null
-            ? 'Jawaban yang sudah diperiksa tetap tersimpan. Lanjutkan kapan saja sebelum jam 04.00.'
-            : 'Jawaban yang sudah diperiksa tetap tersimpan.',
+            ? 'Jawaban tersimpan. Bisa dilanjutkan sampai 04.00.'
+            : 'Jawaban tersimpan.',
         children: [
           FilledButton(onPressed: () => Navigator.pop(context, false), child: const Text('Lanjutkan quiz')),
           const SizedBox(height: 8),
@@ -237,7 +237,6 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
       showDragHandle: true,
       builder: (context) => _Sheet(
         title: 'Laporkan soal',
-        message: 'Admin akan mengecek soal ini.',
         children: [
           for (final r in reasons)
             ListTile(
@@ -253,7 +252,7 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
     try {
       await _api.report(_q.id, picked);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Laporan terkirim. Terima kasih.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Laporan terkirim')));
       }
     } catch (e) {
       if (mounted) showError(context, e);
@@ -395,12 +394,12 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
     final color = right ? AppColors.green : AppColors.danger;
     final firstWrong = !right && !_inRetry;
     final next = !right
-        ? (firstWrong ? 'Diulang lagi di akhir sesi ini, lalu besok' : 'Diulang kembali besok')
+        ? (firstWrong ? 'Diulang di akhir sesi dan besok' : 'Diulang besok')
         : _result == null
-            ? (_sent ? 'Tersimpan di HP, dikirim saat ada sinyal' : '')
+            ? (_sent ? 'Dikirim saat ada sinyal' : '')
             : _result!.nextDays <= 1
-                ? 'Diulang kembali besok'
-                : 'Diulang kembali dalam ${_result!.nextDays} hari';
+                ? 'Diulang besok'
+                : 'Diulang ${_result!.nextDays} hari lagi';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -432,12 +431,16 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
           Text(next, style: TextStyle(fontSize: 12, color: AppColors.muted)),
         ],
         const SizedBox(height: 6),
-        Wrap(
-          spacing: 4,
+        Row(
           children: [
             if (q.page > 0) _LinkButton(glyph: AppGlyph.book, label: 'Manual hal. ${q.page}', onTap: _openManual),
             _LinkButton(glyph: AppGlyph.nyel, label: 'Tanya nyel AI', onTap: _askAi),
-            _LinkButton(glyph: AppGlyph.flag, label: 'Laporkan soal', onTap: _report, muted: true),
+            const Spacer(),
+            IconButton(
+              tooltip: 'Laporkan soal',
+              onPressed: _report,
+              icon: AppIcon(AppGlyph.flag, size: 18, color: AppColors.muted),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -459,7 +462,7 @@ class _RecallTag extends StatelessWidget {
     return Tooltip(
       triggerMode: TooltipTriggerMode.tap,
       showDuration: const Duration(seconds: 4),
-      message: 'Recall: soal yang dulu kamu jawab salah atau sudah waktunya diulang.',
+      message: 'Soal ulangan: dulu salah atau sudah waktunya diulang',
       child: Container(
         padding: const EdgeInsets.fromLTRB(6, 3, 10, 3),
         decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(12)),
@@ -617,8 +620,8 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     final code = error is AuthException ? (error as AuthException).code : '';
     final (title, message) = switch (code) {
-      'done' => ('Quiz harian sudah selesai', 'Kembali besok, atau coba Quiz per unit.'),
-      'empty' => ('Soal baru sedang disiapkan', 'Belum ada soal untuk ${unit ?? 'section-mu'}. Coba lagi nanti.'),
+      'done' => ('Quiz harian sudah selesai', 'Coba Quiz per unit'),
+      'empty' => ('Belum ada soal', 'Soal untuk ${unit ?? 'section-mu'} sedang disiapkan'),
       'network' => ('Gagal memuat soal', 'Periksa koneksi internet.'),
       _ => ('Gagal memuat soal', error is AuthException ? (error as AuthException).message : '$error'),
     };
@@ -744,12 +747,12 @@ class QuizSummaryScreen extends StatelessWidget {
               Expanded(
                 child: _Stat(
                   value: '+${result?.xp ?? xpWithoutBonus}',
-                  label: result == null ? 'XP (setelah terkirim)' : 'XP',
+                  label: 'XP',
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _Stat(value: (result?.rank ?? 0) > 0 ? '#${result!.rank}' : '-', label: 'Peringkat minggu ini'),
+                child: _Stat(value: (result?.rank ?? 0) > 0 ? '${result!.rank}' : '-', label: 'Peringkat'),
               ),
             ],
           ),
@@ -767,7 +770,7 @@ class QuizSummaryScreen extends StatelessWidget {
                       children: [
                         Text('Streak ${result!.streak} hari', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                         Text(
-                          result!.freezeUsed ? 'Libur streak terpakai, streak tetap aman' : 'Quiz hari ini selesai',
+                          result!.freezeUsed ? 'Libur streak terpakai' : 'Quiz hari ini selesai',
                           style: TextStyle(fontSize: 12, color: AppColors.muted),
                         ),
                       ],
@@ -788,7 +791,7 @@ class QuizSummaryScreen extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Tersimpan di HP. Buka Quiz lagi saat ada sinyal supaya XP dan streak dihitung.',
+                      'XP dan streak dihitung saat ada sinyal',
                       style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
                     ),
                   ),
@@ -811,7 +814,6 @@ class QuizSummaryScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Lihat ${questions.length} soal', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                      Text('Jawaban dan penjelasan', style: TextStyle(fontSize: 12, color: AppColors.muted)),
                     ],
                   ),
                 ),
@@ -1018,7 +1020,7 @@ class _QuizPictureState extends State<QuizPicture> {
                     )
                   : Center(
                       child: snap.hasError
-                          ? Text('Gambar gagal dimuat. Ketuk untuk coba lagi.',
+                          ? Text('Gagal dimuat. Ketuk lagi.',
                               style: TextStyle(fontSize: 12, color: AppColors.muted))
                           : const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)),
                     ),

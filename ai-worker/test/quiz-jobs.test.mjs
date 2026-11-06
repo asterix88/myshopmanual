@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import * as quiz from "../src/quiz-db.ts";
-import { curate, planPages, selfCheck, wantedFor, writeQuestions } from "../src/quiz-ai.ts";
+import { cleanExplain, curate, planPages, selfCheck, wantedFor, writeQuestions } from "../src/quiz-ai.ts";
 import { createJob, listJobs, mixFrom, runJobs, targets, wantedForPage } from "../src/quiz-jobs.ts";
 
 function fresh() {
@@ -192,4 +192,11 @@ test("a job where nyel AI never answers fails with a message", async () => {
   const [job] = await listJobs(db);
   assert.equal(job.status, "gagal");
   assert.match(job.error, /tidak menjawab/);
+});
+
+test("explanations start with the fact", () => {
+  assert.equal(cleanExplain("Halaman menyatakan bahwa OLSS mengurangi kerugian."), "OLSS mengurangi kerugian.");
+  assert.equal(cleanExplain("Menurut manual, relief valve membuka pada 34,8 MPa."), "Relief valve membuka pada 34,8 MPa.");
+  assert.equal(cleanExplain("Halaman ini menjelaskan: pompa diatur oleh PC valve."), "Pompa diatur oleh PC valve.");
+  assert.equal(cleanExplain("Relief valve membatasi tekanan."), "Relief valve membatasi tekanan.");
 });
