@@ -43,6 +43,14 @@ new_sqlite_classes = ["Stats"]
 binding = "QUIZ"
 database_name = "mymanual-quiz"
 database_id = "8752ff6e-7d31-4156-9bd5-1e5b4bd0af78"
+# Its tables are made by the files in migrations/, which the deploy
+# workflow runs ("wrangler d1 migrations apply").
+migrations_dir = "migrations"
+
+# The Quiz's nightly job (src/quiz-cron.ts): 21.00 UTC = 04.00 WIB, when a
+# new quiz day starts.
+[triggers]
+crons = ["0 21 * * *"]
 
 
 [vars]
