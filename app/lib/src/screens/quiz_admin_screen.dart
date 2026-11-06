@@ -518,7 +518,7 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
       final path = indexes[file.key];
       if (path == null) throw Exception('Indeks manual belum ada di HP. Coba lagi saat ada sinyal.');
       final page = widget.page;
-      final found = await Isolate.run(() => pageTextSync(path, page));
+      final found = await _pageText(path, page);
       final text = found?.text.trim() ?? '';
       if (text.length < 80) throw Exception('Halaman ini hampir tanpa teks. Pilih halaman lain.');
       if (!mounted) return;
@@ -609,3 +609,10 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
     );
   }
 }
+
+/// Reads one page's text in the background. A top-level function, so the
+/// isolate gets only the path and page number and never the screen's state
+/// (a closure inside the State drags the widget tree along, which an isolate
+/// refuses).
+Future<({String text, String? section})?> _pageText(String path, int page) =>
+    Isolate.run(() => pageTextSync(path, page));
