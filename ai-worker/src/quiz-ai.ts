@@ -83,7 +83,7 @@ Rules:
 - Type "bs": a statement; choices ["Benar", "Salah"]. Make about half of them false by changing one value or part name.
 - Type "gambar": only for a drawing page whose text has a numbered legend (lines like "3. Main relief valve"). The mechanic sees the drawing with its numbers but WITHOUT the legend. Ask what one numbered part is ("Pada gambar <name of the drawing>, komponen nomor 3 adalah?"); 4 choices taken from the same legend, exactly one right; put the number in the field "callout". If the page has no numbered legend, write "pg" instead.
 - The question must be answerable without seeing the page (except "gambar"); name the unit and the component.
-- explain: one or two sentences saying why the right answer is right, as the page says it.
+- explain: one or two short sentences giving the fact itself, as the page says it. Start with the fact; never start with "Halaman menyatakan", "Menurut manual" or similar.
 - Different questions must check different facts.
 
 Reply with JSON only: {"questions": [{"type": "pg", "prompt": "...", "choices": ["...", "...", "...", "..."], "answer": 0, "explain": "...", "callout": null}]} where answer is the index of the right choice (0 = first).`;
@@ -135,7 +135,7 @@ export async function writeQuestions(
       prompt: String(raw.prompt ?? ""),
       choices: Array.isArray(raw.choices) ? raw.choices.map(String) : [],
       answer: Number(raw.answer),
-      explain: String(raw.explain ?? ""),
+      explain: cleanExplain(String(raw.explain ?? "")),
       callout: raw.callout == null ? null : String(raw.callout),
     };
     if (q.type === "bs") q.choices = ["Benar", "Salah"];
@@ -215,7 +215,7 @@ export async function curate(ask: Ask, drafts: Draft[], text: string): Promise<{
         prompt: String(f.prompt ?? d.prompt),
         choices: Array.isArray(f.choices) ? f.choices.map(String) : d.choices,
         answer: f.answer === undefined ? d.answer : Number(f.answer),
-        explain: String(f.explain ?? d.explain),
+        explain: cleanExplain(String(f.explain ?? d.explain)),
         callout: f.callout == null ? d.callout : String(f.callout),
       };
       if (d.type === "bs") fixed.choices = ["Benar", "Salah"];
@@ -260,4 +260,14 @@ export async function planPages(ask: Ask, toc: string, pages: number, want: numb
     });
   }
   return out.slice(0, Math.max(want, 1) + 5);
+}
+
+/// "Halaman menyatakan bahwa OLSS ..." -> "OLSS ...": the explanation starts
+/// with the fact. Same rule in the app (quiz.dart) for older questions.
+export function cleanExplain(text: string): string {
+  const out = text
+    .trim()
+    .replace(/^(menurut|berdasarkan)\s+(halaman|manual|teks)(\s+(ini|tersebut|sumber))?[,:]?\s+/i, "")
+    .replace(/^(halaman|manual|teks)(\s+(ini|tersebut|sumber))?\s+(menyatakan|menyebutkan|menjelaskan|mengatakan)(\s+bahwa)?[,:]?\s+/i, "");
+  return out ? out[0].toUpperCase() + out.slice(1) : out;
 }

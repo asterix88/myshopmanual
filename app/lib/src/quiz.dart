@@ -353,7 +353,7 @@ class QuizQuestion {
         prompt = j['prompt'] as String? ?? '',
         choices = [for (final c in j['choices'] as List? ?? const []) '$c'],
         answer = _int(j['answer']),
-        explain = j['explain'] as String? ?? '',
+        explain = cleanExplain(j['explain'] as String? ?? ''),
         manualId = j['manual_id'] as String? ?? '',
         page = _int(j['page']),
         image = j['image'] as String?,
@@ -456,6 +456,7 @@ class BoardRow {
         avatar = _int(j['avatar']),
         xp = _int(j['xp']),
         change = _int(j['change']),
+        streak = _int(j['streak']),
         me = j['me'] == true;
 
   final int rank;
@@ -467,6 +468,9 @@ class BoardRow {
 
   /// Places up (+) or down (-) since the night before.
   final int change;
+
+  /// Streak still standing today (0 when broken).
+  final int streak;
   final bool me;
 }
 
@@ -474,9 +478,13 @@ class Board {
   Board(Map<String, dynamic> j)
       : period = j['period'] as String? ?? '',
         rows = [for (final r in j['rows'] as List? ?? const []) BoardRow(r as Map<String, dynamic>)],
-        me = j['me'] == null ? null : BoardRow(j['me'] as Map<String, dynamic>);
+        me = j['me'] == null ? null : BoardRow(j['me'] as Map<String, dynamic>),
+        count = _int(j['count']);
 
   final String period;
+
+  /// Mechanics with XP on this board.
+  final int count;
   final List<BoardRow> rows;
   final BoardRow? me;
 }
@@ -611,4 +619,18 @@ class QuizReport {
   final String prompt;
   final String? unit;
   final String status;
+}
+
+/// "Halaman menyatakan bahwa OLSS ..." -> "OLSS ...": an explanation starts
+/// with the fact (older questions; the server cleans new ones the same way).
+String cleanExplain(String text) {
+  final out = text
+      .trim()
+      .replaceFirst(RegExp(r'^(menurut|berdasarkan)\s+(halaman|manual|teks)(\s+(ini|tersebut|sumber))?[,:]?\s+', caseSensitive: false), '')
+      .replaceFirst(
+        RegExp(r'^(halaman|manual|teks)(\s+(ini|tersebut|sumber))?\s+(menyatakan|menyebutkan|menjelaskan|mengatakan)(\s+bahwa)?[,:]?\s+',
+            caseSensitive: false),
+        '',
+      );
+  return out.isEmpty ? out : out[0].toUpperCase() + out.substring(1);
 }

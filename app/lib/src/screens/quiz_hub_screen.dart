@@ -97,12 +97,12 @@ class _QuizHomeCardState extends State<QuizHomeCard> {
     } else if (home.daily == 'lanjutkan') {
       look = FlameLook.today;
       title = 'Lanjutkan quiz';
-      sub = Text('Jawaban yang sudah diperiksa tersimpan', style: muted);
+      sub = Text('Belum selesai', style: muted);
       cta = 'Lanjutkan';
     } else if (freeze) {
       look = FlameLook.freeze;
       title = 'Jaga streakmu';
-      sub = Text('Libur streak terpakai. Streak ${home.streak} hari aman.', style: muted);
+      sub = Text('Libur streak terpakai', style: muted);
     } else if (home.streak > 0 && hoursLeft <= 10) {
       look = FlameLook.today;
       title = 'Jaga streakmu';
@@ -239,7 +239,7 @@ class _QuizHubScreenState extends State<QuizHubScreen> {
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(
-                padding: EdgeInsets.zero,
+                padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 8),
                 children: [
                   _StreakHeader(home: home),
                   Padding(
@@ -251,7 +251,7 @@ class _QuizHubScreenState extends State<QuizHubScreen> {
                           child: IntrinsicHeight(
                             child: Row(
                               children: [
-                                _HubStat(home.rankWeek > 0 ? '#${home.rankWeek}' : '-', 'Peringkat'),
+                                _HubStat(home.rankWeek > 0 ? '${home.rankWeek}' : '-', 'Peringkat'),
                                 VerticalDivider(width: 1, indent: 12, endIndent: 12, color: AppColors.line),
                                 _HubStat('${home.xpWeek}', 'XP minggu'),
                                 VerticalDivider(width: 1, indent: 12, endIndent: 12, color: AppColors.line),
@@ -280,7 +280,7 @@ class _QuizHubScreenState extends State<QuizHubScreen> {
                               _HubRow(
                                 glyph: AppGlyph.unit,
                                 title: 'Quiz per unit',
-                                subtitle: '10 soal dari satu model',
+                                subtitle: '10 soal per model',
                                 onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QuizUnitsScreen())),
                                 last: true,
                               ),
@@ -310,10 +310,10 @@ class _QuizHubScreenState extends State<QuizHubScreen> {
     final name = dept.isEmpty ? 'Departemen' : titleCaseWords(dept);
     final me = board?.me;
     if (board == null || me == null) return name;
-    if (me.rank <= 1) return '$name · Kamu di posisi #1';
+    if (me.rank <= 1) return '$name · posisi 1';
     final above = board.rows.where((r) => r.rank == me.rank - 1).firstOrNull;
     if (above == null) return name;
-    return '$name · ${above.xp - me.xp + 1} XP lagi ke #${above.rank}';
+    return '$name · ${above.xp - me.xp + 1} XP lagi ke posisi ${above.rank}';
   }
 }
 
@@ -356,7 +356,7 @@ class _StreakHeader extends StatelessWidget {
                     Text('Streak ${home.streak} hari',
                         style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white)),
                     Text(
-                      home.done ? 'Quiz hari ini selesai' : 'Quiz hari ini belum dikerjakan',
+                      home.done ? 'Quiz hari ini selesai' : 'Belum quiz hari ini',
                       style: const TextStyle(fontSize: 12, color: Color(0xBFFFFFFF)),
                     ),
                   ],
@@ -540,15 +540,29 @@ class _QuizUnitsScreenState extends State<QuizUnitsScreen> {
                                           ClipRRect(
                                             borderRadius: BorderRadius.circular(3),
                                             child: LinearProgressIndicator(
-                                              value: u.total == 0 ? 0 : u.mastered / u.total,
+                                              value: u.total == 0 ? 0 : (u.seen / u.total).clamp(0, 1),
                                               minHeight: 6,
                                               color: AppColors.navy,
                                               backgroundColor: AppColors.line,
                                             ),
                                           ),
                                           const SizedBox(height: 4),
-                                          Text('${u.mastered} dari ${u.total} soal dikuasai',
-                                              style: TextStyle(fontSize: 11, color: AppColors.muted)),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text('${u.seen} dari ${u.total} soal',
+                                                    style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                                              ),
+                                              Text(
+                                                '${u.total == 0 ? 0 : (u.seen * 100 / u.total).round().clamp(0, 100)}%',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: AppColors.muted,
+                                                  fontFeatures: const [FontFeature.tabularFigures()],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -661,7 +675,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   if (dept.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(titleCaseWords(dept), style: const TextStyle(fontSize: 12, color: Color(0xBFFFFFFF))),
+                      child: Text(
+                        [titleCaseWords(dept), if ((board?.count ?? 0) > 0) '${board!.count} mekanik'].join(' · '),
+                        style: const TextStyle(fontSize: 12, color: Color(0xBFFFFFFF)),
+                      ),
                     ),
                   _PeriodTabs(
                     month: _month,
@@ -689,7 +706,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               const EmptyState(
                 icon: Icons.emoji_events_outlined,
                 title: 'Belum ada XP periode ini',
-                message: 'Selesaikan satu quiz untuk masuk papan.',
+                message: 'Selesaikan satu quiz',
               )
             else ...[
               if (board.me != null) _Race(board: board),
@@ -775,8 +792,9 @@ class _Podium extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Second, first, third, as on a podium.
-    final order = [if (rows.length > 1) 1, 0, if (rows.length > 2) 2];
+    // Second, first, third, as on a podium; a place nobody has yet stays
+    // as an empty step, so the podium keeps its shape.
+    const order = [1, 0, 2];
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -800,7 +818,7 @@ class _Podium extends StatelessWidget {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: _PodiumPlace(row: rows[i], place: i, onMe: onMe),
+                  child: i < rows.length ? _PodiumPlace(row: rows[i], place: i, onMe: onMe) : _EmptyPlace(place: i),
                 ),
               ),
           ],
@@ -906,8 +924,7 @@ class _PodiumPlace extends StatelessWidget {
                       ]),
                       style: const TextStyle(color: Colors.white),
                     ),
-                    Text(titleCaseWords(row.section.split(',').first),
-                        style: const TextStyle(fontSize: 11, color: Color(0xBFFFFFFF))),
+                    _SectionStreak(row: row, color: const Color(0xBFFFFFFF), center: true),
                   ],
                 ),
               ),
@@ -926,6 +943,56 @@ class _PodiumPlace extends StatelessWidget {
   }
 }
 
+/// A podium step nobody has reached yet this period.
+class _EmptyPlace extends StatelessWidget {
+  const _EmptyPlace({required this.place});
+
+  final int place;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = place == 0 ? 64.0 : 52.0;
+    final height = [86.0, 66.0, 54.0][place];
+    return Column(
+      children: [
+        Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: .06),
+            border: Border.all(color: Colors.white.withValues(alpha: .18), width: 2),
+          ),
+          child: Text(
+            '${place + 1}',
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0x59FFFFFF)),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: height + 20,
+          width: double.infinity,
+          alignment: Alignment.topCenter,
+          padding: const EdgeInsets.only(top: 14),
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            color: Colors.white.withValues(alpha: .05),
+          ),
+          child: const Text('Belum ada', style: TextStyle(fontSize: 11, color: Color(0x80FFFFFF))),
+        ),
+        Container(
+          height: 10,
+          decoration: const BoxDecoration(
+            color: Color(0x2E050E1E),
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(4)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 String _firstName(String name) => titleCaseWords(name.split(' ').first);
 
 /// "Rahmat Suryadi" -> "Rahmat S."
@@ -933,6 +1000,14 @@ String _shortName(String name) {
   final parts = name.trim().split(RegExp(r'\s+'));
   if (parts.length < 2) return titleCaseWords(name);
   return '${titleCaseWords(parts.first)} ${parts[1][0].toUpperCase()}.';
+}
+
+/// At the top: how far ahead of second place.
+String _lead(Board board) {
+  final second = board.rows.where((r) => r.rank == 2).firstOrNull;
+  final me = board.me;
+  if (second == null || me == null) return 'Satu-satunya di papan';
+  return '${me.xp - second.xp} XP di atas posisi 2';
 }
 
 /// How far to the next place.
@@ -957,18 +1032,27 @@ class _Race extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Text('#${me.rank}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.navy)),
-                  const SizedBox(width: 10),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(color: AppColors.navySoft, shape: BoxShape.circle),
+                    child: Text(
+                      '${me.rank}',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.navy),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          above == null ? 'Kamu di puncak' : '$gap XP lagi ke ${me.rank <= 4 ? 'podium' : '#${above.rank}'}',
+                          above == null ? 'Kamu di puncak' : '$gap XP lagi ke ${me.rank <= 4 ? 'podium' : 'posisi ${above.rank}'}',
                           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                         ),
                         Text(
-                          above == null ? 'Pertahankan dengan quiz harian' : 'Sekitar ${(gap / 10).ceil()} jawaban benar',
+                          above == null ? _lead(board) : 'Sekitar ${(gap / 10).ceil()} jawaban benar',
                           style: TextStyle(fontSize: 12, color: AppColors.muted),
                         ),
                       ],
@@ -997,7 +1081,7 @@ class _Race extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('Kamu ${me.xp}', style: TextStyle(fontSize: 11, color: AppColors.muted)),
-                    Text('#${above.rank} ${_shortName(above.name)} ${above.xp}', style: TextStyle(fontSize: 11, color: AppColors.muted)),
+                    Text('${above.rank}. ${_shortName(above.name)} ${above.xp}', style: TextStyle(fontSize: 11, color: AppColors.muted)),
                   ],
                 ),
               ],
@@ -1077,7 +1161,7 @@ class _BoardRowTile extends StatelessWidget {
                     if (row.change != 0) ...[const SizedBox(width: 6), RankChange(row.change)],
                   ],
                 ),
-                Text(titleCaseWords(row.section.split(',').first), style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                _SectionStreak(row: row, color: AppColors.muted),
               ],
             ),
           ),
@@ -1172,7 +1256,7 @@ class QuizReminderSettings extends StatefulWidget {
 class _QuizReminderSettingsState extends State<QuizReminderSettings> {
   late ReminderSettings _settings = QuizReminders.load(StoreScope.read(context).root);
 
-  static const _times = [(5, 30), (6, 0), (6, 30), (7, 0), (12, 0), (16, 0)];
+  static const _times = [(5, 0), (5, 30), (6, 0), (6, 30), (7, 0), (7, 30), (12, 0), (16, 0)];
 
   Future<void> _set(ReminderSettings settings) async {
     setState(() => _settings = settings);
@@ -1181,22 +1265,66 @@ class _QuizReminderSettingsState extends State<QuizReminderSettings> {
     await QuizReminders.sync(root, QuizApi.lastHome ?? widget.home);
   }
 
-  Future<void> _otherTime() async {
-    final picked = await showTimePicker(
+  /// "Jam pengingat": the usual times in equal boxes, or any time.
+  Future<void> _chooseTime() async {
+    final s = _settings;
+    final picked = await showModalBottomSheet<(int, int)>(
       context: context,
-      initialTime: TimeOfDay(hour: _settings.hour, minute: _settings.minute),
-      helpText: 'Jam pengingat harian',
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Jam pengingat', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 12),
+              GridView.count(
+                crossAxisCount: 4,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 1.9,
+                children: [
+                  for (final (h, m) in _times)
+                    _TimeBox(
+                      label: ReminderSettings(hour: h, minute: m).time,
+                      selected: s.hour == h && s.minute == m,
+                      onTap: () => Navigator.pop(context, (h, m)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 44,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, (-1, -1)),
+                  child: const Text('Jam lain'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    if (picked.$1 >= 0) return _set(_settings.copyWith(hour: picked.$1, minute: picked.$2));
+    final other = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: s.hour, minute: s.minute),
+      helpText: 'Jam pengingat',
       builder: (context, child) =>
           MediaQuery(data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true), child: child!),
     );
-    if (picked != null) await _set(_settings.copyWith(hour: picked.hour, minute: picked.minute));
+    if (other != null) await _set(_settings.copyWith(hour: other.hour, minute: other.minute));
   }
 
   @override
   Widget build(BuildContext context) {
     final s = _settings;
-    final preset = _times.any((t) => t.$1 == s.hour && t.$2 == s.minute);
-    final timeStyle = TextStyle(fontWeight: FontWeight.w600, color: AppColors.navy);
+    final muted = TextStyle(fontSize: 12, color: AppColors.muted);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1206,55 +1334,83 @@ class _QuizReminderSettingsState extends State<QuizReminderSettings> {
             children: [
               _SwitchRow(
                 title: 'Pengingat harian',
-                subtitle: Text.rich(
-                  TextSpan(
-                    children: [
-                      const TextSpan(text: 'Setiap hari pukul '),
-                      TextSpan(text: s.time, style: timeStyle),
-                    ],
-                  ),
-                  style: TextStyle(fontSize: 12, color: AppColors.muted),
-                ),
+                subtitle: Text('Setiap hari', style: muted),
+                time: s.daily
+                    ? Material(
+                        color: AppColors.navySoft,
+                        borderRadius: BorderRadius.circular(10),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(10),
+                          onTap: _chooseTime,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  s.time,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.navy,
+                                    fontFeatures: const [FontFeature.tabularFigures()],
+                                  ),
+                                ),
+                                Icon(Icons.expand_more, size: 18, color: AppColors.navy),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    : null,
                 value: s.daily,
                 onChanged: (v) => _set(s.copyWith(daily: v)),
               ),
               Divider(height: 1, color: AppColors.divider),
               _SwitchRow(
                 title: 'Peringatan streak',
-                subtitle: Text('Pukul 20.00 kalau belum quiz', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                subtitle: Text('20.00 jika belum quiz', style: muted),
                 value: s.streak,
                 onChanged: (v) => _set(s.copyWith(streak: v)),
               ),
             ],
           ),
         ),
-        if (s.daily) ...[
-          const SizedBox(height: 16),
-          const _Caps('Jam pengingat harian'),
-          AppCard(
-            padding: const EdgeInsets.all(12),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final (h, m) in _times)
-                  ChoiceChip(
-                    label: Text(ReminderSettings(hour: h, minute: m).time),
-                    selected: s.hour == h && s.minute == m,
-                    onSelected: (_) => _set(s.copyWith(hour: h, minute: m)),
-                  ),
-                ChoiceChip(
-                  label: Text(preset ? 'Lainnya…' : s.time),
-                  selected: !preset,
-                  onSelected: (_) => _otherTime(),
-                ),
-              ],
-            ),
-          ),
-        ],
       ],
     );
   }
+}
+
+class _TimeBox extends StatelessWidget {
+  const _TimeBox({required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: selected ? AppColors.navy : AppColors.surface,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: BorderSide(color: selected ? AppColors.navy : AppColors.line),
+    ),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Center(
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            color: selected ? Colors.white : null,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _Caps extends StatelessWidget {
@@ -1273,10 +1429,11 @@ class _Caps extends StatelessWidget {
 }
 
 class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({required this.title, required this.subtitle, required this.value, required this.onChanged});
+  const _SwitchRow({required this.title, required this.subtitle, required this.value, required this.onChanged, this.time});
 
   final String title;
   final Widget subtitle;
+  final Widget? time;
   final bool value;
   final ValueChanged<bool> onChanged;
 
@@ -1297,9 +1454,41 @@ class _SwitchRow extends StatelessWidget {
               ],
             ),
           ),
+          if (time != null) ...[time!, const SizedBox(width: 4)],
           Switch(value: value, onChanged: onChanged, activeThumbColor: Colors.white, activeTrackColor: AppColors.navy),
         ],
       ),
     ),
+  );
+}
+
+/// "TRACK 🔥6": the section, and the streak when one stands.
+class _SectionStreak extends StatelessWidget {
+  const _SectionStreak({required this.row, required this.color, this.center = false});
+
+  final BoardRow row;
+  final Color color;
+  final bool center;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    mainAxisAlignment: center ? MainAxisAlignment.center : MainAxisAlignment.start,
+    children: [
+      Flexible(
+        child: Text(
+          row.section.split(',').first.toUpperCase(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 11, letterSpacing: .3, color: color),
+        ),
+      ),
+      if (row.streak > 0) ...[
+        const SizedBox(width: 8),
+        const Flame(size: 12),
+        const SizedBox(width: 2),
+        Text('${row.streak}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+      ],
+    ],
   );
 }

@@ -13,6 +13,7 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:mymanual/src/screens/quiz_hub_screen.dart';
 import 'package:mymanual/src/screens/quiz_screen.dart';
 import 'package:mymanual/src/screens/shell.dart';
+import 'package:mymanual/src/search.dart' show pageHeading;
 import 'package:mymanual/src/store.dart';
 
 import 'store_test.dart' show fixtureServer, testSession;
@@ -183,6 +184,18 @@ void main() {
     await tester.runAsync(() async => store.dispose());
   });
 
+  test('a page without bookmarks is named by its title line', () {
+    expect(pageHeading('12\nHYDRAULIC SYSTEM OVERVIEW\nMain pump supplies oil to...'), 'HYDRAULIC SYSTEM OVERVIEW');
+    expect(pageHeading('Page 3 of 220\n© Komatsu 2020\nEngine cooling'), 'Engine cooling');
+    expect(pageHeading('1\n2\n'), isNull);
+  });
+
+  test('an explanation starts with the fact', () {
+    expect(cleanExplain('Halaman menyatakan bahwa OLSS mengurangi kerugian.'), 'OLSS mengurangi kerugian.');
+    expect(cleanExplain('Menurut manual, relief valve membuka.'), 'Relief valve membuka.');
+    expect(cleanExplain('Relief valve membatasi tekanan.'), 'Relief valve membatasi tekanan.');
+  });
+
   test('a quiz picture covers words but keeps callout numbers', () {
     const text = '3. Main relief valve\n12';
     final rects = [for (var i = 0; i < text.length; i++) PdfRect(i * 10.0, 100, i * 10.0 + 9, 90)];
@@ -321,11 +334,15 @@ void main() {
       await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(home: QuizHubScreen(client: client))));
       await settle(tester);
       expect(find.text('Pengingat harian'), findsOneWidget);
-      await tester.ensureVisible(find.text('12.00'));
+      await tester.ensureVisible(find.text('07.00'));
       await tester.pump();
+      await tester.tap(find.text('07.00'));
+      await settle(tester);
+      expect(find.text('Jam pengingat'), findsOneWidget);
       await tester.tap(find.text('12.00'));
       await settle(tester);
       expect(QuizReminders.load(root).hour, 12);
+      expect(find.text('12.00'), findsOneWidget);
       await tester.tap(find.text('Pengingat harian'));
       await settle(tester);
       expect(QuizReminders.load(root).daily, isFalse);

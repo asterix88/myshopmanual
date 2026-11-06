@@ -205,6 +205,44 @@ FROM pages WHERE page = ?
   }
 }
 
+/// A stand-in table of contents for a manual without bookmarks (training
+/// slides, for one): the first line of each page that reads like a title.
+/// A run of pages under the same title keeps only its first page.
+List<({int page, String title})> pageHeadingsSync(String indexPath) {
+  final out = <({int page, String title})>[];
+  try {
+    final db = sqlite3.open(indexPath, mode: OpenMode.readOnly);
+    try {
+      String? last;
+      for (final row in db.select('SELECT page, text FROM pages ORDER BY page')) {
+        final title = pageHeading(row['text'] as String? ?? '');
+        if (title == null || title.toLowerCase() == last) continue;
+        last = title.toLowerCase();
+        out.add((page: row['page'] as int, title: title));
+      }
+    } finally {
+      db.close();
+    }
+  } on SqliteException {
+    // No index: no headings.
+  }
+  return out;
+}
+
+/// The first line of a page's text that reads like a title: some letters,
+/// not too long, and not a page number or copyright line.
+String? pageHeading(String text) {
+  for (final raw in text.split('\n')) {
+    final line = raw.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (line.length < 4 || line.length > 90) continue;
+    if (RegExp(r'[A-Za-z]').allMatches(line).length < 3) continue;
+    if (RegExp(r'^(page|hal(aman)?\.?|slide)?\s*\d+(\s*(of|dari|/)\s*\d+)?$', caseSensitive: false).hasMatch(line)) continue;
+    if (RegExp(r'copyright|all rights reserved|©', caseSensitive: false).hasMatch(line)) continue;
+    return line;
+  }
+  return null;
+}
+
 /// Finds what the mechanic typed in a page's text the way the index matches
 /// it: case does not matter, and the words may be split by spaces, dashes or
 /// a line break ("01010-81640" also finds "01010 81640").

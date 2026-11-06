@@ -425,17 +425,17 @@ export async function rank(db: Db, who: Who, period: string): Promise<number> {
   return Number(ahead?.n ?? 0) + 1;
 }
 
-export type BoardRow = { rank: number; nrp: string; name: string; section: string; avatar: number; xp: number; change: number; me: boolean };
+export type BoardRow = { rank: number; nrp: string; name: string; section: string; avatar: number; xp: number; change: number; streak: number; me: boolean };
 
 /// The top 20 of [who]'s department and site, plus their own row when it
 /// is not among them. change: places up (+) or down (-) since the last
 /// nightly run.
-export async function leaderboard(db: Db, who: Who, period: "week" | "month", now = Date.now()): Promise<{ period: string; rows: BoardRow[]; me: BoardRow | null }> {
+export async function leaderboard(db: Db, who: Who, period: "week" | "month", now = Date.now()): Promise<{ period: string; rows: BoardRow[]; me: BoardRow | null; count: number }> {
   const day = await today(db, who, now);
   const id = period === "month" ? monthId(day) : weekId(day);
   const rows = await db.all(
     `SELECT * FROM (
-       SELECT b.nrp, u.name, b.section, u.avatar, b.xp, b.rank_prev,
+       SELECT b.nrp, u.name, b.section, u.avatar, b.xp, b.rank_prev, u.streak, u.last_daily, u.freeze_week,
          ROW_NUMBER() OVER (ORDER BY b.xp DESC, b.reached_at) AS rank
        FROM xp_board b JOIN quiz_user u ON u.nrp = b.nrp
        WHERE b.period = ? AND b.site = ? AND b.departemen = ? AND u.hidden = 0
@@ -450,9 +450,18 @@ export async function leaderboard(db: Db, who: Who, period: "week" | "month", no
     avatar: Number(r.avatar),
     xp: Number(r.xp),
     change: r.rank_prev == null ? 0 : Number(r.rank_prev) - Number(r.rank),
+    streak: streakNow(
+      { streak: Number(r.streak), last_daily: (r.last_daily as string | null) ?? null, freeze_week: (r.freeze_week as string | null) ?? null } as Parameters<typeof streakNow>[0],
+      day,
+    ),
     me: r.nrp === who.nrp,
   }));
-  return { period: id, rows: out.filter((r) => r.rank <= BOARD_SIZE), me: out.find((r) => r.me) ?? null };
+  const count = await db.first(
+    `SELECT COUNT(*) AS n FROM xp_board b JOIN quiz_user u ON u.nrp = b.nrp
+     WHERE b.period = ? AND b.site = ? AND b.departemen = ? AND u.hidden = 0`,
+    id, siteOf(who), who.departemen,
+  );
+  return { period: id, rows: out.filter((r) => r.rank <= BOARD_SIZE), me: out.find((r) => r.me) ?? null, count: Number(count?.n ?? 0) };
 }
 
 /// Nightly: remembers every board's current ranks, so tomorrow's

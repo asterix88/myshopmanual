@@ -67,8 +67,12 @@ class _QuizJobScreenState extends State<QuizJobScreen> {
       final path = indexes[file.key];
       if (path == null) throw Exception('Indeks manual ini belum ada di HP. Coba lagi saat ada sinyal.');
       final toc = await loadTocInBackground(path);
-      if (toc.isEmpty) throw Exception('File ini tidak punya daftar isi (bookmark). Buat soal dari halaman saja.');
-      final lines = [for (final t in toc) '${t.page}\t${'  ' * (t.level.clamp(0, 6))}${t.title}'].join('\n');
+      // No bookmarks (training slides, for one): the title line of each page
+      // stands in for the table of contents.
+      final lines = toc.isNotEmpty
+          ? [for (final t in toc) '${t.page}\t${'  ' * (t.level.clamp(0, 6))}${t.title}'].join('\n')
+          : [for (final h in await _headings(path)) '${h.page}\t${h.title}'].join('\n');
+      if (lines.trim().isEmpty) throw Exception('Teks file ini tidak terbaca (mungkin hasil scan).');
 
       if (!mounted) return;
       setState(() => _status = 'nyel AI memilih halaman…');
@@ -282,6 +286,9 @@ class _QuizJobScreenState extends State<QuizJobScreen> {
     if (picked != null) setState(() => _mix = picked);
   }
 }
+
+/// Title lines of every page, read on another isolate (top-level, see below).
+Future<List<({int page, String title})>> _headings(String path) => Isolate.run(() => pageHeadingsSync(path));
 
 /// Text of several pages, read on another isolate. Top-level on purpose: a
 /// closure made inside a State carries the widget tree, which an isolate
