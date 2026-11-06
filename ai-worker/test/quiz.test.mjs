@@ -1,0 +1,218 @@
+// The Quiz database code (src/quiz-db.ts) on node:sqlite, with the real
+// migration file, so the tables and the SQL are tested together.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
+import * as quiz from "../src/quiz-db.ts";
+import { runNightly } from "../src/quiz-cron.ts";
+
+function fresh() {
+  const d = new DatabaseSync(":memory:");
+  d.exec(readFileSync(new URL("../migrations/0001_quiz.sql", import.meta.url), "utf8"));
+  const run = (sql, b) => d.prepare(sql).run(...b.map((v) => (v === undefined ? null : v)));
+  return {
+    all: async (sql, ...b) => d.prepare(sql).all(...b),
+    first: async (sql, ...b) => d.prepare(sql).get(...b) ?? null,
+    run: async (sql, ...b) => Number(run(sql, b).changes),
+    batch: async (list) => {
+      d.exec("BEGIN");
+      try {
+        for (const [sql, ...b] of list) run(sql, b);
+        d.exec("COMMIT");
+      } catch (e) {
+        d.exec("ROLLBACK");
+        throw e;
+      }
+    },
+  };
+}
+
+// 6 Nov 2026 08.00 WIB
+const NOW = Date.UTC(2026, 10, 6, 1);
+const DAY = 86400_000;
+const ali = { nrp: "A1", name: "Ali", sections: ["TRACK"], departemen: "PLANT" };
+const budi = { nrp: "B2", name: "Budi", sections: ["TRACK"], departemen: "PLANT" };
+const wati = { nrp: "W3", name: "Wati", sections: ["WHEEL"], departemen: "PLANT" };
+
+async function seed(db, n = 12, unit = "PC210", section = "TRACK") {
+  for (let i = 0; i < n; i++) {
+    await quiz.addQuestion(
+      db,
+      { section, unit, topic: "torsi", type: "pg", prompt: `Soal ${unit} ${i}`, choices: ["A", "B", "C", "D"], answer: 1, explain: "x", manual_id: "sm", page: i + 1 },
+      { status: "terbit", source: "admin", by: "ADM", id: `${unit}-${i}`, now: NOW },
+    );
+  }
+}
+
+let seq = 0;
+async function play(db, who, s, { wrong = 0, now = NOW, ms = 5000 } = {}) {
+  for (const [i, q] of s.questions.entries()) {
+    await quiz.answer(db, who, { id: `a${seq++}`, session_id: s.id, question_id: q.id, chosen: i < wrong ? 0 : 1, ms }, now);
+  }
+  return quiz.finish(db, who, s.id, now);
+}
+
+test("migration keeps itself: running it twice changes nothing", async () => {
+  const d = new DatabaseSync(":memory:");
+  const sql = readFileSync(new URL("../migrations/0001_quiz.sql", import.meta.url), "utf8");
+  d.exec(sql);
+  d.exec(sql);
+  assert.equal(d.prepare("SELECT COUNT(*) AS n FROM site").get().n, 1);
+});
+
+test("a mechanic gets 10 questions of their section, with answers", async () => {
+  const db = fresh();
+  await seed(db, 12);
+  await seed(db, 5, "WA500", "WHEEL");
+  await quiz.ensureUser(db, ali, () => 0.35);
+  const s = await quiz.startSession(db, ali, "harian", null, { now: NOW });
+  assert.equal(s.questions.length, 10);
+  assert.ok(s.questions.every((q) => q.unit === "PC210" && q.choices.length === 4 && q.answer === 1));
+  const u = await db.first("SELECT avatar, site FROM quiz_user WHERE nrp = 'A1'");
+  assert.deepEqual({ ...u }, { avatar: 3, site: "SBS" });
+});
+
+test("an unfinished Quiz harian comes back the same; a finished one is done for the day", async () => {
+  const db = fresh();
+  await seed(db, 12);
+  await quiz.ensureUser(db, ali);
+  const s = await quiz.startSession(db, ali, "harian", null, { now: NOW });
+  const again = await quiz.startSession(db, ali, "harian", null, { now: NOW + 60_000 });
+  assert.equal(again.id, s.id);
+  await play(db, ali, s);
+  assert.deepEqual(await quiz.startSession(db, ali, "harian", null, { now: NOW + 120_000 }), { error: "done" });
+  // Quiz per unit may be played again and again.
+  const unit = await quiz.startSession(db, ali, "unit", "PC210", { now: NOW + 180_000 });
+  assert.equal(unit.questions.length, 10);
+});
+
+test("answers: XP, level, resend counted once, 400 XP limit", async () => {
+  const db = fresh();
+  await seed(db, 12);
+  await quiz.ensureUser(db, ali);
+  const s = await quiz.startSession(db, ali, "harian", null, { now: NOW });
+  const q = s.questions[0];
+  const a = { id: "x1", session_id: s.id, question_id: q.id, chosen: 1, ms: 4000 };
+  assert.deepEqual(await quiz.answer(db, ali, a, NOW), { correct: true, xp: 10, level: 1, next_days: 3, mastered: false });
+  await quiz.answer(db, ali, a, NOW);
+  assert.equal((await db.first("SELECT answered, xp FROM daily_stats")).answered, 1);
+  const wrong = await quiz.answer(db, ali, { ...a, id: "x2", question_id: s.questions[1].id, chosen: 3 }, NOW);
+  assert.deepEqual(wrong, { correct: false, xp: 2, level: 0, next_days: 1, mastered: false });
+  assert.deepEqual(await quiz.answer(db, ali, { ...a, id: "x3", question_id: "nope" }, NOW), { error: "question" });
+  await db.run("UPDATE daily_stats SET xp = 395");
+  assert.equal((await quiz.answer(db, ali, { ...a, id: "x4", question_id: s.questions[2].id }, NOW)).xp, 5);
+});
+
+test("finish: bonus, streak and the leaderboard", async () => {
+  const db = fresh();
+  await seed(db, 30);
+  for (const who of [ali, budi, wati]) await quiz.ensureUser(db, who);
+  const s = await quiz.startSession(db, ali, "harian", null, { now: NOW });
+  const out = await play(db, ali, s);
+  // 10 x 10 + finish 10 + perfect 20 + streak 1 day 5
+  assert.deepEqual(out, { score: 10, total: 10, xp_session: 135, bonus: 35, streak: 1, freeze_used: false, rank: 1 });
+  const sb = await quiz.startSession(db, budi, "harian", null, { now: NOW });
+  const ob = await play(db, budi, sb, { wrong: 3 });
+  assert.equal(ob.score, 7);
+  assert.equal(ob.xp_session, 7 * 10 + 3 * 2 + 10 + 5);
+  assert.equal(ob.rank, 2);
+  const board = await quiz.leaderboard(db, budi, "week", NOW);
+  assert.equal(board.period, "W2026-45");
+  assert.deepEqual(board.rows.map((r) => [r.rank, r.nrp, r.xp]), [[1, "A1", 135], [2, "B2", 91]]);
+  assert.equal(board.me.nrp, "B2");
+  // Wati (WHEEL) is on the same department board, across sections.
+  assert.equal((await quiz.leaderboard(db, wati, "month", NOW)).rows.length, 2);
+  // Hidden accounts leave the board.
+  await quiz.hideFromBoard(db, "A1", true);
+  assert.equal((await quiz.leaderboard(db, budi, "week", NOW)).rows[0].nrp, "B2");
+});
+
+test("next day: wrong answers come back as reviews, streak goes on", async () => {
+  const db = fresh();
+  await seed(db, 30);
+  await quiz.ensureUser(db, ali);
+  const s1 = await quiz.startSession(db, ali, "harian", null, { now: NOW });
+  await play(db, ali, s1, { wrong: 4 });
+  const s2 = await quiz.startSession(db, ali, "harian", null, { now: NOW + DAY });
+  const reviews = s2.questions.filter((q) => q.review);
+  assert.equal(reviews.length, 3);
+  assert.ok(reviews.every((q) => q.level === 0));
+  const out = await play(db, ali, s2, { now: NOW + DAY });
+  assert.equal(out.streak, 2);
+  const home = await quiz.home(db, ali, NOW + DAY);
+  assert.equal(home.daily, "selesai");
+  assert.equal(home.streak, 2);
+  assert.equal(home.rank_week, 1);
+});
+
+test("streak freeze after one missed day", async () => {
+  const db = fresh();
+  await seed(db, 40);
+  await quiz.ensureUser(db, ali);
+  await play(db, ali, await quiz.startSession(db, ali, "harian", null, { now: NOW }));
+  const later = NOW + 2 * DAY; // 7 Nov missed
+  const out = await play(db, ali, await quiz.startSession(db, ali, "harian", null, { now: later }), { now: later });
+  assert.equal(out.streak, 2);
+  assert.equal(out.freeze_used, true);
+});
+
+test("units list shows mastered questions (level 4+)", async () => {
+  const db = fresh();
+  await seed(db, 12);
+  await quiz.ensureUser(db, ali);
+  await db.run("INSERT INTO card_state (nrp, question_id, unit, level, next_date) VALUES ('A1', 'PC210-0', 'PC210', 4, '2026-12-01')");
+  assert.deepEqual(await quiz.units(db, ali), [{ unit: "PC210", total: 12, seen: 1, mastered: 1 }]);
+});
+
+test("two reports pull a question; approving brings it back", async () => {
+  const db = fresh();
+  await seed(db, 3);
+  for (const who of [ali, budi]) await quiz.ensureUser(db, who);
+  assert.deepEqual(await quiz.report(db, ali, "PC210-0", "angka salah", NOW), { pulled: false });
+  assert.deepEqual(await quiz.report(db, budi, "PC210-0", "", NOW), { pulled: true });
+  assert.equal((await db.first("SELECT status FROM question WHERE id = 'PC210-0'")).status, "ditarik");
+  assert.equal((await quiz.openReports(db)).length, 2);
+  await quiz.decide(db, "PC210-0", "setujui", "ADM", null, NOW);
+  assert.equal((await db.first("SELECT status FROM question WHERE id = 'PC210-0'")).status, "terbit");
+  assert.equal((await quiz.openReports(db)).length, 0);
+});
+
+test("drafts wait for an admin; edits are saved", async () => {
+  const db = fresh();
+  const id = await quiz.addQuestion(
+    db,
+    { section: "track", unit: "PC210", topic: "torsi", type: "pg", prompt: "?", choices: ["1", "2"], answer: 0, explain: "x", manual_id: "sm", page: 3 },
+    { status: "draf", source: "ai", by: "ADM", check_note: "ok", now: NOW },
+  );
+  await quiz.ensureUser(db, ali);
+  assert.deepEqual(await quiz.startSession(db, ali, "harian", null, { now: NOW }), { error: "empty" });
+  assert.equal((await quiz.listQuestions(db, "draf", null))[0].section, "TRACK");
+  const edit = { section: "TRACK", unit: "PC210", topic: "torsi", type: "pg", prompt: "Baru?", choices: ["1", "2", "3"], answer: 2, explain: "y", manual_id: "sm", page: 3 };
+  await quiz.decide(db, id, "setujui", "ADM", edit, NOW);
+  const [q] = await quiz.listQuestions(db, "terbit", "PC210");
+  assert.equal(q.prompt, "Baru?");
+  assert.equal(q.answer, 2);
+  assert.equal(q.reviewed_by, "ADM");
+});
+
+test("nightly: rank change, hard questions flagged, old answers removed", async () => {
+  const db = fresh();
+  await seed(db, 30);
+  for (const who of [ali, budi]) await quiz.ensureUser(db, who);
+  await play(db, ali, await quiz.startSession(db, ali, "harian", null, { now: NOW }));
+  await play(db, budi, await quiz.startSession(db, budi, "harian", null, { now: NOW }), { wrong: 5 });
+  await runNightly(db, NOW);
+  // Budi overtakes Ali with a unit quiz after the nightly run.
+  for (let i = 0; i < 2; i++) await play(db, budi, await quiz.startSession(db, budi, "unit", "PC210", { now: NOW + 1000 + i }), { now: NOW + 1000 + i });
+  const board = await quiz.leaderboard(db, ali, "week", NOW);
+  assert.deepEqual(board.rows.map((r) => [r.nrp, r.change]), [["B2", 1], ["A1", -1]]);
+
+  for (let i = 0; i < 20; i++) {
+    await db.run("INSERT INTO review_log (id, session_id, nrp, question_id, chosen, correct, level_after, xp, ms, answered_at) VALUES (?, 's', 'X', 'PC210-29', 0, 0, 0, 2, 3000, ?)", `h${i}`, NOW);
+  }
+  await db.run("INSERT INTO review_log (id, session_id, nrp, question_id, chosen, correct, level_after, xp, ms, answered_at) VALUES ('old', 's', 'X', 'PC210-1', 0, 1, 1, 10, 3000, ?)", NOW - 200 * DAY);
+  await runNightly(db, NOW);
+  assert.equal((await db.first("SELECT status FROM question WHERE id = 'PC210-29'")).status, "perlu_cek");
+  assert.equal(await db.first("SELECT id FROM review_log WHERE id = 'old'"), null);
+});

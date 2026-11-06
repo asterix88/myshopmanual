@@ -517,6 +517,13 @@ export async function requireAdmin(
   return auth;
 }
 
+/// The employee's department (Departemen column of karyawan.xlsx) and
+/// whether they are still active, for the Quiz leaderboard.
+export async function employeeInfo(env: AuthEnv, nrp: string): Promise<{ department: string; active: boolean } | null> {
+  const e = await load(env, nrp);
+  return e ? { department: e.department ?? "", active: e.active } : null;
+}
+
 /// Every employee as the admin screen lists them, by NRP.
 export async function employeeRows(env: AuthEnv): Promise<Map<string, Row>> {
   const rows = new Map<string, Row>();

@@ -1,11 +1,13 @@
 import { countQuestion, handleAuth, requireSession, SESSION_HEADER } from "./auth";
 import { feedback } from "./feedback";
 import { handleFiles } from "./files";
+import { handleQuiz, type QuizEnv } from "./quiz";
+import { scheduledQuiz } from "./quiz-cron";
 import { handleStats, recordRating, type StatsEnv } from "./stats";
 
 export { Stats } from "./stats";
 
-export interface Env extends StatsEnv {
+export interface Env extends StatsEnv, QuizEnv {
   GROQ_API_KEY?: string;
   DEEPSEEK_API_KEY?: string;
   APP_TOKEN?: string;
@@ -289,6 +291,10 @@ export default {
     if (counted.undo && response.status !== 200) await counted.undo();
     return response;
   },
+  // The Quiz's nightly job (src/quiz-cron.ts), at the time in wrangler.toml.
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(scheduledQuiz(env));
+  },
 } satisfies ExportedHandler<Env>;
 
 async function handle(
@@ -303,6 +309,8 @@ async function handle(
   if (auth) return auth;
   const stats = await handleStats(request, env, url.pathname);
   if (stats) return stats;
+  const quiz = await handleQuiz(request, env, url.pathname);
+  if (quiz) return quiz;
   if (request.method === "GET" && url.pathname === "/") {
     return json({ ok: true, model: env.MODEL });
   }
