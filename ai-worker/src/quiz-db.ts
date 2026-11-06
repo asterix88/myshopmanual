@@ -483,6 +483,14 @@ export async function home(db: Db, who: Who, now = Date.now()) {
     "SELECT xp FROM xp_board WHERE period = ? AND site = ? AND departemen = ? AND nrp = ?",
     weekId(day), siteOf(who), who.departemen, who.nrp,
   );
+  const s = scope(who, null);
+  const counts = await db.first(
+    `SELECT COUNT(*) AS questions, SUM(CASE WHEN c.level >= 4 THEN 1 ELSE 0 END) AS mastered
+     FROM question q LEFT JOIN card_state c ON c.question_id = q.id AND c.nrp = ?
+     WHERE ${s.where}`,
+    who.nrp,
+    ...s.bind,
+  );
   const state = {
     streak: Number(u?.streak ?? 0),
     best_streak: Number(u?.best_streak ?? 0),
@@ -500,6 +508,12 @@ export async function home(db: Db, who: Who, now = Date.now()) {
     rank_week: await rank(db, who, weekId(day)),
     avatar: Number(u?.avatar ?? 0),
     reminder: (u?.reminder as string | null) ?? "07:00",
+    last_daily: state.last_daily,
+    freeze_week: state.freeze_week,
+    // Published questions this mechanic can get (the app hides the Quiz
+    // card from mechanics while there are none) and how many they master.
+    questions: Number(counts?.questions ?? 0),
+    mastered: Number(counts?.mastered ?? 0),
   };
 }
 

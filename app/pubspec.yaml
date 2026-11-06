@@ -68,6 +68,7 @@ flutter:
     - assets/images/logo.png
     - assets/images/cetok.png
     - assets/units/
+    - assets/avatars/
 
   fonts:
     - family: Poppins

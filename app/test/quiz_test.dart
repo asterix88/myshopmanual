@@ -1,0 +1,181 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:mymanual/src/quiz.dart';
+import 'package:mymanual/src/screens/quiz_hub_screen.dart';
+import 'package:mymanual/src/screens/quiz_screen.dart';
+import 'package:mymanual/src/screens/shell.dart';
+import 'package:mymanual/src/store.dart';
+
+import 'store_test.dart' show fixtureServer, testSession;
+
+Map<String, dynamic> homeJson({int questions = 30, String daily = 'belum', int streak = 3}) => {
+      'daily': daily,
+      'session_id': null,
+      'streak': streak,
+      'best_streak': 5,
+      'xp_week': 120,
+      'xp_total': 900,
+      'rank_week': 2,
+      'avatar': 3,
+      'questions': questions,
+      'mastered': 4,
+      'last_daily': '2026-11-05',
+      'day': '2026-11-06',
+      'freeze_week': null,
+    };
+
+Map<String, dynamic> question(String id) => {
+      'id': id,
+      'unit': 'TEST1-1',
+      'topic': 'hidrolik',
+      'type': 'pg',
+      'prompt': 'Soal $id: fungsi main relief valve?',
+      'choices': ['Membatasi tekanan', 'Menambah debit', 'Mendinginkan oli', 'Menyaring oli'],
+      'answer': 0,
+      'explain': 'Relief valve membuka saat tekanan melewati setelan.',
+      'manual_id': 'TEST1-1/sm',
+      'page': 12,
+    };
+
+void main() {
+  late Directory root;
+
+  setUp(() {
+    root = Directory.systemTemp.createTempSync('quiz');
+    AppStore.retryDelays = const [];
+    QuizApi.lastHome = null;
+  });
+  tearDown(() => root.deleteSync(recursive: true));
+
+  test('an answer without signal is kept and sent with the next call', () async {
+    var up = false;
+    final sent = <String>[];
+    final client = MockClient((request) async {
+      if (request.url.path.startsWith('/quiz')) {
+        if (!up) throw const SocketException('offline');
+        if (request.url.path == '/quiz/answer') {
+          sent.add((jsonDecode(request.body) as Map)['question_id'] as String);
+          return http.Response(jsonEncode({'correct': true, 'xp': 10, 'level': 1, 'next_days': 1}), 200);
+        }
+        return http.Response(jsonEncode(homeJson()), 200);
+      }
+      return fixtureServer().send(http.Request(request.method, request.url)).then(http.Response.fromStream);
+    });
+    final store = await AppStore.open(root: root, client: client);
+    await store.signIn(testSession(), refreshNow: false);
+    final api = QuizApi(store, client);
+
+    final result = await api.answer(QuizAnswer(sessionId: 's1', questionId: 'q1', chosen: 0, ms: 5000));
+    expect(result, isNull);
+    expect(File('${root.path}/quiz_pending.json').existsSync(), isTrue);
+
+    up = true;
+    final home = await api.home();
+    expect(sent, ['q1']);
+    expect(home.questions, 30);
+    expect(home.streak, 3);
+    expect(QuizApi.lastHome, same(home));
+    expect(File('${root.path}/quiz_pending.json').existsSync(), isFalse);
+    store.dispose();
+  });
+
+  Future<AppStore> openStore(WidgetTester tester, http.Client client, {bool admin = false}) async {
+    late AppStore store;
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: client);
+      await store.signIn(testSession(admin: admin), refreshNow: false);
+    });
+    return store;
+  }
+
+  Future<void> settle(WidgetTester tester) async {
+    for (var i = 0; i < 6; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+  }
+
+  testWidgets('the Home card shows the streak and hides with no questions', (tester) async {
+    var questions = 30;
+    final client = MockClient((request) async => http.Response(jsonEncode(homeJson(questions: questions)), 200));
+    final store = await openStore(tester, client);
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(home: Scaffold(body: QuizHomeCard(key: const ValueKey(1), client: client))),
+    ));
+    await settle(tester);
+    expect(find.text('Quiz harian').evaluate().isNotEmpty || find.text('Jaga streakmu').evaluate().isNotEmpty, isTrue);
+    expect(find.text('3'), findsOneWidget);
+
+    // No published question yet: a mechanic sees nothing.
+    questions = 0;
+    QuizApi.lastHome = null;
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(home: Scaffold(body: QuizHomeCard(key: const ValueKey(2), client: client))),
+    ));
+    await settle(tester);
+    expect(find.byType(Text), findsNothing);
+    await tester.runAsync(() async => store.dispose());
+  });
+
+  testWidgets('a set: choose, Periksa, a wrong answer comes back, then the summary', (tester) async {
+    final answers = <(String, int)>[];
+    final client = MockClient((request) async {
+      final body = request.body.isEmpty ? <String, dynamic>{} : jsonDecode(request.body) as Map<String, dynamic>;
+      return switch (request.url.path) {
+        '/quiz/session' => http.Response(
+            jsonEncode({'id': 's1', 'unit': null, 'questions': [question('q1'), question('q2')], 'answered': []}),
+            200,
+          ),
+        '/quiz/answer' => () {
+            answers.add((body['question_id'] as String, body['chosen'] as int));
+            final right = body['chosen'] == 0;
+            return http.Response(jsonEncode({'correct': right, 'xp': right ? 10 : 2, 'level': right ? 1 : 0, 'next_days': 1}), 200);
+          }(),
+        '/quiz/finish' => http.Response(
+            jsonEncode({'score': 1, 'total': 2, 'xp_session': 22, 'streak': 4, 'freeze_used': false, 'rank': 2}),
+            200,
+          ),
+        _ => http.Response(jsonEncode(homeJson()), 200),
+      };
+    });
+    final store = await openStore(tester, client);
+    await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(home: QuizPlayScreen(client: client))));
+    await settle(tester);
+
+    expect(find.text('Soal q1: fungsi main relief valve?'), findsOneWidget);
+    await tester.tap(find.text('Membatasi tekanan'));
+    await tester.pump();
+    await tester.tap(find.text('Periksa'));
+    await settle(tester);
+    expect(find.text('Benar'), findsOneWidget);
+    await tester.tap(find.text('Lanjut'));
+    await settle(tester);
+
+    // q2 wrong: it comes back at the end.
+    await tester.tap(find.text('Menambah debit'));
+    await tester.pump();
+    await tester.tap(find.text('Periksa'));
+    await settle(tester);
+    expect(find.text('Belum tepat'), findsOneWidget);
+    await tester.tap(find.text('Lanjut'));
+    await settle(tester);
+    expect(find.text('Soal q2: fungsi main relief valve?'), findsOneWidget);
+    await tester.tap(find.text('Membatasi tekanan'));
+    await tester.pump();
+    await tester.tap(find.text('Periksa'));
+    await settle(tester);
+    await tester.tap(find.text('Lanjut'));
+    await settle(tester);
+
+    expect(answers, [('q1', 0), ('q2', 1), ('q2', 0)]);
+    expect(find.text('Selesai'), findsOneWidget);
+    await tester.runAsync(() async => store.dispose());
+  });
+}
