@@ -551,16 +551,15 @@ class _Option extends StatelessWidget {
 }
 
 class _LinkButton extends StatelessWidget {
-  const _LinkButton({required this.glyph, required this.label, required this.onTap, this.muted = false});
+  const _LinkButton({required this.glyph, required this.label, required this.onTap});
 
   final AppGlyph glyph;
   final String label;
   final VoidCallback onTap;
-  final bool muted;
 
   @override
   Widget build(BuildContext context) {
-    final color = muted ? AppColors.muted : AppColors.navy;
+    final color = AppColors.navy;
     return TextButton(
       style: TextButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 8),

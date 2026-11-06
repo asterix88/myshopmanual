@@ -13,6 +13,7 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:mymanual/src/screens/quiz_hub_screen.dart';
 import 'package:mymanual/src/screens/quiz_screen.dart';
 import 'package:mymanual/src/screens/shell.dart';
+import 'package:mymanual/src/search.dart' show pageHeading;
 import 'package:mymanual/src/store.dart';
 
 import 'store_test.dart' show fixtureServer, testSession;
@@ -181,6 +182,12 @@ void main() {
     expect(answers, [('q1', 0), ('q2', 1), ('q2', 0)]);
     expect(find.text('Selesai'), findsOneWidget);
     await tester.runAsync(() async => store.dispose());
+  });
+
+  test('a page without bookmarks is named by its title line', () {
+    expect(pageHeading('12\nHYDRAULIC SYSTEM OVERVIEW\nMain pump supplies oil to...'), 'HYDRAULIC SYSTEM OVERVIEW');
+    expect(pageHeading('Page 3 of 220\n© Komatsu 2020\nEngine cooling'), 'Engine cooling');
+    expect(pageHeading('1\n2\n'), isNull);
   });
 
   test('an explanation starts with the fact', () {
