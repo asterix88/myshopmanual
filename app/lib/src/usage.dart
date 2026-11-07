@@ -69,6 +69,10 @@ class UsageLog {
 
   Future<void> _adding = Future.value();
 
+  /// Done once every event added so far is in the file.
+  @visibleForTesting
+  Future<void> get saved => _adding.catchError((_) {}).then((_) => _writing.catchError((_) {}));
+
   /// Adds events one after another, so they stay in the order they happened
   /// while the file is still being read.
   Future<void> _add(Map<String, dynamic> event) {

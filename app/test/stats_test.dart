@@ -88,7 +88,8 @@ void main() {
     store.usage.searched('relief valve', 3);
     store.usage.searched('Relief Valve', 3); // the same search again: counted once
     store.usage.asked(question: 'Apa SL1?', answer: 'Spring loaded', sources: const [], queries: const ['SL1']);
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    // Every event in the file before the app "starts again" below.
+    await store.usage.saved;
     await store.usage.send();
     expect(sent, isEmpty);
 
@@ -105,7 +106,7 @@ void main() {
 
     // Logging out sends what is left first.
     again.usage.searched('seal kit', 0);
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await again.usage.saved;
     await again.signOut();
     expect(sent.map((e) => e['q']), ['seal kit']);
     store.dispose();
