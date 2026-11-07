@@ -215,6 +215,35 @@ void main() {
     expect(calloutOf('Komponen ini adalah?'), isNull);
   });
 
+  test('a two-line label is one label (PM PC1250 page 153)', () {
+    // Word boxes as pdfium reads them (left, bottom, right, top).
+    const words = [
+      ('Main', 228.6, 17.2, 252.3, 25.4), ('Pump', 256.7, 15.1, 286.1, 25.3), ('1', 290.3, 17.4, 293.7, 25.2),
+      ('TVC', 91.5, 112.4, 112.8, 120.7), ('Valve', 116.6, 112.4, 144.7, 120.5),
+      ('PTO', 700.1, 61.1, 721.3, 69.2), ('lubrication', 683.1, 48.0, 738.0, 56.1),
+      ('Pump', 442.0, 28.9, 471.4, 39.1), ('for', 474.8, 31.0, 489.3, 39.2), ('Aftercooler', 436.2, 17.8, 494.3, 26.0),
+      ('Control', 482.7, 164.7, 520.8, 173.1), ('pump', 487.6, 149.5, 516.6, 157.8),
+      ('Pump', 344.0, 478.8, 373.5, 489.0), ('for', 376.9, 480.9, 391.3, 489.1), ('Radiator', 398.4, 480.9, 442.1, 489.1),
+      ('/', 444.7, 480.8, 448.5, 489.2), ('Oil', 369.9, 467.6, 383.5, 475.8), ('Cooler', 387.4, 467.6, 421.7, 475.9),
+    ];
+    final text = StringBuffer();
+    final rects = <PdfRect>[];
+    for (final (w, l, b, r, t) in words) {
+      for (var i = 0; i < w.length; i++) {
+        final x = l + (r - l) * i / w.length;
+        text.write(w[i]);
+        rects.add(PdfRect(x, t, x + (r - l) / w.length, b));
+      }
+      text.write(' ');
+      rects.add(PdfRect(r, t, r, t));
+    }
+    final labels = {for (final l in quizLabels(text.toString(), rects)) l.text};
+    expect(labels, {
+      'Main Pump 1', 'TVC Valve', 'PTO lubrication', 'Pump for Aftercooler', 'Control pump',
+      'Pump for Radiator / Oil Cooler',
+    });
+  });
+
   test('a quiz picture keeps only the drawing that holds the asked number', () {
     // A 200x300 white page: text-like bar at top, drawing A (left, middle),
     // drawing B (right, middle), a bar at the bottom.
