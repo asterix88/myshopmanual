@@ -171,7 +171,7 @@ class QuizPage {
       canvas.drawRect(c.shift(-r.topLeft), white);
     }
     paintQuizMarks(canvas, marks, 1, r.topLeft, side: side);
-    return _encode(await _turned(await recorder.endRecording().toImage(w, h), turns));
+    return _encodeQuiz(await _turned(await recorder.endRecording().toImage(w, h), turns));
   }
 
   /// The drawing that holds [target]: a callout number, or a label's name
@@ -208,6 +208,31 @@ Future<ui.Image> _turned(ui.Image image, int turns) async {
     ..drawImage(image, ui.Offset.zero, ui.Paint());
   image.dispose();
   return recorder.endRecording().toImage(ow.round(), oh.round());
+}
+
+/// A quiz picture's PNG must stay under the server's 2 MB; a photo drawn
+/// large can be more, so it is drawn smaller until it fits [limit].
+/// [image] is disposed.
+Future<Uint8List> _encodeQuiz(ui.Image image, {int limit = 1500000}) async {
+  var png = await _encode(image.clone());
+  for (var i = 0; i < 4 && png.length > limit; i++) {
+    final k = math.sqrt(limit / png.length) * 0.95;
+    final w = math.max(1, (image.width * k).round());
+    final h = math.max(1, (image.height * k).round());
+    final recorder = ui.PictureRecorder();
+    ui.Canvas(recorder).drawImageRect(
+      image,
+      ui.Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      ui.Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()),
+      ui.Paint()..filterQuality = ui.FilterQuality.high,
+    );
+    final smaller = await recorder.endRecording().toImage(w, h);
+    image.dispose();
+    image = smaller;
+    png = await _encode(image.clone());
+  }
+  image.dispose();
+  return png;
 }
 
 /// [image] as PNG bytes; [image] is disposed.
@@ -400,7 +425,7 @@ Future<Uint8List> _sharpQuizPicture(AppStore store, ManualFile file, int page, Q
               ui.Rect.fromLTRB(c.left * k - x, c.top * k - y, c.right * k - x, c.bottom * k - y), white);
         }
         paintQuizMarks(canvas, drawing.marks, k, origin, side: drawing.side);
-        return await _encode(await _turned(await recorder.endRecording().toImage(width, height), drawing.turns));
+        return await _encodeQuiz(await _turned(await recorder.endRecording().toImage(width, height), drawing.turns));
       } finally {
         await document?.dispose();
       }
