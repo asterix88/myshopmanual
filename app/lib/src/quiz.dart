@@ -260,6 +260,34 @@ class QuizApi {
     _versions[id] = imageVersion(id) + 1;
   }
 
+  /// Keeps what "Atur gambar" made of a picture ([edit]: QuizEdit.toJson),
+  /// so the editor opens on it next time.
+  Future<void> saveImageEdit(String id, Map<String, dynamic> edit) async {
+    final session = store.session;
+    if (session == null) throw AuthException('login', 'Silakan masuk lagi.');
+    final http.Response response;
+    try {
+      response = await client
+          .put(
+            _base.resolve('/admin/quiz/image-edit/${Uri.encodeComponent(id)}'),
+            headers: {'content-type': 'application/json', sessionHeader: session.token},
+            body: jsonEncode({'edit': edit}),
+          )
+          .timeout(const Duration(seconds: 25));
+    } on Exception {
+      throw AuthException('network', 'Koneksi terputus');
+    }
+    if (response.statusCode != 200) {
+      throw AuthException('server', 'Editan gambar gagal disimpan (kode ${response.statusCode}).');
+    }
+    _edits[id] = edit;
+  }
+
+  static final _edits = <String, Map<String, dynamic>>{};
+
+  /// The edit this phone saved for [id] since the list was loaded.
+  static Map<String, dynamic>? savedEdit(String id) => _edits[id];
+
   static final _images = <String, Uint8List>{};
   static final _versions = <String, int>{};
 
@@ -367,6 +395,7 @@ class QuizQuestion {
         manualId = j['manual_id'] as String? ?? '',
         page = _int(j['page']),
         image = j['image'] as String?,
+        imageEdit = j['image_edit'],
         review = j['review'] == true,
         level = (j['level'] as num?)?.toInt();
 
@@ -385,6 +414,9 @@ class QuizQuestion {
 
   /// A "gambar" question's picture (its key on the server), or null.
   final String? image;
+
+  /// What "Atur gambar" last saved for the picture (see QuizEdit), or null.
+  final Object? imageEdit;
 
   /// Asked again (was wrong, or its date has come).
   final bool review;

@@ -9,6 +9,7 @@ import 'package:pdfrx/pdfrx.dart' show PdfDocument;
 import '../models.dart';
 import '../page_image.dart';
 import '../quiz.dart';
+import '../quiz_edit.dart';
 import '../search.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -329,9 +330,9 @@ Future<void> sendQuizPicture(AppStore store, QuizApi api, ManualFile file, int p
   final drawn = await renderQuizPage(store, file, page, open: open);
   try {
     for (final MapEntry(key: id, value: target) in targets.entries) {
-      final marks = drawn.marksFor(target);
-      final Uint8List png = await drawn.png(drawn.autoCropFor(target), marks: marks);
-      await api.uploadImage(id, png, letter: marks.where((m) => m.asked).firstOrNull?.letter);
+      final edit = QuizEdit.auto(drawn, target);
+      final Uint8List png = await edit.png(drawn);
+      await api.uploadImage(id, png, letter: edit.letter);
     }
   } finally {
     drawn.dispose();

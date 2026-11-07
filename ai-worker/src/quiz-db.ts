@@ -599,6 +599,7 @@ export type QuestionRow = Question & {
   curator_score: number | null;
   curator_note: string | null;
   passed: boolean;
+  image_edit: unknown;
 };
 
 const QUESTION_ROW = `SELECT q.*,
@@ -623,6 +624,15 @@ export async function questionRow(db: Db, id: string): Promise<QuestionRow | nul
   return r ? toQuestionRow(r) : null;
 }
 
+function parseEdit(v: unknown): unknown {
+  if (typeof v !== "string") return null;
+  try {
+    return JSON.parse(v);
+  } catch {
+    return null;
+  }
+}
+
 function toQuestionRow(r: Row): QuestionRow {
   return {
     ...toQuestion(r),
@@ -638,6 +648,7 @@ function toQuestionRow(r: Row): QuestionRow {
     curator_score: r.curator_score == null ? null : Number(r.curator_score),
     curator_note: (r.curator_note as string | null) ?? null,
     passed: Number(r.passed ?? 0) === 1,
+    image_edit: parseEdit(r.image_edit),
     wrong_pct: r.wrong_rate == null ? null : Math.round(Number(r.wrong_rate) * 100),
   };
 }
@@ -673,14 +684,31 @@ export async function addQuestion(
   return id;
 }
 
-/// The picture of a "gambar" question (an R2 key, quiz/img/...).
-/// Saves a question's picture. [letter]: on a labelled photo, the letter the
-/// app gave the asked label; it takes the place of "[X]" in the question.
+/// Saves a question's picture (an R2 key, quiz/img/...). [letter]: on a
+/// labelled photo, the letter the app gave the asked label; it takes the
+/// place of "[X]" in the question. The text with "[X]" is kept, so a later
+/// edit that changes the letter changes the question too.
 export async function setImage(db: Db, id: string, key: string, now = Date.now(), letter: string | null = null): Promise<boolean> {
   if (letter && /^[A-Z]$/.test(letter)) {
-    return (await db.run("UPDATE question SET image = ?, prompt = REPLACE(prompt, '[X]', ?), updated_at = ? WHERE id = ?", key, letter, now, id)) > 0;
+    return (
+      (await db.run(
+        `UPDATE question SET image = ?,
+           prompt = REPLACE(COALESCE(prompt_template, prompt), '[X]', ?),
+           prompt_template = COALESCE(prompt_template, CASE WHEN instr(prompt, '[X]') > 0 THEN prompt END),
+           updated_at = ? WHERE id = ?`,
+        key, letter, now, id,
+      )) > 0
+    );
   }
   return (await db.run("UPDATE question SET image = ?, updated_at = ? WHERE id = ?", key, now, id)) > 0;
+}
+
+/// The editor's data for a question's picture (crop, labels, covers), so
+/// "Atur gambar" opens where the admin left it. At most 64 KB.
+export async function setImageEdit(db: Db, id: string, edit: unknown, now = Date.now()): Promise<boolean> {
+  const text = edit == null ? null : JSON.stringify(edit);
+  if (text && text.length > 65536) return false;
+  return (await db.run("UPDATE question SET image_edit = ?, updated_at = ? WHERE id = ?", text, now, id)) > 0;
 }
 
 /// "Setujui semua yang lolos": publishes the drafts among [ids] that passed
@@ -718,10 +746,11 @@ export async function decide(
   if (edit) {
     statements.push([
       `UPDATE question SET section = ?, unit = ?, topic = ?, type = ?, prompt = ?, choices = ?, answer = ?, explain = ?,
-         manual_id = ?, page = ?, image = COALESCE(?, image), updated_at = ? WHERE id = ?`,
+         manual_id = ?, page = ?, image = COALESCE(?, image),
+         prompt_template = CASE WHEN prompt = ? THEN prompt_template ELSE NULL END, updated_at = ? WHERE id = ?`,
       edit.section.toUpperCase(), edit.unit || null, edit.topic, edit.type, edit.prompt.trim(),
       JSON.stringify(edit.choices.map((c) => c.trim())), edit.answer, edit.explain.trim(), edit.manual_id.trim(), edit.page,
-      edit.image ?? null, now, id,
+      edit.image ?? null, edit.prompt.trim(), now, id,
     ]);
   }
   const status = { setujui: "terbit", tolak: "ditolak", tarik: "ditarik", ubah: null }[action];

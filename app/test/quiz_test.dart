@@ -11,6 +11,7 @@ import 'package:http/testing.dart';
 import 'package:mymanual/src/models.dart';
 import 'package:mymanual/src/page_image.dart';
 import 'package:mymanual/src/quiz.dart';
+import 'package:mymanual/src/quiz_edit.dart';
 import 'package:mymanual/src/quiz_reminders.dart';
 import 'package:mymanual/src/screens/quiz_admin_screen.dart';
 import 'package:mymanual/src/screens/quiz_crop_screen.dart';
@@ -447,6 +448,171 @@ void main() {
     expect(cut.width, lessThan(90));
     expect(cut.height, lessThan(110));
     expect(QuizApi.imageVersion('q9'), 1);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
+
+  test('QuizEdit: letters in reading order, merge, split, delete, saved in points', () {
+    const a = Rect.fromLTRB(10, 10, 60, 30); // top left
+    const b = Rect.fromLTRB(200, 12, 260, 30); // top right
+    const c1 = Rect.fromLTRB(100, 200, 160, 215); // "Control"
+    const c2 = Rect.fromLTRB(104, 220, 150, 235); // "pump", under it
+    final edit = QuizEdit(
+      crop: const Rect.fromLTRB(0, 0, 400, 300),
+      labels: [
+        const QuizLabel(c1, 'Control', [(text: 'Control', box: c1)]),
+        const QuizLabel(b, 'PSV'),
+        const QuizLabel(c2, 'pump', [(text: 'pump', box: c2)]),
+        const QuizLabel(a, 'PD'),
+      ],
+      ask: 1,
+    );
+    expect([for (final m in edit.marks) m.letter], ['A', 'B', 'C', 'D']);
+    expect(edit.letterOf(3), 'A'); // PD, top left
+    expect(edit.letter, 'B'); // PSV
+    // Every letter the same size.
+    expect(edit.markBox(1).height, edit.markBox(3).height);
+
+    final merged = edit.merge(2, 0);
+    expect(merged.labels.length, 3);
+    expect(merged.labels[0].text, 'Control pump');
+    expect(merged.labels[0].box, c1.expandToInclude(c2));
+    expect(merged.ask, 1);
+    expect(merged.letter, 'B');
+
+    final split = merged.split(0, 'pump');
+    expect([for (final l in split.labels) l.text], ['Control', 'pump', 'PSV', 'PD']);
+    expect(split.ask, 2);
+
+    final gone = split.removeLabel(2);
+    expect(gone.ask, isNull);
+    expect(gone.letter, isNull);
+
+    // Saved in PDF points: a page drawn at another size gets the same edit.
+    final json = jsonDecode(jsonEncode(merged.copyWith(turns: 1, size: 1.4).toJson(2))) as Map<String, dynamic>;
+    expect(json['crop'], [0, 0, 200, 150]);
+    final back = QuizEdit.fromJson(json, 2)!;
+    expect(back.same(merged.copyWith(turns: 1, size: 1.4)), isTrue);
+    expect(back.labels[0].words.length, 2);
+    expect(QuizEdit.fromJson({'v': 2}, 1), isNull);
+    expect(QuizEdit.fromJson(null, 1), isNull);
+  });
+
+  testWidgets('Atur gambar v2: pick the answer label, undo, save the edit with its letter', (tester) async {
+    Pdfrx.pdfiumModulePath ??= File('build/native_assets/linux/libpdfium.so').absolute.path;
+    Pdfrx.cacheDirectoryPath ??= Directory.systemTemp.createTempSync('pdfcache').path;
+    final sent = <String, http.Request>{};
+    final client = MockClient((request) async {
+      if (request.method == 'PUT') sent[request.url.path] = request;
+      return http.Response('{"ok":true}', 200);
+    });
+    final store = await openStore(tester, client, admin: true);
+    final file = Catalog.fromJson(fixtureCatalog()).units.single.files.single;
+    late QuizPage page;
+    await tester.runAsync(() async {
+      page = await renderQuizPage(store, file, 1,
+          open: () => PdfDocument.openFile(File('test/fixtures/quiz_labels.pdf').absolute.path));
+    });
+    final q = QuizQuestion({
+      ...question('L2'), 'type': 'gambar', 'prompt': 'Pada foto pompa, komponen bertanda [X] adalah?',
+      'choices': ['Servo valve', 'PT', 'PD', 'PSV'], 'answer': 0,
+    });
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(home: QuizCropScreen(api: QuizApi(store, client), file: file, question: q, page: () async => page)),
+    ));
+    await settle(tester);
+    await tester.tap(find.text('Label'));
+    await settle(tester);
+    // Servo valve is the fifth label: E.
+    expect(find.text('E'), findsOneWidget);
+    expect(find.text('Servo valve'), findsOneWidget);
+
+    // "Ganti", then tap the PSV label (A) on the picture.
+    await tester.tap(find.text('Ganti'));
+    await settle(tester);
+    expect(find.textContaining('Ketuk label untuk'), findsOneWidget);
+    final psv = page.labels.indexWhere((l) => l.text == 'PSV');
+    final stage = tester.getRect(find.byWidgetPredicate((w) => w is CustomPaint && '${w.painter.runtimeType}' == '_EditPainter'));
+    final fit = math.min((stage.width - 24) / page.width, (stage.height - 24) / page.height);
+    final landscape = tester.view.physicalSize.width > tester.view.physicalSize.height;
+    final origin = stage.topLeft +
+        Offset((stage.width - page.width * fit) / 2, landscape ? (stage.height - page.height * fit) / 2 : 12);
+    final psvLetter = QuizEdit.auto(page, 'Servo valve').letterOf(psv)!;
+    await tester.tapAt(origin + page.labels[psv].box.center * fit);
+    await settle(tester);
+    expect(find.text(psvLetter), findsOneWidget);
+    expect(find.textContaining('Ketuk label untuk'), findsNothing);
+
+    // Undo puts E back; redo takes A again.
+    await tester.tap(find.byIcon(Icons.undo));
+    await settle(tester);
+    expect(find.text('E'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.redo));
+    await settle(tester);
+
+    // Pratinjau: the question with its letter.
+    await tester.tap(find.text('Pratinjau'));
+    await settle(tester);
+    expect(find.text('Pada foto pompa, komponen bertanda $psvLetter adalah?'), findsOneWidget);
+
+    await tester.tap(find.text('Simpan'));
+    for (var i = 0; i < 50 && !sent.containsKey('/admin/quiz/image/L2'); i++) {
+      await settle(tester);
+    }
+    expect(sent['/admin/quiz/image/L2']!.url.queryParameters['letter'], psvLetter);
+    final edit = (jsonDecode(sent['/admin/quiz/image-edit/L2']!.body) as Map)['edit'] as Map<String, dynamic>;
+    expect(edit['ask'], psv);
+    expect((edit['labels'] as List).length, 8);
+    // Opened again: on the saved edit, not the automatic one.
+    final again = QuizEdit.fromJson(QuizApi.savedEdit('L2'), page.scale)!;
+    expect(again.letter, psvLetter);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
+
+  testWidgets('Atur gambar v2: leaving with changes asks first', (tester) async {
+    final client = MockClient((request) async => http.Response('{"ok":true}', 200));
+    final store = await openStore(tester, client, admin: true);
+    late QuizPage page;
+    await tester.runAsync(() async {
+      final recorder = ui.PictureRecorder();
+      Canvas(recorder).drawRect(const Rect.fromLTWH(0, 0, 200, 300), Paint()..color = Colors.white);
+      final image = await recorder.endRecording().toImage(200, 300);
+      final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      page = QuizPage(image, data!.buffer.asUint8List(), const []);
+    });
+    final file = Catalog.fromJson(fixtureCatalog()).units.single.files.single;
+    final q = QuizQuestion({...question('q8'), 'type': 'gambar', 'prompt': 'Pada gambar valve, komponen nomor 7 adalah?'});
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<bool>(
+              builder: (_) => QuizCropScreen(api: QuizApi(store, client), file: file, question: q, page: () async => page),
+            )),
+            child: const Text('buka'),
+          ),
+        ),
+      ),
+    ));
+    await tester.tap(find.text('buka'));
+    await settle(tester);
+    // Turn the picture: a change.
+    await tester.tap(find.text('Putar 90°'));
+    await settle(tester);
+    await tester.pageBack();
+    await settle(tester);
+    expect(find.text('Buang perubahan?'), findsOneWidget);
+    await tester.tap(find.text('Lanjut edit'));
+    await settle(tester);
+    expect(find.text('Atur gambar'), findsOneWidget);
+    await tester.pageBack();
+    await settle(tester);
+    await tester.tap(find.text('Buang'));
+    await settle(tester);
+    expect(find.text('buka'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(() async => store.dispose());
   });

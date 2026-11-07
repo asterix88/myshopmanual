@@ -10,6 +10,7 @@
 //   POST /admin/quiz/jobs               recent jobs with their progress
 //   POST /admin/quiz/approve            {ids} -> publishes those that passed the curator
 //   PUT  /admin/quiz/image/<id>         PNG body: the picture of a "gambar" question
+//   PUT  /admin/quiz/image-edit/<id>    {edit}: the editor's data for that picture
 //   POST /admin/quiz/questions          {status, unit?} -> list (draf, terbit, ditarik, ...)
 //   POST /admin/quiz/add                an admin's own question {..., publish?}
 //   POST /admin/quiz/question/<id>      {action: setujui|ubah|tolak|tarik, question?}
@@ -167,6 +168,14 @@ export async function handleQuizAdmin(request: Request, env: QuizEnv, path: stri
   const auth = await requireAdmin(env, request);
   if (auth.error) return auth.error;
   const by = auth.session.n;
+  if (path.startsWith("/admin/quiz/image-edit/")) {
+    if (request.method !== "PUT") return json({ error: "method" }, 405);
+    const id = decodeURIComponent(path.slice("/admin/quiz/image-edit/".length));
+    const body = await readBody(request);
+    if (!body) return json({ error: "bad_request" }, 400);
+    const ok = await quiz.setImageEdit(quiz.d1(env.QUIZ), id, body.edit ?? null);
+    return ok ? json({ ok: true }) : json({ error: "not_found", message: "Soal tidak ditemukan." }, 404);
+  }
   if (path.startsWith("/admin/quiz/image/")) {
     if (request.method !== "PUT") return json({ error: "method" }, 405);
     return putImage(request, env, decodeURIComponent(path.slice("/admin/quiz/image/".length)));

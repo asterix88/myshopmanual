@@ -10,7 +10,7 @@ import { createJob, listJobs, mixFrom, runJobs, targets, wantedForPage } from ".
 
 function fresh() {
   const d = new DatabaseSync(":memory:");
-  for (const file of ["0001_quiz.sql", "0002_quiz_jobs.sql"]) {
+  for (const file of ["0001_quiz.sql", "0002_quiz_jobs.sql", "0003_quiz_image_edit.sql"]) {
     d.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"));
   }
   const run = (sql, b) => d.prepare(sql).run(...b.map((v) => (v === undefined ? null : v)));
