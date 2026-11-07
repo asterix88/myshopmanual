@@ -338,6 +338,48 @@ void main() {
     await tester.runAsync(() async => store.dispose());
   });
 
+  testWidgets('a labelled photo: labels become letters A, B, C, the asked one sent with its letter', (tester) async {
+    Pdfrx.pdfiumModulePath ??= File('build/native_assets/linux/libpdfium.so').absolute.path;
+    Pdfrx.cacheDirectoryPath ??= Directory.systemTemp.createTempSync('pdfcache').path;
+    final sent = <Uri>[];
+    final client = MockClient((request) async {
+      if (request.method == 'PUT') sent.add(request.url);
+      return http.Response('{"ok":true}', 200);
+    });
+    final store = await openStore(tester, client, admin: true);
+    final file = Catalog.fromJson(fixtureCatalog()).units.single.files.single;
+    late QuizPage page;
+    await tester.runAsync(() async {
+      // A training slide: a photo with 8 part names on it, two of them on two lines.
+      page = await renderQuizPage(store, file, 1,
+          open: () => PdfDocument.openFile(File('test/fixtures/quiz_labels.pdf').absolute.path));
+    });
+    expect([for (final l in page.labels) l.text], [
+      'PSV', 'CO NC Valve', 'PD', 'TVC output pressure', 'Servo valve', 'PT', 'TVC valve', 'Pressure reducing valve',
+    ]);
+    final marks = page.marksFor('tvc OUTPUT  pressure');
+    expect([for (final m in marks) m.letter].join(), 'ABCDEFGH');
+    expect(marks.singleWhere((m) => m.asked).letter, 'D');
+    // A numbered drawing's callout is not a label: no letters.
+    expect(page.marksFor('35'), isEmpty);
+    expect(page.marksFor('Main relief valve'), isEmpty);
+
+    final q = QuizQuestion({
+      ...question('L1'), 'type': 'gambar', 'prompt': 'Pada foto pompa, komponen bertanda [X] adalah?',
+      'choices': ['Servo valve', 'PT', 'PD', 'PSV'], 'answer': 0,
+    });
+    expect(q.pictureTarget, 'Servo valve');
+    await tester.runAsync(() async {
+      await sendQuizPicture(store, QuizApi(store, client), file, 1, {'L1': q.pictureTarget},
+          open: () => PdfDocument.openFile(File('test/fixtures/quiz_labels.pdf').absolute.path));
+    });
+    expect(sent.single.path, '/admin/quiz/image/L1');
+    expect(sent.single.queryParameters['letter'], 'E');
+    page.dispose();
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
+
   testWidgets('Atur gambar opens on the drawing of the asked number and sends the chosen part', (tester) async {
     final sent = <String, Uint8List>{};
     final client = MockClient((request) async {

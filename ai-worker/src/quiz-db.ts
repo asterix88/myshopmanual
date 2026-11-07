@@ -674,7 +674,12 @@ export async function addQuestion(
 }
 
 /// The picture of a "gambar" question (an R2 key, quiz/img/...).
-export async function setImage(db: Db, id: string, key: string, now = Date.now()): Promise<boolean> {
+/// Saves a question's picture. [letter]: on a labelled photo, the letter the
+/// app gave the asked label; it takes the place of "[X]" in the question.
+export async function setImage(db: Db, id: string, key: string, now = Date.now(), letter: string | null = null): Promise<boolean> {
+  if (letter && /^[A-Z]$/.test(letter)) {
+    return (await db.run("UPDATE question SET image = ?, prompt = REPLACE(prompt, '[X]', ?), updated_at = ? WHERE id = ?", key, letter, now, id)) > 0;
+  }
   return (await db.run("UPDATE question SET image = ?, updated_at = ? WHERE id = ?", key, now, id)) > 0;
 }
 

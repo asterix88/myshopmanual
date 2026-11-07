@@ -262,3 +262,17 @@ test("quiz statistics: players, weak topics, hard questions, never played", asyn
   assert.equal(q.picks[0] >= 1, true);
   assert.equal(await questionStats(db, "nope"), null);
 });
+
+test("a labelled photo's letter takes the place of [X] when its picture is saved", async () => {
+  const db = fresh();
+  await quiz.addQuestion(
+    db,
+    { section: "TRACK", unit: "PC1250", topic: "struktur", type: "gambar", prompt: "Pada foto pompa, komponen bertanda [X] adalah?", choices: ["PSV", "PT", "PD", "TVC valve"], answer: 0, explain: "x", manual_id: "m", page: 158 },
+    { status: "draf", source: "ai", by: "ADM", id: "L1", now: NOW },
+  );
+  assert.equal(await quiz.setImage(db, "L1", "quiz/img/a.png", NOW, "C"), true);
+  assert.equal((await db.first("SELECT prompt, image FROM question WHERE id = 'L1'")).prompt, "Pada foto pompa, komponen bertanda C adalah?");
+  // Drawn again later: the letter is already there; nothing else changes.
+  assert.equal(await quiz.setImage(db, "L1", "quiz/img/b.png", NOW, "C"), true);
+  assert.equal((await db.first("SELECT image FROM question WHERE id = 'L1'")).image, "quiz/img/b.png");
+});

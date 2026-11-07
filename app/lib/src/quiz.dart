@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import 'ai.dart' show aiUrl;
 import 'auth.dart';
+import 'page_image.dart' show quizPictureTarget;
 import 'quiz_reminders.dart';
 import 'store.dart';
 
@@ -235,14 +236,16 @@ class QuizApi {
   }
 
   /// Sends the picture of a "gambar" question (PNG).
-  Future<void> uploadImage(String id, Uint8List png) async {
+  /// [letter]: on a labelled photo, the asked label's letter; the server
+  /// puts it in place of "[X]" in the question.
+  Future<void> uploadImage(String id, Uint8List png, {String? letter}) async {
     final session = store.session;
     if (session == null) throw AuthException('login', 'Silakan masuk lagi.');
     final http.Response response;
     try {
       response = await client
           .put(
-            _base.resolve('/admin/quiz/image/${Uri.encodeComponent(id)}'),
+            _base.resolve('/admin/quiz/image/${Uri.encodeComponent(id)}${letter == null ? '' : '?letter=$letter'}'),
             headers: {'content-type': 'image/png', sessionHeader: session.token},
             body: png,
           )
@@ -388,6 +391,9 @@ class QuizQuestion {
   final int? level;
 
   String get topicName => quizTopics[topic] ?? topic;
+
+  /// What a picture question's picture is about (see [quizPictureTarget]).
+  String? get pictureTarget => quizPictureTarget(prompt, choices, answer);
 }
 
 class QuizSession {

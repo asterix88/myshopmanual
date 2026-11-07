@@ -109,11 +109,11 @@ Future<Uint8List> _render(PdfPage pdfPage, String region, double longest) async 
 /// valve") does not give the answer away. [image] is the whole page; the
 /// question's picture is a part of it ([autoCrop], or the admin's own box).
 class QuizPage {
-  QuizPage(this.image, this.rgba, this.numbers, {this.sharp});
+  QuizPage(this.image, this.rgba, this.numbers, {this.labels = const [], this.sharp});
 
-  /// Draws a part of the page again at a size that stays sharp when zoomed;
-  /// null in tests, where [png] cuts it from [image].
-  final Future<Uint8List> Function(ui.Rect crop)? sharp;
+  /// Draws a part of the page again at a size that stays sharp when zoomed,
+  /// with [QuizMark]s on it; null in tests, where [png] cuts it from [image].
+  final Future<Uint8List> Function(ui.Rect crop, List<QuizMark> marks)? sharp;
 
   final ui.Image image;
 
@@ -123,19 +123,36 @@ class QuizPage {
   /// The callout numbers left on the page and where they are, in pixels.
   final List<({String text, ui.Rect box})> numbers;
 
+  /// Short part names placed on a photo or drawing ("PSV", "TVC valve"), in
+  /// reading order, so the first is A; in pixels.
+  final List<({String text, ui.Rect box})> labels;
+
   int get width => image.width;
   int get height => image.height;
 
+  /// On a labelled photo: every label as a letter box, the one [target]
+  /// names (the right answer) marked as asked. Empty when [target] is not
+  /// one of the labels (a numbered drawing).
+  List<QuizMark> marksFor(String? target) {
+    final asked = labelIndex(labels.map((l) => l.text).toList(), target);
+    if (asked == null) return const [];
+    return [
+      for (final (i, l) in labels.take(26).indexed) (box: l.box, letter: String.fromCharCode(65 + i), asked: i == asked),
+    ];
+  }
+
   /// The question's picture: [crop] (in [image]'s pixels) of the page as a
   /// PNG, drawn again from the manual so a small drawing stays sharp.
-  Future<Uint8List> png(ui.Rect crop) async {
+  Future<Uint8List> png(ui.Rect crop, {List<QuizMark> marks = const []}) async {
     final sharp = this.sharp;
-    if (sharp != null) return sharp(crop);
+    if (sharp != null) return sharp(crop, marks);
     final r = crop.intersect(ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()));
     final w = math.max(1, r.width.round());
     final h = math.max(1, r.height.round());
     final recorder = ui.PictureRecorder();
-    ui.Canvas(recorder).drawImageRect(image, r, ui.Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), ui.Paint());
+    final canvas = ui.Canvas(recorder)
+      ..drawImageRect(image, r, ui.Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), ui.Paint());
+    paintQuizMarks(canvas, marks, 1, r.topLeft);
     final part = await recorder.endRecording().toImage(w, h);
     final ByteData? data;
     try {
@@ -147,11 +164,63 @@ class QuizPage {
     return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
   }
 
-  /// The drawing that holds callout [number] ([autoCrop]).
-  ui.Rect autoCropFor(String? number) => autoCrop(rgba, width, height,
-      [for (final n in numbers) if (number != null && n.text == number) n.box]);
+  /// The drawing that holds [target]: a callout number, or a label's name
+  /// ([autoCrop]).
+  ui.Rect autoCropFor(String? target) {
+    final asked = labelIndex(labels.map((l) => l.text).toList(), target);
+    return autoCrop(rgba, width, height, [
+      if (asked != null) labels[asked].box,
+      for (final n in numbers) if (target != null && n.text == target) n.box,
+    ]);
+  }
 
   void dispose() => image.dispose();
+}
+
+/// A label of a photo shown as a letter: [box] in the page picture's pixels.
+typedef QuizMark = ({ui.Rect box, String letter, bool asked});
+
+/// Which of [labels] [target] names, ignoring case and spacing; null when
+/// none does.
+int? labelIndex(List<String> labels, String? target) {
+  if (target == null || RegExp(r'^\d+$').hasMatch(target.trim())) return null;
+  String flat(String s) => s.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
+  final want = flat(target);
+  if (want.isEmpty) return null;
+  final i = labels.indexWhere((l) => flat(l) == want);
+  return i < 0 ? null : i;
+}
+
+/// Draws [marks] (scaled by [k], less [origin]): a white box with a navy
+/// border and the letter; the asked one's letter in orange.
+void paintQuizMarks(ui.Canvas canvas, List<QuizMark> marks, double k, ui.Offset origin) {
+  const navy = ui.Color(0xFF1E3A64);
+  const orange = ui.Color(0xFFF08A1C);
+  for (final m in marks) {
+    final r = ui.Rect.fromLTRB(
+        m.box.left * k - origin.dx, m.box.top * k - origin.dy, m.box.right * k - origin.dx, m.box.bottom * k - origin.dy);
+    // At least a square big enough for the letter.
+    final side = math.max(r.height, 18 * k);
+    final box = ui.Rect.fromCenter(center: r.center, width: math.max(r.width, side), height: side);
+    canvas.drawRect(box, ui.Paint()..color = const ui.Color(0xFFFFFFFF));
+    canvas.drawRect(
+      box,
+      ui.Paint()
+        ..color = m.asked ? orange : navy
+        ..style = ui.PaintingStyle.stroke
+        ..strokeWidth = math.max(1.5, side * 0.08),
+    );
+    final builder = ui.ParagraphBuilder(ui.ParagraphStyle(textAlign: ui.TextAlign.center, fontSize: side * 0.68))
+      ..pushStyle(ui.TextStyle(
+        color: m.asked ? orange : navy,
+        fontWeight: ui.FontWeight.w700,
+        fontFamily: 'Poppins',
+        fontSize: side * 0.68,
+      ))
+      ..addText(m.letter);
+    final paragraph = builder.build()..layout(ui.ParagraphConstraints(width: box.width));
+    canvas.drawParagraph(paragraph, ui.Offset(box.left, box.center.dy - paragraph.height / 2));
+  }
 }
 
 /// Draws [page] of [file] for quiz pictures (see [QuizPage]).
@@ -188,6 +257,7 @@ Future<QuizPage> renderQuizPage(AppStore store, ManualFile file, int page,
         ui.Rect toPixels(PdfRect r) => ui.Rect.fromLTRB(
             r.left * scale - 2, (pdfPage.height - r.top) * scale - 2, r.right * scale + 2, (pdfPage.height - r.bottom) * scale + 2);
         final parts = quizPageText(text?.fullText ?? '', text?.charRects ?? const []);
+        final labels = quizLabels(text?.fullText ?? '', text?.charRects ?? const []);
         final recorder = ui.PictureRecorder();
         final canvas = ui.Canvas(recorder)..drawImage(picture, ui.Offset.zero, ui.Paint());
         picture.dispose();
@@ -207,7 +277,9 @@ Future<QuizPage> renderQuizPage(AppStore store, ManualFile file, int page,
           covered,
           data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
           [for (final n in parts.numbers) (text: n.text, box: toPixels(n.box))],
-          sharp: (crop) => _sharpQuizPicture(store, file, page, crop, scale, pdfWidth, pdfHeight, parts.cover, open: open),
+          labels: [for (final l in labels) (text: l.text, box: toPixels(l.box))],
+          sharp: (crop, marks) =>
+              _sharpQuizPicture(store, file, page, crop, scale, pdfWidth, pdfHeight, parts.cover, marks, open: open),
         );
       } finally {
         await document?.dispose();
@@ -217,7 +289,7 @@ Future<QuizPage> renderQuizPage(AppStore store, ManualFile file, int page,
 /// [crop] of a quiz page (pixels at [scale]) drawn again so its longest side
 /// is about [longest] pixels, with the same words covered.
 Future<Uint8List> _sharpQuizPicture(AppStore store, ManualFile file, int page, ui.Rect crop, double scale,
-        double pdfWidth, double pdfHeight, List<PdfRect> cover,
+        double pdfWidth, double pdfHeight, List<PdfRect> cover, List<QuizMark> marks,
         {double longest = 1400, Future<PdfDocument> Function()? open}) =>
     _oneAtATime(() async {
       PdfDocument? document;
@@ -258,6 +330,7 @@ Future<Uint8List> _sharpQuizPicture(AppStore store, ManualFile file, int page, u
             white,
           );
         }
+        paintQuizMarks(canvas, marks, s / scale, ui.Offset(x.toDouble(), y.toDouble()));
         final out = await recorder.endRecording().toImage(width, height);
         final ByteData? data;
         try {
@@ -271,6 +344,96 @@ Future<Uint8List> _sharpQuizPicture(AppStore store, ManualFile file, int page, u
         await document?.dispose();
       }
     });
+
+/// The words of a page grouped into labels: words next to each other on a
+/// line, or on lines right under each other ("TVC output" / "pressure"),
+/// are one label. Only short groups (up to 6 words) count as labels, in
+/// reading order: top to bottom, rows left to right.
+List<({String text, PdfRect box})> quizLabels(String text, List<PdfRect> rects) {
+  final n = math.min(text.length, rects.length);
+  final words = <({String text, PdfRect box})>[];
+  var start = -1;
+  void close(int end) {
+    if (start < 0) return;
+    var b = rects[start];
+    for (var i = start + 1; i < end; i++) {
+      final r = rects[i];
+      b = PdfRect(math.min(b.left, r.left), math.max(b.top, r.top), math.max(b.right, r.right), math.min(b.bottom, r.bottom));
+    }
+    if (b.top - b.bottom > 0) words.add((text: text.substring(start, end), box: b));
+    start = -1;
+  }
+
+  for (var i = 0; i < n; i++) {
+    if (text[i].trim().isEmpty) {
+      close(i);
+    } else if (start < 0) {
+      start = i;
+    }
+  }
+  close(n);
+
+  // Union-find over the words.
+  final parent = List<int>.generate(words.length, (i) => i);
+  int find(int i) => parent[i] == i ? i : parent[i] = find(parent[i]);
+  bool near(PdfRect a, PdfRect b) {
+    final h = math.max(a.top - a.bottom, b.top - b.bottom);
+    final overlapY = math.min(a.top, b.top) - math.max(a.bottom, b.bottom);
+    final gapX = math.max(a.left, b.left) - math.min(a.right, b.right);
+    if (overlapY > 0.5 * math.min(a.top - a.bottom, b.top - b.bottom)) return gapX < 0.9 * h; // same line
+    final gapY = math.max(a.bottom, b.bottom) - math.min(a.top, b.top);
+    return gapY < 0.6 * h && gapX < 0.3 * h; // lines under each other
+  }
+
+  for (var i = 0; i < words.length; i++) {
+    for (var j = i + 1; j < words.length; j++) {
+      if (near(words[i].box, words[j].box)) parent[find(i)] = find(j);
+    }
+  }
+  final groups = <int, List<({String text, PdfRect box})>>{};
+  for (var i = 0; i < words.length; i++) {
+    groups.putIfAbsent(find(i), () => []).add(words[i]);
+  }
+  final labels = <({String text, PdfRect box})>[];
+  for (final g in groups.values) {
+    if (g.length > 6) continue;
+    // Lines top to bottom (PDF y grows upward), words left to right.
+    final h = g.map((w) => w.box.top - w.box.bottom).reduce(math.max);
+    g.sort((a, b) {
+      final dy = b.box.top - a.box.top;
+      return dy.abs() > h * 0.5 ? dy.sign.toInt() : a.box.left.compareTo(b.box.left);
+    });
+    var box = g.first.box;
+    for (final w in g.skip(1)) {
+      box = PdfRect(math.min(box.left, w.box.left), math.max(box.top, w.box.top), math.max(box.right, w.box.right),
+          math.min(box.bottom, w.box.bottom));
+    }
+    final label = g.map((w) => w.text).join(' ');
+    if (label.length <= 40 && RegExp(r'[A-Za-z]').hasMatch(label)) labels.add((text: label, box: box));
+  }
+  // Reading order: rows from the top (a row = labels whose tops are within
+  // two label heights), left to right in a row.
+  labels.sort((a, b) => b.box.top.compareTo(a.box.top));
+  final ordered = <({String text, PdfRect box})>[];
+  var row = <({String text, PdfRect box})>[];
+  for (final l in labels) {
+    if (row.isNotEmpty) {
+      final h = row.first.box.top - row.first.box.bottom;
+      if (row.first.box.top - l.box.top > 2 * h) {
+        ordered.addAll(row..sort((a, b) => a.box.left.compareTo(b.box.left)));
+        row = [];
+      }
+    }
+    row.add(l);
+  }
+  ordered.addAll(row..sort((a, b) => a.box.left.compareTo(b.box.left)));
+  return ordered;
+}
+
+/// What a picture question shows: the callout number it asks about, or on
+/// a labelled photo the right answer's label.
+String? quizPictureTarget(String prompt, List<String> choices, int answer) =>
+    calloutOf(prompt) ?? (answer >= 0 && answer < choices.length ? choices[answer] : null);
 
 /// The callout number a picture question asks about: "komponen nomor 3".
 String? calloutOf(String prompt) =>

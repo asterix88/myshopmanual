@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:pdfrx/pdfrx.dart' show PdfDocument;
 
 import '../models.dart';
 import '../page_image.dart';
@@ -178,7 +179,7 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
     final store = StoreScope.read(context);
     final file = store.fileByKey(q.question.manualId);
     if (file == null) throw Exception('Manual soal ini tidak ada di daftar. Gambarnya tidak bisa dibuat.');
-    await sendQuizPicture(store, widget.api, file, q.question.page, {q.question.id: calloutOf(q.question.prompt)});
+    await sendQuizPicture(store, widget.api, file, q.question.page, {q.question.id: q.question.pictureTarget});
   }
 
   /// "Setujui semua yang lolos": pictures first, then one call.
@@ -208,7 +209,7 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
         if (file == null) continue;
         try {
           await sendQuizPicture(store, widget.api, file, group.first.question.page,
-              {for (final q in group) q.question.id: calloutOf(q.question.prompt)});
+              {for (final q in group) q.question.id: q.question.pictureTarget});
         } on Object {
           // Left as a draft; the admin sees it after.
         }
@@ -320,14 +321,17 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
 const quizTypes = {'pg': 'Pilihan ganda', 'bs': 'Benar/Salah', 'gambar': 'Gambar'};
 
 /// Draws [page] of [file] once and sends each picture question of that page
-/// ([callouts]: question id -> the number it asks about) the drawing that
-/// holds its number.
-Future<void> sendQuizPicture(AppStore store, QuizApi api, ManualFile file, int page, Map<String, String?> callouts) async {
-  final drawn = await renderQuizPage(store, file, page);
+/// ([targets]: question id -> the callout number it asks about, or on a
+/// labelled photo the asked label) the drawing that holds it; on a labelled
+/// photo every label shows as a letter.
+Future<void> sendQuizPicture(AppStore store, QuizApi api, ManualFile file, int page, Map<String, String?> targets,
+    {Future<PdfDocument> Function()? open}) async {
+  final drawn = await renderQuizPage(store, file, page, open: open);
   try {
-    for (final MapEntry(key: id, value: number) in callouts.entries) {
-      final Uint8List png = await drawn.png(drawn.autoCropFor(number));
-      await api.uploadImage(id, png);
+    for (final MapEntry(key: id, value: target) in targets.entries) {
+      final marks = drawn.marksFor(target);
+      final Uint8List png = await drawn.png(drawn.autoCropFor(target), marks: marks);
+      await api.uploadImage(id, png, letter: marks.where((m) => m.asked).firstOrNull?.letter);
     }
   } finally {
     drawn.dispose();

@@ -152,7 +152,8 @@ async function putImage(request: Request, env: QuizEnv, id: string): Promise<Res
   if (!png || bytes.length > MAX_IMAGE) return json({ error: "bad_request", message: "Gambar harus PNG, maksimal 2 MB." }, 400);
   const key = `quiz/img/${id}-${Date.now().toString(36)}.png`;
   await env.BUCKET.put(key, bytes, { httpMetadata: { contentType: "image/png" } });
-  const ok = await quiz.setImage(quiz.d1(env.QUIZ), id, key);
+  const letter = new URL(request.url).searchParams.get("letter");
+  const ok = await quiz.setImage(quiz.d1(env.QUIZ), id, key, Date.now(), letter);
   if (!ok) {
     await env.BUCKET.delete(key);
     return json({ error: "not_found", message: "Soal tidak ditemukan." }, 404);

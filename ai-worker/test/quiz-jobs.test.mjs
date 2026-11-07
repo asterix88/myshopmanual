@@ -210,3 +210,11 @@ test("pg and bs questions lose the drawing's callout numbers", () => {
   assert.equal(pic.prompt, "Komponen nomor (3) adalah?");
   assert.match(selfCheck({ type: "pg", page: 4, prompt: "Pada gambar, part ini?", choices: ["A", "B"], answer: 0, explain: "" }, "A").note, /gambar/);
 });
+
+test("self check: a labelled photo question needs its label on the page", () => {
+  const base = { section: "TRACK", unit: "PC1250", topic: "struktur", manual_id: "m", page: 158, explain: "" };
+  const LABELS = "PSV\r\nPressure \r\nreducing valve\r\nTVC output \r\npressure Servo valve\r\nTVC valve\r\nCO NC Valve\r\nPD\r\nPT";
+  const q = { ...base, type: "gambar", prompt: "Pada foto pompa PC1250, komponen bertanda [X] adalah?", choices: ["CO NC Valve", "TVC valve", "PSV", "PT"], answer: 0, callout: "CO NC Valve" };
+  assert.equal(selfCheck(q, LABELS).ok, true);
+  assert.equal(selfCheck({ ...q, choices: ["Main relief", "TVC valve"], callout: "Main relief" }, LABELS).ok, false);
+});
