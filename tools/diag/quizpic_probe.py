@@ -12,10 +12,7 @@ def get(path):
     with urllib.request.urlopen(req, timeout=900) as r:
         return r.read()
 
-cat = json.loads(get("catalog.json"))
-f = next(f for u in cat["units"] if u["id"].upper().startswith("CAT395") for f in u["files"] if "SYSTEM OPERATION" in f["title"].upper())
-print("file", f["title"], f["pdf"]["path"], f["pages"])
-open("/tmp/so.pdf", "wb").write(get(f["pdf"]["path"]))
+# The workflow fetched catalog.json and the PDF from the bucket (wrangler).
 doc = pdfium.PdfDocument("/tmp/so.pdf")
 PAGE = int(sys.argv[1]) if len(sys.argv) > 1 else 187
 page = doc[PAGE - 1]
