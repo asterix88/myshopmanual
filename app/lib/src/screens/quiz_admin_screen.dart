@@ -13,6 +13,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
+import 'quiz_crop_screen.dart';
 import 'quiz_screen.dart';
 import 'quiz_job_screen.dart';
 import 'shell.dart';
@@ -156,12 +157,28 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
     }
   }
 
+  /// "Atur gambar": the admin chooses the part of the page to show.
+  Future<void> _crop(AdminQuestion q) async {
+    final file = StoreScope.read(context).fileByKey(q.question.manualId);
+    if (file == null) {
+      showError(context, Exception('Manual soal ini tidak ada di daftar.'));
+      return;
+    }
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+      builder: (_) => QuizCropScreen(api: widget.api, file: file, question: q.question),
+    ));
+    if (saved == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gambar soal disimpan')));
+      QuizApi.changed.value++;
+    }
+  }
+
   /// Draws a picture question's page with its words covered and sends it.
   Future<void> _picture(AdminQuestion q) async {
     final store = StoreScope.read(context);
     final file = store.fileByKey(q.question.manualId);
     if (file == null) throw Exception('Manual soal ini tidak ada di daftar. Gambarnya tidak bisa dibuat.');
-    await sendQuizPicture(store, widget.api, file, q.question.page, [q.question.id]);
+    await sendQuizPicture(store, widget.api, file, q.question.page, {q.question.id: calloutOf(q.question.prompt)});
   }
 
   /// "Setujui semua yang lolos": pictures first, then one call.
@@ -190,7 +207,8 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
         final file = store.fileByKey(group.first.question.manualId);
         if (file == null) continue;
         try {
-          await sendQuizPicture(store, widget.api, file, group.first.question.page, [for (final q in group) q.question.id]);
+          await sendQuizPicture(store, widget.api, file, group.first.question.page,
+              {for (final q in group) q.question.id: calloutOf(q.question.prompt)});
         } on Object {
           // Left as a draft; the admin sees it after.
         }
@@ -285,7 +303,11 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
               _QuestionCard(
                 item: q,
                 api: widget.api,
-                onAction: (action) => action == 'ubah' ? _edit(q) : _decide(q, action),
+                onAction: (action) => switch (action) {
+                  'ubah' => _edit(q),
+                  'gambar' => _crop(q),
+                  _ => _decide(q, action),
+                },
               ),
             ],
         ],
@@ -297,12 +319,18 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
 /// Question types with their names on screen.
 const quizTypes = {'pg': 'Pilihan ganda', 'bs': 'Benar/Salah', 'gambar': 'Gambar'};
 
-/// Draws [page] of [file] as a quiz picture once and sends it for each of
-/// [ids] (the picture questions of that page).
-Future<void> sendQuizPicture(AppStore store, QuizApi api, ManualFile file, int page, List<String> ids) async {
-  final Uint8List png = await renderQuizPicture(store, file, page);
-  for (final id in ids) {
-    await api.uploadImage(id, png);
+/// Draws [page] of [file] once and sends each picture question of that page
+/// ([callouts]: question id -> the number it asks about) the drawing that
+/// holds its number.
+Future<void> sendQuizPicture(AppStore store, QuizApi api, ManualFile file, int page, Map<String, String?> callouts) async {
+  final drawn = await renderQuizPage(store, file, page);
+  try {
+    for (final MapEntry(key: id, value: number) in callouts.entries) {
+      final Uint8List png = await drawn.png(drawn.autoCropFor(number));
+      await api.uploadImage(id, png);
+    }
+  } finally {
+    drawn.dispose();
   }
 }
 
@@ -447,7 +475,17 @@ class _QuestionCard extends StatelessWidget {
             q.image == null
                 ? Text('Gambar dibuat dari halaman ${q.page} saat soal disetujui.',
                     style: TextStyle(fontSize: 12, color: AppColors.muted))
-                : QuizPicture(api: api, questionId: q.id, height: 140),
+                : QuizPicture(
+                    key: ValueKey('${q.id}#${QuizApi.imageVersion(q.id)}'), api: api, questionId: q.id, height: 160),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), visualDensity: VisualDensity.compact),
+                onPressed: () => onAction('gambar'),
+                icon: const Icon(Icons.crop, size: 18),
+                label: const Text('Atur gambar'),
+              ),
+            ),
           ],
           const SizedBox(height: 8),
           for (final (i, c) in q.choices.indexed)
@@ -792,7 +830,8 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
       if (result.pictures.isNotEmpty && mounted) {
         setState(() => _status = 'Membuat gambar soal…');
         try {
-          await sendQuizPicture(store, QuizApi(store, _client), file, page, result.pictures);
+          await sendQuizPicture(store, QuizApi(store, _client), file, page,
+              {for (final id in result.pictures) id: result.callouts[id]});
         } on Object {
           // Made again when the question is approved.
         }
@@ -818,6 +857,7 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final kinds = [('campur', 'Campur'), for (final e in quizTypes.entries) (e.key, e.value)];
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
@@ -826,57 +866,62 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text('Buat soal quiz', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
-              'nyel AI membuat draf dari halaman ${widget.page}, lalu kurator memeriksanya. Soal baru muncul ke mekanik setelah admin menyetujui.',
-              style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.inkSoft),
+              '${widget.file.title} · hal. ${widget.page}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12.5, color: AppColors.muted),
             ),
-            const SizedBox(height: 14),
-            const Text('Jenis soal', style: TextStyle(fontSize: 14)),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                for (final (k, label) in [('campur', 'Campur'), for (final e in quizTypes.entries) (e.key, e.value)])
-                  ChoiceChip(
-                    label: Text(label),
-                    selected: _kind == k,
-                    onSelected: _busy ? null : (_) => setState(() => _kind = k),
-                  ),
+            const SizedBox(height: 18),
+            const _SheetLabel('Jenis soal'),
+            Row(children: [
+              for (final (i, (k, label)) in kinds.take(2).indexed) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(child: _Choice(label: label, selected: _kind == k, onTap: _busy ? null : () => setState(() => _kind = k))),
               ],
-            ),
+            ]),
+            const SizedBox(height: 8),
+            Row(children: [
+              for (final (i, (k, label)) in kinds.skip(2).indexed) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(child: _Choice(label: label, selected: _kind == k, onTap: _busy ? null : () => setState(() => _kind = k))),
+              ],
+            ]),
             if (_kind == 'gambar')
               Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  'Untuk halaman gambar dengan keterangan nomor. Mekanik melihat gambarnya tanpa tulisan.',
-                  style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.muted),
-                ),
+                child: Text('Mekanik melihat gambar bernomor, tanpa keterangan.',
+                    style: TextStyle(fontSize: 12, color: AppColors.muted)),
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+            const _SheetLabel('Topik'),
             DropdownButtonFormField<String>(
               initialValue: _topic,
-              decoration: const InputDecoration(labelText: 'Topik'),
+              isDense: true,
+              icon: Icon(Icons.expand_more, color: AppColors.muted),
+              style: TextStyle(fontSize: 14, color: AppColors.ink, fontFamily: 'Poppins'),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: AppColors.surface,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.navy)),
+              ),
               items: [for (final t in quizTopics.entries) DropdownMenuItem(value: t.key, child: Text(t.value))],
               onChanged: _busy ? null : (v) => setState(() => _topic = v ?? _topic),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Expanded(child: Text('Jumlah soal', style: TextStyle(fontSize: 14))),
-                for (final n in const [1, 3, 5])
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: ChoiceChip(
-                      label: Text('$n'),
-                      selected: _count == n,
-                      onSelected: _busy ? null : (_) => setState(() => _count = n),
-                    ),
-                  ),
-              ],
-            ),
             const SizedBox(height: 16),
+            const _SheetLabel('Jumlah soal'),
+            Row(children: [
+              for (final (i, n) in const [1, 3, 5].indexed) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(child: _Choice(label: '$n', selected: _count == n, onTap: _busy ? null : () => setState(() => _count = n))),
+              ],
+            ]),
+            const SizedBox(height: 20),
             SizedBox(
               height: 48,
               child: FilledButton(
@@ -893,7 +938,66 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
                     : const Text('Buat draf'),
               ),
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Draf dicek kurator, terbit setelah admin setuju.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11.5, color: AppColors.muted),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetLabel extends StatelessWidget {
+  const _SheetLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(text, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: AppColors.inkSoft)),
+      );
+}
+
+/// One option box of the "Buat soal quiz" sheet.
+class _Choice extends StatelessWidget {
+  const _Choice({required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected ? AppColors.navySoft : AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: selected ? AppColors.navy : AppColors.border, width: selected ? 1.5 : 1),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            height: 44,
+            child: Center(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  color: selected ? AppColors.navy : AppColors.inkSoft,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

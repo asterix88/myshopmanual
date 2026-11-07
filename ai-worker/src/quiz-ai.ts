@@ -83,6 +83,7 @@ Rules:
 - Type "bs": a statement; choices ["Benar", "Salah"]. Make about half of them false by changing one value or part name.
 - Type "gambar": only for a drawing page whose text has a numbered legend (lines like "3. Main relief valve"). The mechanic sees the drawing with its numbers but WITHOUT the legend. Ask what one numbered part is ("Pada gambar <name of the drawing>, komponen nomor 3 adalah?"); 4 choices taken from the same legend, exactly one right; put the number in the field "callout". If the page has no numbered legend, write "pg" instead.
 - The question must be answerable without seeing the page (except "gambar"); name the unit and the component.
+- Types "pg" and "bs" are shown WITHOUT any picture. In them never write callout numbers such as "(35)" or "nomor 3", and never refer to a drawing ("gambar", "ilustrasi", "illustration"); name each part by its name only. A fact that needs the drawing belongs in a "gambar" question or nowhere.
 - explain: one or two short sentences giving the fact itself, as the page says it. Start with the fact; never start with "Halaman menyatakan", "Menurut manual" or similar.
 - Different questions must check different facts.
 
@@ -139,6 +140,7 @@ export async function writeQuestions(
       callout: raw.callout == null ? null : String(raw.callout),
     };
     if (q.type === "bs") q.choices = ["Benar", "Salah"];
+    stripCallouts(q);
     const bad = questionProblem(q);
     if (bad) skipped.push(bad);
     else drafts.push(q);
@@ -158,6 +160,7 @@ export function selfCheck(q: Draft, text: string): { ok: boolean; note: string }
     if (hasName && hasNumber) return { ok: true, note: `Nomor ${number} dan nama komponen ada di halaman ${q.page}.` };
     return { ok: false, note: `Cek gambar: ${hasNumber ? "" : `nomor ${number || "?"} `}${hasName ? "" : `"${name}" `}tidak ditemukan di keterangan halaman ${q.page}.`.replace("  ", " ") };
   }
+  if (PICTURE_WORDS.test(q.prompt)) return { ok: false, note: "Soal menyebut gambar, padahal soal ini tampil tanpa gambar." };
   const missing = numbersMissing(q.choices[q.answer] ?? "", text);
   return missing.length
     ? { ok: false, note: `Cek angka: ${missing.join(", ")} tidak ditemukan di halaman ${q.page}.` }
@@ -173,6 +176,7 @@ For each question give a score from 1 to 10:
 - 7-8: good, small wording issues.
 - 4-6: unclear, ambiguous (e.g. the value depends on a condition the question does not name), or wrong choices too easy.
 - 1-3: the key is wrong or not on the page, or two choices could be right.
+- Types "pg" and "bs" are shown without the drawing: one that mentions callout numbers like "(35)" or refers to a picture must be "perbaiki" (rewrite without them) or "buang" when it cannot be answered without the drawing.
 
 verdict: "lolos" (score 7+), "perbaiki" (you can fix it: give the whole fixed question in "fixed", same JSON shape, and score the fixed version), or "buang".
 note: one short sentence in Bahasa Indonesia for the admin, saying what is good or what to check.
@@ -219,6 +223,7 @@ export async function curate(ask: Ask, drafts: Draft[], text: string): Promise<{
         callout: f.callout == null ? d.callout : String(f.callout),
       };
       if (d.type === "bs") fixed.choices = ["Benar", "Salah"];
+      stripCallouts(fixed);
       if (!questionProblem(fixed)) q = fixed;
     }
     kept.push({ ...q, score, note });
@@ -260,6 +265,19 @@ export async function planPages(ask: Ask, toc: string, pages: number, want: numb
     });
   }
   return out.slice(0, Math.max(want, 1) + 5);
+}
+
+const PICTURE_WORDS = /\b(gambar|ilustrasi|illustration|nomor\s+\d+)\b/i;
+
+/// "Pilot pump (39)" -> "Pilot pump": a question without a picture must not
+/// point at the drawing's callout numbers. Picture questions keep theirs.
+export function stripCallouts(q: Draft): Draft {
+  if (q.type === "gambar") return q;
+  const strip = (t: string) => t.replace(/\s*\(\d{1,3}[A-Za-z]?\)/g, "").replace(/\s+([,.;:?])/g, "$1").trim();
+  q.prompt = strip(q.prompt);
+  q.choices = q.choices.map(strip);
+  q.explain = strip(q.explain);
+  return q;
 }
 
 /// "Halaman menyatakan bahwa OLSS ..." -> "OLSS ...": the explanation starts

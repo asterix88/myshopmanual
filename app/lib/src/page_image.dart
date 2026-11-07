@@ -104,10 +104,51 @@ Future<Uint8List> _render(PdfPage pdfPage, String region, double longest) async 
   throw StateError('unreachable');
 }
 
-/// The picture of a "gambar" quiz question: the whole page with every word
-/// covered in white, so the drawing keeps its callout numbers but the legend
-/// ("3. Main relief valve") does not give the answer away.
-Future<Uint8List> renderQuizPicture(AppStore store, ManualFile file, int page, {double longest = 1600}) =>
+/// A page drawn for a "gambar" quiz question: every word covered in white,
+/// so the drawing keeps its callout numbers but the legend ("3. Main relief
+/// valve") does not give the answer away. [image] is the whole page; the
+/// question's picture is a part of it ([autoCrop], or the admin's own box).
+class QuizPage {
+  QuizPage(this.image, this.rgba, this.numbers);
+
+  final ui.Image image;
+
+  /// [image]'s pixels, RGBA, for finding the drawings.
+  final Uint8List rgba;
+
+  /// The callout numbers left on the page and where they are, in pixels.
+  final List<({String text, ui.Rect box})> numbers;
+
+  int get width => image.width;
+  int get height => image.height;
+
+  /// The question's picture: [crop] of the page as a PNG.
+  Future<Uint8List> png(ui.Rect crop) async {
+    final r = crop.intersect(ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()));
+    final w = math.max(1, r.width.round());
+    final h = math.max(1, r.height.round());
+    final recorder = ui.PictureRecorder();
+    ui.Canvas(recorder).drawImageRect(image, r, ui.Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), ui.Paint());
+    final part = await recorder.endRecording().toImage(w, h);
+    final ByteData? data;
+    try {
+      data = await part.toByteData(format: ui.ImageByteFormat.png);
+    } finally {
+      part.dispose();
+    }
+    if (data == null) throw StateError('quiz picture could not be encoded');
+    return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+  }
+
+  /// The drawing that holds callout [number] ([autoCrop]).
+  ui.Rect autoCropFor(String? number) => autoCrop(rgba, width, height,
+      [for (final n in numbers) if (number != null && n.text == number) n.box]);
+
+  void dispose() => image.dispose();
+}
+
+/// Draws [page] of [file] for quiz pictures (see [QuizPage]).
+Future<QuizPage> renderQuizPage(AppStore store, ManualFile file, int page, {double longest = 1600}) =>
     _oneAtATime(() async {
       Diagnostics.log('quiz picture ${file.key} p$page');
       PdfDocument? document;
@@ -126,64 +167,178 @@ Future<Uint8List> renderQuizPicture(AppStore store, ManualFile file, int page, {
           rendered.dispose();
         }
         final text = await pdfPage.loadText();
+        ui.Rect toPixels(PdfRect r) => ui.Rect.fromLTRB(
+            r.left * scale - 1, (pdfPage.height - r.top) * scale - 1, r.right * scale + 1, (pdfPage.height - r.bottom) * scale + 1);
+        final parts = quizPageText(text?.fullText ?? '', text?.charRects ?? const []);
         final recorder = ui.PictureRecorder();
         final canvas = ui.Canvas(recorder)..drawImage(picture, ui.Offset.zero, ui.Paint());
         picture.dispose();
         final white = ui.Paint()..color = const ui.Color(0xffffffff);
-        for (final r in wordsToCover(text?.fullText ?? '', text?.charRects ?? const [])) {
-          canvas.drawRect(
-            ui.Rect.fromLTRB(r.left * scale - 1, (pdfPage.height - r.top) * scale - 1, r.right * scale + 1,
-                (pdfPage.height - r.bottom) * scale + 1),
-            white,
-          );
+        for (final r in parts.cover) {
+          canvas.drawRect(toPixels(r), white);
         }
         final covered = await recorder.endRecording().toImage(width, height);
-        final ByteData? data;
-        try {
-          data = await covered.toByteData(format: ui.ImageByteFormat.png);
-        } finally {
+        final data = await covered.toByteData(format: ui.ImageByteFormat.rawRgba);
+        if (data == null) {
           covered.dispose();
+          throw StateError('page $page could not be read');
         }
-        if (data == null) throw StateError('page $page could not be encoded');
-        return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+        return QuizPage(covered, data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+            [for (final n in parts.numbers) (text: n.text, box: toPixels(n.box))]);
       } finally {
         await document?.dispose();
       }
     });
 
-/// The boxes of the words to cover on a quiz picture: every run of
-/// characters that has a letter in it. Numbers alone ("3", "12.") stay,
-/// since they are the drawing's callouts.
-List<PdfRect> wordsToCover(String text, List<PdfRect> rects) {
-  final out = <PdfRect>[];
+/// The callout number a picture question asks about: "komponen nomor 3".
+String? calloutOf(String prompt) =>
+    (RegExp(r'nomor\s*\(?(\d{1,3})\b', caseSensitive: false).firstMatch(prompt) ??
+            RegExp(r'\((\d{1,3})\)').firstMatch(prompt))
+        ?.group(1);
+
+/// What to cover on a quiz picture and which callout numbers stay. Every run
+/// of characters with a letter in it is covered. A number alone ("3", "12.",
+/// "(35)") stays as a callout, unless it sits on a line with words: then it
+/// belongs to the legend ("3. Main relief valve") and is covered too.
+({List<PdfRect> cover, List<({String text, PdfRect box})> numbers}) quizPageText(String text, List<PdfRect> rects) {
   final letter = RegExp(r'[A-Za-z]');
+  final n = math.min(text.length, rects.length);
+  final tokens = <({int start, int end, int line, bool word})>[];
+  var line = 0;
   var start = -1;
   void close(int end) {
     if (start < 0) return;
-    final word = text.substring(start, end);
-    if (letter.hasMatch(word)) {
-      var box = rects[start];
-      for (var i = start + 1; i < end; i++) {
-        final r = rects[i];
-        box = PdfRect(math.min(box.left, r.left), math.max(box.top, r.top), math.max(box.right, r.right),
-            math.min(box.bottom, r.bottom));
-      }
-      out.add(box);
-    }
+    tokens.add((start: start, end: end, line: line, word: letter.hasMatch(text.substring(start, end))));
     start = -1;
   }
 
-  final n = math.min(text.length, rects.length);
   for (var i = 0; i < n; i++) {
-    final blank = text[i].trim().isEmpty;
-    if (blank) {
+    final c = text[i];
+    if (c.trim().isEmpty) {
       close(i);
+      if (c == '\n' || c == '\r') line++;
     } else if (start < 0) {
       start = i;
     }
   }
   close(n);
-  return out;
+
+  PdfRect box(int from, int to) {
+    var b = rects[from];
+    for (var i = from + 1; i < to; i++) {
+      final r = rects[i];
+      b = PdfRect(math.min(b.left, r.left), math.max(b.top, r.top), math.max(b.right, r.right), math.min(b.bottom, r.bottom));
+    }
+    return b;
+  }
+
+  final cover = <PdfRect>[];
+  final numbers = <({String text, PdfRect box})>[];
+  for (final (i, t) in tokens.indexed) {
+    final onWordLine = (i > 0 && tokens[i - 1].line == t.line && tokens[i - 1].word) ||
+        (i + 1 < tokens.length && tokens[i + 1].line == t.line && tokens[i + 1].word);
+    if (t.word || onWordLine) {
+      cover.add(box(t.start, t.end));
+    } else {
+      final digits = RegExp(r'\d+').firstMatch(text.substring(t.start, t.end))?.group(0);
+      if (digits != null) numbers.add((text: digits, box: box(t.start, t.end)));
+    }
+  }
+  return (cover: cover, numbers: numbers);
+}
+
+/// The boxes [quizPageText] covers.
+List<PdfRect> wordsToCover(String text, List<PdfRect> rects) => quizPageText(text, rects).cover;
+
+/// The part of a covered page that is one drawing: the page is cut at white
+/// gaps, first into bands, then each band into columns, until the part
+/// holding [targets] (the asked callout) stops changing. Without a target the
+/// biggest drawing wins. A small margin is kept around it.
+ui.Rect autoCrop(Uint8List rgba, int width, int height, List<ui.Rect> targets) {
+  bool ink(int x, int y) {
+    final i = (y * width + x) * 4;
+    return rgba[i] < 215 || rgba[i + 1] < 215 || rgba[i + 2] < 215;
+  }
+
+  final longest = math.max(width, height);
+  final gap = math.max(8, (longest * 0.012).round());
+
+  // Runs of rows (or columns) with ink inside [r], split at white gaps.
+  List<(int, int)> runs(ui.Rect r, bool rows) {
+    final from = (rows ? r.top : r.left).floor();
+    final to = (rows ? r.bottom : r.right).ceil();
+    final out = <(int, int)>[];
+    int? runStart;
+    var lastInk = -1 << 30;
+    for (var a = from; a < to; a++) {
+      var any = false;
+      if (rows) {
+        for (var x = r.left.floor(); x < r.right.ceil(); x += 2) {
+          if (ink(x, a)) {
+            any = true;
+            break;
+          }
+        }
+      } else {
+        for (var y = r.top.floor(); y < r.bottom.ceil(); y += 2) {
+          if (ink(a, y)) {
+            any = true;
+            break;
+          }
+        }
+      }
+      if (!any) continue;
+      if (runStart != null && a - lastInk > gap) {
+        out.add((runStart, lastInk + 1));
+        runStart = null;
+      }
+      runStart ??= a;
+      lastInk = a;
+    }
+    if (runStart != null) out.add((runStart, lastInk + 1));
+    return out;
+  }
+
+  int inkIn(ui.Rect r) {
+    var count = 0;
+    for (var y = r.top.floor(); y < r.bottom.ceil(); y += 4) {
+      for (var x = r.left.floor(); x < r.right.ceil(); x += 4) {
+        if (ink(x, y)) count++;
+      }
+    }
+    return count;
+  }
+
+  final page = ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble());
+  final target = targets.isEmpty ? null : targets.first;
+  var current = page;
+  for (var step = 0; step < 6; step++) {
+    final rows = step.isEven;
+    final parts = [
+      for (final (a, b) in runs(current, rows))
+        rows
+            ? ui.Rect.fromLTRB(current.left, a.toDouble(), current.right, b.toDouble())
+            : ui.Rect.fromLTRB(a.toDouble(), current.top, b.toDouble(), current.bottom),
+    ];
+    if (parts.isEmpty) return page;
+    ui.Rect pick;
+    if (target != null) {
+      final c = target.center;
+      double distance(ui.Rect r) {
+        final dx = c.dx < r.left ? r.left - c.dx : (c.dx > r.right ? c.dx - r.right : 0.0);
+        final dy = c.dy < r.top ? r.top - c.dy : (c.dy > r.bottom ? c.dy - r.bottom : 0.0);
+        return dx + dy;
+      }
+
+      pick = parts.reduce((a, b) => distance(b) < distance(a) ? b : a);
+    } else {
+      pick = parts.reduce((a, b) => inkIn(b) > inkIn(a) ? b : a);
+    }
+    if (step > 0 && pick == current) break;
+    current = pick;
+  }
+  final margin = longest * 0.02;
+  return current.inflate(margin).intersect(page);
 }
 
 /// A small picture of [page] for showing under an AI answer, drawn once and

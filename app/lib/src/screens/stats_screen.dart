@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import '../auth.dart';
 import '../models.dart';
 import '../public_downloads.dart';
+import '../quiz.dart';
 import '../stats.dart';
 import '../store.dart';
 import '../theme.dart';
@@ -14,6 +15,7 @@ import '../widgets/common.dart';
 import '../widgets/excavator_loader.dart';
 import '../widgets/unit_icon.dart';
 import 'answer_reports_screen.dart';
+import 'quiz_admin_screen.dart' show QuizEditScreen;
 import 'shell.dart';
 import 'viewer_screen.dart';
 
@@ -31,7 +33,7 @@ class StatsScreen extends StatefulWidget {
 }
 
 class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 4, vsync: this);
+  late final TabController _tabs = TabController(length: 5, vsync: this);
   late final http.Client _client = widget.client ?? http.Client();
   late final StatsApi _api = StatsApi(StoreScope.read(context), _client);
 
@@ -183,10 +185,12 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
             indicatorWeight: 3,
             indicatorSize: TabBarIndicatorSize.label,
             dividerColor: AppColors.line,
-            labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            labelPadding: const EdgeInsets.symmetric(horizontal: 10),
             labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             unselectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-            tabs: const [Tab(text: 'Manual'), Tab(text: 'nyel AI'), Tab(text: 'Cari'), Tab(text: 'Pengguna')],
+            tabs: const [Tab(text: 'Manual'), Tab(text: 'nyel AI'), Tab(text: 'Cari'), Tab(text: 'Pengguna'), Tab(text: 'Quiz')],
           ),
           Expanded(child: _body(data)),
         ],
@@ -215,6 +219,16 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
       _AiTab(data: data, onQuestion: _showAnswer, showSection: showSection),
       _SearchTab(data: data, onMissing: _showSearch),
       _PeopleTab(data: data, onPerson: _openPerson, onInactive: _openInactive, showSection: showSection),
+      _QuizTab(
+        key: ValueKey(_filter.key),
+        api: _api,
+        filter: _filter,
+        onQuestion: _showQuizQuestion,
+        onNever: (people) => Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => _InactivePage(people: people, sections: _sections, title: 'belum ikut quiz'),
+        )),
+        showSection: showSection,
+      ),
     ];
     return TabBarView(
       controller: _tabs,
@@ -269,6 +283,8 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
           _load();
         },
       ));
+
+  void _showQuizQuestion(String id) => _sheet(_QuizQuestionSheet(load: _api.quizQuestion(_filter, id)));
 
   void _openPerson(String nrp) => Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => _PersonPage(api: _api, filter: _filter, nrp: nrp, onQuestion: _showAnswer),
@@ -1555,10 +1571,11 @@ class _PersonPage extends StatelessWidget {
 }
 
 class _InactivePage extends StatelessWidget {
-  const _InactivePage({required this.people, required this.sections});
+  const _InactivePage({required this.people, required this.sections, this.title = 'belum aktif'});
 
   final List<InactiveRow> people;
   final List<String> sections;
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -1572,7 +1589,7 @@ class _InactivePage extends StatelessWidget {
     ];
     return Scaffold(
       appBar: AppBar(
-        title: Text('${people.length} belum aktif'),
+        title: Text('${people.length} $title'),
         shape: Border(bottom: BorderSide(color: AppColors.line)),
         actions: [
           IconButton(
@@ -1635,21 +1652,28 @@ class _InactivePage extends StatelessWidget {
 
 /// A small label: the app version, or "app lama" in amber.
 class _Tag extends StatelessWidget {
-  const _Tag(this.text, {this.warn = false});
+  const _Tag(this.text, {this.warn = false, this.danger = false});
 
   final String text;
   final bool warn;
+
+  /// Red instead of amber.
+  final bool danger;
 
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
         decoration: BoxDecoration(
-          color: warn ? AppColors.amberSoft : AppColors.greenSoft,
+          color: danger ? AppColors.danger.withValues(alpha: .12) : (warn ? AppColors.amberSoft : AppColors.greenSoft),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
           text,
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: warn ? AppColors.amber : AppColors.green),
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: danger ? AppColors.danger : (warn ? AppColors.amber : AppColors.green),
+          ),
         ),
       );
 }
@@ -1665,4 +1689,363 @@ String inactiveText(List<InactiveRow> people, List<String> order, Map<String, Li
     }
   }
   return b.toString().trimRight();
+}
+
+// ── Quiz ───────────────────────────────────────────────────────────────
+
+/// Quiz: who plays, which topics and questions go wrong, who is ahead.
+/// Loads its own numbers, only once the tab is opened.
+class _QuizTab extends StatefulWidget {
+  const _QuizTab({
+    super.key,
+    required this.api,
+    required this.filter,
+    required this.onQuestion,
+    required this.onNever,
+    this.showSection = true,
+  });
+
+  final StatsApi api;
+  final StatsFilter filter;
+  final ValueChanged<String> onQuestion;
+  final ValueChanged<List<InactiveRow>> onNever;
+  final bool showSection;
+
+  @override
+  State<_QuizTab> createState() => _QuizTabState();
+}
+
+class _QuizTabState extends State<_QuizTab> with AutomaticKeepAliveClientMixin {
+  late Future<QuizStats> _data = widget.api.quiz(widget.filter);
+
+  @override
+  bool get wantKeepAlive => true;
+
+  Color _scoreColor(int pct) => pct < 60 ? AppColors.danger : (pct < 75 ? AppColors.amber : AppColors.navy);
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return FutureBuilder<QuizStats>(
+      future: _data,
+      builder: (context, snap) {
+        if (snap.hasError) {
+          return Center(
+            child: EmptyState(
+              icon: Icons.wifi_off,
+              title: 'Gagal memuat quiz',
+              action: TextButton(
+                onPressed: () => setState(() => _data = widget.api.quiz(widget.filter)),
+                child: const Text('Coba lagi'),
+              ),
+            ),
+          );
+        }
+        final d = snap.data;
+        if (d == null) return const Center(child: ExcavatorLoader(label: 'Memuat quiz…'));
+        final muted = TextStyle(fontSize: 11, color: AppColors.muted);
+        return ListView(
+          padding: _listPadding,
+          children: [
+            const _Caps('Ringkasan quiz'),
+            _Tiles([
+              ('${d.players}/${d.users}', 'Ikut quiz'),
+              ('${d.correct}%', d.trendCorrect == null ? 'Benar' : 'Benar ${d.trendCorrect! >= 0 ? '▲' : '▼'}${d.trendCorrect!.abs()}'),
+              ('${d.sets}', 'Set selesai'),
+            ]),
+            if (widget.showSection && d.perSection.isNotEmpty) ...[
+              const _Caps('Ikut quiz per section'),
+              AppCard(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                child: Column(
+                  children: [
+                    for (final s in d.perSection)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        child: Row(
+                          children: [
+                            SizedBox(width: 76, child: Text(s.section, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
+                            Expanded(child: _Bar(s.total == 0 ? 0 : s.players / s.total)),
+                            SizedBox(
+                              width: 52,
+                              child: Text('${s.players}/${s.total}', textAlign: TextAlign.right, style: const TextStyle(fontSize: 12)),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+            const _Caps('Topik terlemah'),
+            if (d.topics.isEmpty)
+              const _None('Belum ada jawaban.')
+            else
+              _Rows([
+                for (final t in d.topics.take(5))
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(quizTopics[t.topic] ?? t.topic, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                              Text('${t.answers} jawaban', style: muted),
+                              const SizedBox(height: 6),
+                              _ScoreBar(t.correct / 100, color: _scoreColor(t.correct)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text('${t.correct}%', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+              ]),
+            const _Caps('Soal paling sering salah'),
+            if (d.hard.isEmpty)
+              const _None('Belum ada soal dengan 5 jawaban atau lebih.')
+            else
+              _Rows([
+                for (final q in d.hard)
+                  InkWell(
+                    onTap: () => widget.onQuestion(q.id),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(q.prompt,
+                                    maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                                Text([if (q.unit.isNotEmpty) q.unit, quizTopics[q.topic] ?? q.topic, '${q.answers} jawaban'].join(' · '),
+                                    maxLines: 1, overflow: TextOverflow.ellipsis, style: muted),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _Tag('${q.correct}% benar', warn: true, danger: q.correct < 40),
+                          Icon(Icons.chevron_right, size: 20, color: AppColors.faint),
+                        ],
+                      ),
+                    ),
+                  ),
+              ]),
+            const _Caps('Paling rajin'),
+            if (d.top.isEmpty)
+              const _None('Belum ada yang ikut quiz.')
+            else
+              _Rows([
+                for (final (i, p) in d.top.indexed)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 18,
+                          child: Text('${i + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.muted)),
+                        ),
+                        _Initials(p.name, size: 34),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                              Text([if (widget.showSection) p.section, if (p.streak > 0) 'streak ${p.streak} hari'].join(' · '), style: muted),
+                            ],
+                          ),
+                        ),
+                        Text('${p.xp} XP', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+              ]),
+            if (d.never.isNotEmpty) ...[
+              const _Caps('Belum pernah ikut quiz'),
+              AppCard(
+                onTap: () => widget.onNever(d.never),
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${d.never.length} orang', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          Text(_neverBySection(d.never), style: muted),
+                        ],
+                      ),
+                    ),
+                    Text('Lihat', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.navy)),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  String _neverBySection(List<InactiveRow> people) {
+    final n = <String, int>{};
+    for (final p in people) {
+      final s = p.sections.firstOrNull ?? defaultSection;
+      n[s] = (n[s] ?? 0) + 1;
+    }
+    return [for (final e in n.entries) '${e.key} ${e.value}'].join(' · ');
+  }
+}
+
+/// A bar in a status colour (red, amber or navy).
+class _ScoreBar extends StatelessWidget {
+  const _ScoreBar(this.fraction, {required this.color});
+
+  final double fraction;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: BorderRadius.circular(3),
+        child: SizedBox(
+          height: 6,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ColoredBox(color: AppColors.greySoft),
+              FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: fraction.clamp(0.0, 1.0),
+                child: ColoredBox(color: color),
+              ),
+            ],
+          ),
+        ),
+      );
+}
+
+/// A question that often goes wrong: which choice people pick, then
+/// Buka manual, Ubah soal or Tarik soal.
+class _QuizQuestionSheet extends StatelessWidget {
+  const _QuizQuestionSheet({required this.load});
+
+  final Future<QuizQuestionStats> load;
+
+  @override
+  Widget build(BuildContext context) => _Loading<QuizQuestionStats>(
+        load: load,
+        show: (context, s) {
+          final admin = AdminQuestion(s.question);
+          final q = admin.question;
+          final total = s.picks.fold<int>(0, (a, b) => a + b);
+          final rightPct = total == 0 ? 0 : (s.picks.elementAtOrNull(q.answer) ?? 0) * 100 ~/ total;
+          final store = StoreScope.read(context);
+          final file = q.manualId.isEmpty ? null : store.fileByKey(q.manualId);
+          return ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            children: [
+              Text(
+                [if (q.unit != null) q.unit!, q.topicName, if (q.page > 0) 'hal. ${q.page}'].join(' · '),
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+              const SizedBox(height: 6),
+              Text(q.prompt, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.45)),
+              const SizedBox(height: 4),
+              Text('${s.answers} jawaban · $rightPct% benar', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+              const SizedBox(height: 8),
+              for (final (i, c) in q.choices.indexed) ...[
+                Divider(height: 1, color: AppColors.divider),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          c,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: i == q.answer ? FontWeight.w600 : FontWeight.w400,
+                            color: i == q.answer ? AppColors.green : null,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      SizedBox(
+                        width: 80,
+                        child: _ScoreBar(
+                          total == 0 ? 0 : (s.picks.elementAtOrNull(i) ?? 0) / total,
+                          color: i == q.answer ? AppColors.green : AppColors.faint,
+                        ),
+                      ),
+                      SizedBox(
+                        width: 40,
+                        child: Text(
+                          '${total == 0 ? 0 : (s.picks.elementAtOrNull(i) ?? 0) * 100 ~/ total}%',
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: file == null
+                          ? null
+                          : () => Navigator.of(context).push(MaterialPageRoute(
+                                builder: (_) => ViewerScreen(fileKey: file.key, initialPage: q.page),
+                              )),
+                      child: const Text('Buka manual'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => QuizEditScreen(question: admin))),
+                      child: const Text('Ubah soal'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+                onPressed: () async {
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Tarik soal ini?'),
+                      content: const Text('Soal tidak muncul lagi di quiz.'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+                        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Tarik')),
+                      ],
+                    ),
+                  );
+                  if (ok != true || !context.mounted) return;
+                  try {
+                    await QuizApi(store, http.Client()).decide(q.id, 'tarik');
+                    if (!context.mounted) return;
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Soal ditarik')));
+                  } on Object catch (e) {
+                    if (context.mounted) showError(context, e);
+                  }
+                },
+                child: const Text('Tarik soal'),
+              ),
+            ],
+          );
+        },
+      );
 }

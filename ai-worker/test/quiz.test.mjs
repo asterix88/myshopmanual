@@ -220,3 +220,45 @@ test("nightly: rank change, hard questions flagged, old answers removed", async 
   assert.equal((await db.first("SELECT status FROM question WHERE id = 'PC210-29'")).status, "perlu_cek");
   assert.equal(await db.first("SELECT id FROM review_log WHERE id = 'old'"), null);
 });
+
+test("quiz statistics: players, weak topics, hard questions, never played", async () => {
+  const { quizStats, questionStats } = await import("../src/quiz-stats.ts");
+  const db = fresh();
+  await seed(db, 12);
+  for (const who of [ali, budi]) await quiz.ensureUser(db, who, () => 0.1);
+  await play(db, ali, await quiz.startSession(db, ali, "harian", null, { now: NOW }), { wrong: 2 });
+  await play(db, budi, await quiz.startSession(db, budi, "harian", null, { now: NOW }), { wrong: 6 });
+  const staff = [
+    { nrp: "A1", name: "Ali", sections: ["TRACK"] },
+    { nrp: "B2", name: "Budi", sections: ["TRACK"] },
+    { nrp: "C3", name: "Cahyo", sections: ["TRACK"] },
+    { nrp: "W3", name: "Wati", sections: ["WHEEL"] },
+  ];
+  const s = await quizStats(db, { since: NOW - 7 * DAY, section: "" }, staff, ["TRACK", "WHEEL"], NOW + 60_000);
+  assert.equal(s.players, 2);
+  assert.equal(s.users, 4);
+  assert.equal(s.correct, 60); // 8 + 4 of 20
+  assert.equal(s.sets, 2);
+  assert.deepEqual(s.per_section, [
+    { section: "TRACK", players: 2, total: 3 },
+    { section: "WHEEL", players: 0, total: 1 },
+  ]);
+  assert.deepEqual(s.topics, [{ topic: "torsi", answers: 20, correct: 60 }]);
+  assert.deepEqual(s.top.map((p) => p.nrp), ["A1", "B2"]);
+  assert.equal(s.top[0].streak, 1);
+  assert.deepEqual(s.never.map((p) => p.nrp), ["C3", "W3"]);
+  assert.equal(s.people.find((p) => p.nrp === "B2").correct, 40);
+  // Only 2 answers per question: none is "hard" yet.
+  assert.deepEqual(s.hard, []);
+  // One section: the others' people are left out.
+  const wheel = await quizStats(db, { since: NOW - 7 * DAY, section: "WHEEL" }, staff, ["TRACK", "WHEEL"], NOW + 60_000);
+  assert.equal(wheel.players, 0);
+  assert.deepEqual(wheel.never.map((p) => p.nrp), ["W3"]);
+
+  const asked = (await db.first("SELECT question_id FROM review_log WHERE nrp = 'B2' AND chosen = 0")).question_id;
+  const q = await questionStats(db, asked);
+  assert.equal(q.answers, 2);
+  assert.equal(q.picks.reduce((a, b) => a + b, 0), 2);
+  assert.equal(q.picks[0] >= 1, true);
+  assert.equal(await questionStats(db, "nope"), null);
+});

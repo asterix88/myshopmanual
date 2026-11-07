@@ -8,10 +8,13 @@ import { employeeRows, requireAdmin, requireSession, type Row, type Session } fr
 import { readCatalog, type FilesEnv } from "./files";
 import { DEFAULT_SECTION, SHARED_SECTION, unitSection } from "./sections";
 import * as db from "./stats-db";
+import { d1 } from "./quiz-db";
+import { questionStats, quizStats } from "./quiz-stats";
 import { xlsx, type Cell } from "./xlsx";
 
 export interface StatsEnv extends FilesEnv {
   STATS: DurableObjectNamespace<Stats>;
+  QUIZ: D1Database;
 }
 
 export class Stats extends DurableObject<StatsEnv> {
@@ -128,12 +131,35 @@ export async function handleStats(request: Request, env: StatsEnv, path: string)
     }
     case "/admin/stats/search":
       return json(await stub(env).search(f, text(b.q)));
+    case "/admin/stats/quiz":
+      return json(await quizOverview(env, f));
+    case "/admin/stats/quiz/question": {
+      const found = await questionStats(d1(env.QUIZ), text(b.id));
+      return found ? json(found) : json({ error: "not_found", message: "Soal tidak ditemukan." }, 404);
+    }
     case "/admin/stats/handled":
       if (!text(b.q)) return json({ error: "bad_request" }, 400);
       await stub(env).markHandled(text(b.q));
       return json({ ok: true });
   }
   return json({ error: "not_found" }, 404);
+}
+
+/// The people the quiz statistics count (as "Pengguna aktif": active staff,
+/// no admins) and the section chips in order.
+async function staffList(env: StatsEnv) {
+  const employees = await employeeRows(env);
+  const staff = [...employees].filter(([, r]) => r.active && !r.admin);
+  const all = [...new Set(staff.flatMap(([, r]) => r.sections))].filter((x) => x !== SHARED_SECTION);
+  return {
+    people: staff.map(([nrp, r]) => ({ nrp, name: r.name, sections: r.sections })),
+    sections: [...ORDER.filter((x) => all.includes(x)), ...all.filter((x) => !ORDER.includes(x)).sort()],
+  };
+}
+
+async function quizOverview(env: StatsEnv, f: db.Filter) {
+  const { people, sections } = await staffList(env);
+  return quizStats(d1(env.QUIZ), f, people, sections);
 }
 
 /// Sections with a manual of their own (not counting the ones every section
@@ -236,7 +262,7 @@ const day = (ms: number) => {
 
 /// The monthly report: what the screen shows, one sheet per list.
 export async function report(env: StatsEnv, f: db.Filter, label: string): Promise<Uint8Array> {
-  const o = await overview(env, f);
+  const [o, q] = await Promise.all([overview(env, f), quizOverview(env, f)]);
   const head = (...cells: Cell[]) => cells;
   return xlsx([
     {
@@ -252,6 +278,9 @@ export async function report(env: StatsEnv, f: db.Filter, label: string): Promis
         ["Jawaban membantu", o.ratings.good],
         ["Jawaban dinilai salah", o.ratings.bad],
         ["Kata tidak ketemu", o.missing.length],
+        ["Ikut quiz", q.players],
+        ["Jawaban quiz benar (%)", q.correct],
+        ["Set quiz selesai", q.sets],
       ],
     },
     {
@@ -276,6 +305,13 @@ export async function report(env: StatsEnv, f: db.Filter, label: string): Promis
       rows: [
         head("NRP", "Nama", "Section", "Manual dibuka", "Tanya nyel AI", "Cari", "Terakhir aktif"),
         ...o.people.map((p) => [p.nrp, p.name, p.sections.join(", "), p.manuals, p.ai, p.searches, day(p.last)]),
+      ],
+    },
+    {
+      name: "Quiz",
+      rows: [
+        head("NRP", "Nama", "Section", "Set", "Jawaban", "Benar (%)", "XP", "Streak max"),
+        ...q.people.map((p) => [p.nrp, p.name, p.section, p.sets, p.answers, p.correct, p.xp, p.best_streak]),
       ],
     },
     {

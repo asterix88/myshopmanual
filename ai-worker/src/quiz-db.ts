@@ -601,18 +601,30 @@ export type QuestionRow = Question & {
   passed: boolean;
 };
 
-export async function listQuestions(db: Db, status: string, unit: string | null): Promise<QuestionRow[]> {
-  const rows = await db.all(
-    `SELECT q.*,
+const QUESTION_ROW = `SELECT q.*,
        (SELECT COUNT(*) FROM report r WHERE r.question_id = q.id AND r.handled_by IS NULL) AS reports,
        (SELECT COUNT(*) FROM review_log l WHERE l.question_id = q.id) AS answered,
        (SELECT AVG(1 - l.correct) FROM review_log l WHERE l.question_id = q.id) AS wrong_rate
-     FROM question q WHERE q.status = ? ${unit ? "AND q.unit = ?" : ""}
+     FROM question q`;
+
+export async function listQuestions(db: Db, status: string, unit: string | null): Promise<QuestionRow[]> {
+  const rows = await db.all(
+    `${QUESTION_ROW} WHERE q.status = ? ${unit ? "AND q.unit = ?" : ""}
      ORDER BY q.updated_at DESC LIMIT 200`,
     status,
     ...(unit ? [unit] : []),
   );
-  return rows.map((r) => ({
+  return rows.map(toQuestionRow);
+}
+
+/// One question as the admin's list shows it, whatever its status.
+export async function questionRow(db: Db, id: string): Promise<QuestionRow | null> {
+  const r = await db.first(`${QUESTION_ROW} WHERE q.id = ?`, id);
+  return r ? toQuestionRow(r) : null;
+}
+
+function toQuestionRow(r: Row): QuestionRow {
+  return {
     ...toQuestion(r),
     status: String(r.status),
     source: String(r.source),
@@ -627,7 +639,7 @@ export async function listQuestions(db: Db, status: string, unit: string | null)
     curator_note: (r.curator_note as string | null) ?? null,
     passed: Number(r.passed ?? 0) === 1,
     wrong_pct: r.wrong_rate == null ? null : Math.round(Number(r.wrong_rate) * 100),
-  }));
+  };
 }
 
 /// Saves a new question (draft from nyel AI, or an admin's own).
