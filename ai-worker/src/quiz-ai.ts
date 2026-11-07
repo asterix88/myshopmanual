@@ -81,7 +81,9 @@ Rules:
 - Write in Bahasa Indonesia, keeping technical terms, part names, codes and values exactly as the page writes them (in English when the page is English).
 - Type "pg": 4 choices, exactly one right. The wrong choices must be believable (near values, related parts), never silly.
 - Type "bs": a statement; choices ["Benar", "Salah"]. Make about half of them false by changing one value or part name.
-- Type "gambar": only for a drawing page whose text has a numbered legend (lines like "3. Main relief valve"). The mechanic sees the drawing with its numbers but WITHOUT the legend. Ask what one numbered part is ("Pada gambar <name of the drawing>, komponen nomor 3 adalah?"); 4 choices taken from the same legend, exactly one right; put the number in the field "callout". If the page has no numbered legend, write "pg" instead.
+- Type "gambar", numbered drawing: a drawing page whose text has a numbered legend (lines like "3. Main relief valve"). The mechanic sees the drawing with its numbers but WITHOUT the legend. Ask what one numbered part is ("Pada gambar <name of the drawing>, komponen nomor 3 adalah?"); 4 choices taken from the same legend, exactly one right; put the number in the field "callout".
+- Type "gambar", labelled photo or drawing: a page whose text is mostly short part names placed on a photo or drawing (like "PSV", "TVC valve", "Servo valve", each a label on the picture, few or no sentences). The mechanic sees the picture with every label hidden and replaced by a letter. Ask what one label is, writing [X] where its letter goes ("Pada foto <what the picture shows, with the unit>, komponen bertanda [X] adalah?"); 4 choices taken from the labels on the same page, written exactly as the page writes them, exactly one right; put the right label, exactly as on the page, in the field "callout".
+- When the page is such a labelled picture, write only "gambar" questions, whatever types were asked, each about a different label. If a page has neither a numbered legend nor labels, write "pg" instead of "gambar".
 - The question must be answerable without seeing the page (except "gambar"); name the unit and the component.
 - Types "pg" and "bs" are shown WITHOUT any picture. In them never write callout numbers such as "(35)" or "nomor 3", and never refer to a drawing ("gambar", "ilustrasi", "illustration"); name each part by its name only. A fact that needs the drawing belongs in a "gambar" question or nowhere.
 - explain: one or two short sentences giving the fact itself, as the page says it. Start with the fact; never start with "Halaman menyatakan", "Menurut manual" or similar.
@@ -156,6 +158,12 @@ export function selfCheck(q: Draft, text: string): { ok: boolean; note: string }
     const number = String(q.callout ?? "").trim();
     const flat = text.toLowerCase().replace(/\s+/g, " ");
     const hasName = name.trim().length > 0 && flat.includes(name.toLowerCase().replace(/\s+/g, " ").trim());
+    if (q.prompt.includes("[X]")) {
+      // A labelled photo: the asked label is the right choice itself.
+      return hasName
+        ? { ok: true, note: `Label "${name}" ada di halaman ${q.page}.` }
+        : { ok: false, note: `Cek gambar: label "${name}" tidak ditemukan di halaman ${q.page}.` };
+    }
     const hasNumber = number !== "" && new RegExp(`(^|\\D)${number.replace(/\D/g, "")}(\\D|$)`).test(text);
     if (hasName && hasNumber) return { ok: true, note: `Nomor ${number} dan nama komponen ada di halaman ${q.page}.` };
     return { ok: false, note: `Cek gambar: ${hasNumber ? "" : `nomor ${number || "?"} `}${hasName ? "" : `"${name}" `}tidak ditemukan di keterangan halaman ${q.page}.`.replace("  ", " ") };
@@ -176,6 +184,7 @@ For each question give a score from 1 to 10:
 - 7-8: good, small wording issues.
 - 4-6: unclear, ambiguous (e.g. the value depends on a condition the question does not name), or wrong choices too easy.
 - 1-3: the key is wrong or not on the page, or two choices could be right.
+- Type "gambar" on a labelled photo: the mechanic sees the picture with every label replaced by a letter, and [X] in the question becomes the asked label's letter. Judge it by the labels on the page; the right answer is the asked label itself.
 - Types "pg" and "bs" are shown without the drawing: one that mentions callout numbers like "(35)" or refers to a picture must be "perbaiki" (rewrite without them) or "buang" when it cannot be answered without the drawing.
 
 verdict: "lolos" (score 7+), "perbaiki" (you can fix it: give the whole fixed question in "fixed", same JSON shape, and score the fixed version), or "buang".
@@ -235,7 +244,7 @@ export async function curate(ask: Ask, drafts: Draft[], text: string): Promise<{
 
 const PLAN_PROMPT = `You choose pages of a heavy-equipment technical manual to make quiz questions from, using its table of contents (bookmarks with page numbers).
 
-Good pages: tables of standard values, pressures, capacities and tightening torques; function and structure of components; adjusting and testing procedures; failure codes and troubleshooting; periodic maintenance intervals; drawings of a component whose parts are numbered with a legend (kind "gambar", e.g. "Control valve", "Structure of ...", "Hydraulic pump" under Structure and function).
+Good pages: tables of standard values, pressures, capacities and tightening torques; function and structure of components; adjusting and testing procedures; failure codes and troubleshooting; periodic maintenance intervals; drawings of a component whose parts are numbered with a legend (kind "gambar", e.g. "Control valve", "Structure of ...", "Hydraulic pump" under Structure and function); photos or drawings with part names as labels, as in training slides (kind "gambar").
 Skip: covers, foreword, safety notices, index pages, part lists, wiring diagrams, blank pages.
 Spread the pages over different systems and chapters; do not take several pages of the same table.
 

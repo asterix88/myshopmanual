@@ -36,6 +36,7 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
   Rect? _auto;
   _Grip? _grip;
   bool _saving = false;
+  List<QuizMark> _marks = const [];
 
   @override
   void initState() {
@@ -51,8 +52,10 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
         page.dispose();
         return;
       }
-      final auto = page.autoCropFor(calloutOf(widget.question.prompt));
+      final target = widget.question.pictureTarget;
+      final auto = page.autoCropFor(target);
       setState(() {
+        _marks = page.marksFor(target);
         _page = page;
         _auto = auto;
         _crop = auto;
@@ -74,7 +77,8 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
     if (page == null || crop == null) return;
     setState(() => _saving = true);
     try {
-      await widget.api.uploadImage(widget.question.id, await page.png(crop));
+      await widget.api.uploadImage(widget.question.id, await page.png(crop, marks: _marks),
+          letter: _marks.where((m) => m.asked).firstOrNull?.letter);
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
@@ -122,7 +126,7 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
                       onPanEnd: (_) => _grip = null,
                       child: Stack(fit: StackFit.expand, children: [
                         RawImage(image: page.image, fit: BoxFit.fill),
-                        CustomPaint(painter: _CropPainter(_crop!, scale, AppColors.navy)),
+                        CustomPaint(painter: _CropPainter(_crop!, scale, AppColors.navy, _marks)),
                       ]),
                     ),
                   ),
@@ -203,14 +207,18 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
 
 /// Dims the page outside the crop box and draws the box with its corners.
 class _CropPainter extends CustomPainter {
-  _CropPainter(this.crop, this.scale, this.color);
+  _CropPainter(this.crop, this.scale, this.color, this.marks);
 
   final Rect crop;
   final double scale;
   final Color color;
 
+  /// Letters of a labelled photo, as the picture will show them.
+  final List<QuizMark> marks;
+
   @override
   void paint(Canvas canvas, Size size) {
+    paintQuizMarks(canvas, marks, scale, Offset.zero);
     final r = Rect.fromLTRB(crop.left * scale, crop.top * scale, crop.right * scale, crop.bottom * scale);
     final outside = Path()
       ..fillType = PathFillType.evenOdd
@@ -233,5 +241,5 @@ class _CropPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CropPainter old) => old.crop != crop || old.scale != scale || old.color != color;
+  bool shouldRepaint(_CropPainter old) => old.crop != crop || old.scale != scale || old.color != color || old.marks != marks;
 }

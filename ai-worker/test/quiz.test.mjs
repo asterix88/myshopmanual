@@ -224,7 +224,8 @@ test("nightly: rank change, hard questions flagged, old answers removed", async 
 test("quiz statistics: players, weak topics, hard questions, never played", async () => {
   const { quizStats, questionStats } = await import("../src/quiz-stats.ts");
   const db = fresh();
-  await seed(db, 12);
+  // One set's worth, so both play every question and each has 2 answers.
+  await seed(db, 10);
   for (const who of [ali, budi]) await quiz.ensureUser(db, who, () => 0.1);
   await play(db, ali, await quiz.startSession(db, ali, "harian", null, { now: NOW }), { wrong: 2 });
   await play(db, budi, await quiz.startSession(db, budi, "harian", null, { now: NOW }), { wrong: 6 });
@@ -261,4 +262,18 @@ test("quiz statistics: players, weak topics, hard questions, never played", asyn
   assert.equal(q.picks.reduce((a, b) => a + b, 0), 2);
   assert.equal(q.picks[0] >= 1, true);
   assert.equal(await questionStats(db, "nope"), null);
+});
+
+test("a labelled photo's letter takes the place of [X] when its picture is saved", async () => {
+  const db = fresh();
+  await quiz.addQuestion(
+    db,
+    { section: "TRACK", unit: "PC1250", topic: "struktur", type: "gambar", prompt: "Pada foto pompa, komponen bertanda [X] adalah?", choices: ["PSV", "PT", "PD", "TVC valve"], answer: 0, explain: "x", manual_id: "m", page: 158 },
+    { status: "draf", source: "ai", by: "ADM", id: "L1", now: NOW },
+  );
+  assert.equal(await quiz.setImage(db, "L1", "quiz/img/a.png", NOW, "C"), true);
+  assert.equal((await db.first("SELECT prompt, image FROM question WHERE id = 'L1'")).prompt, "Pada foto pompa, komponen bertanda C adalah?");
+  // Drawn again later: the letter is already there; nothing else changes.
+  assert.equal(await quiz.setImage(db, "L1", "quiz/img/b.png", NOW, "C"), true);
+  assert.equal((await db.first("SELECT image FROM question WHERE id = 'L1'")).image, "quiz/img/b.png");
 });
