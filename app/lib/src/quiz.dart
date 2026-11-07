@@ -253,9 +253,16 @@ class QuizApi {
     if (response.statusCode != 200) {
       throw AuthException('server', 'Gambar soal gagal dikirim (kode ${response.statusCode}).');
     }
+    _images[id] = png;
+    _versions[id] = imageVersion(id) + 1;
   }
 
   static final _images = <String, Uint8List>{};
+  static final _versions = <String, int>{};
+
+  /// Goes up each time this phone sends [questionId] a new picture, so a
+  /// picture on screen knows to show the new one.
+  static int imageVersion(String questionId) => _versions[questionId] ?? 0;
 
   /// The picture of a "gambar" question, kept in memory once loaded.
   Future<Uint8List> image(String questionId) async {
@@ -530,12 +537,16 @@ class GenerateResult {
   GenerateResult(Map<String, dynamic> j)
       : saved = _int(j['saved']),
         pictures = [for (final id in j['pictures'] as List? ?? const []) '$id'],
+        callouts = {for (final e in (j['callouts'] as Map? ?? const {}).entries) '${e.key}': '${e.value}'},
         dropped = _int(j['dropped']);
 
   final int saved;
 
   /// Saved "gambar" questions, which still need their picture.
   final List<String> pictures;
+
+  /// The number each picture question asks about, by question id.
+  final Map<String, String> callouts;
 
   /// Thrown away by the curator.
   final int dropped;

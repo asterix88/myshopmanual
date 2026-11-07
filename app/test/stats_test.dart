@@ -322,4 +322,83 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(() async => store.dispose());
   });
+
+  testWidgets('the Quiz tab: weak topics, a hard question with its picks, never played', (tester) async {
+    final asked = <String>[];
+    final hardRow = {
+      'id': 'q1', 'section': 'TRACK', 'unit': 'PC210-10M0', 'topic': 'standar', 'type': 'pg',
+      'prompt': 'Setelan main relief PC210-10 saat power max?',
+      'choices': ['37.3 MPa', '34.8 MPa', '31.4 MPa', '29.4 MPa'], 'answer': 0, 'explain': 'Main relief 37.3 MPa.',
+      'manual_id': 'TEST1-1/sm', 'page': 12, 'image': null, 'status': 'terbit', 'source': 'admin',
+      'check_note': null, 'created_by': 'ADM', 'reviewed_by': null, 'updated_at': 0, 'reports': 0, 'answered': 14,
+      'job_id': null, 'curator_score': null, 'curator_note': null, 'passed': false, 'wrong_pct': 79,
+    };
+    final client = MockClient((request) async {
+      asked.add('${request.url.path} ${request.body}');
+      return switch (request.url.path) {
+        '/admin/stats' => http.Response(jsonEncode(overviewJson()), 200),
+        '/admin/stats/quiz' => http.Response(
+            jsonEncode({
+              'players': 31, 'users': 52, 'correct': 74, 'trend_correct': 6, 'sets': 186,
+              'per_section': [
+                {'section': 'TRACK', 'players': 26, 'total': 40},
+              ],
+              'topics': [
+                {'topic': 'standar', 'answers': 88, 'correct': 52},
+              ],
+              'hard': [
+                {'id': 'q1', 'prompt': hardRow['prompt'], 'unit': 'PC210-10M0', 'topic': 'standar', 'answers': 14, 'correct': 21},
+              ],
+              'top': [
+                {'nrp': '1', 'name': 'Ali Akbar', 'section': 'TRACK', 'xp': 640, 'streak': 12},
+              ],
+              'never': [
+                {'nrp': 'N1', 'name': 'Mekanik Satu', 'sections': ['SUPPORT'], 'never': true, 'last': 0},
+              ],
+            }),
+            200),
+        '/admin/stats/quiz/question' => http.Response(jsonEncode({...hardRow, 'picks': [3, 9, 1, 1], 'answers': 14}), 200),
+        _ => http.Response('{}', 404),
+      };
+    });
+    late AppStore store;
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer());
+      await store.signIn(testSession(admin: true), refreshNow: false);
+    });
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(theme: buildTheme(dark: false), home: StatsScreen(client: client)),
+    ));
+    Future<void> wait() async {
+      for (var i = 0; i < 5; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+    }
+
+    await wait();
+    final tab = find.descendant(of: find.byType(TabBar), matching: find.text('Quiz'));
+    await tester.ensureVisible(tab);
+    await tester.pumpAndSettle();
+    await tester.tap(tab);
+    await wait();
+    expect(asked.where((a) => a.startsWith('/admin/stats/quiz ')), isNotEmpty);
+    expect(find.text('52%'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Ali Akbar'), 200, scrollable: find.byType(Scrollable).last);
+    expect(find.text('Ali Akbar'), findsOneWidget);
+    await tester.ensureVisible(find.text('Setelan main relief PC210-10 saat power max?'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Setelan main relief PC210-10 saat power max?'));
+    await wait();
+    expect(asked.last, contains('"id":"q1"'));
+    expect(find.text('14 jawaban · 21% benar'), findsOneWidget);
+    expect(find.text('Tarik soal'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
 }

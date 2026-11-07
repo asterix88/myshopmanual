@@ -127,6 +127,13 @@ class StatsApi {
     await file.writeAsBytes(response.bodyBytes);
   }
 
+  /// The Quiz tab: who plays, what they get wrong, who is ahead.
+  Future<QuizStats> quiz(StatsFilter f) async => QuizStats(await _post('/admin/stats/quiz', _filter(f)));
+
+  /// One question: how often each choice was picked.
+  Future<QuizQuestionStats> quizQuestion(StatsFilter f, String id) async =>
+      QuizQuestionStats(await _post('/admin/stats/quiz/question', {..._filter(f), 'id': id}));
+
   /// "Tandai sudah ditangani": off the "Tidak ketemu" list until searched again.
   Future<void> markHandled(String query) => _post('/admin/stats/handled', {'q': query});
 }
@@ -392,4 +399,78 @@ class SearchStats {
   final int n;
   final int people;
   final List<({String nrp, String name, List<String> sections, DateTime? at})> who;
+}
+
+/// The Quiz tab of Statistik pemakaian (/admin/stats/quiz).
+class QuizStats {
+  QuizStats(Map<String, dynamic> json)
+      : players = _int(json['players']),
+        users = _int(json['users']),
+        correct = _int(json['correct']),
+        sets = _int(json['sets']),
+        trendCorrect = (json['trend_correct'] as num?)?.toInt(),
+        perSection = [
+          for (final r in _list(json['per_section']))
+            (section: _str(r['section']), players: _int(r['players']), total: _int(r['total'])),
+        ],
+        topics = [
+          for (final r in _list(json['topics'])) (topic: _str(r['topic']), answers: _int(r['answers']), correct: _int(r['correct'])),
+        ],
+        hard = [
+          for (final r in _list(json['hard']))
+            (
+              id: _str(r['id']),
+              prompt: _str(r['prompt']),
+              unit: _str(r['unit']),
+              topic: _str(r['topic']),
+              answers: _int(r['answers']),
+              correct: _int(r['correct']),
+            ),
+        ],
+        top = [
+          for (final r in _list(json['top']))
+            (nrp: _str(r['nrp']), name: _str(r['name']), section: _str(r['section']), xp: _int(r['xp']), streak: _int(r['streak'])),
+        ],
+        never = [for (final r in _list(json['never'])) InactiveRow(r)];
+
+  /// Mechanics who did at least one set in the period, out of [users].
+  final int players;
+  final int users;
+
+  /// Percent of answers right.
+  final int correct;
+
+  /// Points up or down against the period before; null = nothing to compare.
+  final int? trendCorrect;
+
+  /// Sets finished.
+  final int sets;
+  final List<({String section, int players, int total})> perSection;
+
+  /// Weakest first; [correct] in percent.
+  final List<({String topic, int answers, int correct})> topics;
+
+  /// Questions most often answered wrong (at least 5 answers).
+  final List<({String id, String prompt, String unit, String topic, int answers, int correct})> hard;
+  final List<({String nrp, String name, String section, int xp, int streak})> top;
+
+  /// Mechanics who never played a quiz.
+  final List<InactiveRow> never;
+
+  bool get isEmpty => players == 0 && never.isEmpty;
+}
+
+/// One question on the Quiz tab: the choices and how often each was picked.
+class QuizQuestionStats {
+  QuizQuestionStats(Map<String, dynamic> json)
+      : question = json,
+        picks = [for (final n in json['picks'] as List? ?? const []) (n as num).toInt()],
+        answers = _int(json['answers']);
+
+  /// The question as /admin/quiz/questions lists it.
+  final Map<String, dynamic> question;
+
+  /// Times each choice was picked, in choice order.
+  final List<int> picks;
+  final int answers;
 }

@@ -1,14 +1,18 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:mymanual/src/models.dart';
 import 'package:mymanual/src/page_image.dart';
 import 'package:mymanual/src/quiz.dart';
 import 'package:mymanual/src/quiz_reminders.dart';
 import 'package:mymanual/src/screens/quiz_admin_screen.dart';
+import 'package:mymanual/src/screens/quiz_crop_screen.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:mymanual/src/screens/quiz_hub_screen.dart';
 import 'package:mymanual/src/screens/quiz_screen.dart';
@@ -16,7 +20,7 @@ import 'package:mymanual/src/screens/shell.dart';
 import 'package:mymanual/src/search.dart' show pageHeading;
 import 'package:mymanual/src/store.dart';
 
-import 'store_test.dart' show fixtureServer, testSession;
+import 'store_test.dart' show fixtureCatalog, fixtureServer, testSession;
 
 Map<String, dynamic> homeJson({int questions = 30, String daily = 'belum', int streak = 3}) => {
       'daily': daily,
@@ -196,14 +200,47 @@ void main() {
     expect(cleanExplain('Relief valve membatasi tekanan.'), 'Relief valve membatasi tekanan.');
   });
 
-  test('a quiz picture covers words but keeps callout numbers', () {
-    const text = '3. Main relief valve\n12';
+  test('a quiz picture covers words and the legend but keeps callout numbers', () {
+    const text = '3. Main relief valve\n12\n(35)';
     final rects = [for (var i = 0; i < text.length; i++) PdfRect(i * 10.0, 100, i * 10.0 + 9, 90)];
-    final boxes = wordsToCover(text, rects);
-    // "Main", "relief", "valve"; not "3." and not "12".
-    expect(boxes.length, 3);
-    expect(boxes.first.left, 30);
-    expect(boxes.first.right, 69);
+    final parts = quizPageText(text, rects);
+    // "3." (legend line), "Main", "relief", "valve"; not "12" and not "(35)".
+    expect(parts.cover.length, 4);
+    expect(parts.cover[1].left, 30);
+    expect(parts.cover[1].right, 69);
+    expect([for (final n in parts.numbers) n.text], ['12', '35']);
+    expect(calloutOf('Pada gambar Pilot manifold, komponen nomor 33 adalah?'), '33');
+    expect(calloutOf('Komponen (26) adalah?'), '26');
+    expect(calloutOf('Komponen ini adalah?'), isNull);
+  });
+
+  test('a quiz picture keeps only the drawing that holds the asked number', () {
+    // A 200x300 white page: text-like bar at top, drawing A (left, middle),
+    // drawing B (right, middle), a bar at the bottom.
+    const w = 200, h = 300;
+    final rgba = Uint8List(w * h * 4)..fillRange(0, w * h * 4, 255);
+    void fill(int l, int t, int r, int b) {
+      for (var y = t; y < b; y++) {
+        for (var x = l; x < r; x++) {
+          final i = (y * w + x) * 4;
+          rgba[i] = rgba[i + 1] = rgba[i + 2] = 0;
+        }
+      }
+    }
+
+    fill(10, 10, 190, 20);
+    fill(20, 100, 80, 180);
+    fill(120, 110, 180, 170);
+    fill(10, 280, 190, 290);
+    final a = autoCrop(rgba, w, h, [const Rect.fromLTWH(50, 120, 6, 6)]);
+    expect(a.left, lessThan(20));
+    expect(a.right, lessThan(100));
+    expect(a.top, greaterThan(80));
+    expect(a.bottom, lessThan(200));
+    final b = autoCrop(rgba, w, h, [const Rect.fromLTWH(150, 140, 6, 6)]);
+    expect(b.left, greaterThan(100));
+    // No number found: the biggest drawing.
+    expect(autoCrop(rgba, w, h, const []).right, lessThan(100));
   });
 
   testWidgets('Draf: job progress, curator score, approve all that passed', (tester) async {
@@ -255,6 +292,48 @@ void main() {
     await settle(tester);
     expect(approved, ['q1', 'q2']);
     expect(find.text('2 soal diterbitkan'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
+
+  testWidgets('Atur gambar opens on the drawing of the asked number and sends the chosen part', (tester) async {
+    final sent = <String, Uint8List>{};
+    final client = MockClient((request) async {
+      if (request.method == 'PUT') sent[request.url.path] = request.bodyBytes;
+      return http.Response('{"ok":true}', 200);
+    });
+    final store = await openStore(tester, client, admin: true);
+    // A white 200x300 page with two drawings; the number 7 sits on the right one.
+    late QuizPage page;
+    await tester.runAsync(() async {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder)..drawRect(const Rect.fromLTWH(0, 0, 200, 300), Paint()..color = Colors.white);
+      canvas.drawRect(const Rect.fromLTRB(20, 100, 80, 180), Paint()..color = Colors.black);
+      canvas.drawRect(const Rect.fromLTRB(120, 110, 180, 170), Paint()..color = Colors.black);
+      final image = await recorder.endRecording().toImage(200, 300);
+      final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      page = QuizPage(image, data!.buffer.asUint8List(), [(text: '7', box: const Rect.fromLTWH(150, 140, 6, 6))]);
+    });
+    final file = Catalog.fromJson(fixtureCatalog()).units.single.files.single;
+    final q = QuizQuestion({...question('q9'), 'type': 'gambar', 'prompt': 'Pada gambar valve, komponen nomor 7 adalah?'});
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(home: QuizCropScreen(api: QuizApi(store, client), file: file, question: q, page: () async => page)),
+    ));
+    await settle(tester);
+    expect(find.text('Atur gambar'), findsOneWidget);
+    // Already the automatic choice: nothing to reset to.
+    expect(tester.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Otomatis')).onPressed, isNull);
+    await tester.tap(find.text('Simpan'));
+    await settle(tester);
+    final png = sent['/admin/quiz/image/q9'];
+    expect(png, isNotNull);
+    late ui.Image cut;
+    await tester.runAsync(() async => cut = (await (await ui.instantiateImageCodec(png!)).getNextFrame()).image);
+    // Only the right drawing (60 px) and its margin, not the whole page.
+    expect(cut.width, lessThan(90));
+    expect(cut.height, lessThan(110));
+    expect(QuizApi.imageVersion('q9'), 1);
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(() async => store.dispose());
   });

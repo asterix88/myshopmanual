@@ -68,7 +68,7 @@ async function generate(env: QuizEnv, b: Record<string, unknown>, by: string): P
   const reviewed = await curate(ask, out.drafts, text);
 
   const db = quiz.d1(env.QUIZ);
-  const saved: { id: string; type: string }[] = [];
+  const saved: { id: string; type: string; callout: string | null }[] = [];
   for (const q of reviewed.kept) {
     const check = selfCheck(q, text);
     const id = await quiz.addQuestion(db, q, {
@@ -80,13 +80,15 @@ async function generate(env: QuizEnv, b: Record<string, unknown>, by: string): P
       curator_note: q.note,
       passed: check.ok && q.score !== null && q.score >= PASS_SCORE,
     });
-    saved.push({ id, type: q.type });
+    saved.push({ id, type: q.type, callout: q.callout ?? null });
   }
   return json({
     ok: true,
     saved: saved.length,
     ids: saved.map((s) => s.id),
     pictures: saved.filter((s) => s.type === "gambar").map((s) => s.id),
+    // The asked number of each picture question, so the app can cut out its drawing.
+    callouts: Object.fromEntries(saved.filter((s) => s.type === "gambar" && s.callout).map((s) => [s.id, s.callout])),
     skipped: out.skipped,
     dropped: reviewed.dropped,
   });

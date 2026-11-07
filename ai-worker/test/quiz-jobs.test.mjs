@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import * as quiz from "../src/quiz-db.ts";
-import { cleanExplain, curate, planPages, selfCheck, wantedFor, writeQuestions } from "../src/quiz-ai.ts";
+import { cleanExplain, curate, stripCallouts, planPages, selfCheck, wantedFor, writeQuestions } from "../src/quiz-ai.ts";
 import { createJob, listJobs, mixFrom, runJobs, targets, wantedForPage } from "../src/quiz-jobs.ts";
 
 function fresh() {
@@ -199,4 +199,14 @@ test("explanations start with the fact", () => {
   assert.equal(cleanExplain("Menurut manual, relief valve membuka pada 34,8 MPa."), "Relief valve membuka pada 34,8 MPa.");
   assert.equal(cleanExplain("Halaman ini menjelaskan: pompa diatur oleh PC valve."), "Pompa diatur oleh PC valve.");
   assert.equal(cleanExplain("Relief valve membatasi tekanan."), "Relief valve membatasi tekanan.");
+});
+
+test("pg and bs questions lose the drawing's callout numbers", () => {
+  const q = stripCallouts({ type: "pg", prompt: "Dari mana oli pilot menuju pilot manifold (35) berasal?", choices: ["Pilot pump (39)", "Pilot accumulator (31)"], answer: 0, explain: "Oli dari pilot pump (39) mensuplai pilot manifold (35)." });
+  assert.equal(q.prompt, "Dari mana oli pilot menuju pilot manifold berasal?");
+  assert.deepEqual(q.choices, ["Pilot pump", "Pilot accumulator"]);
+  assert.equal(q.explain, "Oli dari pilot pump mensuplai pilot manifold.");
+  const pic = stripCallouts({ type: "gambar", prompt: "Komponen nomor (3) adalah?", choices: ["A", "B"], answer: 0, explain: "" });
+  assert.equal(pic.prompt, "Komponen nomor (3) adalah?");
+  assert.match(selfCheck({ type: "pg", page: 4, prompt: "Pada gambar, part ini?", choices: ["A", "B"], answer: 0, explain: "" }, "A").note, /gambar/);
 });
