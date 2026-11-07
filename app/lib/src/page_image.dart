@@ -382,7 +382,9 @@ List<({String text, PdfRect box})> quizLabels(String text, List<PdfRect> rects) 
     final gapX = math.max(a.left, b.left) - math.min(a.right, b.right);
     if (overlapY > 0.5 * math.min(a.top - a.bottom, b.top - b.bottom)) return gapX < 0.9 * h; // same line
     final gapY = math.max(a.bottom, b.bottom) - math.min(a.top, b.top);
-    return gapY < 0.6 * h && gapX < 0.3 * h; // lines under each other
+    // Lines under each other: char boxes are tight, so a short word under a
+    // tall one ("Control" / "pump") leaves almost a full line height.
+    return gapY < 1.0 * h && gapX < 0.3 * h;
   }
 
   for (var i = 0; i < words.length; i++) {
