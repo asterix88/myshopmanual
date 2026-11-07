@@ -24,7 +24,7 @@ n = tp.count_chars()
 text = "".join(chr(raw.FPDFText_GetUnicode(tp, i)) for i in range(n))
 print("chars", n, "text len", len(text))
 boxes = [tp.get_charbox(i) for i in range(n)]  # (l, b, r, t)
-for i in range(0, min(n, 400)):
+for i in range(0, min(n, 2000)):
     print(i, repr(text[i]), [round(v, 1) for v in boxes[i]])
 scale = 1600 / max(w, h)
 img = page.render(scale=scale).to_pil().convert("RGB")
