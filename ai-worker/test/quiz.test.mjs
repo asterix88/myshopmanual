@@ -9,7 +9,7 @@ import { runNightly } from "../src/quiz-cron.ts";
 
 function fresh() {
   const d = new DatabaseSync(":memory:");
-  for (const file of ["0001_quiz.sql", "0002_quiz_jobs.sql"]) {
+  for (const file of ["0001_quiz.sql", "0002_quiz_jobs.sql", "0003_quiz_image_edit.sql"]) {
     d.exec(readFileSync(new URL(`../migrations/${file}`, import.meta.url), "utf8"));
   }
   const run = (sql, b) => d.prepare(sql).run(...b.map((v) => (v === undefined ? null : v)));
@@ -276,4 +276,17 @@ test("a labelled photo's letter takes the place of [X] when its picture is saved
   // Drawn again later: the letter is already there; nothing else changes.
   assert.equal(await quiz.setImage(db, "L1", "quiz/img/b.png", NOW, "C"), true);
   assert.equal((await db.first("SELECT image FROM question WHERE id = 'L1'")).image, "quiz/img/b.png");
+  // Edited in "Atur gambar": the asked label is now E, and the question says so.
+  assert.equal(await quiz.setImage(db, "L1", "quiz/img/c.png", NOW, "E"), true);
+  assert.equal((await db.first("SELECT prompt FROM question WHERE id = 'L1'")).prompt, "Pada foto pompa, komponen bertanda E adalah?");
+  // The editor's data comes back with the question.
+  const edit = { v: 1, crop: [0, 0, 100, 50], labels: [{ box: [1, 2, 3, 4], text: "PSV" }] };
+  assert.equal(await quiz.setImageEdit(db, "L1", edit), true);
+  assert.deepEqual((await quiz.questionRow(db, "L1")).image_edit, edit);
+  assert.equal(await quiz.setImageEdit(db, "nope", edit), false);
+  // The admin rewrites the question: the [X] text is dropped with it.
+  const row = await quiz.questionRow(db, "L1");
+  await quiz.decide(db, "L1", "ubah", "ADM", { ...row, prompt: "Komponen bertanda E pada foto adalah?" }, NOW);
+  assert.equal(await quiz.setImage(db, "L1", "quiz/img/d.png", NOW, "B"), true);
+  assert.equal((await db.first("SELECT prompt FROM question WHERE id = 'L1'")).prompt, "Komponen bertanda E pada foto adalah?");
 });
