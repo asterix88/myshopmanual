@@ -224,7 +224,8 @@ test("nightly: rank change, hard questions flagged, old answers removed", async 
 test("quiz statistics: players, weak topics, hard questions, never played", async () => {
   const { quizStats, questionStats } = await import("../src/quiz-stats.ts");
   const db = fresh();
-  await seed(db, 12);
+  // One set's worth, so both play every question and each has 2 answers.
+  await seed(db, 10);
   for (const who of [ali, budi]) await quiz.ensureUser(db, who, () => 0.1);
   await play(db, ali, await quiz.startSession(db, ali, "harian", null, { now: NOW }), { wrong: 2 });
   await play(db, budi, await quiz.startSession(db, budi, "harian", null, { now: NOW }), { wrong: 6 });
