@@ -109,7 +109,11 @@ Future<Uint8List> _render(PdfPage pdfPage, String region, double longest) async 
 /// valve") does not give the answer away. [image] is the whole page; the
 /// question's picture is a part of it ([autoCrop], or the admin's own box).
 class QuizPage {
-  QuizPage(this.image, this.rgba, this.numbers);
+  QuizPage(this.image, this.rgba, this.numbers, {this.sharp});
+
+  /// Draws a part of the page again at a size that stays sharp when zoomed;
+  /// null in tests, where [png] cuts it from [image].
+  final Future<Uint8List> Function(ui.Rect crop)? sharp;
 
   final ui.Image image;
 
@@ -122,8 +126,11 @@ class QuizPage {
   int get width => image.width;
   int get height => image.height;
 
-  /// The question's picture: [crop] of the page as a PNG.
+  /// The question's picture: [crop] (in [image]'s pixels) of the page as a
+  /// PNG, drawn again from the manual so a small drawing stays sharp.
   Future<Uint8List> png(ui.Rect crop) async {
+    final sharp = this.sharp;
+    if (sharp != null) return sharp(crop);
     final r = crop.intersect(ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()));
     final w = math.max(1, r.width.round());
     final h = math.max(1, r.height.round());
@@ -148,17 +155,28 @@ class QuizPage {
 }
 
 /// Draws [page] of [file] for quiz pictures (see [QuizPage]).
-Future<QuizPage> renderQuizPage(AppStore store, ManualFile file, int page, {double longest = 1600}) =>
+/// [open] replaces opening [file] (tests).
+Future<QuizPage> renderQuizPage(AppStore store, ManualFile file, int page,
+        {double longest = 1600, Future<PdfDocument> Function()? open}) =>
     _oneAtATime(() async {
       Diagnostics.log('quiz picture ${file.key} p$page');
       PdfDocument? document;
       try {
-        document = await _open(store, file);
+        document = await (open?.call() ?? _open(store, file));
         final pdfPage = await _loadPage(document, page);
         final scale = longest / math.max(pdfPage.width, pdfPage.height);
         final width = (pdfPage.width * scale).round();
         final height = (pdfPage.height * scale).round();
-        final rendered = await pdfPage.render(width: width, height: height, backgroundColor: 0xffffffff);
+        // fullWidth/fullHeight say how big the whole page is drawn; without
+        // them PDFium draws it at 1 pixel per point in the corner, and the
+        // word boxes (scaled) land on the drawing.
+        final rendered = await pdfPage.render(
+          width: width,
+          height: height,
+          fullWidth: width.toDouble(),
+          fullHeight: height.toDouble(),
+          backgroundColor: 0xffffffff,
+        );
         if (rendered == null) throw StateError('page $page could not be drawn');
         final ui.Image picture;
         try {
@@ -168,7 +186,7 @@ Future<QuizPage> renderQuizPage(AppStore store, ManualFile file, int page, {doub
         }
         final text = await pdfPage.loadText();
         ui.Rect toPixels(PdfRect r) => ui.Rect.fromLTRB(
-            r.left * scale - 1, (pdfPage.height - r.top) * scale - 1, r.right * scale + 1, (pdfPage.height - r.bottom) * scale + 1);
+            r.left * scale - 2, (pdfPage.height - r.top) * scale - 2, r.right * scale + 2, (pdfPage.height - r.bottom) * scale + 2);
         final parts = quizPageText(text?.fullText ?? '', text?.charRects ?? const []);
         final recorder = ui.PictureRecorder();
         final canvas = ui.Canvas(recorder)..drawImage(picture, ui.Offset.zero, ui.Paint());
@@ -183,8 +201,72 @@ Future<QuizPage> renderQuizPage(AppStore store, ManualFile file, int page, {doub
           covered.dispose();
           throw StateError('page $page could not be read');
         }
-        return QuizPage(covered, data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-            [for (final n in parts.numbers) (text: n.text, box: toPixels(n.box))]);
+        final pdfWidth = pdfPage.width;
+        final pdfHeight = pdfPage.height;
+        return QuizPage(
+          covered,
+          data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+          [for (final n in parts.numbers) (text: n.text, box: toPixels(n.box))],
+          sharp: (crop) => _sharpQuizPicture(store, file, page, crop, scale, pdfWidth, pdfHeight, parts.cover, open: open),
+        );
+      } finally {
+        await document?.dispose();
+      }
+    });
+
+/// [crop] of a quiz page (pixels at [scale]) drawn again so its longest side
+/// is about [longest] pixels, with the same words covered.
+Future<Uint8List> _sharpQuizPicture(AppStore store, ManualFile file, int page, ui.Rect crop, double scale,
+        double pdfWidth, double pdfHeight, List<PdfRect> cover,
+        {double longest = 1400, Future<PdfDocument> Function()? open}) =>
+    _oneAtATime(() async {
+      PdfDocument? document;
+      try {
+        document = await (open?.call() ?? _open(store, file));
+        final pdfPage = await _loadPage(document, page);
+        // Points of the page in the crop; never smaller than the first drawing.
+        final points = math.max(crop.width, crop.height) / scale;
+        final s = math.min(math.max(scale, longest / points), scale * 4);
+        final x = (crop.left / scale * s).round();
+        final y = (crop.top / scale * s).round();
+        final width = math.max(1, (crop.width / scale * s).round());
+        final height = math.max(1, (crop.height / scale * s).round());
+        final rendered = await pdfPage.render(
+          x: x,
+          y: y,
+          width: width,
+          height: height,
+          fullWidth: pdfWidth * s,
+          fullHeight: pdfHeight * s,
+          backgroundColor: 0xffffffff,
+        );
+        if (rendered == null) throw StateError('page $page could not be drawn');
+        final ui.Image picture;
+        try {
+          picture = await rendered.createImage();
+        } finally {
+          rendered.dispose();
+        }
+        final recorder = ui.PictureRecorder();
+        final canvas = ui.Canvas(recorder)..drawImage(picture, ui.Offset.zero, ui.Paint());
+        picture.dispose();
+        final white = ui.Paint()..color = const ui.Color(0xffffffff);
+        for (final r in cover) {
+          canvas.drawRect(
+            ui.Rect.fromLTRB(r.left * s - x - 2, (pdfHeight - r.top) * s - y - 2, r.right * s - x + 2,
+                (pdfHeight - r.bottom) * s - y + 2),
+            white,
+          );
+        }
+        final out = await recorder.endRecording().toImage(width, height);
+        final ByteData? data;
+        try {
+          data = await out.toByteData(format: ui.ImageByteFormat.png);
+        } finally {
+          out.dispose();
+        }
+        if (data == null) throw StateError('quiz picture could not be encoded');
+        return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
       } finally {
         await document?.dispose();
       }

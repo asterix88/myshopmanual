@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -292,6 +293,47 @@ void main() {
     await settle(tester);
     expect(approved, ['q1', 'q2']);
     expect(find.text('2 soal diterbitkan'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
+
+  testWidgets('a quiz picture from a real page: legend covered, only the asked drawing, drawn sharp', (tester) async {
+    Pdfrx.pdfiumModulePath ??= File('build/native_assets/linux/libpdfium.so').absolute.path;
+    Pdfrx.cacheDirectoryPath ??= Directory.systemTemp.createTempSync('pdfcache').path;
+    final client = MockClient((request) async => http.Response('{}', 200));
+    final store = await openStore(tester, client);
+    final file = Catalog.fromJson(fixtureCatalog()).units.single.files.single;
+    late QuizPage page;
+    late ui.Rect crop;
+    late ui.Image cut;
+    await tester.runAsync(() async {
+      // A 596 x 843 pt page: legend at the top, title, a drawing with
+      // callouts 32 and 35, a paragraph at the bottom.
+      page = await renderQuizPage(store, file, 1,
+          open: () => PdfDocument.openFile(File('test/fixtures/quiz_page.pdf').absolute.path));
+      crop = page.autoCropFor('35');
+      cut = (await (await ui.instantiateImageCodec(await page.png(crop))).getNextFrame()).image;
+    });
+    final scale = page.height / 842.88;
+    bool inkAt(double x, double y) {
+      final i = ((y * scale).round() * page.width + (x * scale).round()) * 4;
+      return page.rgba[i] < 200;
+    }
+
+    // The page is drawn full size (not in a corner at 1 px per point).
+    expect(page.height, 1600);
+    // "(17) Swing brake solenoid" at x 45-120 pt, 800 pt from the bottom: covered.
+    expect([for (var x = 45.0; x < 120; x += 1) inkAt(x, 842.88 - 801)].contains(true), isFalse);
+    // The grey drawing stays.
+    expect(inkAt(150, 842.88 - 400), isTrue);
+    // The crop holds the drawing and callout 35, not the legend or the paragraph.
+    expect(crop.top / scale, greaterThan(842.88 - 520));
+    expect(crop.bottom / scale, lessThan(842.88 - 270));
+    expect(crop.left / scale, lessThan(110));
+    expect(crop.right / scale, greaterThan(248));
+    // Drawn again from the PDF: sharper than the page picture's own pixels.
+    expect(math.max(cut.width, cut.height), greaterThan(math.max(crop.width, crop.height) * 1.5));
+    page.dispose();
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(() async => store.dispose());
   });
