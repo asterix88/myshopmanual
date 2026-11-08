@@ -432,4 +432,42 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(() async => store.dispose());
   });
+
+  testWidgets('only quiz played: usage tabs say empty, the Quiz tab still shows', (tester) async {
+    final empty = {...overviewJson(), 'opens': 0, 'ai': 0, 'searches': [], 'people': [], 'manuals': [], 'questions': []};
+    final client = MockClient((request) async => switch (request.url.path) {
+          '/admin/stats' => http.Response(jsonEncode(empty), 200),
+          '/admin/stats/quiz' => http.Response(
+              jsonEncode({'players': 2, 'users': 52, 'correct': 70, 'sets': 3, 'per_section': [], 'topics': [], 'hard': [], 'top': [], 'never': []}),
+              200),
+          _ => http.Response('{}', 404),
+        });
+    late AppStore store;
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer());
+      await store.signIn(testSession(admin: true), refreshNow: false);
+    });
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(theme: buildTheme(dark: false), home: StatsScreen(client: client)),
+    ));
+    Future<void> wait() async {
+      for (var i = 0; i < 5; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+    }
+
+    await wait();
+    expect(find.text('Belum ada pemakaian'), findsOneWidget);
+    final tab = find.descendant(of: find.byType(TabBar), matching: find.text('Quiz'));
+    await tester.ensureVisible(tab);
+    await tester.pumpAndSettle();
+    await tester.tap(tab);
+    await wait();
+    expect(find.text('2/52'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
 }
