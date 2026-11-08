@@ -113,6 +113,36 @@ void main() {
     again.dispose();
   });
 
+  test('a phone left open for days swaps its session and still sends', () async {
+    var fresh = false;
+    var refreshed = 0;
+    final sent = <String>[];
+    final client = MockClient((request) async {
+      switch (request.url.path) {
+        case '/auth/refresh':
+          refreshed++;
+          fresh = true;
+          return http.Response(jsonEncode(testSession(token: 'new').toJson()), 200);
+        case '/stats':
+          // The server takes a session for a day only.
+          if (!fresh || request.headers[sessionHeader] != 'new') {
+            return http.Response(jsonEncode({'error': 'refresh', 'message': 'Sesi perlu diperbarui.'}), 401);
+          }
+          sent.addAll([for (final e in (jsonDecode(request.body) as Map)['events'] as List) (e as Map)['q'] as String]);
+          return http.Response(jsonEncode({'ok': true}), 200);
+      }
+      return fixtureServer().send(http.Request(request.method, request.url)).then(http.Response.fromStream);
+    });
+    final store = await AppStore.open(root: root, client: client);
+    await store.signIn(testSession(), refreshNow: false);
+    store.usage.searched('seal kit', 0);
+    await store.usage.saved;
+    await store.usage.send();
+    expect(refreshed, 1);
+    expect(sent, ['seal kit']);
+    store.dispose();
+  });
+
   test('the phone tells the server its app version', () {
     final json = const DeviceInfo('id', 'HP').toJson();
     expect(json['model'], 'HP');

@@ -138,7 +138,7 @@ class _MyManualAppState extends State<MyManualApp> with WidgetsBindingObserver {
   /// Back after a long time in the background: the login may have run out.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) widget.store.checkSessionExpiry();
+    if (state == AppLifecycleState.resumed) unawaited(widget.store.resumed());
     if (state == AppLifecycleState.paused) {
       widget.store.markActive();
       unawaited(widget.store.usage.send());

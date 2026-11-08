@@ -194,6 +194,7 @@ class AppStore extends ChangeNotifier {
       themeMode = themeChosen ? json['theme'] as String? ?? 'light' : 'light';
       _aiDay = json['ai_day'] as String? ?? '';
       _homeSection = json['home_section'] as String? ?? '';
+      _reportedApp = json['reported_app'] as String? ?? '';
       if (json['convert'] case {'kind': final String kind, 'from': final String from, 'to': final String to}) {
         lastConvert = (kind: kind, from: from, to: to);
       }
@@ -372,6 +373,17 @@ class AppStore extends ChangeNotifier {
     if (session?.expired ?? false) await signOut();
   }
 
+  /// Back in front after time in the background, maybe days: swap an aged
+  /// session and send the usage log, which a cold start would also do.
+  Future<void> resumed() async {
+    await checkSessionExpiry();
+    if (session?.stale ?? false) await renewSession();
+    unawaited(usage.send());
+  }
+
+  /// The app version the server last heard from this phone.
+  String _reportedApp = '';
+
   Future<Session?>? _renewing;
 
   /// Swaps the session for a new one (the server only accepts a day-old
@@ -386,6 +398,10 @@ class AppStore extends ChangeNotifier {
         if (session == null) return null;
         session = fresh;
         await _saveSession();
+        if (_reportedApp != currentApp) {
+          _reportedApp = currentApp;
+          await _save();
+        }
         notifyListeners();
         return fresh;
       } on AuthException catch (e) {
@@ -408,6 +424,7 @@ class AppStore extends ChangeNotifier {
     // Admins test the app; their use is not counted.
     enabled: () => loggedIn && !(session?.admin ?? false),
     section: () => homeSection,
+    renew: () async => await renewSession() != null,
   );
 
   /// Cetok Online's parts stock (its own server), opened from the Home tab.
@@ -471,6 +488,7 @@ class AppStore extends ChangeNotifier {
       'theme_chosen': themeChosen,
       'ai_day': _aiDay,
       if (_homeSection.isNotEmpty) 'home_section': _homeSection,
+      if (_reportedApp.isNotEmpty) 'reported_app': _reportedApp,
       'ai_asked': _aiAsked,
       if (lastConvert case final c?) 'convert': {'kind': c.kind, 'from': c.from, 'to': c.to},
     };
@@ -509,7 +527,9 @@ class AppStore extends ChangeNotifier {
   /// Fetches catalog.json. Offline is normal: the cached catalog stays.
   Future<void> refresh() async {
     await checkSessionExpiry();
-    if (session?.stale ?? false) await renewSession();
+    // A new APK tells the server its version (Kelola karyawan, Statistik)
+    // through the session swap, without waiting for the session to age.
+    if ((session?.stale ?? false) || (session != null && _reportedApp != currentApp)) await renewSession();
     if (serverUrl.isEmpty) {
       online = false;
       lastError = 'Alamat server belum diatur';
