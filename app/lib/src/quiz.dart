@@ -235,7 +235,7 @@ class QuizApi {
     return (published: _int(data['published']), left: [for (final id in data['left'] as List? ?? const []) '$id']);
   }
 
-  /// Sends the picture of a "gambar" question (PNG).
+  /// Sends the picture of a question (PNG), of any type.
   /// [letter]: on a labelled photo, the asked label's letter; the server
   /// puts it in place of "[X]" in the question.
   Future<void> uploadImage(String id, Uint8List png, {String? letter}) async {
@@ -257,6 +257,26 @@ class QuizApi {
       throw AuthException('server', 'Gambar soal gagal dikirim (kode ${response.statusCode}).');
     }
     _images[id] = png;
+    _versions[id] = imageVersion(id) + 1;
+  }
+
+  /// "Hapus gambar": takes the picture off a pg/bs question.
+  Future<void> removeImage(String id) async {
+    final session = store.session;
+    if (session == null) throw AuthException('login', 'Silakan masuk lagi.');
+    final http.Response response;
+    try {
+      response = await client
+          .delete(_base.resolve('/admin/quiz/image/${Uri.encodeComponent(id)}'), headers: {sessionHeader: session.token})
+          .timeout(const Duration(seconds: 25));
+    } on Exception {
+      throw AuthException('network', 'Koneksi terputus');
+    }
+    if (response.statusCode != 200) {
+      throw AuthException('server', 'Gambar gagal dihapus (kode ${response.statusCode}).');
+    }
+    _images.remove(id);
+    _edits.remove(id);
     _versions[id] = imageVersion(id) + 1;
   }
 

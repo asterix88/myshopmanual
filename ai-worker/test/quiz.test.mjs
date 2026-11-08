@@ -290,3 +290,27 @@ test("a labelled photo's letter takes the place of [X] when its picture is saved
   assert.equal(await quiz.setImage(db, "L1", "quiz/img/d.png", NOW, "B"), true);
   assert.equal((await db.first("SELECT prompt FROM question WHERE id = 'L1'")).prompt, "Komponen bertanda E pada foto adalah?");
 });
+
+test("a pg question can get a picture and lose it again; a picture question keeps its own", async () => {
+  const db = fresh();
+  await quiz.addQuestion(
+    db,
+    { section: "TRACK", unit: "PC210", topic: "standar", type: "pg", prompt: "Set pressure safety valve travel motor?", choices: ["27.4 MPa", "41.7 MPa", "34.8 MPa", "3.9 MPa"], answer: 1, explain: "x", manual_id: "pm", page: 206 },
+    { status: "draf", source: "ai", by: "ADM", id: "P1", now: NOW },
+  );
+  await quiz.addQuestion(
+    db,
+    { section: "TRACK", unit: "PC210", topic: "struktur", type: "gambar", prompt: "Komponen nomor 3 adalah?", choices: ["A", "B", "C", "D"], answer: 0, explain: "x", manual_id: "pm", page: 206 },
+    { status: "draf", source: "ai", by: "ADM", id: "G1", now: NOW },
+  );
+  assert.equal(await quiz.setImage(db, "P1", "quiz/img/p.png", NOW), true);
+  assert.equal(await quiz.setImageEdit(db, "P1", { v: 1, crop: [0, 0, 10, 10] }), true);
+  assert.equal((await quiz.questionRow(db, "P1")).image, "quiz/img/p.png");
+  assert.equal(await quiz.removeImage(db, "P1", NOW), true);
+  const row = await quiz.questionRow(db, "P1");
+  assert.equal(row.image, null);
+  assert.equal(row.image_edit, null);
+  await quiz.setImage(db, "G1", "quiz/img/g.png", NOW);
+  assert.equal(await quiz.removeImage(db, "G1", NOW), false);
+  assert.equal((await quiz.questionRow(db, "G1")).image, "quiz/img/g.png");
+});

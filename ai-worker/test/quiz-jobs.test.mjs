@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import * as quiz from "../src/quiz-db.ts";
-import { cleanExplain, curate, stripCallouts, planPages, selfCheck, wantedFor, writeQuestions } from "../src/quiz-ai.ts";
+import { cleanExplain, curate, isRepeat, stripCallouts, planPages, selfCheck, wantedFor, writeQuestions } from "../src/quiz-ai.ts";
 import { createJob, listJobs, mixFrom, runJobs, targets, wantedForPage } from "../src/quiz-jobs.ts";
 
 function fresh() {
@@ -46,15 +46,18 @@ function fakeAsk(calls = []) {
       const list = JSON.parse(user.slice(user.indexOf("Questions:\n") + 11));
       return { reviews: list.map((q) => ({ i: q.i, score: q.prompt.includes("jelek") ? 2 : 8, verdict: q.prompt.includes("jelek") ? "buang" : "lolos", note: "Jelas." })) };
     }
-    const m = /Write \d+ questions: (.*)\./.exec(user);
+    const m = /Write \d+ questions: (.*?)\.(\n|$)/.exec(user);
+    const page = /Manual page (\d+)/.exec(user)?.[1] ?? "0";
+    // Each question about its own thing, so none is a repeat of another.
+    const own = (t, i) => `p${page}${t}${i}a p${page}${t}${i}b p${page}${t}${i}c`;
     const out = [];
     for (const part of m[1].split(", ")) {
       const [n, , , type] = part.split(" ");
       for (let i = 0; i < Number(n); i++) {
         const t = type.replace(/"/g, "");
-        if (t === "gambar") out.push({ type: "gambar", prompt: `Komponen nomor 3 adalah? ${i}`, choices: ["Boom spool", "Main relief valve", "Arm spool", "Safety-suction valve"], answer: 1, explain: "Keterangan nomor 3.", callout: "3" });
-        else if (t === "bs") out.push({ type: "bs", prompt: `Main relief 37.3 MPa ${i}`, choices: ["x"], answer: 0, explain: "Tabel." });
-        else out.push({ type: "pg", prompt: i === 0 ? "Soal jelek" : `Tekanan main relief? ${i}`, choices: ["37.3 MPa", "28.4 MPa", "3.2 MPa", "31.4 MPa"], answer: 0, explain: "Tabel." });
+        if (t === "gambar") out.push({ type: "gambar", prompt: `Komponen nomor 3 adalah? ${own("g", i)}`, choices: ["Boom spool", "Main relief valve", "Arm spool", "Safety-suction valve"], answer: 1, explain: "Keterangan nomor 3.", callout: "3" });
+        else if (t === "bs") out.push({ type: "bs", prompt: `Main relief 37.3 MPa ${own("b", i)}`, choices: ["x"], answer: 0, explain: "Tabel." });
+        else out.push({ type: "pg", prompt: i === 0 ? `Soal jelek ${own("j", i)}` : `Tekanan main relief? ${own("p", i)}`, choices: ["37.3 MPa", "28.4 MPa", "3.2 MPa", "31.4 MPa"], answer: 0, explain: "Tabel." });
       }
     }
     return { questions: out };
@@ -217,4 +220,49 @@ test("self check: a labelled photo question needs its label on the page", () => 
   const q = { ...base, type: "gambar", prompt: "Pada foto pompa PC1250, komponen bertanda [X] adalah?", choices: ["CO NC Valve", "TVC valve", "PSV", "PT"], answer: 0, callout: "CO NC Valve" };
   assert.equal(selfCheck(q, LABELS).ok, true);
   assert.equal(selfCheck({ ...q, choices: ["Main relief", "TVC valve"], callout: "Main relief" }, LABELS).ok, false);
+});
+
+test("a repeat of a question already made is spotted, other questions are not", () => {
+  const made = [
+    { prompt: "Pada safety valve travel motor, gaya apa yang menekan spring sehingga poppet bergerak ke kiri?", answer: "Gaya dari 'Circular area difference between (D1) and (D2) x Pressure'" },
+    { prompt: "Berapa tekanan main relief (power max) PC210-10?", answer: "37.3 MPa" },
+  ];
+  const q = (prompt, choices, answer = 0) => ({ prompt, choices, answer });
+  // The same question in other words.
+  assert.equal(isRepeat(q("Gaya apa yang menekan spring pada safety valve travel motor sehingga poppet bergerak ke kiri?", ["x", "y"]), made), true);
+  // The same right answer and much the same question.
+  assert.equal(isRepeat(q("Tekanan main relief PC210-10 saat power max?", ["37.3 MPa", "28.4 MPa"]), made), true);
+  // Another fact of the same page.
+  assert.equal(isRepeat(q("Ke mana oli bertekanan mengalir saat poppet (1) bergerak?", ["Chamber MA", "Tangki"]), made), false);
+  assert.equal(isRepeat(q("Berapa tekanan swing relief PC210-10?", ["28.4 MPa", "37.3 MPa"]), made), false);
+  // Another value with the same number is still another question.
+  assert.equal(isRepeat(q("Berapa tekanan travel relief?", ["37.3 MPa", "28.4 MPa"]), made), false);
+  // Benar/Salah answers alone do not make a repeat.
+  assert.equal(isRepeat(q("Swing relief 28.4 MPa.", ["Benar", "Salah"]), [{ prompt: "Main relief 37.3 MPa.", answer: "Benar" }]), false);
+});
+
+test("a second job on the same manual tells nyel AI what exists and drops repeats", async () => {
+  const NOW = Date.UTC(2026, 10, 8, 2);
+  const db = fresh();
+  const users = [];
+  // A nyel AI that writes the same question every time.
+  const ask = async (system, user) => {
+    if (system.includes("senior heavy-equipment instructor")) {
+      const list = JSON.parse(user.slice(user.indexOf("Questions:\n") + 11));
+      return { reviews: list.map((x) => ({ i: x.i, score: 8, verdict: "lolos", note: "Jelas." })) };
+    }
+    users.push(user);
+    return { questions: [{ type: "pg", prompt: "Berapa tekanan main relief (power max)?", choices: ["37.3 MPa", "28.4 MPa", "3.2 MPa", "31.4 MPa"], answer: 0, explain: "Tabel." }] };
+  };
+  const job = (n) =>
+    createJob(db, { section: "TRACK", unit: "PC210", manual_id: "sm", title: "SM", topic: "semua", count: 1, mix: { pg: 100, bs: 0, gambar: 0 }, pages: [{ page: 402, kind: "teks", topic: "standar", text: TABLE }] }, "ADM", NOW + n);
+  await job(0);
+  await runJobs(db, ask, NOW + 60_000, () => NOW);
+  assert.equal((await db.all("SELECT id FROM question")).length, 1);
+  assert.doesNotMatch(users[0], /Already made/);
+  await job(1);
+  await runJobs(db, ask, NOW + 60_000, () => NOW + 10);
+  // Told about the first one, and its repeat thrown away.
+  assert.match(users[1], /Already made from this page[^]*Berapa tekanan main relief/);
+  assert.equal((await db.all("SELECT id FROM question")).length, 1);
 });

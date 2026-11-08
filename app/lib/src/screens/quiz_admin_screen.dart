@@ -175,6 +175,33 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
     }
   }
 
+  /// "Hapus gambar" on a pg/bs question.
+  Future<void> _removePicture(AdminQuestion q) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus gambar?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await widget.api.removeImage(q.question.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gambar dihapus')));
+      QuizApi.changed.value++;
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
+  }
+
   /// Draws a picture question's page with its words covered and sends it.
   Future<void> _picture(AdminQuestion q) async {
     final store = StoreScope.read(context);
@@ -308,6 +335,7 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
                 onAction: (action) => switch (action) {
                   'ubah' => _edit(q),
                   'gambar' => _crop(q),
+                  'hapus_gambar' => _removePicture(q),
                   _ => _decide(q, action),
                 },
               ),
@@ -438,6 +466,28 @@ class _BulkCard extends StatelessWidget {
   }
 }
 
+/// A small text button with an icon, under a question's picture.
+class _LinkButton extends StatelessWidget {
+  const _LinkButton({required this.icon, required this.label, required this.onPressed, this.color});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => TextButton.icon(
+        style: TextButton.styleFrom(
+          foregroundColor: color,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          visualDensity: VisualDensity.compact,
+        ),
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+      );
+}
+
 class _QuestionCard extends StatelessWidget {
   const _QuestionCard({required this.item, required this.api, required this.onAction});
 
@@ -475,23 +525,31 @@ class _QuestionCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(q.prompt, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.4)),
-          if (q.type == 'gambar') ...[
+          if (q.type == 'gambar' || q.image != null) ...[
             const SizedBox(height: 8),
             q.image == null
                 ? Text('Gambar dibuat dari halaman ${q.page} saat soal disetujui.',
                     style: TextStyle(fontSize: 12, color: AppColors.muted))
                 : QuizPicture(
                     key: ValueKey('${q.id}#${QuizApi.imageVersion(q.id)}'), api: api, questionId: q.id, height: 160),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), visualDensity: VisualDensity.compact),
-                onPressed: () => onAction('gambar'),
-                icon: const Icon(Icons.crop, size: 18),
-                label: const Text('Atur gambar'),
-              ),
-            ),
           ],
+          Wrap(
+            spacing: 4,
+            children: [
+              _LinkButton(
+                icon: q.image == null && q.type != 'gambar' ? Icons.add_photo_alternate_outlined : Icons.crop,
+                label: q.image == null && q.type != 'gambar' ? 'Tambah gambar' : 'Atur gambar',
+                onPressed: () => onAction('gambar'),
+              ),
+              if (q.image != null && q.type != 'gambar')
+                _LinkButton(
+                  icon: Icons.delete_outline,
+                  label: 'Hapus gambar',
+                  color: AppColors.danger,
+                  onPressed: () => onAction('hapus_gambar'),
+                ),
+            ],
+          ),
           const SizedBox(height: 8),
           for (final (i, c) in q.choices.indexed)
             Padding(

@@ -344,7 +344,7 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
               ),
               const SizedBox(height: 14),
               Text(q.prompt, style: const TextStyle(fontSize: 17, height: 1.45, fontWeight: FontWeight.w600)),
-              if (q.type == 'gambar' && q.image != null) ...[
+              if (q.image != null) ...[
                 const SizedBox(height: 12),
                 QuizPicture(api: _api, questionId: q.id),
               ],
