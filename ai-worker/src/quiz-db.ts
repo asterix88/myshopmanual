@@ -819,3 +819,18 @@ export async function tidy(db: Db, now = Date.now()): Promise<{ log: number; boa
   );
   return { log, boards, sessions };
 }
+
+/// The questions already made from [manualId] (any status, rejected too, so
+/// a new draft does not bring one back), for the repeat check.
+export async function madeFrom(db: Db, manualId: string): Promise<{ page: number; prompt: string; answer: string }[]> {
+  const rows = await db.all("SELECT page, prompt, choices, answer FROM question WHERE manual_id = ?", manualId);
+  return rows.map((r) => {
+    let choices: string[] = [];
+    try {
+      choices = JSON.parse(String(r.choices));
+    } catch {
+      // no choices
+    }
+    return { page: Number(r.page), prompt: String(r.prompt), answer: String(choices[Number(r.answer)] ?? "") };
+  });
+}

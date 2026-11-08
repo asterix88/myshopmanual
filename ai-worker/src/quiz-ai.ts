@@ -112,11 +112,14 @@ export function wantedFor(kind: string, count: number): Wanted {
 }
 
 /// Asks for questions from one page. [wanted] says how many of each type.
+/// [avoid]: questions already made from this page, which the new ones must
+/// not repeat.
 export async function writeQuestions(
   ask: Ask,
   base: Omit<QuestionInput, "type" | "prompt" | "choices" | "answer" | "explain">,
   text: string,
   wanted: Wanted,
+  avoid: string[] = [],
 ): Promise<{ drafts: Draft[]; skipped: string[] } | null> {
   const total = wanted.pg + wanted.bs + wanted.gambar;
   const parts = [
@@ -126,7 +129,11 @@ export async function writeQuestions(
   ].filter(Boolean);
   const reply = await ask(
     WRITE_PROMPT,
-    `Unit: ${base.unit ?? "umum (semua unit)"}\nTopic: ${TOPIC_NAMES[base.topic] ?? base.topic}\nWrite ${total} questions: ${parts.join(", ")}.\n\nManual page ${base.page}:\n${text.slice(0, MAX_PAGE_TEXT)}`,
+    `Unit: ${base.unit ?? "umum (semua unit)"}\nTopic: ${TOPIC_NAMES[base.topic] ?? base.topic}\nWrite ${total} questions: ${parts.join(", ")}.${
+      avoid.length
+        ? `\n\nAlready made from this page (do NOT ask the same fact again, not even in other words; ask about other facts on the page, or write fewer):\n${avoid.slice(0, 30).map((q) => `- ${q.slice(0, 200)}`).join("\n")}`
+        : ""
+    }\n\nManual page ${base.page}:\n${text.slice(0, MAX_PAGE_TEXT)}`,
   );
   if (!reply || !Array.isArray(reply.questions)) return null;
   const drafts: Draft[] = [];
@@ -297,4 +304,45 @@ export function cleanExplain(text: string): string {
     .replace(/^(menurut|berdasarkan)\s+(halaman|manual|teks)(\s+(ini|tersebut|sumber))?[,:]?\s+/i, "")
     .replace(/^(halaman|manual|teks)(\s+(ini|tersebut|sumber))?\s+(menyatakan|menyebutkan|menjelaskan|mengatakan)(\s+bahwa)?[,:]?\s+/i, "");
   return out ? out[0].toUpperCase() + out.slice(1) : out;
+}
+
+// ---- Dobel ----
+
+const STOP = new Set(
+  "yang dan atau dari pada untuk dengan ini itu adalah apa berapa dalam pada ke di the of and or to in on for is are what which how a an sebagai saat ketika jika agar oleh akan tersebut berikut manakah benar salah".split(" "),
+);
+
+function words(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9.,/ ]+/g, " ")
+      .split(/[\s,/]+/)
+      .map((w) => w.replace(/^\.+|\.+$/g, ""))
+      .filter((w) => w.length >= 2 && !STOP.has(w)),
+  );
+}
+
+/// Words in both over words in either (Jaccard).
+function overlap(a: Set<string>, b: Set<string>): number {
+  if (!a.size || !b.size) return 0;
+  let same = 0;
+  for (const w of a) if (b.has(w)) same++;
+  return same / (a.size + b.size - same);
+}
+
+/// A question already made, as [isRepeat] compares it.
+export type Made = { prompt: string; answer: string };
+
+/// The question asks what one of [made] already asks: nearly all the same
+/// words, or the same right answer with most of the same words.
+export function isRepeat(q: { prompt: string; choices: string[]; answer: number }, made: Made[]): boolean {
+  const p = words(q.prompt);
+  const answer = (q.choices[q.answer] ?? "").trim().toLowerCase();
+  for (const m of made) {
+    const o = overlap(p, words(m.prompt));
+    if (o >= 0.7) return true;
+    if (answer && answer === m.answer.trim().toLowerCase() && answer !== "benar" && answer !== "salah" && o >= 0.6) return true;
+  }
+  return false;
 }

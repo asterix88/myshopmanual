@@ -22,7 +22,7 @@
 // on that page and writes what it found in check_note.
 
 import { requireAdmin } from "./auth";
-import { askWith, curate, planPages, selfCheck, wantedFor, writeQuestions, MAX_PAGE_TEXT } from "./quiz-ai.ts";
+import { askWith, curate, isRepeat, planPages, selfCheck, wantedFor, writeQuestions, MAX_PAGE_TEXT } from "./quiz-ai.ts";
 import * as quiz from "./quiz-db.ts";
 import { createJob, listJobs, mixFrom, MAX_JOB_PAGES, MAX_JOB_QUESTIONS, PASS_SCORE, targets, type JobPage } from "./quiz-jobs.ts";
 import { questionProblem, STATUSES, TOPICS, type QuestionInput } from "./quiz-rules.ts";
@@ -63,12 +63,20 @@ async function generate(env: QuizEnv, b: Record<string, unknown>, by: string): P
   const kind = ["pg", "bs", "gambar"].includes(String(b.kind)) ? String(b.kind) : "campur";
 
   const ask = askWith(env);
-  const { image: _image, type: _type, prompt: _p, choices: _c, answer: _a, explain: _e, ...where } = base;
-  const out = await writeQuestions(ask, where, text, wantedFor(kind, count));
-  if (!out) return json({ error: "upstream", message: "nyel AI belum bisa membuat soal sekarang. Coba lagi nanti." }, 502);
-  const reviewed = await curate(ask, out.drafts, text);
-
   const db = quiz.d1(env.QUIZ);
+  const { image: _image, type: _type, prompt: _p, choices: _c, answer: _a, explain: _e, ...where } = base;
+  // Not again what was made from this manual before.
+  const made = await quiz.madeFrom(db, base.manual_id);
+  const avoid = made.filter((m) => m.page === base.page).map((m) => m.prompt);
+  const out = await writeQuestions(ask, where, text, wantedFor(kind, count), avoid);
+  if (!out) return json({ error: "upstream", message: "nyel AI belum bisa membuat soal sekarang. Coba lagi nanti." }, 502);
+  const fresh = out.drafts.filter((q) => {
+    if (isRepeat(q, made)) return false;
+    made.push({ page: base.page, prompt: q.prompt, answer: q.choices[q.answer] ?? "" });
+    return true;
+  });
+  const reviewed = await curate(ask, fresh, text);
+
   const saved: { id: string; type: string; callout: string | null }[] = [];
   for (const q of reviewed.kept) {
     const check = selfCheck(q, text);
@@ -91,7 +99,7 @@ async function generate(env: QuizEnv, b: Record<string, unknown>, by: string): P
     // The asked number of each picture question, so the app can cut out its drawing.
     callouts: Object.fromEntries(saved.filter((s) => s.type === "gambar" && s.callout).map((s) => [s.id, s.callout])),
     skipped: out.skipped,
-    dropped: reviewed.dropped,
+    dropped: reviewed.dropped + out.drafts.length - fresh.length,
   });
 }
 

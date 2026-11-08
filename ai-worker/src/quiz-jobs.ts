@@ -11,8 +11,8 @@
 //    when enough questions are kept or the pages run out.
 // 4. The admin approves in Kelola soal quiz > Draf.
 
-import { curate, MAX_PAGE_TEXT, selfCheck, writeQuestions, type Ask, type Wanted } from "./quiz-ai.ts";
-import { addQuestion, DEFAULT_SITE, type Db } from "./quiz-db.ts";
+import { curate, isRepeat, MAX_PAGE_TEXT, selfCheck, writeQuestions, type Ask, type Wanted } from "./quiz-ai.ts";
+import { addQuestion, DEFAULT_SITE, madeFrom, type Db } from "./quiz-db.ts";
 import { TOPICS } from "./quiz-rules.ts";
 
 export const MAX_JOB_QUESTIONS = 50;
@@ -194,13 +194,26 @@ async function runOne(db: Db, ask: Ask, job: Record<string, unknown>, deadline: 
         manual_id: String(job.manual_id),
         page: p.page,
       };
-      const out = await writeQuestions(ask, base, p.text, wanted);
+      // Questions made before from this manual (earlier drafts, this job's
+      // pages so far): the AI is told this page's, and repeats are dropped.
+      const made = await madeFrom(db, String(job.manual_id));
+      const avoid = made.filter((m) => m.page === p.page).map((m) => m.prompt);
+      const out = await writeQuestions(ask, base, p.text, wanted, avoid);
       if (!out) {
         failures++;
       } else {
         written = out.drafts.length + out.skipped.length;
         dropped += out.skipped.length;
-        const reviewed = await curate(ask, out.drafts, p.text);
+        const fresh = [];
+        for (const q of out.drafts) {
+          if (isRepeat(q, made)) {
+            dropped++;
+            continue;
+          }
+          fresh.push(q);
+          made.push({ page: p.page, prompt: q.prompt, answer: q.choices[q.answer] ?? "" });
+        }
+        const reviewed = await curate(ask, fresh, p.text);
         dropped += reviewed.dropped;
         for (const q of reviewed.kept) {
           const check = selfCheck(q, p.text);
