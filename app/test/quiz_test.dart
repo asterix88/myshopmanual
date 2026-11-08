@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -569,6 +570,28 @@ void main() {
     expect(again.letter, psvLetter);
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(() async => store.dispose());
+  });
+
+  testWidgets('a big photo is drawn smaller until its PNG fits the server (2 MB)', (tester) async {
+    late Uint8List png;
+    late ui.Image back;
+    await tester.runAsync(() async {
+      // 1600 x 900 of noise: as a PNG far over 2 MB.
+      final random = math.Random(1);
+      final pixels = Uint8List(1600 * 900 * 4);
+      for (var i = 0; i < pixels.length; i++) {
+        pixels[i] = i % 4 == 3 ? 255 : random.nextInt(256);
+      }
+      final done = Completer<ui.Image>();
+      ui.decodeImageFromPixels(pixels, 1600, 900, ui.PixelFormat.rgba8888, done.complete);
+      final page = QuizPage(await done.future, pixels, const []);
+      png = await page.png(const Rect.fromLTWH(0, 0, 1600, 900));
+      back = (await (await ui.instantiateImageCodec(png)).getNextFrame()).image;
+      page.dispose();
+    });
+    expect(png.length, lessThanOrEqualTo(1500000));
+    expect(back.width, lessThan(1600));
+    expect(back.width / back.height, closeTo(16 / 9, 0.01));
   });
 
   testWidgets('Atur gambar v2: leaving with changes asks first', (tester) async {
