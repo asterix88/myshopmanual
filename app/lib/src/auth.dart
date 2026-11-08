@@ -176,6 +176,10 @@ class AppConfig {
 
 /// What the app sends about this phone: a random id made once, and the
 /// model name the admin sees.
+/// This APK's version as the server keeps it: "1.0.0 (57)"; empty in a
+/// local build.
+final String currentApp = appVersion.isEmpty ? '' : (buildNumber.isEmpty ? appVersion : '$appVersion ($buildNumber)');
+
 class DeviceInfo {
   const DeviceInfo(this.id, this.model);
   final String id;
@@ -186,7 +190,7 @@ class DeviceInfo {
   Map<String, String> toJson() => {
         'id': id,
         'model': model,
-        if (appVersion.isNotEmpty) 'app': buildNumber.isEmpty ? appVersion : '$appVersion ($buildNumber)',
+        if (currentApp.isNotEmpty) 'app': currentApp,
       };
 
   static String newId() {

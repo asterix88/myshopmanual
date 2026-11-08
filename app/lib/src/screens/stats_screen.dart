@@ -209,16 +209,23 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
         ),
       );
     }
-    if (data.isEmpty) {
-      return _Empty(caption: '${_filter.section.isEmpty ? 'Semua section' : _filter.section} · ${_filter.periodLabel}');
-    }
     // With one section chosen, rows need not say it again.
     final showSection = _filter.section.isEmpty;
+    // Quiz plays are kept apart from the usage log, so the Quiz tab has its
+    // own numbers even when nobody opened a manual, searched or asked.
+    Widget used(Widget tab) => data.isEmpty
+        ? ListView(children: [
+            SizedBox(
+              height: 360,
+              child: _Empty(caption: '${_filter.section.isEmpty ? 'Semua section' : _filter.section} · ${_filter.periodLabel}'),
+            ),
+          ])
+        : tab;
     final views = [
-      _ManualTab(data: data, onManual: _showManual),
-      _AiTab(data: data, onQuestion: _showAnswer, showSection: showSection),
-      _SearchTab(data: data, onMissing: _showSearch),
-      _PeopleTab(data: data, onPerson: _openPerson, onInactive: _openInactive, showSection: showSection),
+      used(_ManualTab(data: data, onManual: _showManual)),
+      used(_AiTab(data: data, onQuestion: _showAnswer, showSection: showSection)),
+      used(_SearchTab(data: data, onMissing: _showSearch)),
+      used(_PeopleTab(data: data, onPerson: _openPerson, onInactive: _openInactive, showSection: showSection)),
       _QuizTab(
         key: ValueKey(_filter.key),
         api: _api,

@@ -113,6 +113,36 @@ void main() {
     again.dispose();
   });
 
+  test('a phone left open for days swaps its session and still sends', () async {
+    var fresh = false;
+    var refreshed = 0;
+    final sent = <String>[];
+    final client = MockClient((request) async {
+      switch (request.url.path) {
+        case '/auth/refresh':
+          refreshed++;
+          fresh = true;
+          return http.Response(jsonEncode(testSession(token: 'new').toJson()), 200);
+        case '/stats':
+          // The server takes a session for a day only.
+          if (!fresh || request.headers[sessionHeader] != 'new') {
+            return http.Response(jsonEncode({'error': 'refresh', 'message': 'Sesi perlu diperbarui.'}), 401);
+          }
+          sent.addAll([for (final e in (jsonDecode(request.body) as Map)['events'] as List) (e as Map)['q'] as String]);
+          return http.Response(jsonEncode({'ok': true}), 200);
+      }
+      return fixtureServer().send(http.Request(request.method, request.url)).then(http.Response.fromStream);
+    });
+    final store = await AppStore.open(root: root, client: client);
+    await store.signIn(testSession(), refreshNow: false);
+    store.usage.searched('seal kit', 0);
+    await store.usage.saved;
+    await store.usage.send();
+    expect(refreshed, 1);
+    expect(sent, ['seal kit']);
+    store.dispose();
+  });
+
   test('the phone tells the server its app version', () {
     final json = const DeviceInfo('id', 'HP').toJson();
     expect(json['model'], 'HP');
@@ -399,6 +429,44 @@ void main() {
     expect(asked.last, contains('"id":"q1"'));
     expect(find.text('14 jawaban · 21% benar'), findsOneWidget);
     expect(find.text('Tarik soal'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
+
+  testWidgets('only quiz played: usage tabs say empty, the Quiz tab still shows', (tester) async {
+    final empty = {...overviewJson(), 'opens': 0, 'ai': 0, 'searches': [], 'people': [], 'manuals': [], 'questions': []};
+    final client = MockClient((request) async => switch (request.url.path) {
+          '/admin/stats' => http.Response(jsonEncode(empty), 200),
+          '/admin/stats/quiz' => http.Response(
+              jsonEncode({'players': 2, 'users': 52, 'correct': 70, 'sets': 3, 'per_section': [], 'topics': [], 'hard': [], 'top': [], 'never': []}),
+              200),
+          _ => http.Response('{}', 404),
+        });
+    late AppStore store;
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer());
+      await store.signIn(testSession(admin: true), refreshNow: false);
+    });
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(theme: buildTheme(dark: false), home: StatsScreen(client: client)),
+    ));
+    Future<void> wait() async {
+      for (var i = 0; i < 5; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+    }
+
+    await wait();
+    expect(find.text('Belum ada pemakaian'), findsOneWidget);
+    final tab = find.descendant(of: find.byType(TabBar), matching: find.text('Quiz'));
+    await tester.ensureVisible(tab);
+    await tester.pumpAndSettle();
+    await tester.tap(tab);
+    await wait();
+    expect(find.text('2/52'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(() async => store.dispose());
   });

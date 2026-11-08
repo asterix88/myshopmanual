@@ -20,6 +20,7 @@ class UsageLog {
     required this.endpoint,
     required this.enabled,
     required this.section,
+    this.renew,
   });
 
   final String path;
@@ -34,6 +35,11 @@ class UsageLog {
   /// The section open on Home: an NRP with several sections is counted in
   /// the one it was using.
   final String Function() section;
+
+  /// Swaps a session the server calls too old (AppStore.renewSession); true
+  /// when it worked. The session client cannot resend a request with a body
+  /// by itself, so a refused batch is sent again here.
+  final Future<bool> Function()? renew;
 
   /// Events not sent yet, oldest first; the oldest go when there are too
   /// many (a phone offline for weeks).
@@ -130,9 +136,13 @@ class UsageLog {
           final queue = await _load();
           while (queue.isNotEmpty) {
             final batch = queue.take(300).toList();
-            final response = await client
+            Future<http.Response> post() => client
                 .post(endpoint, headers: {'content-type': 'application/json'}, body: jsonEncode({'events': batch}))
                 .timeout(const Duration(seconds: 20));
+            var response = await post();
+            // A phone that stays open for days keeps a session older than the
+            // server takes: swap it and send again, once.
+            if (response.statusCode == 401 && renew != null && await renew!()) response = await post();
             if (response.statusCode != 200) {
               debugPrint('usage log not sent: HTTP ${response.statusCode}');
               return;
