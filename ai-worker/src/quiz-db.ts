@@ -703,6 +703,14 @@ export async function setImage(db: Db, id: string, key: string, now = Date.now()
   return (await db.run("UPDATE question SET image = ?, updated_at = ? WHERE id = ?", key, now, id)) > 0;
 }
 
+/// "Hapus gambar": takes the picture off a pg/bs question. A "gambar"
+/// question keeps its picture (it cannot be asked without one).
+export async function removeImage(db: Db, id: string, now = Date.now()): Promise<boolean> {
+  return (
+    (await db.run("UPDATE question SET image = NULL, image_edit = NULL, updated_at = ? WHERE id = ? AND type <> 'gambar'", now, id)) > 0
+  );
+}
+
 /// The editor's data for a question's picture (crop, labels, covers), so
 /// "Atur gambar" opens where the admin left it. At most 64 KB.
 export async function setImageEdit(db: Db, id: string, edit: unknown, now = Date.now()): Promise<boolean> {

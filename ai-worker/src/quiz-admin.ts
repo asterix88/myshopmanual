@@ -9,7 +9,8 @@
 //                                       -> a "Buat draf kuis" job, run by the cron (quiz-jobs.ts)
 //   POST /admin/quiz/jobs               recent jobs with their progress
 //   POST /admin/quiz/approve            {ids} -> publishes those that passed the curator
-//   PUT  /admin/quiz/image/<id>         PNG body: the picture of a "gambar" question
+//   PUT  /admin/quiz/image/<id>         PNG body: the picture of a question (any type)
+//   DELETE /admin/quiz/image/<id>       takes the picture off a pg/bs question
 //   PUT  /admin/quiz/image-edit/<id>    {edit}: the editor's data for that picture
 //   POST /admin/quiz/questions          {status, unit?} -> list (draf, terbit, ditarik, ...)
 //   POST /admin/quiz/add                an admin's own question {..., publish?}
@@ -172,7 +173,7 @@ async function putImage(request: Request, env: QuizEnv, id: string): Promise<Res
 
 /// Handles /admin/quiz/*.
 export async function handleQuizAdmin(request: Request, env: QuizEnv, path: string): Promise<Response> {
-  if (request.method !== "POST" && request.method !== "GET" && request.method !== "PUT") return json({ error: "method" }, 405);
+  if (!["POST", "GET", "PUT", "DELETE"].includes(request.method)) return json({ error: "method" }, 405);
   const auth = await requireAdmin(env, request);
   if (auth.error) return auth.error;
   const by = auth.session.n;
@@ -185,8 +186,13 @@ export async function handleQuizAdmin(request: Request, env: QuizEnv, path: stri
     return ok ? json({ ok: true }) : json({ error: "not_found", message: "Soal tidak ditemukan." }, 404);
   }
   if (path.startsWith("/admin/quiz/image/")) {
+    const id = decodeURIComponent(path.slice("/admin/quiz/image/".length));
+    if (request.method === "DELETE") {
+      const ok = await quiz.removeImage(quiz.d1(env.QUIZ), id);
+      return ok ? json({ ok: true }) : json({ error: "not_found", message: "Soal tidak ditemukan atau soal Gambar." }, 404);
+    }
     if (request.method !== "PUT") return json({ error: "method" }, 405);
-    return putImage(request, env, decodeURIComponent(path.slice("/admin/quiz/image/".length)));
+    return putImage(request, env, id);
   }
   const b = await readBody(request);
   if (!b) return json({ error: "bad_request" }, 400);

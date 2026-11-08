@@ -669,6 +669,82 @@ void main() {
     await tester.runAsync(() async => store.dispose());
   });
 
+  testWidgets('a pg question with a picture shows it to the mechanic too', (tester) async {
+    final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+    final asked = <String>[];
+    final client = MockClient((request) async {
+      asked.add(request.url.path);
+      return switch (request.url.path) {
+        '/quiz/session' => http.Response(
+            jsonEncode({
+              'id': 's1',
+              'questions': [
+                {...question('p1'), 'prompt': 'Set pressure safety valve travel motor?', 'image': 'quiz/img/p1.png'},
+              ],
+              'answered': [],
+            }),
+            200),
+        '/quiz/image/p1' => http.Response.bytes(png, 200, headers: {'content-type': 'image/png'}),
+        _ => http.Response(jsonEncode(homeJson()), 200),
+      };
+    });
+    final store = await openStore(tester, client);
+    await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(home: QuizPlayScreen(client: client))));
+    await settle(tester);
+    expect(asked, contains('/quiz/image/p1'));
+    expect(find.text('Ketuk untuk perbesar'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
+
+  testWidgets('Kelola soal: Tambah gambar on a pg question, Hapus gambar once it has one', (tester) async {
+    final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+    final deleted = <String>[];
+    Map<String, dynamic> draft(String id, {String? image}) => {
+          ...question(id),
+          'section': 'TRACK',
+          'status': 'draf',
+          'source': 'ai',
+          'reports': 0,
+          'answered': 0,
+          'passed': true,
+          'image': ?image,
+        };
+    final client = MockClient((request) async {
+      if (request.method == 'DELETE') {
+        deleted.add(request.url.path);
+        return http.Response('{"ok":true}', 200);
+      }
+      final body = request.body.isEmpty ? <String, dynamic>{} : jsonDecode(request.body) as Map<String, dynamic>;
+      return switch (request.url.path) {
+        '/admin/quiz/questions' => http.Response(
+            jsonEncode({
+              'questions': body['status'] == 'draf' ? [draft('a1'), draft('a2', image: 'quiz/img/a2.png')] : [],
+            }),
+            200),
+        '/admin/quiz/jobs' => http.Response(jsonEncode({'jobs': []}), 200),
+        '/quiz/image/a2' => http.Response.bytes(png, 200, headers: {'content-type': 'image/png'}),
+        _ => http.Response(jsonEncode({'reports': []}), 200),
+      };
+    });
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final store = await openStore(tester, client, admin: true);
+    await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(home: QuizAdminScreen(client: client))));
+    await settle(tester);
+    expect(find.text('Tambah gambar'), findsOneWidget);
+    expect(find.text('Atur gambar'), findsOneWidget);
+    await tester.tap(find.text('Hapus gambar'));
+    await settle(tester);
+    expect(find.text('Hapus gambar?'), findsOneWidget);
+    await tester.tap(find.text('Hapus'));
+    await settle(tester);
+    expect(deleted, ['/admin/quiz/image/a2']);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
+
   group('quiz reminders', () {
     QuizHome h({String daily = 'belum', int streak = 3, int questions = 30}) =>
         QuizHome(homeJson(daily: daily, streak: streak, questions: questions));

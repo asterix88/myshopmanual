@@ -71,7 +71,9 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
   double _fit = 1;
   Size _stage = Size.zero;
 
-  String? get _target => widget.question.pictureTarget;
+  /// What the picture asks about; none on a pg/bs question, whose picture
+  /// only helps (no letter is asked).
+  String? get _target => widget.question.type == 'gambar' ? widget.question.pictureTarget : null;
 
   @override
   void initState() {
