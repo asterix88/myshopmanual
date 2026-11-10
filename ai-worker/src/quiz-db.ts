@@ -688,26 +688,28 @@ export async function addQuestion(
 /// labelled photo, the letter the app gave the asked label; it takes the
 /// place of "[X]" in the question. The text with "[X]" is kept, so a later
 /// edit that changes the letter changes the question too.
+/// Picture changes leave updated_at alone: the admin's list is ordered by
+/// it, and a draft must not jump away from where the admin was working.
 export async function setImage(db: Db, id: string, key: string, now = Date.now(), letter: string | null = null): Promise<boolean> {
   if (letter && /^[A-Z]$/.test(letter)) {
     return (
       (await db.run(
         `UPDATE question SET image = ?,
            prompt = REPLACE(COALESCE(prompt_template, prompt), '[X]', ?),
-           prompt_template = COALESCE(prompt_template, CASE WHEN instr(prompt, '[X]') > 0 THEN prompt END),
-           updated_at = ? WHERE id = ?`,
-        key, letter, now, id,
+           prompt_template = COALESCE(prompt_template, CASE WHEN instr(prompt, '[X]') > 0 THEN prompt END)
+         WHERE id = ?`,
+        key, letter, id,
       )) > 0
     );
   }
-  return (await db.run("UPDATE question SET image = ?, updated_at = ? WHERE id = ?", key, now, id)) > 0;
+  return (await db.run("UPDATE question SET image = ? WHERE id = ?", key, id)) > 0;
 }
 
 /// "Hapus gambar": takes the picture off a pg/bs question. A "gambar"
 /// question keeps its picture (it cannot be asked without one).
 export async function removeImage(db: Db, id: string, now = Date.now()): Promise<boolean> {
   return (
-    (await db.run("UPDATE question SET image = NULL, image_edit = NULL, updated_at = ? WHERE id = ? AND type <> 'gambar'", now, id)) > 0
+    (await db.run("UPDATE question SET image = NULL, image_edit = NULL WHERE id = ? AND type <> 'gambar'", id)) > 0
   );
 }
 
@@ -716,7 +718,7 @@ export async function removeImage(db: Db, id: string, now = Date.now()): Promise
 export async function setImageEdit(db: Db, id: string, edit: unknown, now = Date.now()): Promise<boolean> {
   const text = edit == null ? null : JSON.stringify(edit);
   if (text && text.length > 65536) return false;
-  return (await db.run("UPDATE question SET image_edit = ?, updated_at = ? WHERE id = ?", text, now, id)) > 0;
+  return (await db.run("UPDATE question SET image_edit = ? WHERE id = ?", text, id)) > 0;
 }
 
 /// "Setujui semua yang lolos": publishes the drafts among [ids] that passed
