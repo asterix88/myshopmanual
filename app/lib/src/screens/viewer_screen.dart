@@ -196,6 +196,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
     _document = document;
     _searcher ??= PdfTextSearcher(_controller)..addListener(_onSearchChanged);
     setState(() => _pageCount = document.pages.length);
+    // pdfrx opens a page lower than the screen (landscape) centered.
+    final initialPage = widget.initialPage ?? 1;
+    if (initialPage > 1) _jumpTo(initialPage);
     if (_online && _file!.searchable) {
       _loadOnlineToc();
     } else {
@@ -312,11 +315,14 @@ class _ViewerScreenState extends State<ViewerScreen> {
     await _loadPageHits(page);
   }
 
-  /// Online, an animated jump paints every page it passes, and the viewer
-  /// fetches each of those from the server before the page asked for. So
-  /// jump straight there; offline the short slide is kept.
+  /// Jumps straight to the page, without a slide. Online, an animated jump
+  /// paints every page it passes, and the viewer fetches each of those from
+  /// the server before the page asked for. And while page sizes are still
+  /// being learned, a slide under way would be cut short where it was.
+  /// The page's top goes to the top of the screen; pdfrx would center a page
+  /// lower than the screen, such as a landscape page, between its neighbours.
   Future<void> _jumpTo(int page) =>
-      _controller.goToPage(pageNumber: page, duration: _online ? Duration.zero : const Duration(milliseconds: 200));
+      _controller.goToPage(pageNumber: page, anchor: PdfPageAnchor.topCenter, duration: Duration.zero);
 
   void _nextHit() => _goToHit((_hitAt + 1) % _hitTotal);
 
@@ -736,8 +742,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
   late final PdfViewerParams _viewerParams = PdfViewerParams(
         backgroundColor: AppColors.viewerBackground,
         margin: 8,
-        layoutPages: _fixedSlotLayout,
-        sizeDelegateProvider: const _FixedSlotSizeDelegateProvider(),
+        layoutPages: _fitWidthLayout,
+        sizeDelegateProvider: const _SteadySizeDelegateProvider(),
         // Read online, measuring all pages up front would fetch most of the
         // file before the first page shows, so measure pages as they scroll in.
         behaviorControlParams: PdfViewerBehaviorControlParams(loadPageDimensionsOnDemand: _online),
@@ -762,27 +768,21 @@ class _ViewerScreenState extends State<ViewerScreen> {
         },
       );
 
-  /// Every page gets a slot of the same size (A4 portrait at a fixed width)
-  /// and is fitted inside it, centered. Page positions then never depend on
-  /// page sizes, which pdfrx only learns page by page after opening (and,
-  /// online, only as pages scroll in). So nothing shifts or shrinks while
-  /// scrolling, and a bookmark lands on the page it names.
-  static PdfPageLayout _fixedSlotLayout(List<PdfPage> pages, PdfViewerParams params) {
-    const slotWidth = 600.0;
-    const slotHeight = slotWidth * 1.4142;
+  /// Pages one under the other, each as wide as the column with its own
+  /// height, like Xodo: a landscape page takes only its own (low) height, so
+  /// several of them fit on the screen. A page whose size is not known yet
+  /// (online, before it scrolls in) keeps the estimate pdfrx gives it.
+  static PdfPageLayout _fitWidthLayout(List<PdfPage> pages, PdfViewerParams params) {
+    const width = 600.0;
     final margin = params.margin;
     final rects = <Rect>[];
     var y = margin;
     for (final page in pages) {
-      final scale = page.width > 0 && page.height > 0
-          ? math.min(slotWidth / page.width, slotHeight / page.height)
-          : 1.0;
-      final width = page.width > 0 ? page.width * scale : slotWidth;
-      final height = page.height > 0 ? page.height * scale : slotHeight;
-      rects.add(Rect.fromLTWH(margin + (slotWidth - width) / 2, y + (slotHeight - height) / 2, width, height));
-      y += slotHeight + margin;
+      final height = page.width > 0 && page.height > 0 ? width * page.height / page.width : width * 1.4142;
+      rects.add(Rect.fromLTWH(margin, y, width, height));
+      y += height + margin;
     }
-    return PdfPageLayout(pageLayouts: rects, documentSize: Size(slotWidth + margin * 2, y));
+    return PdfPageLayout(pageLayouts: rects, documentSize: Size(width + margin * 2, y));
   }
 
   /// Matches found: by the index, or by pdfrx on loaded pages when there is
@@ -902,7 +902,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
             // it would be off; open the page from its top instead.
             _jumpTo(dest.pageNumber);
           } else if (dest != null) {
-            _controller.goToDest(dest);
+            _controller.goToDest(dest, duration: Duration.zero);
           } else if (page != null) {
             _jumpTo(page);
           }
@@ -1224,33 +1224,34 @@ class _BookmarksSheetState extends State<_BookmarksSheet> {
   }
 }
 
-/// pdfrx's default sizing, except when only page sizes change.
+/// pdfrx's default sizing, except that the view is moved only when the page
+/// being read actually moved.
 ///
 /// pdfrx learns real page sizes after opening (offline, all pages in the
-/// background for a while; online, as pages scroll in). Each time it re-runs
-/// the layout and, by default, moves the view to "keep" the old position,
-/// which cancels a bookmark jump still under way and lands somewhere else.
-/// With [_ViewerScreenState._fixedSlotLayout] every page keeps its slot, so the
-/// current position is already right and the view is left alone.
-class _FixedSlotSizeDelegateProvider extends PdfViewerSizeDelegateProvider {
-  const _FixedSlotSizeDelegateProvider();
+/// background for a while; online, as pages scroll in) and re-runs the
+/// layout each time. By default it then puts the view back on the page being
+/// read, which also stops a fling. Most of these updates only change pages
+/// below the screen, so they are left alone; when pages above changed size,
+/// the page being read is kept where it is on the screen.
+class _SteadySizeDelegateProvider extends PdfViewerSizeDelegateProvider {
+  const _SteadySizeDelegateProvider();
 
-  // A fold-out page is drawn at about half its size to fit its slot, so
-  // allow twice pdfrx's default zoom to keep its diagrams just as sharp.
+  // Allow twice pdfrx's default zoom so the small print of fold-out
+  // drawings still gets sharp.
   static const _legacy = PdfViewerSizeDelegateProviderLegacy(maxScale: 16);
 
   @override
-  PdfViewerSizeDelegate create() => _FixedSlotSizeDelegate(_legacy.create());
+  PdfViewerSizeDelegate create() => _SteadySizeDelegate(_legacy.create());
 
   @override
-  bool operator ==(Object other) => other is _FixedSlotSizeDelegateProvider;
+  bool operator ==(Object other) => other is _SteadySizeDelegateProvider;
 
   @override
-  int get hashCode => (_FixedSlotSizeDelegateProvider).hashCode;
+  int get hashCode => (_SteadySizeDelegateProvider).hashCode;
 }
 
-class _FixedSlotSizeDelegate implements PdfViewerSizeDelegate {
-  _FixedSlotSizeDelegate(this._inner);
+class _SteadySizeDelegate implements PdfViewerSizeDelegate {
+  _SteadySizeDelegate(this._inner);
 
   final PdfViewerSizeDelegate _inner;
 
@@ -1305,7 +1306,7 @@ class _FixedSlotSizeDelegate implements PdfViewerSizeDelegate {
     required bool isLayoutChanged,
     required bool isViewSizeChanged,
   }) {
-    if (!isViewSizeChanged) return;
+    if (!isViewSizeChanged && !_readPageMoved(oldState.layout, newState.layout, anchorPageNumber)) return;
     _inner.onLayoutUpdate(
       oldState: oldState,
       newState: newState,
@@ -1315,6 +1316,19 @@ class _FixedSlotSizeDelegate implements PdfViewerSizeDelegate {
       isLayoutChanged: isLayoutChanged,
       isViewSizeChanged: isViewSizeChanged,
     );
+  }
+
+  /// Whether the page being read, or the one above it (whose bottom may be
+  /// at the top of the screen), moved or changed size.
+  static bool _readPageMoved(PdfPageLayout? oldLayout, PdfPageLayout? newLayout, int? pageNumber) {
+    if (oldLayout == null || newLayout == null || pageNumber == null) return true;
+    if (pageNumber > oldLayout.pageLayouts.length || pageNumber > newLayout.pageLayouts.length) return true;
+    for (var i = math.max(0, pageNumber - 2); i < pageNumber; i++) {
+      final before = oldLayout.pageLayouts[i];
+      final after = newLayout.pageLayouts[i];
+      if ((before.top - after.top).abs() > 0.5 || (before.height - after.height).abs() > 0.5) return true;
+    }
+    return false;
   }
 }
 
