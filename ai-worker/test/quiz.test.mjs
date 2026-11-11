@@ -314,3 +314,23 @@ test("a pg question can get a picture and lose it again; a picture question keep
   assert.equal(await quiz.removeImage(db, "G1", NOW), false);
   assert.equal((await quiz.questionRow(db, "G1")).image, "quiz/img/g.png");
 });
+
+test("saving or removing a picture keeps the draft in its place in the list", async () => {
+  const db = fresh();
+  const add = (id, at) =>
+    quiz.addQuestion(
+      db,
+      { section: "TRACK", unit: "PC210", topic: "standar", type: "pg", prompt: `Soal ${id}?`, choices: ["1", "2", "3", "4"], answer: 0, explain: "x", manual_id: "pm", page: 1 },
+      { status: "draf", source: "ai", by: "ADM", id, now: at },
+    );
+  await add("old", NOW);
+  await add("new", NOW + 1000);
+  const order = async () => (await quiz.listQuestions(db, "draf", null)).map((q) => q.id);
+  assert.deepEqual(await order(), ["new", "old"]);
+  await quiz.setImageEdit(db, "old", { v: 1, crop: [0, 0, 1, 1] }, NOW + 5000);
+  await quiz.setImage(db, "old", "quiz/img/o.png", NOW + 5000);
+  assert.deepEqual(await order(), ["new", "old"]);
+  await quiz.removeImage(db, "old", NOW + 6000);
+  assert.deepEqual(await order(), ["new", "old"]);
+  assert.equal((await quiz.listQuestions(db, "draf", null)).length, 2);
+});
