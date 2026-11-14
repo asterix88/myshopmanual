@@ -5,7 +5,8 @@ name: Deploy AI server
 # Needs repository secrets CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and
 # GROQ_API_KEY; DEEPSEEK_API_KEY is optional (without it DeepSeek is skipped),
 # and so is TAVILY_API_KEY (web search; without it the AI searches
-# Wikipedia). OWNER_CODE (the admin code) is needed to upload the employee
+# Wikipedia). GOOGLE_SERVICE_ACCOUNT (the robot's JSON key) is needed for
+# Daily Inspection. OWNER_CODE (the admin code) is needed to upload the employee
 # list from update.bat. The API token needs Workers Scripts, Workers KV
 # Storage, Workers R2 Storage and D1 (all Edit) plus Workers Routes on the
 # zone.
@@ -26,7 +27,9 @@ jobs:
           DEEPSEEK: ${{ secrets.DEEPSEEK_API_KEY }}
           OWNER: ${{ secrets.OWNER_CODE }}
           TAVILY: ${{ secrets.TAVILY_API_KEY }}
+          GOOGLE: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
         run: |
+          if [ -n "$GOOGLE" ]; then echo "google=true" >> "$GITHUB_OUTPUT"; fi
           if [ -n "$DEEPSEEK" ]; then echo "deepseek=true" >> "$GITHUB_OUTPUT"; fi
           if [ -n "$OWNER" ]; then echo "owner=true" >> "$GITHUB_OUTPUT"; fi
           if [ -n "$TAVILY" ]; then echo "tavily=true" >> "$GITHUB_OUTPUT"; fi
@@ -119,3 +122,11 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
         run: printf '%s' "$TAVILY_API_KEY" | npx wrangler secret put TAVILY_API_KEY
+      - name: Upload the Daily Inspection robot key
+        if: steps.check.outputs.ready == 'true' && steps.check.outputs.google == 'true'
+        working-directory: ai-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+        run: printf '%s' "$GOOGLE_SERVICE_ACCOUNT" | npx wrangler secret put GOOGLE_SERVICE_ACCOUNT
