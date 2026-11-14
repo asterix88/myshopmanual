@@ -69,6 +69,11 @@ VISION_MODEL = "deepseek:deepseek-v4-flash,qwen/qwen3.8-27b"
 # before the NRP login). Set by Anas on 29 Oct 2026 with sections, since a
 # section's manuals must only reach its NRPs.
 REQUIRE_LOGIN = "1"
+# Daily Inspection Monitoring (src/inspection.ts): the admin's sheet "MASTER
+# DATA MONITORING DAILY INSPECTION" and the name of its findings tabs. In
+# 2027 the tabs get a new year: change INSPECTION_TAB with them.
+INSPECTION_SHEET_ID = "1fm-KQv-b1ZKV08oT45LJ-GxEL6meSieANMF-Bf-Tw-E"
+INSPECTION_TAB = "INSPECTION {SECTION} OPEN 2026"
 
 # Secrets, never in this file:
 #   DEEPSEEK_API_KEY  key from platform.deepseek.com, uploaded by the workflow
@@ -79,5 +84,9 @@ REQUIRE_LOGIN = "1"
 #                     those run out, the AI searches Wikipedia
 #   OWNER_CODE        the admin code; update.bat sends it (ADMIN_CODE in
 #                     r2-keys.bat) to upload karyawan.xlsx and warm manuals
+#   GOOGLE_SERVICE_ACCOUNT  the JSON key of the Google Cloud service account
+#                     ("robot") that reads and writes the Daily Inspection
+#                     sheet; uploaded by the workflow from the GitHub secret
+#                     of the same name
 #   APP_TOKEN         optional; when set (npx wrangler secret put APP_TOKEN), the
 #                     app must send it, so also set the GitHub secret AI_TOKEN

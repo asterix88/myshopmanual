@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 class ToolIcon extends StatelessWidget {
   const ToolIcon.gauge({super.key, this.size = 48}) : _painter = const _GaugePainter();
   const ToolIcon.box({super.key, this.size = 48}) : _painter = const _BoxPainter();
+  const ToolIcon.clipboard({super.key, this.size = 48}) : _painter = const _ClipboardPainter();
 
   final double size;
   final CustomPainter _painter;
@@ -88,4 +89,31 @@ class _BoxPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BoxPainter oldDelegate) => false;
+}
+
+/// Daily Inspection: a clipboard with check lines and an orange tick.
+class _ClipboardPainter extends CustomPainter {
+  const _ClipboardPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = size.width / 24;
+    final line = _stroke(u, 1.8, Colors.white)..strokeJoin = StrokeJoin.round;
+    canvas.drawRRect(RRect.fromLTRBR(5 * u, 4.5 * u, 19 * u, 21.5 * u, Radius.circular(2.2 * u)), line);
+    canvas.drawRRect(
+      RRect.fromLTRBR(9 * u, 2.5 * u, 15 * u, 6.5 * u, Radius.circular(1.2 * u)),
+      Paint()..color = _navy,
+    );
+    canvas.drawRRect(RRect.fromLTRBR(9 * u, 2.5 * u, 15 * u, 6.5 * u, Radius.circular(1.2 * u)), line);
+    canvas.drawLine(Offset(8.5 * u, 11 * u), Offset(15.5 * u, 11 * u), _stroke(u, 1.6, Colors.white));
+    canvas.drawLine(Offset(8.5 * u, 14.5 * u), Offset(12.5 * u, 14.5 * u), _stroke(u, 1.6, Colors.white));
+    final tick = Path()
+      ..moveTo(12.5 * u, 18 * u)
+      ..lineTo(14.5 * u, 20 * u)
+      ..lineTo(18.5 * u, 15.5 * u);
+    canvas.drawPath(tick, _stroke(u, 2.2, _orange)..strokeJoin = StrokeJoin.round);
+  }
+
+  @override
+  bool shouldRepaint(_ClipboardPainter oldDelegate) => false;
 }

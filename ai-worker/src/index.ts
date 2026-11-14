@@ -1,6 +1,7 @@
 import { countQuestion, handleAuth, requireSession, SESSION_HEADER } from "./auth";
 import { feedback } from "./feedback";
 import { handleFiles } from "./files";
+import { handleInspection, scheduledInspection, type InspectionEnv } from "./inspection";
 import { handleQuiz, type QuizEnv } from "./quiz";
 import { scheduledJobs, scheduledQuiz } from "./quiz-cron";
 import { handleStats, recordRating, type StatsEnv } from "./stats";
@@ -9,7 +10,7 @@ export { Stats } from "./stats";
 
 const NIGHTLY_CRON = "0 21 * * *";
 
-export interface Env extends StatsEnv, QuizEnv {
+export interface Env extends StatsEnv, QuizEnv, InspectionEnv {
   GROQ_API_KEY?: string;
   DEEPSEEK_API_KEY?: string;
   APP_TOKEN?: string;
@@ -297,6 +298,8 @@ export default {
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     // "0 21 * * *" = the nightly job; "* * * * *" = Buat draf kuis jobs.
     ctx.waitUntil(controller.cron === NIGHTLY_CRON ? scheduledQuiz(env) : scheduledJobs(env));
+    // Nightly too: can the robot still open the Daily Inspection sheet?
+    if (controller.cron === NIGHTLY_CRON) ctx.waitUntil(scheduledInspection(env));
   },
 } satisfies ExportedHandler<Env>;
 
@@ -314,6 +317,8 @@ async function handle(
   if (stats) return stats;
   const quiz = await handleQuiz(request, env, url.pathname);
   if (quiz) return quiz;
+  const inspection = await handleInspection(request, env, url.pathname);
+  if (inspection) return inspection;
   if (request.method === "GET" && url.pathname === "/") {
     return json({ ok: true, model: env.MODEL });
   }
