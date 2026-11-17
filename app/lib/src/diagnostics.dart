@@ -8,17 +8,22 @@ import 'package:path_provider/path_provider.dart';
 /// report says which test build it came from.
 const buildId = String.fromEnvironment('BUILD_ID');
 
-/// pubspec.yaml's version and the APK workflow's run number, both set by
-/// the workflow; empty in local builds.
+/// The version (major.minor from pubspec.yaml, then the APK workflow's run
+/// number, e.g. "1.1.215") and that run number, both set by the workflow;
+/// empty in local builds.
 const appVersion = String.fromEnvironment('APP_VERSION');
 const buildNumber = String.fromEnvironment('BUILD_NUMBER');
 
-/// "Versi 1.0.0 (build 57)", shown under the login screen.
-String get versionLabel => appVersion.isEmpty
-    ? 'Versi lokal'
-    : buildNumber.isEmpty
-        ? 'Versi $appVersion'
-        : 'Versi $appVersion (build $buildNumber)';
+/// The version as people see it: "1.1.215". Older builds kept the run
+/// number apart ("1.0.0 (57)").
+String get appVersionText => appVersion.isEmpty
+    ? ''
+    : buildNumber.isEmpty || appVersion.endsWith('.$buildNumber')
+        ? appVersion
+        : '$appVersion ($buildNumber)';
+
+/// "Versi 1.1.215", shown under the login screen.
+String get versionLabel => appVersion.isEmpty ? 'Versi lokal' : 'Versi $appVersionText';
 
 /// A small log of what the app was doing, kept on the phone so a force close
 /// can be explained afterwards (menu ⋮ > Laporan masalah). Each line is
@@ -71,7 +76,7 @@ class Diagnostics {
   /// Everything known about recent problems, as text to copy and send.
   static Future<String> report() async {
     final out = StringBuffer();
-    out.writeln('Versi: ${buildId.isEmpty ? 'lokal' : buildId}${buildNumber.isEmpty ? '' : ', build $buildNumber'}');
+    out.writeln('Versi: ${appVersion.isEmpty ? 'lokal' : appVersionText}${buildId.isEmpty ? '' : ' ($buildId)'}');
     try {
       final memory = (await _channel.invokeMapMethod<String, Object?>('memory')) ?? const {};
       out.writeln('RAM HP: ${memory['totalMb']} MB, tersedia ${memory['availMb']} MB, '
