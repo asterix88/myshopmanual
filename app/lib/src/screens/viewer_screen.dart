@@ -22,6 +22,7 @@ import 'package:pdfrx/pdfrx.dart';
 import '../diagnostics.dart';
 import '../models.dart';
 import '../page_image.dart';
+import '../page_sizes.dart';
 import '../remote_pdf.dart';
 import '../search.dart';
 import '../specs.dart';
@@ -46,32 +47,34 @@ part 'viewer/torque.dart';
 /// chapter are marked.
 Future<void> openViewer(BuildContext context, ManualFile file, {int? page, String? query, TorqueScan? torque}) {
   Diagnostics.log('open ${file.key} p${page ?? 1}');
-  return Navigator.of(context).push(MaterialPageRoute(
-    builder: (_) => ViewerScreen(fileKey: file.key, initialPage: page, initialQuery: query, torque: torque),
-  ));
+  return Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => ViewerScreen(fileKey: file.key, initialPage: page, initialQuery: query, torque: torque),
+    ),
+  );
 }
 
 /// A handle on the right edge that shows the page number; dragging it
 /// scrolls through the whole document fast.
 Widget pageScrollThumb(PdfViewerController controller) => PdfViewerScrollThumb(
-      controller: controller,
-      orientation: ScrollbarOrientation.right,
-      thumbSize: const Size(46, 30),
-      margin: 0,
-      thumbBuilder: (context, size, page, controller) => Container(
-        key: const Key('page-thumb'),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.navy,
-          borderRadius: const BorderRadius.horizontal(left: Radius.circular(15)),
-          boxShadow: const [BoxShadow(color: Color(0x33101828), blurRadius: 6, offset: Offset(0, 2))],
-        ),
-        child: Text(
-          page == null ? '' : '$page',
-          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
-        ),
-      ),
-    );
+  controller: controller,
+  orientation: ScrollbarOrientation.right,
+  thumbSize: const Size(46, 30),
+  margin: 0,
+  thumbBuilder: (context, size, page, controller) => Container(
+    key: const Key('page-thumb'),
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: AppColors.navy,
+      borderRadius: const BorderRadius.horizontal(left: Radius.circular(15)),
+      boxShadow: const [BoxShadow(color: Color(0x33101828), blurRadius: 6, offset: Offset(0, 2))],
+    ),
+    child: Text(
+      page == null ? '' : '$page',
+      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+    ),
+  ),
+);
 
 class ViewerScreen extends StatefulWidget {
   const ViewerScreen({super.key, required this.fileKey, this.initialPage, this.initialQuery, this.torque});
@@ -89,6 +92,7 @@ class ViewerScreen extends StatefulWidget {
 
 class _ViewerScreenState extends State<ViewerScreen> {
   final _controller = PdfViewerController();
+
   /// pdfrx only allows a searcher once the document is loaded, so it is
   /// created in [_onViewerReady].
   PdfTextSearcher? _searcher;
@@ -125,6 +129,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   Timer? _saveTimer;
   late AppStore _store;
   List<TocEntry> _toc = const [];
+
   /// The bookmarks; null while they are still being read.
   final _outline = ValueNotifier<List<PdfOutlineNode>?>(null);
 
@@ -167,10 +172,37 @@ class _ViewerScreenState extends State<ViewerScreen> {
         dir: dir,
         fetch: (start, end) => store.fetchPdfRange(_file!, start, end),
       );
-      unawaited(RemotePdf.prune(Directory(store.pdfBlockRoot), maxBytes: 400 << 20, keep: dir)
-          .catchError((Object e) => Diagnostics.log('prune pdf pieces: $e')));
+      unawaited(
+        RemotePdf.prune(
+          Directory(store.pdfBlockRoot),
+          maxBytes: 400 << 20,
+          keep: dir,
+        ).catchError((Object e) => Diagnostics.log('prune pdf pieces: $e')),
+      );
     }
     if (manual != null) _toc = loadToc(store.indexPath(manual.file));
+    if (_file != null) {
+      final index = store.readyIndexPath(_file!);
+      _knownSizes =
+          (index == null ? null : PageSizes.fromIndex(index)) ?? PageSizes.fromFile(store.pageSizeCachePath(_file!));
+      Diagnostics.log('page sizes: ${_knownSizes == null ? 'unknown' : '${_knownSizes!.sizes.length} known'}');
+    }
+  }
+
+  /// The pages' sizes before PDFium has measured them; null when neither the
+  /// index nor an earlier visit has them. See [PageSizes].
+  PageSizes? _knownSizes;
+
+  /// Keeps the sizes PDFium measured, for a manual whose index has none, so
+  /// the next opening lays the pages out right from the start.
+  void _savePageSizes() {
+    final document = _document;
+    final file = _file;
+    if (document == null || file == null || (_knownSizes?.isComplete ?? false)) return;
+    PageSizes.save(_store.pageSizeCachePath(file), [
+      for (final page in document.pages)
+        page.isLoaded && page.width > 0 && page.height > 0 ? Size(page.width, page.height) : null,
+    ]);
   }
 
   /// Pages for the AI are not drawn from the server while a manual is open
@@ -183,6 +215,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   @override
   void dispose() {
+    if (_fullScreen) SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    _savePageSizes();
     _resumeServerDrawing();
     if (_saveTimer?.isActive ?? false) {
       _saveTimer!.cancel();
@@ -323,91 +357,136 @@ class _ViewerScreenState extends State<ViewerScreen> {
     final bookmarked = store.isBookmarked(file.key, _page);
     final section = _sectionFor(_page);
 
-    return Scaffold(
-      backgroundColor: AppColors.viewerBackground,
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final full = _fullScreen;
+    return PopScope(
+      // Back first leaves full screen, like Xodo.
+      canPop: !full,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _setFullScreen(false);
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.viewerBackground,
+        appBar: full
+            ? null
+            : AppBar(
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      file.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 15),
+                    ),
+                    Text(
+                      [
+                        store.unitNameOf(file),
+                        if (file.type != DocType.other) file.type.label,
+                        if (_online) 'online',
+                      ].join(' · '),
+                      style: TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
+                    ),
+                  ],
+                ),
+                actions: [
+                  if (store.session?.admin ?? false)
+                    IconButton(
+                      tooltip: 'Buat soal quiz dari halaman ini',
+                      onPressed: () => showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        useSafeArea: true,
+                        builder: (_) => QuizGenerateSheet(file: file, page: _page),
+                      ),
+                      icon: AppIcon(AppGlyph.quiz, color: AppColors.ink, size: 22),
+                    ),
+                  IconButton(
+                    tooltip: 'Cari di file ini',
+                    onPressed: _toggleSearch,
+                    icon: _searching
+                        ? const Icon(Icons.search_off)
+                        : AppIcon(AppGlyph.search, color: AppColors.ink, size: 22),
+                  ),
+                  IconButton(
+                    tooltip: bookmarked ? 'Hapus tanda halaman ini' : 'Tandai halaman ini',
+                    onPressed: () => store.toggleBookmark(file.key, _page),
+                    icon: AppIcon(
+                      bookmarked ? AppGlyph.bookmarkOn : AppGlyph.bookmark,
+                      color: AppColors.ink,
+                      accent: AppColors.orange,
+                      size: 22,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Penanda',
+                    onPressed: () => _showBookmarks(file),
+                    icon: AppIcon(AppGlyph.contents, color: AppColors.ink, size: 22),
+                  ),
+                ],
+                bottom: _searching
+                    ? _searchBar()
+                    : widget.torque != null
+                    ? _torqueBar()
+                    : null,
+              ),
+        body: Stack(
           children: [
-            Text(file.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15)),
-            Text(
-              [store.unitNameOf(file), if (file.type != DocType.other) file.type.label, if (_online) 'online'].join(' · '),
-              style: TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
+            Positioned.fill(
+              child: _online
+                  ? PdfViewer.custom(
+                      // Fetch only the parts of the PDF being viewed, in small
+                      // pieces, so a 350 MB manual opens in seconds.
+                      fileSize: file.pdf.size,
+                      read: _remote!.read,
+                      sourceName: 'remote:${file.key}@${file.pdf.sha256}',
+                      controller: _controller,
+                      initialPageNumber: widget.initialPage ?? 1,
+                      params: _viewerParams,
+                    )
+                  : PdfViewer.file(
+                      store.pdfPath(file),
+                      controller: _controller,
+                      initialPageNumber: widget.initialPage ?? 1,
+                      params: _viewerParams,
+                    ),
             ),
+            // On the left: the nyel AI button has the right corner.
+            if (full)
+              // Full screen keeps only the nyel AI button.
+              const Positioned(left: 0, top: 0, child: SizedBox.shrink())
+            else if (_searching && _matchCount > 0)
+              Positioned(left: 16, bottom: 24, child: _matchPill())
+            else if (!_searching && (_torque?.isNotEmpty ?? false))
+              Positioned(
+                left: 16,
+                bottom: 24,
+                child: _matchPill(prev: _prevTorque, next: _nextTorque),
+              ),
+            Positioned(right: 16, bottom: 16, child: _AiButton(onPressed: () => _askAi(file))),
           ],
         ),
-        actions: [
-          if (store.session?.admin ?? false)
-            IconButton(
-              tooltip: 'Buat soal quiz dari halaman ini',
-              onPressed: () => showModalBottomSheet<void>(
-                context: context,
-                isScrollControlled: true,
-                useSafeArea: true,
-                builder: (_) => QuizGenerateSheet(file: file, page: _page),
-              ),
-              icon: AppIcon(AppGlyph.quiz, color: AppColors.ink, size: 22),
-            ),
-          IconButton(
-            tooltip: 'Cari di file ini',
-            onPressed: _toggleSearch,
-            icon: _searching ? const Icon(Icons.search_off) : AppIcon(AppGlyph.search, color: AppColors.ink, size: 22),
-          ),
-          IconButton(
-            tooltip: bookmarked ? 'Hapus tanda halaman ini' : 'Tandai halaman ini',
-            onPressed: () => store.toggleBookmark(file.key, _page),
-            icon: AppIcon(bookmarked ? AppGlyph.bookmarkOn : AppGlyph.bookmark, color: AppColors.ink, accent: AppColors.orange, size: 22),
-          ),
-          IconButton(
-            tooltip: 'Penanda',
-            onPressed: () => _showBookmarks(file),
-            icon: AppIcon(AppGlyph.contents, color: AppColors.ink, size: 22),
-          ),
-        ],
-        bottom: _searching
-            ? _searchBar()
-            : widget.torque != null
-                ? _torqueBar()
-                : null,
+        bottomNavigationBar: _pageCount == 0 || full
+            ? null
+            : _PageBar(page: _page, pageCount: _pageCount, section: section, onJump: _jumpTo),
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: _online
-                ? PdfViewer.custom(
-                    // Fetch only the parts of the PDF being viewed, in small
-                    // pieces, so a 350 MB manual opens in seconds.
-                    fileSize: file.pdf.size,
-                    read: _remote!.read,
-                    sourceName: 'remote:${file.key}@${file.pdf.sha256}',
-                    controller: _controller,
-                    initialPageNumber: widget.initialPage ?? 1,
-                    params: _viewerParams,
-                  )
-                : PdfViewer.file(
-                    store.pdfPath(file),
-                    controller: _controller,
-                    initialPageNumber: widget.initialPage ?? 1,
-                    params: _viewerParams,
-                  ),
-          ),
-          // On the left: the nyel AI button has the right corner.
-          if (_searching && _matchCount > 0)
-            Positioned(left: 16, bottom: 24, child: _matchPill())
-          else if (!_searching && (_torque?.isNotEmpty ?? false))
-            Positioned(left: 16, bottom: 24, child: _matchPill(prev: _prevTorque, next: _nextTorque)),
-          Positioned(right: 16, bottom: 16, child: _AiButton(onPressed: () => _askAi(file))),
-        ],
-      ),
-      bottomNavigationBar: _pageCount == 0
-          ? null
-          : _PageBar(
-              page: _page,
-              pageCount: _pageCount,
-              section: section,
-              onJump: _jumpTo,
-            ),
     );
+  }
+
+  /// Full screen: a tap on the page hides the bars (also Android's status
+  /// and navigation bars), leaving only the pages and the nyel AI button;
+  /// another tap, or back, brings them back. Like Xodo.
+  bool _fullScreen = false;
+
+  void _setFullScreen(bool on) {
+    if (on == _fullScreen || !mounted) return;
+    setState(() => _fullScreen = on);
+    SystemChrome.setEnabledSystemUIMode(on ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge);
+  }
+
+  bool _onTap(BuildContext context, PdfViewerController controller, PdfViewerGeneralTapHandlerDetails details) {
+    // While typing a search the tap only closes the keyboard.
+    if (details.type == PdfViewerGeneralTapType.tap && !_searchFocus.hasFocus) _setFullScreen(!_fullScreen);
+    return false;
   }
 
   /// Opens nyel AI over the viewer with the page shown now attached, so the
@@ -416,51 +495,60 @@ class _ViewerScreenState extends State<ViewerScreen> {
     // The chat covers the viewer, which then draws nothing: the AI may draw
     // pages of online manuals meanwhile.
     _resumeServerDrawing();
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ChatScreen(file: file, page: _page)));
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ChatScreen(file: file, page: _page),
+      ),
+    );
     if (mounted) _resumeServerDrawing = pauseServerDrawing();
   }
 
   /// Built once: the viewer re-lays out whenever its params change.
   late final PdfViewerParams _viewerParams = PdfViewerParams(
-        backgroundColor: AppColors.viewerBackground,
-        margin: 8,
-        layoutPages: _fitWidthLayout,
-        sizeDelegateProvider: const _SteadySizeDelegateProvider(),
-        // Read online, measuring all pages up front would fetch most of the
-        // file before the first page shows, so measure pages as they scroll in.
-        behaviorControlParams: PdfViewerBehaviorControlParams(loadPageDimensionsOnDemand: _online),
-        onViewerReady: _onViewerReady,
-        onPageChanged: _onPageChanged,
-        viewerOverlayBuilder: (context, size, handleLinkTap) => [pageScrollThumb(_controller)],
-        pagePaintCallbacks: [
-          _paintHits,
-          _paintTorque,
-        ],
-        loadingBannerBuilder: (context, bytesDownloaded, totalBytes) =>
-            Center(child: ExcavatorLoader(label: _online ? 'Loading material…' : null)),
-        errorBannerBuilder: (context, error, stackTrace, documentRef) {
-          Diagnostics.log('viewer error: $error');
-          return EmptyState(
-          icon: _online ? Icons.cloud_off : Icons.error_outline,
-          title: _online ? 'Gagal membuka file secara online' : 'File tidak bisa dibuka',
-          message: _online
-              ? 'Periksa sinyal, atau unduh file ini supaya bisa dibuka tanpa internet.'
-              : 'Coba hapus lalu unduh ulang file ini.',
-          );
-        },
+    backgroundColor: AppColors.viewerBackground,
+    margin: 8,
+    layoutPages: _fitWidthLayout,
+    sizeDelegateProvider: const _SteadySizeDelegateProvider(),
+    // Read online, measuring all pages up front would fetch most of the
+    // file before the first page shows, so measure pages as they scroll in.
+    behaviorControlParams: PdfViewerBehaviorControlParams(loadPageDimensionsOnDemand: _online),
+    onViewerReady: _onViewerReady,
+    onPageChanged: _onPageChanged,
+    viewerOverlayBuilder: (context, size, handleLinkTap) => [if (!_fullScreen) pageScrollThumb(_controller)],
+    onGeneralTap: _onTap,
+    pagePaintCallbacks: [_paintHits, _paintTorque],
+    loadingBannerBuilder: (context, bytesDownloaded, totalBytes) =>
+        Center(child: ExcavatorLoader(label: _online ? 'Loading material…' : null)),
+    errorBannerBuilder: (context, error, stackTrace, documentRef) {
+      Diagnostics.log('viewer error: $error');
+      return EmptyState(
+        icon: _online ? Icons.cloud_off : Icons.error_outline,
+        title: _online ? 'Gagal membuka file secara online' : 'File tidak bisa dibuka',
+        message: _online
+            ? 'Periksa sinyal, atau unduh file ini supaya bisa dibuka tanpa internet.'
+            : 'Coba hapus lalu unduh ulang file ini.',
       );
+    },
+  );
 
   /// Pages one under the other, each as wide as the column with its own
   /// height, like Xodo: a landscape page takes only its own (low) height, so
-  /// several of them fit on the screen. A page whose size is not known yet
-  /// (online, before it scrolls in) keeps the estimate pdfrx gives it.
-  static PdfPageLayout _fitWidthLayout(List<PdfPage> pages, PdfViewerParams params) {
+  /// several of them fit on the screen.
+  ///
+  /// Sizes known beforehand ([_knownSizes]) come first: then the layout is
+  /// final from the start and nothing moves while PDFium measures the pages.
+  /// Otherwise a page not measured yet keeps the estimate pdfrx gives it
+  /// (the size of page 1).
+  PdfPageLayout _fitWidthLayout(List<PdfPage> pages, PdfViewerParams params) {
     const width = 600.0;
     final margin = params.margin;
+    final known = _knownSizes;
     final rects = <Rect>[];
     var y = margin;
-    for (final page in pages) {
-      final height = page.width > 0 && page.height > 0 ? width * page.height / page.width : width * 1.4142;
+    for (var i = 0; i < pages.length; i++) {
+      final page = pages[i];
+      final size = known?[i] ?? (page.width > 0 && page.height > 0 ? Size(page.width, page.height) : null);
+      final height = size != null ? width * size.height / size.width : width * 1.4142;
       rects.add(Rect.fromLTWH(margin, y, width, height));
       y += height + margin;
     }

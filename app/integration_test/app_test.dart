@@ -31,10 +31,12 @@ MockClient fixtureServer() => MockClient((request) async {
       return http.Response.bytes(bytes.sublist(start, end), 206);
     });
 
-/// Pumps until [finder] matches, or fails after [timeout].
-Future<void> pumpUntil(WidgetTester tester, Finder finder, {Duration timeout = const Duration(seconds: 20)}) async {
+/// Pumps until [finder] matches (or, with [absent], no longer matches),
+/// or fails after [timeout].
+Future<void> pumpUntil(WidgetTester tester, Finder finder,
+    {Duration timeout = const Duration(seconds: 20), bool absent = false}) async {
   final end = DateTime.now().add(timeout);
-  while (finder.evaluate().isEmpty) {
+  while (finder.evaluate().isEmpty != absent) {
     if (DateTime.now().isAfter(end)) fail('Not shown in time: $finder');
     await tester.pump(const Duration(milliseconds: 200));
   }
@@ -145,6 +147,41 @@ void main() {
     tester.widget<TextField>(field).onSubmitted!('zzzz');
     await pumpUntil(tester, find.text('tidak ada'));
     expect(find.byKey(const Key('match-pill')), findsNothing);
+    step('done');
+  }, timeout: const Timeout(Duration(minutes: 4)));
+
+  testWidgets('a tap on the page goes full screen with only the nyel AI button', (tester) async {
+    final root = Directory('${(await getTemporaryDirectory()).path}/it-${DateTime.now().microsecondsSinceEpoch}')
+      ..createSync(recursive: true);
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    final file = store.catalog.files.single;
+    await store.download(file, unitName: 'TEST1-1');
+
+    step('open viewer');
+    await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(home: ViewerScreen(fileKey: file.key))));
+    await pumpUntil(tester, find.text(' / 4'));
+    final viewer = find.byType(ViewerScreen);
+    final appBar = find.byType(AppBar);
+    expect(appBar, findsOneWidget);
+
+    step('tap: full screen');
+    await tester.tapAt(tester.getCenter(viewer));
+    await pumpUntil(tester, find.text(' / 4'), absent: true);
+    expect(appBar, findsNothing);
+    expect(find.byKey(const Key('viewer-ai')), findsOneWidget);
+
+    step('tap again: bars back');
+    await tester.tapAt(tester.getCenter(viewer));
+    await pumpUntil(tester, find.text(' / 4'));
+    expect(appBar, findsOneWidget);
+
+    step('back leaves full screen first');
+    await tester.tapAt(tester.getCenter(viewer));
+    await pumpUntil(tester, find.text(' / 4'), absent: true);
+    await tester.binding.handlePopRoute();
+    await pumpUntil(tester, find.text(' / 4'));
+    expect(viewer, findsOneWidget);
     step('done');
   }, timeout: const Timeout(Duration(minutes: 4)));
 
