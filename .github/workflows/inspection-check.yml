@@ -1,11 +1,10 @@
 name: Daily Inspection check
 # Tests SHEET_SCRIPT_URL + SHEET_SCRIPT_KEY against the Apps Script Web App
 # without printing the code (tools/diag/inspection_check.py).
+# Run it from Actions > Daily Inspection check > Run workflow when the app
+# says "Kode rahasia salah" or the sheet cannot be opened.
 on:
   workflow_dispatch:
-  push:
-    branches: [claude/project-thread-vztdpo]
-    paths: [.github/workflows/inspection-check.yml, tools/diag/inspection_check.py]
 jobs:
   check:
     runs-on: ubuntu-latest

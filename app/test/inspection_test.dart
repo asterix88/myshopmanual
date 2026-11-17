@@ -205,7 +205,13 @@ void main() {
     expect(find.text('TRACK · Update 12/11 09:10'), findsOneWidget);
     expect(find.byKey(const Key('inspection-sheet-link')), findsOneWidget);
     expect(find.text('CLOSE'), findsOneWidget);
-    expect(find.text('DONE'), findsOneWidget);
+    expect(find.text('ACTION  DONE', findRichText: true), findsOneWidget);
+    // Both E5138 findings sit in one unit frame.
+    final e5138 = find.byKey(const Key('unit-E5138'));
+    expect(e5138, findsOneWidget);
+    expect(find.descendant(of: e5138, matching: find.text('PIN BUCKET AUS')), findsOneWidget);
+    expect(find.descendant(of: e5138, matching: find.text('SEAL CYLINDER BOCOR')), findsOneWidget);
+    expect(find.descendant(of: e5138, matching: find.text('1 open · 1 close')), findsOneWidget);
     expect(find.text('Remark'), findsNothing);
 
     // Model filter: a sheet with each model and its counts.
