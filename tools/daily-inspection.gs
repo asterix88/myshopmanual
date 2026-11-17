@@ -29,8 +29,9 @@ function doPost(e) {
     return out_({ error: 'bad_request' });
   }
   if (!req || KEY === 'GANTI_DENGAN_KODE_RAHASIA' || req.key !== KEY) return out_({ error: 'forbidden', message: 'Kode rahasia salah.' });
-  const ss = SpreadsheetApp.openById(SHEET_ID);
   try {
+    // Throws when the robot is no longer allowed to open the sheet.
+    const ss = SpreadsheetApp.openById(SHEET_ID);
     if (req.op === 'read') {
       return out_({ values: (req.ranges || []).map(function (r) {
         const range = range_(ss, r, false);
