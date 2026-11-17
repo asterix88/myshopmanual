@@ -204,7 +204,7 @@ void main() {
     expect(find.byType(InspectionScreen), findsOneWidget);
     expect(find.text('TRACK · Update 12/11 09:10'), findsOneWidget);
     expect(find.byKey(const Key('inspection-sheet-link')), findsOneWidget);
-    expect(find.text('CLOSE'), findsOneWidget);
+    expect(find.text('CLOSED'), findsOneWidget);
     expect(find.text('ACTION  DONE', findRichText: true), findsOneWidget);
     // Both E5138 findings sit in one unit frame.
     final e5138 = find.byKey(const Key('unit-E5138'));
@@ -234,11 +234,11 @@ void main() {
     await tester.enterText(find.byKey(const Key('inspection-action')), 'replace pin');
     await tester.pump();
     await tester.tap(find.byKey(const Key('inspection-save-action')));
-    await settle(find.text('E5138 CLOSE'));
-    expect(find.text('E5138 CLOSE'), findsOneWidget);
+    await settle(find.text('E5138 CLOSED'));
+    expect(find.text('E5138 CLOSED'), findsOneWidget);
     expect(find.text('Urungkan'), findsOneWidget);
     expect(server.calls.last.$2, containsPair('action', 'REPLACE PIN'));
-    expect(find.text('CLOSE'), findsNWidgets(2));
+    expect(find.text('CLOSED'), findsNWidgets(2));
 
     // Add a finding for a unit that is in POP UNIT.
     ScaffoldMessenger.of(tester.element(find.byType(InspectionScreen))).hideCurrentSnackBar();
