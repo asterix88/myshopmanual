@@ -32,6 +32,10 @@ class Diagnostics {
   Diagnostics._();
 
   static File? _file;
+
+  /// Also told about every error the app did not handle (the automatic
+  /// error reports listen here).
+  static void Function(String message, String stack)? onError;
   static const _channel = MethodChannel('mymanual/diagnostics');
   static const _maxBytes = 64 * 1024;
 
@@ -53,10 +57,12 @@ class Diagnostics {
     final previous = FlutterError.onError;
     FlutterError.onError = (details) {
       log('ERROR ${details.exceptionAsString()}\n${details.stack ?? ''}');
+      onError?.call(details.exceptionAsString(), '${details.stack ?? ''}');
       previous?.call(details);
     };
     PlatformDispatcher.instance.onError = (error, stack) {
       log('ERROR $error\n$stack');
+      onError?.call('$error', '$stack');
       return false;
     };
   }
@@ -70,6 +76,26 @@ class Diagnostics {
       file.writeAsStringSync('$now $message\n', mode: FileMode.append, flush: true);
     } on FileSystemException {
       // Logging must never break the app.
+    }
+  }
+
+  /// Why Android closed the app the last few times, newest first (Android
+  /// 11 and newer; empty elsewhere): time, reason, description.
+  static Future<List<Map<Object?, Object?>>> exits() async {
+    try {
+      return (await _channel.invokeListMethod<Map<Object?, Object?>>('exits')) ?? const [];
+    } on Object {
+      return const [];
+    }
+  }
+
+  /// The last [count] lines of the log, the steps before a problem.
+  static String tail([int count = 40]) {
+    try {
+      final lines = _file?.readAsLinesSync() ?? const <String>[];
+      return lines.skip(lines.length > count ? lines.length - count : 0).join('\n');
+    } on FileSystemException {
+      return '';
     }
   }
 
