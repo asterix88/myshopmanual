@@ -1,3 +1,19 @@
+/// AppStore: the app's one shared state (login, catalog, downloaded manuals,
+/// settings saved in state.json). Screens reach it with `StoreScope.of`.
+///
+/// This file holds the state itself and login/refresh/saving. Bigger topics
+/// are extensions on AppStore in their own files under `store/`:
+///
+/// - `downloads.dart`   download, pause, cancel, retry, delete manuals
+/// - `updates.dart`     the bell: new / updated / withdrawn manuals
+/// - `ai_index.dart`    search indexes fetched in the background for nyel AI
+/// - `spec_packs.dart`  per-unit spek.pdf for the Standar and Servis tabs
+///
+/// They are `part` files, so they may use AppStore's private fields. Their
+/// methods are extension methods: a file that calls them must import
+/// `store.dart` itself (getting AppStore through another file is not enough).
+library;
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -16,6 +32,11 @@ import 'diagnostics.dart';
 import 'keep_alive.dart';
 import 'models.dart';
 import 'usage.dart';
+
+part 'store/ai_index.dart';
+part 'store/downloads.dart';
+part 'store/spec_packs.dart';
+part 'store/updates.dart';
 
 /// Server address: the Worker that serves the R2 bucket to logged-in phones
 /// (ai-worker/src/files.ts), unless a build overrides it with
@@ -581,39 +602,6 @@ class AppStore extends ChangeNotifier {
     return 'Server sedang bermasalah.';
   }
 
-  /// Changes on the server since the user last looked (only meaningful once
-  /// the catalog was fetched at least once).
-  List<ManualUpdate> get updates =>
-      computeUpdates(remote: catalog, local: local, seenKeys: seenKeys);
-
-  /// Updates the user has not looked at yet: what the bell counts.
-  List<ManualUpdate> get unseenUpdates => [
-        for (final u in updates)
-          if (!seenKeys.contains(u.seenKey)) u,
-      ];
-
-  /// What the update list shows, newest first: changes still pending and
-  /// the ones already seen, until the bin clears them.
-  List<ManualUpdate> get listedUpdates {
-    final listed = <String>{};
-    return [
-      for (final u in [...updates, ...updateLog])
-        if (!dismissedUpdates.contains(u.seenKey) && listed.add(u.seenKey)) u,
-    ];
-  }
-
-  /// Not looked at yet: marked on the update list.
-  bool isUnseen(ManualUpdate update) => !seenKeys.contains(update.seenKey);
-
-  /// Adds [pending] updates not logged yet to the front of [updateLog].
-  bool _remember(List<ManualUpdate> pending) {
-    final logged = {for (final u in updateLog) u.seenKey};
-    final fresh = [for (final u in pending) if (!logged.contains(u.seenKey)) u];
-    if (fresh.isEmpty) return false;
-    updateLog = [...fresh, ...updateLog].take(200).toList();
-    return true;
-  }
-
   static ManualUpdate? _logEntry(Map<String, dynamic> json) {
     try {
       return ManualUpdate(
@@ -624,14 +612,6 @@ class AppStore extends ChangeNotifier {
     } catch (_) {
       return null;
     }
-  }
-
-  /// Empties the update list (the bin on it); manuals on the phone stay.
-  void clearUpdates() {
-    dismissedUpdates.addAll(listedUpdates.map((u) => u.seenKey));
-    markUpdatesSeen();
-    _scheduleSave();
-    notifyListeners();
   }
 
   /// Remembers a search for the Cari tab's start page.
@@ -645,29 +625,6 @@ class AppStore extends ChangeNotifier {
 
   void removeRecentSearch(String query) {
     recentSearches = [...recentSearches]..remove(query);
-    _scheduleSave();
-    notifyListeners();
-  }
-
-  void markUpdatesSeen() {
-    final before = seenKeys.length;
-    final pending = updates;
-    final logged = _remember(pending);
-    seenKeys.addAll(catalog.files.map((f) => f.key));
-    seenKeys.addAll(pending.map((u) => u.seenKey));
-    if (seenKeys.length != before || logged) {
-      _scheduleSave();
-      notifyListeners();
-    }
-  }
-
-  /// Opening a unit counts as seeing its updates: its badges and its part
-  /// of the bell's count go; the update list keeps them.
-  void markUnitUpdatesSeen(String unitId) {
-    final pending = [for (final u in unseenUpdates) if (u.file.unitId == unitId) u];
-    if (pending.isEmpty) return;
-    _remember(pending);
-    seenKeys.addAll(pending.map((u) => u.seenKey));
     _scheduleSave();
     notifyListeners();
   }
@@ -718,132 +675,14 @@ class AppStore extends ChangeNotifier {
 
   LocalManual? localManual(String key) => local[key];
 
-  /// Bytes [start] to [end] (exclusive) of [f]'s PDF from the server, for a
-  /// manual that is not on the phone.
-  Future<Uint8List> fetchPdfRange(ManualFile f, int start, int end) async {
-    final response = await _client
-        // v (the file's version) lets the server answer from its cache
-        // without first checking the bucket.
-        .get(
-          _url(f.pdf.path).replace(queryParameters: {'v': f.pdf.sha256.substring(0, 12)}),
-          headers: {'Range': 'bytes=$start-${end - 1}'},
-        )
-        .timeout(const Duration(seconds: 30));
-    if (response.statusCode == 206 && response.bodyBytes.length == end - start) return response.bodyBytes;
-    throw HttpException('HTTP ${response.statusCode} untuk ${f.pdf.path}');
-  }
-
   /// The manual for [key]: the downloaded copy if there is one, else the
   /// server's entry.
   ManualFile? fileByKey(String key) => local[key]?.file ?? catalog.file(key);
 
   String unitNameOf(ManualFile f) => local[f.key]?.unitName ?? unitById(f.unitId)?.name ?? f.unitId;
 
-  int get usedBytes => local.values.fold(0, (sum, m) => sum + m.file.downloadSize);
-
-  Future<void> download(ManualFile file, {required String unitName}) async {
-    if (downloads.containsKey(file.key)) return;
-    final progress = DownloadProgress(file.downloadSize);
-    downloads[file.key] = progress;
-    notifyListeners();
-    final targets = {file.index: indexPath(file), file.pdf: pdfPath(file)};
-    // Keeps the app alive with a notification while it downloads, so moving
-    // to another app does not stop it.
-    if (downloads.length == 1) unawaited(KeepAlive.start('Mengunduh manual'));
-    try {
-      var done = 0;
-      for (final e in targets.entries) {
-        await _fetchRetrying(e.key, e.value, progress, done);
-        done += e.key.size;
-      }
-      // Swap both in only once both arrived intact, so an update that fails
-      // halfway leaves the old version usable.
-      for (final target in targets.values) {
-        await File('$target.part').rename(target);
-        await _deleteIfExists(File('$target.part.sha'));
-      }
-      local[file.key] = LocalManual(file: file, unitName: unitName);
-      seenKeys.add(file.key);
-      usage.downloaded(file);
-      await _save();
-    } on DownloadCancelled {
-      // Cancelled on purpose: free the space. Paused keeps the parts.
-      if (!progress.paused) {
-        for (final target in targets.values) {
-          await _deleteIfExists(File('$target.part'));
-          await _deleteIfExists(File('$target.part.sha'));
-        }
-      }
-    } on SocketException {
-      throw DownloadInterrupted();
-    } on HandshakeException {
-      throw DownloadInterrupted();
-    } on TimeoutException {
-      throw DownloadInterrupted();
-    } on http.ClientException {
-      throw DownloadInterrupted();
-    } finally {
-      downloads.remove(file.key);
-      if (downloads.isEmpty) unawaited(KeepAlive.stop());
-      notifyListeners();
-    }
-  }
-
   /// Manuals waiting in an "Unduh semua" run, downloaded one at a time.
   final Set<String> downloadQueue = {};
-
-  /// Downloads [files] one after another. Stops at the first one that does
-  /// not finish (paused, cancelled or failed), so the rest wait for the
-  /// mechanic instead of filling the phone on a bad signal.
-  Future<void> downloadAll(List<ManualFile> files, {required String unitName}) async {
-    final todo = [for (final f in files) if (!isDownloaded(f.key) && !downloadQueue.contains(f.key)) f];
-    if (todo.isEmpty) return;
-    downloadQueue.addAll(todo.map((f) => f.key));
-    notifyListeners();
-    try {
-      for (final f in todo) {
-        if (!downloadQueue.contains(f.key)) break;
-        // Its own Unduh button may have started it already.
-        while (downloads.containsKey(f.key)) {
-          await Future<void>.delayed(const Duration(milliseconds: 300));
-        }
-        if (isDownloaded(f.key)) {
-          downloadQueue.remove(f.key);
-          continue;
-        }
-        await download(catalog.file(f.key) ?? f, unitName: unitName);
-        if (!isDownloaded(f.key)) break;
-        downloadQueue.remove(f.key);
-        notifyListeners();
-      }
-    } finally {
-      downloadQueue.removeAll(todo.map((f) => f.key));
-      notifyListeners();
-    }
-  }
-
-  /// [_fetch], continuing from what arrived when the connection drops (a
-  /// phone switching networks or waking up), before giving up.
-  Future<void> _fetchRetrying(RemoteFile remote, String target, DownloadProgress progress, int done) async {
-    for (var attempt = 0;; attempt++) {
-      progress.received = done;
-      try {
-        return await _fetch(remote, target, progress);
-      } on Exception catch (e) {
-        final network = e is SocketException ||
-            e is HandshakeException ||
-            e is TimeoutException ||
-            e is http.ClientException;
-        if (!network || attempt >= retryDelays.length) rethrow;
-        Diagnostics.log('download ${remote.path}: $e, retry ${attempt + 1}');
-        final until = DateTime.now().add(retryDelays[attempt]);
-        while (DateTime.now().isBefore(until)) {
-          if (progress.cancelled) throw DownloadCancelled();
-          await Future<void>.delayed(const Duration(milliseconds: 250));
-        }
-      }
-    }
-  }
 
   /// Waits between tries of a dropped download.
   @visibleForTesting
@@ -855,113 +694,6 @@ class AppStore extends ChangeNotifier {
     Duration(seconds: 30),
   ];
 
-  /// Stops a download but keeps what arrived, to continue later.
-  void pauseDownload(String key) {
-    final progress = downloads[key];
-    if (progress == null) return;
-    progress
-      ..paused = true
-      ..cancelled = true;
-    notifyListeners();
-  }
-
-  void cancelDownload(String key) {
-    downloads[key]?.cancelled = true;
-    notifyListeners();
-  }
-
-  /// Bytes already downloaded for [file] by an interrupted download.
-  int partialBytes(ManualFile file) {
-    var total = 0;
-    for (final (remote, target) in [(file.index, indexPath(file)), (file.pdf, pdfPath(file))]) {
-      final part = File('$target.part');
-      final tag = File('$target.part.sha');
-      if (part.existsSync() && tag.existsSync() && tag.readAsStringSync() == remote.sha256) {
-        total += part.lengthSync();
-      }
-    }
-    return total;
-  }
-
-  /// Downloads [remote] to `<target>.part` and checks its sha256. A `.part`
-  /// left by an interrupted try of the same version (recorded in
-  /// `<target>.part.sha`) is continued with an HTTP Range request.
-  Future<void> _fetch(RemoteFile remote, String target, DownloadProgress progress) async {
-    await Directory(p.dirname(target)).create(recursive: true);
-    final part = File('$target.part');
-    final tag = File('$target.part.sha');
-    var have = 0;
-    if (await part.exists()) {
-      final sameVersion = await tag.exists() && await tag.readAsString() == remote.sha256;
-      have = sameVersion ? await part.length() : 0;
-      if (!sameVersion || have > remote.size) {
-        await part.delete();
-        have = 0;
-      }
-    }
-    await tag.writeAsString(remote.sha256);
-    progress.received += have;
-    notifyListeners();
-
-    if (have < remote.size) {
-      final request = http.Request('GET', _url(remote.path));
-      if (have > 0) request.headers['Range'] = 'bytes=$have-';
-      final response = await _client.send(request).timeout(const Duration(seconds: 30));
-      final IOSink sink;
-      if (have > 0 && response.statusCode == 206) {
-        sink = part.openWrite(mode: FileMode.append);
-      } else if (response.statusCode == 200) {
-        // The server sent the whole file: start over.
-        progress.received -= have;
-        sink = part.openWrite();
-      } else {
-        throw HttpException('HTTP ${response.statusCode} untuk ${remote.path}');
-      }
-      var lastNotify = DateTime.now();
-      try {
-        // A dropped connection can stall without an error; treat 30 s of
-        // silence as an interruption.
-        await for (final chunk in response.stream.timeout(const Duration(seconds: 30))) {
-          if (progress.cancelled) throw DownloadCancelled();
-          sink.add(chunk);
-          progress.received += chunk.length;
-          if (DateTime.now().difference(lastNotify) > const Duration(milliseconds: 150)) {
-            lastNotify = DateTime.now();
-            notifyListeners();
-          }
-        }
-      } finally {
-        await sink.close().catchError((_) {});
-      }
-    }
-
-    final path = part.path;
-    final digest = await Isolate.run(() => sha256.bind(File(path).openRead()).first);
-    if (digest.toString() != remote.sha256) {
-      await _deleteIfExists(part);
-      await _deleteIfExists(tag);
-      throw const FileSystemException('File rusak saat diunduh, coba lagi');
-    }
-  }
-
-  static Future<void> _deleteIfExists(File f) async {
-    if (await f.exists()) await f.delete();
-  }
-
-  Future<void> deleteManuals(Iterable<String> keys) async {
-    for (final key in keys.toList()) {
-      final m = local.remove(key);
-      if (m == null) continue;
-      for (final path in [pdfPath(m.file), indexPath(m.file)]) {
-        final f = File(path);
-        if (await f.exists()) await f.delete();
-      }
-      bookmarks.remove(key);
-      if (lastRead?.fileKey == key) lastRead = null;
-    }
-    await _save();
-    notifyListeners();
-  }
 
   void setLastRead(String fileKey, int page, {String? section}) {
     lastRead = LastRead(fileKey: fileKey, page: page, section: section);
@@ -988,59 +720,7 @@ class AppStore extends ChangeNotifier {
   /// tests leave it off.
   bool autoFetchAiIndexes = false;
 
-  /// Progress of [fetchAllAiIndexes] while it runs: indexes ready of total,
-  /// and bytes received of the bytes it has to fetch.
-  AiIndexProgress? get aiIndexProgress => _aiIndexRun;
   AiIndexProgress? _aiIndexRun;
-
-  /// Fetches every missing search index for nyel AI (indexes only, never
-  /// PDFs), a few at a time, and deletes cached indexes of manuals no longer
-  /// on the server. A failed index is skipped; after several failures in a
-  /// row (offline) it stops and tries again on the next refresh.
-  Future<void> fetchAllAiIndexes() async {
-    if (_aiIndexRun != null) return;
-    final files = [for (final f in catalog.files) if (f.searchable) f];
-    final missing = [for (final f in files) if (_readyAiIndex(f) == null) f];
-    final run = _aiIndexRun = AiIndexProgress(
-      total: files.length,
-      ready: files.length - missing.length,
-      totalBytes: missing.fold(0, (s, f) => s + f.index.size),
-    );
-    notifyListeners();
-    var failuresInARow = 0;
-    var next = 0;
-    Future<void> worker() async {
-      while (next < missing.length && failuresInARow < 3) {
-        final file = missing[next++];
-        final got = await aiIndexes(where: (f) => f.key == file.key);
-        if (got.isEmpty) {
-          failuresInARow++;
-        } else {
-          failuresInARow = 0;
-          run.ready++;
-        }
-        run.doneBytes += file.index.size;
-        notifyListeners();
-      }
-    }
-
-    try {
-      await Future.wait([for (var i = 0; i < 3; i++) worker()]);
-      if (failuresInARow < 3) await _deleteStaleAiIndexes();
-    } finally {
-      _aiIndexRun = null;
-      notifyListeners();
-    }
-  }
-
-  Future<void> _deleteStaleAiIndexes() async {
-    final keep = {for (final f in catalog.files) cachedIndexPath(f)};
-    final dir = Directory(p.join(_root.path, 'index-cache'));
-    if (!await dir.exists()) return;
-    await for (final entry in dir.list(recursive: true)) {
-      if (entry is File && entry.path.endsWith('.sqlite') && !keep.contains(entry.path)) await entry.delete();
-    }
-  }
 
   /// The kind and units the Konversi Satuan screen showed last.
   ({String kind, String from, String to})? lastConvert;
@@ -1087,56 +767,7 @@ class AppStore extends ChangeNotifier {
     return q;
   }
 
-  /// Where a unit's spek.pdf is kept; the version is in the name so an
-  /// update fetches it afresh.
-  String specPath(Unit unit, SpecPack spec) =>
-      p.join(_root.path, 'spek', '${unit.id}-${spec.file.sha256.substring(0, 12)}.pdf');
-
-  /// The unit's spek.pdf if it is on the phone.
-  String? readySpecPath(Unit unit) {
-    final spec = unit.spec;
-    if (spec == null) return null;
-    final path = specPath(unit, spec);
-    return File(path).existsSync() ? path : null;
-  }
-
   bool _fetchingSpecs = false;
-
-  /// Fetches the spek.pdf of every unit that lacks it (they are small) and
-  /// deletes old versions, so the Spek tab opens its pages without signal.
-  /// Stops at the first failure (offline) and tries again on the next refresh.
-  Future<void> fetchSpecPacks() async {
-    if (_fetchingSpecs) return;
-    _fetchingSpecs = true;
-    try {
-      for (final unit in catalog.units) {
-        final spec = unit.spec;
-        if (spec == null || readySpecPath(unit) != null) continue;
-        final target = specPath(unit, spec);
-        try {
-          await _fetch(spec.file, target, DownloadProgress(spec.file.size));
-        } on Exception catch (e) {
-          debugPrint('spek ${unit.id} failed: $e');
-          return;
-        }
-        await File('$target.part').rename(target);
-        await _deleteIfExists(File('$target.part.sha'));
-        notifyListeners();
-      }
-      final keep = {
-        for (final u in catalog.units)
-          if (u.spec != null) specPath(u, u.spec!),
-      };
-      final dir = Directory(p.join(_root.path, 'spek'));
-      if (await dir.exists()) {
-        await for (final entry in dir.list()) {
-          if (entry is File && entry.path.endsWith('.pdf') && !keep.contains(entry.path)) await entry.delete();
-        }
-      }
-    } finally {
-      _fetchingSpecs = false;
-    }
-  }
 
   /// Where the search index of a manual that is not downloaded is kept for
   /// nyel AI; the version is in the name so an update fetches it afresh.
@@ -1147,88 +778,11 @@ class AppStore extends ChangeNotifier {
 
   String get pdfBlockRoot => p.join(_root.path, 'pdf-blocks');
 
-  String cachedIndexPath(ManualFile f) =>
-      p.join(_root.path, 'index-cache', f.unitId, '${f.id}-${f.index.sha256.substring(0, 12)}.sqlite');
-
-  /// Search indexes for nyel AI over every manual on the server, by file
-  /// key: a downloaded manual uses its own index; for any other only the small
-  /// index is fetched (not the PDF) and kept. [where] narrows the manuals, so
-  /// a question about one unit only fetches that unit's indexes. A manual
-  /// whose index can't be fetched (offline) is left out.
-  ///
-  /// With [fetch] false nothing is downloaded: only indexes already on the
-  /// phone are returned.
-  Future<Map<String, String>> aiIndexes({
-    bool Function(ManualFile file)? where,
-    void Function(String status)? onStatus,
-    bool fetch = true,
-  }) async {
-    final result = <String, String>{};
-    for (final file in catalog.files.followedBy(local.values.map((m) => m.file))) {
-      if (!file.searchable || result.containsKey(file.key) || !(where?.call(file) ?? true)) continue;
-      final ready = _readyAiIndex(file);
-      if (ready != null) {
-        result[file.key] = ready;
-        continue;
-      }
-      if (!fetch) continue;
-      final target = cachedIndexPath(file);
-      onStatus?.call('Mengambil indeks ${unitNameOf(file)} · ${file.type.label}…');
-      // The background fetch and a question may want the same index at
-      // once; they share one download.
-      final download = _aiIndexFetches[file.key] ??=
-          _fetchAiIndex(file, target).whenComplete(() {
-            // A block body: returning the removed future would await itself.
-            _aiIndexFetches.remove(file.key);
-          });
-      try {
-        await download;
-      } on Exception {
-        continue;
-      }
-      result[file.key] = target;
-    }
-    return result;
-  }
-
   final _aiIndexFetches = <String, Future<void>>{};
 
-  /// The index of [file] if it is on the phone already, else null.
-  String? _readyAiIndex(ManualFile file) {
-    if (isDownloaded(file.key)) return indexPath(file);
-    final cached = cachedIndexPath(file);
-    return File(cached).existsSync() ? cached : null;
-  }
-
-  Future<void> _fetchAiIndex(ManualFile file, String target) async {
-    final dir = Directory(p.dirname(target));
-    if (await dir.exists()) {
-      // Older versions of this manual's index.
-      final old = RegExp('^${RegExp.escape(file.id)}-[0-9a-f]{12}\\.sqlite\$');
-      await for (final entry in dir.list()) {
-        if (old.hasMatch(p.basename(entry.path))) await entry.delete();
-      }
-    }
-    final progress = DownloadProgress(file.index.size);
-    final run = _aiIndexRun;
-    run?._inFlight.add(progress);
-    try {
-      await _fetch(file.index, target, progress);
-    } finally {
-      run?._inFlight.remove(progress);
-    }
-    await File('$target.part').rename(target);
-    await _deleteIfExists(File('$target.part.sha'));
-  }
-
-  /// Search indexes for the Cari tab, by file key: every manual whose index
-  /// is on the phone, downloaded or not (the small indexes of the others are
-  /// fetched in the background for nyel AI).
-  Map<String, String> searchableIndexes({DocType? type}) => {
-        for (final file in catalog.files.followedBy(local.values.map((m) => m.file)))
-          if (file.searchable && (type == null || file.type == type))
-            file.key: ?_readyAiIndex(file),
-      };
+  /// [notifyListeners] for the topic files under store/ (extensions may
+  /// not call it directly: it is protected).
+  void _changed() => notifyListeners();
 
   @override
   void dispose() {
@@ -1247,4 +801,8 @@ class AppStore extends ChangeNotifier {
     _client.close();
     super.dispose();
   }
+}
+
+Future<void> _deleteIfExists(File f) async {
+  if (await f.exists()) await f.delete();
 }
