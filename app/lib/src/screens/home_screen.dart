@@ -20,6 +20,7 @@ import 'cetok_screen.dart';
 import 'convert_screen.dart';
 import 'employees_screen.dart';
 import 'error_reports_screen.dart';
+import 'inspection_screen.dart';
 import 'machine_screen.dart';
 import 'quiz_admin_screen.dart';
 import 'quiz_hub_screen.dart';
@@ -831,6 +832,17 @@ class _Tools extends StatelessWidget {
               onTap: () => openCetok(context),
             ),
           ),
+          if (StoreScope.of(context).seesInspection) ...[
+            const SizedBox(width: 12),
+            Expanded(
+              child: _ToolTile(
+                key: const Key('tool-inspection'),
+                icon: const ToolIcon.clipboard(),
+                title: 'Daily Inspection',
+                onTap: () => openInspection(context),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -855,10 +867,10 @@ class _ToolTile extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             title,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink, height: 1.3),
           ),
         ],
       ),

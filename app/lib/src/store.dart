@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'ai.dart' show aiUrl;
 import 'auth.dart';
 import 'cetok.dart';
+import 'inspection.dart';
 import 'diagnostics.dart';
 import 'keep_alive.dart';
 import 'models.dart';
@@ -315,8 +316,10 @@ class AppStore extends ChangeNotifier {
     final s = session;
     if (s != null && !revoked && !s.expired) {
       await usage.send().timeout(const Duration(seconds: 8), onTimeout: () {});
+      if (inspection.pendingCount > 0) await inspection.flush().timeout(const Duration(seconds: 8), onTimeout: () {});
     }
     session = null;
+    await inspection.clear();
     await usage.clear();
     try {
       if (await _sessionFile.exists()) await _sessionFile.delete();
@@ -433,6 +436,23 @@ class AppStore extends ChangeNotifier {
     client: _client,
     showAllSetting: _cetokShowAll,
   );
+
+  /// Daily Inspection Monitoring (the admin's Google Sheet, through the
+  /// MyManual server), opened from Fitur lainnya on Home.
+  late final Inspection inspection = Inspection(
+    cachePath: p.join(_root.path, 'inspection.json'),
+    client: _client,
+    baseUrl: Uri.parse(aiUrl),
+  );
+
+  /// Whether this NRP has a Daily Inspection tab: Track, Wheel or Support
+  /// (sessions from before sections are Track), or an admin.
+  bool get seesInspection {
+    final s = session;
+    if (s == null) return false;
+    if (s.admin || s.sections.isEmpty) return true;
+    return s.sections.any((x) => inspectionSections.contains(x.toUpperCase()));
+  }
 
   /// The admin's choice of all or some Cetok locations; null when offline.
   Future<bool?> _cetokShowAll() async {
