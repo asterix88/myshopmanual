@@ -1,0 +1,112 @@
+name: Pulihkan backup
+
+# Puts the employee list and/or the quiz back from a "Backup mingguan" ZIP.
+# Only by hand: Actions > Pulihkan backup > Run workflow. The current data
+# is backed up first (sebelum-pulih-...), so a wrong choice can be undone by
+# restoring that one. Step by step: BACKUP.md.
+on:
+  workflow_dispatch:
+    inputs:
+      tanggal:
+        description: 'Tanggal backup, contoh 2026-11-23 (atau nama lengkap, contoh sebelum-pulih-2026-11-26-1405)'
+        required: true
+      yang_dipulihkan:
+        description: 'Yang dipulihkan'
+        type: choice
+        options: [karyawan, quiz, keduanya]
+        required: true
+      konfirmasi:
+        description: 'Ketik PULIHKAN (huruf besar) untuk melanjutkan'
+        required: true
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact: ${{ steps.find.outputs.artifact }}
+      name: ${{ steps.find.outputs.name }}
+    steps:
+      - name: Konfirmasi
+        env:
+          KONFIRMASI: ${{ inputs.konfirmasi }}
+        run: |
+          if [ "$KONFIRMASI" != PULIHKAN ]; then
+            echo "::error::Kolom konfirmasi harus diisi PULIHKAN. Tidak ada data yang diubah."
+            exit 1
+          fi
+      # The newest ZIP with that name that has not expired (90 days).
+      - name: Cari backup
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TANGGAL: ${{ inputs.tanggal }}
+        run: |
+          TANGGAL=$(echo "$TANGGAL" | tr -d '[:space:]')
+          if echo "$TANGGAL" | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then NAME="backup-$TANGGAL"; else NAME="$TANGGAL"; fi
+          ID=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=$NAME&per_page=100" \
+            --jq '[.artifacts[] | select(.expired | not)] | sort_by(.created_at) | last | .id // empty')
+          if [ -z "$ID" ]; then
+            echo "::error::Backup '$NAME' tidak ditemukan (atau sudah lewat 90 hari). Cek nama/tanggalnya di Actions > Backup mingguan. Tidak ada data yang diubah."
+            exit 1
+          fi
+          echo "Backup ditemukan: $NAME"
+          echo "artifact=$ID" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+
+  # Safety net: a backup of the data as it is now, before it is overwritten.
+  safety:
+    needs: check
+    uses: ./.github/workflows/backup.yml
+    with:
+      prefix: sebelum-pulih
+    secrets: inherit
+
+  restore:
+    needs: [check, safety]
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WHAT: ${{ inputs.yang_dipulihkan }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: ai-worker
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Ambil backup
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -o backup.zip \
+            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${{ needs.check.outputs.artifact }}/zip"
+          unzip -q backup.zip -d backup
+          ls -R backup
+
+      - name: Pulihkan karyawan
+        if: env.WHAT == 'karyawan' || env.WHAT == 'keduanya'
+        run: python tools/backup_tool.py restore-karyawan backup/pulihkan/karyawan.json | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Empties each quiz table and fills it from the backup.
+      - name: Pulihkan quiz
+        if: env.WHAT == 'quiz' || env.WHAT == 'keduanya'
+        run: |
+          python tools/backup_tool.py restore-quiz-sql backup/pulihkan/quiz.sql restore-quiz.sql
+          cd ai-worker && npx wrangler d1 execute mymanual-quiz --remote --file ../restore-quiz.sql --yes
+          cd .. && echo "Quiz dipulihkan: $(python tools/backup_tool.py count-quiz backup/pulihkan/quiz.sql)" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Selesai
+        run: |
+          {
+            echo
+            echo "Dipulihkan dari **${{ needs.check.outputs.name }}** ($WHAT)."
+            echo "Data sebelum dipulihkan disimpan sebagai **${{ needs.safety.outputs.name }}** (bagian Artifacts di halaman run ini). Kalau ternyata salah pilih, pulihkan lagi dengan mengisi tanggal: ${{ needs.safety.outputs.name }}"
+          } >> "$GITHUB_STEP_SUMMARY"
