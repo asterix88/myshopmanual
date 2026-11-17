@@ -208,38 +208,47 @@ export async function addFindings(ctx: Ctx, b: NewFindings): Promise<{ rows: num
     return fail(400, "bad_request", "Isian belum lengkap: kode unit, HM, tanggal, leader dan problem.");
   }
   const tab = q(tabOf(ctx, b.section));
-  const [all, popRows] = await ctx.sheets.read([`${tab}!B${FIRST_ROW}:Q${LAST_ROW}`, `${q(POP_TAB)}!B8:R2000`]);
-  const known = popIndex(parsePop(popRows ?? [])).get(unitKey(unit));
-  if (known && known.section && known.section !== b.section) {
-    return fail(400, "other_section", `Unit ${known.unit} milik section ${known.section}.`);
+  // Two phones adding at the same moment may pick the same free row: the
+  // write is refused then (rows not empty any more), so read again.
+  for (let attempt = 0; ; attempt++) {
+    const [all, popRows] = await ctx.sheets.read([`${tab}!B${FIRST_ROW}:Q${LAST_ROW}`, `${q(POP_TAB)}!B8:R2000`]);
+    const known = popIndex(parsePop(popRows ?? [])).get(unitKey(unit));
+    if (known && known.section && known.section !== b.section) {
+      return fail(400, "other_section", `Unit ${known.unit} milik section ${known.section}.`);
+    }
+    const model = known?.model || b.model.trim().toUpperCase();
+    if (!model) return fail(400, "model", "Unit ini belum ada di POP UNIT, isi model unitnya.");
+    const code = known?.unit ?? unit;
+    const start = firstFreeRow(all ?? []);
+    const end = start + problems.length - 1;
+    const data: { range: string; values: string[][] }[] = [];
+    const rows: number[] = [];
+    problems.forEach((problem, i) => {
+      const r = start + i;
+      rows.push(r);
+      const no = r === FIRST_ROW ? "1" : `=B${r - 1}+1`;
+      data.push(
+        {
+          range: `${tab}!B${r}:J${r}`,
+          values: [[no, String(i + 1), asText(b.inspector), asText(leader), asText(code), asText(model), hm, date, asText(problem)]],
+        },
+        { range: `${tab}!M${r}`, values: [[`=IF(J${r}="","",IF(K${r}="","OPEN","CLOSE"))`]] },
+        {
+          // As the admin's rows: the section looked up in POP UNIT; a unit
+          // not in POP UNIT yet gets the inspector's section as text.
+          range: `${tab}!Q${r}`,
+          values: [[known ? `=IFERROR(VLOOKUP(F${r},${q(POP_TAB)}!$C:$R,16,0)," ")` : b.section]],
+        },
+      );
+    });
+    data.push({ range: `${tab}!T3`, values: [[wibStamp(ctx.now)]] });
+    try {
+      await ctx.sheets.write(data, [`${tab}!F${start}:F${end}`, `${tab}!J${start}:J${end}`]);
+      return { rows };
+    } catch (e) {
+      if (!(e instanceof SheetsError && e.status === 409) || attempt >= 2) throw e;
+    }
   }
-  const model = known?.model || b.model.trim().toUpperCase();
-  if (!model) return fail(400, "model", "Unit ini belum ada di POP UNIT, isi model unitnya.");
-  const code = known?.unit ?? unit;
-  const start = firstFreeRow(all ?? []);
-  const data: { range: string; values: string[][] }[] = [];
-  const rows: number[] = [];
-  problems.forEach((problem, i) => {
-    const r = start + i;
-    rows.push(r);
-    const no = r === FIRST_ROW ? "1" : `=B${r - 1}+1`;
-    data.push(
-      {
-        range: `${tab}!B${r}:J${r}`,
-        values: [[no, String(i + 1), asText(b.inspector), asText(leader), asText(code), asText(model), hm, date, asText(problem)]],
-      },
-      { range: `${tab}!M${r}`, values: [[`=IF(J${r}="","",IF(K${r}="","OPEN","CLOSE"))`]] },
-      {
-        // As the admin's rows: the section looked up in POP UNIT; a unit
-        // not in POP UNIT yet gets the inspector's section as text.
-        range: `${tab}!Q${r}`,
-        values: [[known ? `=IFERROR(VLOOKUP(F${r},${q(POP_TAB)}!$C:$R,16,0)," ")` : b.section]],
-      },
-    );
-  });
-  data.push({ range: `${tab}!T3`, values: [[wibStamp(ctx.now)]] });
-  await ctx.sheets.write(data);
-  return { rows };
 }
 
 /// Can the robot still read and write the sheet? Run every night; a
@@ -260,7 +269,7 @@ export async function checkHealth(ctx: Ctx): Promise<Health> {
 
 export function messageOf(e: unknown): string {
   if (e instanceof SheetsError && (e.status === 403 || e.status === 404)) {
-    return "Robot tidak punya akses ke sheet lagi (izin link mungkin diubah). Tambahkan e-mail robot sebagai editor sheet.";
+    return `Robot tidak bisa membuka sheet (${e.message}). Pastikan akun robot masih editor sheet dan kode rahasianya sama.`;
   }
   if (e instanceof SheetsError && e.status === 400) {
     return `Nama tab di sheet berubah atau tidak ditemukan (${e.message}).`;

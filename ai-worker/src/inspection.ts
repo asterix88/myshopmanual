@@ -21,7 +21,7 @@
 // SECTION in R.
 
 import { allowedOf, requireSession, type AuthEnv, type Session } from "./auth";
-import { googleSheets, parseServiceAccount, SheetsError, type Sheets } from "./google";
+import { appsScriptSheets, googleSheets, parseServiceAccount, SheetsError, type Sheets } from "./google";
 import {
   addFindings,
   checkHealth,
@@ -38,7 +38,11 @@ import {
 import { json, readBody } from "./quiz";
 
 export interface InspectionEnv extends AuthEnv {
-  /// The robot's JSON key (secret; see google.ts).
+  /// The sheet's Apps Script Web App and its secret code (secrets; see
+  /// google.ts and tools/daily-inspection.gs).
+  SHEET_SCRIPT_URL?: string;
+  SHEET_SCRIPT_KEY?: string;
+  /// Or a Google Cloud service account's JSON key (secret; see google.ts).
   GOOGLE_SERVICE_ACCOUNT?: string;
   INSPECTION_SHEET_ID: string;
   /// Tab name with {SECTION} in it, e.g. "INSPECTION {SECTION} OPEN 2026".
@@ -52,6 +56,7 @@ export function inspectionSections(s: Session): string[] {
 }
 
 export function sheetsOf(env: InspectionEnv): Sheets | null {
+  if (env.SHEET_SCRIPT_URL && env.SHEET_SCRIPT_KEY) return appsScriptSheets(env.SHEET_SCRIPT_URL, env.SHEET_SCRIPT_KEY);
   const account = parseServiceAccount(env.GOOGLE_SERVICE_ACCOUNT);
   return account ? googleSheets(account, env.INSPECTION_SHEET_ID) : null;
 }
@@ -80,7 +85,7 @@ export async function handleInspection(
     return json({ error: "section", message: "Daily Inspection hanya untuk section Track, Wheel dan Support." }, 403);
   }
   const sheets = make(env);
-  if (!sheets) return json({ error: "setup", message: "Daily Inspection belum disiapkan admin (akun robot Google)." }, 503);
+  if (!sheets) return json({ error: "setup", message: "Daily Inspection belum disiapkan admin (Apps Script sheet belum disambungkan)." }, 503);
   const ctx: Ctx = { sheets, tab: env.INSPECTION_TAB, kv: env.AUTH };
   const sheetUrl = `https://docs.google.com/spreadsheets/d/${env.INSPECTION_SHEET_ID}/edit`;
   try {

@@ -15,7 +15,7 @@ import {
   wibStamp,
   writeAction,
 } from "../src/inspection-sheet.ts";
-import { SheetsError } from "../src/google.ts";
+import { SheetsError, appsScriptSheets } from "../src/google.ts";
 
 const TAB = "INSPECTION {SECTION} OPEN 2026";
 const row = (no, kase, insp, leader, unit, model, hm, date, problem, action = "") =>
@@ -58,8 +58,15 @@ function fakeSheet() {
         return out;
       });
     },
-    async write(data) {
+    async write(data, guard = []) {
       if (this.fail) throw this.fail;
+      // Another phone took the row between our read and write.
+      if (this.race) {
+        this.race();
+        this.race = null;
+      }
+      const got = await this.read(guard);
+      if (got.some((rows) => rows.some((r) => r.some((c) => c !== "")))) throw new SheetsError(409, "taken");
       for (const { range, values } of data) {
         writes.push(range);
         const { tab, c0, r0 } = parse(range);
@@ -230,4 +237,35 @@ test("health check records lost access", async () => {
   assert.equal(h.ok, false);
   assert.match(h.message, /editor/);
   assert.equal(JSON.parse(store.get("inspection:health")).ok, false);
+});
+
+test("a row taken by another phone at the same moment: the next free row is used", async () => {
+  const s = seeded();
+  s.race = () => s.load("INSPECTION TRACK OPEN 2026", 11, "F", [["E5138"]]);
+  const r = await addFindings(ctx(s), {
+    section: "TRACK", unit: "E5141", model: "", hm: "10", date: "01/11/2026", leader: "NOVAL", problems: ["X"], inspector: "ANAS",
+  });
+  assert.deepEqual(r, { rows: [12] });
+  assert.equal(s.cells.get("INSPECTION TRACK OPEN 2026!J12"), "X");
+});
+
+test("Apps Script robot: key sent, errors mapped", async () => {
+  const sent = [];
+  const answers = [{ values: [[["a", 1]]] }, { error: "taken" }, { error: "forbidden", message: "Kode rahasia salah." }];
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    sent.push([url, JSON.parse(init.body)]);
+    return new Response(JSON.stringify(answers.shift()));
+  };
+  try {
+    const sheets = appsScriptSheets("https://script.test/exec", "rahasia");
+    assert.deepEqual(await sheets.read(["'T'!A1"]), [[["a", "1"]]]);
+    assert.deepEqual(sent[0], ["https://script.test/exec", { op: "read", ranges: ["'T'!A1"], key: "rahasia" }]);
+    await assert.rejects(sheets.write([], ["'T'!F5:F5"]), (e) => e.status === 409);
+    await assert.rejects(sheets.read([]), (e) => e.status === 403);
+    globalThis.fetch = async () => new Response("<html>login</html>");
+    await assert.rejects(sheets.read([]), (e) => e.status === 403 && /Anyone/.test(e.message));
+  } finally {
+    globalThis.fetch = real;
+  }
 });

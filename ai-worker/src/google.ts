@@ -1,9 +1,14 @@
-// Google Sheets for Daily Inspection (inspection.ts), as the "robot": a
-// Google Cloud service account whose JSON key is the Worker secret
-// GOOGLE_SERVICE_ACCOUNT. The sheet is open to anyone with its link, but
-// Google's API still needs an account to write; adding the robot's e-mail
-// (client_email in the key) as an editor of the sheet keeps it working if
-// the link sharing is ever turned off.
+// Google Sheets for Daily Inspection (inspection.ts). Google wants an
+// account for writing, even on a sheet anyone with the link may edit, so
+// the Worker goes through one of two "robots":
+// - appsScriptSheets: a Web App made from the sheet's own Apps Script
+//   (tools/daily-inspection.gs), running as one Gmail account; the Worker
+//   secrets SHEET_SCRIPT_URL and SHEET_SCRIPT_KEY. Needs no Google Cloud
+//   project and no credit card. Used now.
+// - googleSheets: a Google Cloud service account (secret
+//   GOOGLE_SERVICE_ACCOUNT, its JSON key), when one is ever made.
+// Either account should be an editor of the sheet, so it keeps working if
+// the link sharing is turned off.
 
 export type ServiceAccount = { client_email: string; private_key: string };
 
@@ -13,8 +18,9 @@ export interface Sheets {
   /// list of rows per range; missing trailing cells and rows are left out.
   read(ranges: string[]): Promise<string[][][]>;
   /// Writes each range as if typed into the sheet (formulas and dates are
-  /// read the way the sheet reads typing).
-  write(data: { range: string; values: string[][] }[]): Promise<void>;
+  /// read the way the sheet reads typing). With [mustBeEmpty], nothing is
+  /// written (SheetsError 409) when one of those ranges has a value.
+  write(data: { range: string; values: string[][] }[], mustBeEmpty?: string[]): Promise<void>;
 }
 
 export class SheetsError extends Error {
@@ -104,11 +110,60 @@ export function googleSheets(account: ServiceAccount, id: string): Sheets {
       };
       return (data.valueRanges ?? []).map((v) => (v.values ?? []).map((row) => row.map((c) => String(c ?? ""))));
     },
-    async write(data) {
+    async write(data, mustBeEmpty) {
+      if (mustBeEmpty?.length) {
+        const got = await this.read(mustBeEmpty);
+        if (got.some((rows) => rows.some((r) => r.some((c) => c.trim() !== "")))) {
+          throw new SheetsError(409, "Baris sudah terisi.");
+        }
+      }
       await call(`/values:batchUpdate`, {
         method: "POST",
         body: JSON.stringify({ valueInputOption: "USER_ENTERED", data }),
       });
+    },
+  };
+}
+
+/// The sheet through its Apps Script Web App (tools/daily-inspection.gs).
+/// The script answers every call with HTTP 200 and {error} on failure.
+export function appsScriptSheets(url: string, key: string): Sheets {
+  async function call(body: Record<string, unknown>): Promise<Record<string, unknown>> {
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ ...body, key }),
+        redirect: "follow",
+        signal: AbortSignal.timeout(30_000),
+      });
+    } catch (e) {
+      throw new SheetsError(502, `Apps Script tidak menjawab (${String(e)}).`);
+    }
+    const text = await response.text();
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      // An HTML page: the Web App is not deployed for "Anyone", or removed.
+      throw new SheetsError(response.status === 404 ? 404 : 403, "Web App Apps Script tidak bisa dibuka (cek Deploy: akses Anyone).");
+    }
+    if (data.error) {
+      const status = data.error === "forbidden" ? 403 : data.error === "taken" ? 409 : data.error === "range" ? 400 : 502;
+      throw new SheetsError(status, String(data.message ?? data.error));
+    }
+    return data;
+  }
+  return {
+    async read(ranges) {
+      const data = await call({ op: "read", ranges });
+      return ((data.values as unknown[][][] | undefined) ?? []).map((rows) =>
+        rows.map((row) => row.map((c) => String(c ?? ""))),
+      );
+    },
+    async write(data, mustBeEmpty) {
+      await call({ op: "write", data, guard: mustBeEmpty ?? [] });
     },
   };
 }

@@ -84,9 +84,11 @@ INSPECTION_TAB = "INSPECTION {SECTION} OPEN 2026"
 #                     those run out, the AI searches Wikipedia
 #   OWNER_CODE        the admin code; update.bat sends it (ADMIN_CODE in
 #                     r2-keys.bat) to upload karyawan.xlsx and warm manuals
-#   GOOGLE_SERVICE_ACCOUNT  the JSON key of the Google Cloud service account
-#                     ("robot") that reads and writes the Daily Inspection
-#                     sheet; uploaded by the workflow from the GitHub secret
-#                     of the same name
+#   SHEET_SCRIPT_URL, SHEET_SCRIPT_KEY  the Daily Inspection sheet's Apps
+#                     Script Web App (tools/daily-inspection.gs) and its
+#                     secret code; uploaded by the workflow from the GitHub
+#                     secrets of the same names
+#   GOOGLE_SERVICE_ACCOUNT  instead of the Apps Script: a Google Cloud
+#                     service account's JSON key (needs a Cloud project)
 #   APP_TOKEN         optional; when set (npx wrangler secret put APP_TOKEN), the
 #                     app must send it, so also set the GitHub secret AI_TOKEN
