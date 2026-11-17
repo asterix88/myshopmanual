@@ -100,6 +100,15 @@ extension AppStoreAiIndexes on AppStore {
     return result;
   }
 
+  /// The index of [file] if it is on the phone already (downloaded with
+  /// the manual, or fetched for nyel AI), else null.
+  String? readyIndexPath(ManualFile file) => _readyAiIndex(file);
+
+  /// Where the page sizes measured while [file] was open are kept (for
+  /// indexes made before they had the sizes; see PageSizes).
+  String pageSizeCachePath(ManualFile file) =>
+      p.join(_root.path, 'page-sizes', file.unitId, '${file.id}-${file.pdf.sha256.substring(0, 12)}.json');
+
   /// The index of [file] if it is on the phone already, else null.
   String? _readyAiIndex(ManualFile file) {
     if (isDownloaded(file.key)) return indexPath(file);

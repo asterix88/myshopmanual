@@ -22,6 +22,7 @@ import 'package:pdfrx/pdfrx.dart';
 import '../diagnostics.dart';
 import '../models.dart';
 import '../page_image.dart';
+import '../page_sizes.dart';
 import '../remote_pdf.dart';
 import '../search.dart';
 import '../specs.dart';
@@ -171,6 +172,28 @@ class _ViewerScreenState extends State<ViewerScreen> {
           .catchError((Object e) => Diagnostics.log('prune pdf pieces: $e')));
     }
     if (manual != null) _toc = loadToc(store.indexPath(manual.file));
+    if (_file != null) {
+      final index = store.readyIndexPath(_file!);
+      _knownSizes = (index == null ? null : PageSizes.fromIndex(index)) ??
+          PageSizes.fromFile(store.pageSizeCachePath(_file!));
+      Diagnostics.log('page sizes: ${_knownSizes == null ? 'unknown' : '${_knownSizes!.sizes.length} known'}');
+    }
+  }
+
+  /// The pages' sizes before PDFium has measured them; null when neither the
+  /// index nor an earlier visit has them. See [PageSizes].
+  PageSizes? _knownSizes;
+
+  /// Keeps the sizes PDFium measured, for a manual whose index has none, so
+  /// the next opening lays the pages out right from the start.
+  void _savePageSizes() {
+    final document = _document;
+    final file = _file;
+    if (document == null || file == null || (_knownSizes?.isComplete ?? false)) return;
+    PageSizes.save(_store.pageSizeCachePath(file), [
+      for (final page in document.pages)
+        page.isLoaded && page.width > 0 && page.height > 0 ? Size(page.width, page.height) : null,
+    ]);
   }
 
   /// Pages for the AI are not drawn from the server while a manual is open
@@ -183,6 +206,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   @override
   void dispose() {
+    _savePageSizes();
     _resumeServerDrawing();
     if (_saveTimer?.isActive ?? false) {
       _saveTimer!.cancel();
@@ -452,15 +476,22 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   /// Pages one under the other, each as wide as the column with its own
   /// height, like Xodo: a landscape page takes only its own (low) height, so
-  /// several of them fit on the screen. A page whose size is not known yet
-  /// (online, before it scrolls in) keeps the estimate pdfrx gives it.
-  static PdfPageLayout _fitWidthLayout(List<PdfPage> pages, PdfViewerParams params) {
+  /// several of them fit on the screen.
+  ///
+  /// Sizes known beforehand ([_knownSizes]) come first: then the layout is
+  /// final from the start and nothing moves while PDFium measures the pages.
+  /// Otherwise a page not measured yet keeps the estimate pdfrx gives it
+  /// (the size of page 1).
+  PdfPageLayout _fitWidthLayout(List<PdfPage> pages, PdfViewerParams params) {
     const width = 600.0;
     final margin = params.margin;
+    final known = _knownSizes;
     final rects = <Rect>[];
     var y = margin;
-    for (final page in pages) {
-      final height = page.width > 0 && page.height > 0 ? width * page.height / page.width : width * 1.4142;
+    for (var i = 0; i < pages.length; i++) {
+      final page = pages[i];
+      final size = known?[i] ?? (page.width > 0 && page.height > 0 ? Size(page.width, page.height) : null);
+      final height = size != null ? width * size.height / size.width : width * 1.4142;
       rects.add(Rect.fromLTWH(margin, y, width, height));
       y += height + margin;
     }

@@ -216,12 +216,29 @@ def slugify(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "_", name).strip("_")
 
 
-def extract(pdf_path: Path) -> tuple[list[str], list[list]]:
-    """Per-page text and the PDF's own bookmarks as [level, title, page]."""
+def extract(pdf_path: Path) -> tuple[list[str], list[list], list[list]]:
+    """Per-page text, the PDF's own bookmarks as [level, title, page], and
+    the page sizes (see [page_size_runs])."""
     with pymupdf.open(pdf_path) as doc:
         pages = [page.get_text("text") for page in doc]
         toc = [[lvl, title.strip(), page] for lvl, title, page in doc.get_toc()]
-    return pages, toc
+        sizes = page_size_runs([(page.rect.width, page.rect.height) for page in doc])
+    return pages, toc, sizes
+
+
+def page_size_runs(sizes: list[tuple[float, float]]) -> list[list]:
+    """Page sizes (as shown, rotation applied) as [count, width, height]
+    runs: equal neighbours share one run, so a manual of 1,700 A4 pages is
+    one short line. The app lays every page out from these before PDFium
+    has measured them, so pages don't jump while the manual opens."""
+    runs: list[list] = []
+    for width, height in sizes:
+        w, h = round(width, 1), round(height, 1)
+        if runs and runs[-1][1] == w and runs[-1][2] == h:
+            runs[-1][0] += 1
+        else:
+            runs.append([1, w, h])
+    return runs
 
 
 def is_scanned(pages: list[str]) -> bool:
@@ -287,7 +304,7 @@ def ocr_pages(pdf: Path, pages: list[str], exe: str, cache_dir: Path, label: str
 
 
 def write_index(path: Path, title: str, doc_type: str, pages: list[str],
-                toc: list[list], searchable: bool) -> None:
+                toc: list[list], searchable: bool, sizes: list[list] | None = None) -> None:
     path.unlink(missing_ok=True)
     db = sqlite3.connect(path)
     db.executescript(
@@ -312,7 +329,8 @@ def write_index(path: Path, title: str, doc_type: str, pages: list[str],
     db.executemany(
         "INSERT INTO meta VALUES (?, ?)",
         [("schema", "1"), ("title", title), ("type", doc_type),
-         ("page_count", str(len(pages))), ("searchable", str(int(searchable)))],
+         ("page_count", str(len(pages))), ("searchable", str(int(searchable))),
+         *([("page_sizes", json.dumps(sizes, separators=(",", ":")))] if sizes else [])],
     )
     db.executemany("INSERT INTO toc (level, title, page) VALUES (?, ?, ?)", toc)
     if searchable:
@@ -806,7 +824,7 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
 
     for pdf, rel, title in sorted(sources, key=lambda s: order(unit_dir / s[1])):
         group = " / ".join(rel.parts[:-1])
-        pages, toc = extract(pdf)
+        pages, toc, sizes = extract(pdf)
         if is_scanned(pages) and ocr_exe:
             pages = ocr_pages(pdf, pages, ocr_exe, out_dir / ".ocr", rel.as_posix())
         scanned = is_scanned(pages)
@@ -823,7 +841,7 @@ def build_unit(unit_dir: Path, out_dir: Path, include_scanned: bool,
         index_path = unit_out / f"{file_id}.sqlite"
         before = previous_files.get(file_id)
         source_sha = write_pdf(pdf, target, (before or {}).get("pdf"))
-        write_index(index_path, title, doc_type, pages, toc, not scanned)
+        write_index(index_path, title, doc_type, pages, toc, not scanned, sizes)
         if doc_type != "partsbook":
             spec_sources.append((file_id, target, toc, len(pages), pages))
 
