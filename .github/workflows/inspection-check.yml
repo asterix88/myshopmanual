@@ -1,0 +1,17 @@
+name: Daily Inspection check
+# Tests SHEET_SCRIPT_URL + SHEET_SCRIPT_KEY against the Apps Script Web App
+# without printing the code (tools/diag/inspection_check.py).
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/project-thread-vztdpo]
+    paths: [.github/workflows/inspection-check.yml, tools/diag/inspection_check.py]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/diag/inspection_check.py
+        env:
+          URL: ${{ secrets.SHEET_SCRIPT_URL }}
+          KEY: ${{ secrets.SHEET_SCRIPT_KEY }}
