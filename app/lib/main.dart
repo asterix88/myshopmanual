@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import 'src/diagnostics.dart';
+import 'src/error_reports.dart';
 import 'src/keep_alive.dart';
 import 'src/quiz_reminders.dart';
 import 'src/screens/intro_screen.dart';
@@ -24,6 +25,9 @@ Future<void> main() async {
   await Diagnostics.start();
   await _clearOldPdfCache();
   final store = await AppStore.open()..autoFetchAiIndexes = true;
+  // Errors and crashes go to our own server by themselves (admin: menu ⋮ >
+  // Laporan error); sent once the phone is online and logged in.
+  await ErrorReports.start(dir: store.root, session: () => store.session, renew: store.renewSession);
   // The opening animation only after a day or more away; a quick return
   // goes straight to Home behind the Android launch screen.
   final splash = store.wantsSplash(DateTime.now());
@@ -37,6 +41,7 @@ Future<void> main() async {
   var wasLoggedIn = store.loggedIn;
   store.addListener(() {
     if (wasLoggedIn && !store.loggedIn) unawaited(QuizReminders.sync(store.root, null));
+    if (!wasLoggedIn && store.loggedIn) unawaited(ErrorReports.send());
     wasLoggedIn = store.loggedIn;
   });
   // Tapping an update notification opens the update list; a quiz reminder
