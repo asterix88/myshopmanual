@@ -1,0 +1,16 @@
+name: Daily Inspection check
+# Tests SHEET_SCRIPT_URL + SHEET_SCRIPT_KEY against the Apps Script Web App
+# without printing the code (tools/diag/inspection_check.py).
+# Run it from Actions > Daily Inspection check > Run workflow when the app
+# says "Kode rahasia salah" or the sheet cannot be opened.
+on:
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/diag/inspection_check.py
+        env:
+          URL: ${{ secrets.SHEET_SCRIPT_URL }}
+          KEY: ${{ secrets.SHEET_SCRIPT_KEY }}

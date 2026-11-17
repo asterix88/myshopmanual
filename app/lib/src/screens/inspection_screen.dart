@@ -270,20 +270,25 @@ class _InspectionScreenState extends State<InspectionScreen> {
               ],
             ),
           ),
-          for (final r in g.value)
+          // One frame per unit: all its findings together.
+          for (final u in _byUnit(g.value))
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: _FindingCard(
-                row: r,
-                today: today,
-                flash: _flash == r.id,
-                onTap: () => _openRow(data, r),
-              ),
+              child: _UnitCard(unit: u.key, rows: u.value, today: today, flash: _flash, onTap: (r) => _openRow(data, r)),
             ),
         ],
       ],
     );
   }
+}
+
+/// [rows] split by unit code, keeping their order.
+List<MapEntry<String, List<InspectionRow>>> _byUnit(List<InspectionRow> rows) {
+  final units = <String, List<InspectionRow>>{};
+  for (final r in rows) {
+    units.putIfAbsent(r.unit, () => []).add(r);
+  }
+  return units.entries.toList();
 }
 
 String _summary(List<InspectionRow> rows) {
@@ -578,8 +583,52 @@ String _who(InspectionRow r) {
 
 String _ageText(int d) => d <= 0 ? 'Hari ini' : '$d hr';
 
-class _FindingCard extends StatelessWidget {
-  const _FindingCard({required this.row, required this.today, required this.flash, required this.onTap});
+/// One unit's findings in one card: the unit code and its counts on top,
+/// then a row per finding.
+class _UnitCard extends StatelessWidget {
+  const _UnitCard({required this.unit, required this.rows, required this.today, required this.flash, required this.onTap});
+
+  final String unit;
+  final List<InspectionRow> rows;
+  final DateTime today;
+  final String? flash;
+  final ValueChanged<InspectionRow> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final open = rows.where((r) => !r.closed).length;
+    final closed = rows.length - open;
+    return Container(
+      key: Key('unit-$unit'),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), boxShadow: cardShadow, color: AppColors.surface),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    unit,
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: open == 0 ? AppColors.muted : AppColors.navy),
+                  ),
+                ),
+                Text('$open open${closed > 0 ? ' · $closed close' : ''}', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+              ],
+            ),
+          ),
+          for (final r in rows) _FindingRow(row: r, today: today, flash: flash == r.id, onTap: () => onTap(r)),
+        ],
+      ),
+    );
+  }
+}
+
+/// One finding inside a [_UnitCard].
+class _FindingRow extends StatelessWidget {
+  const _FindingRow({required this.row, required this.today, required this.flash, required this.onTap});
 
   final InspectionRow row;
   final DateTime today;
@@ -594,34 +643,66 @@ class _FindingCard extends StatelessWidget {
       duration: const Duration(milliseconds: 900),
       curve: Curves.easeOut,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: cardShadow,
         color: flash ? AppColors.greenSoft : AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.divider)),
       ),
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(
           key: Key('finding-${row.id}'),
-          borderRadius: BorderRadius.circular(16),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: Column(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        row.unit,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        row.problem,
                         style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
                           color: row.closed ? AppColors.muted : AppColors.ink,
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${row.date.length >= 5 ? row.date.substring(0, 5) : row.date} · HM ${row.hm} · ${_who(row)}',
+                        style: TextStyle(fontSize: 12, color: AppColors.muted),
+                      ),
+                      if (row.closed) ...[
+                        const SizedBox(height: 4),
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'ACTION  ',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: AppColors.green),
+                              ),
+                              TextSpan(text: row.action),
+                            ],
+                          ),
+                          style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.ink),
+                        ),
+                      ],
+                      if (row.pending) ...[
+                        const SizedBox(height: 4),
+                        Text('Belum terkirim', style: TextStyle(fontSize: 12, color: AppColors.amber)),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    StatusPill(closed: row.closed),
                     if (!row.closed && age != null) ...[
+                      const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
@@ -633,49 +714,9 @@ class _FindingCard extends StatelessWidget {
                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: old ? AppColors.amber : AppColors.muted),
                         ),
                       ),
-                      const SizedBox(width: 8),
                     ],
-                    StatusPill(closed: row.closed),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  row.problem,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    height: 1.4,
-                    color: row.closed ? AppColors.muted : AppColors.ink,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${row.date.length >= 5 ? row.date.substring(0, 5) : row.date} · HM ${row.hm} · ${_who(row)}',
-                  style: TextStyle(fontSize: 12, color: AppColors.muted),
-                ),
-                if (row.closed) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.only(top: 6),
-                    decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.divider))),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 1),
-                          child: Text('ACTION',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: AppColors.green)),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(child: Text(row.action, style: TextStyle(fontSize: 12, height: 1.4, color: AppColors.ink))),
-                      ],
-                    ),
-                  ),
-                ],
-                if (row.pending) ...[
-                  const SizedBox(height: 4),
-                  Text('Belum terkirim', style: TextStyle(fontSize: 12, color: AppColors.amber)),
-                ],
               ],
             ),
           ),
