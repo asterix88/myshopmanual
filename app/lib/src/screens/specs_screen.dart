@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models.dart';
 import '../specs.dart';
+import '../store.dart';
 import '../widgets/app_icons.dart';
 import '../widgets/excavator_loader.dart';
 import 'shell.dart';
