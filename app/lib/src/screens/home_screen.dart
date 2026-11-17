@@ -19,6 +19,7 @@ import '../widgets/unit_icon.dart';
 import 'cetok_screen.dart';
 import 'convert_screen.dart';
 import 'employees_screen.dart';
+import 'error_reports_screen.dart';
 import 'inspection_screen.dart';
 import 'machine_screen.dart';
 import 'quiz_admin_screen.dart';
@@ -119,6 +120,7 @@ class HomeScreen extends StatelessWidget {
         'report' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportScreen())),
         'employees' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EmployeesScreen())),
         'stats' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StatsScreen())),
+        'errors' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ErrorReportsScreen())),
         'theme' => _chooseTheme(context, store),
         'quiz' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QuizAdminScreen())),
         'cetok' => showDialog<void>(context: context, builder: (_) => const _CetokDataDialog()),
@@ -155,6 +157,8 @@ class HomeScreen extends StatelessWidget {
           const PopupMenuItem(value: 'employees', child: Text('Kelola karyawan')),
         if (store.session?.admin ?? false)
           const PopupMenuItem(value: 'stats', child: Text('Statistik pemakaian')),
+        if (store.session?.admin ?? false)
+          const PopupMenuItem(value: 'errors', child: Text('Laporan error')),
         if (store.session?.admin ?? false)
           const PopupMenuItem(value: 'quiz', child: Text('Kelola soal quiz')),
         // Penilaian nyel AI is in Statistik pemakaian, tab nyel AI (Anas, 3 Nov 2026).

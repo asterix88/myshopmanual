@@ -1,4 +1,5 @@
 import { countQuestion, handleAuth, requireSession, SESSION_HEADER } from "./auth";
+import { errors } from "./errors";
 import { feedback } from "./feedback";
 import { handleFiles } from "./files";
 import { handleInspection, scheduledInspection, type InspectionEnv } from "./inspection";
@@ -333,6 +334,7 @@ async function handle(
     }
     return json({ ok: !!env.OWNER_CODE && code.trim() === env.OWNER_CODE.trim() });
   }
+  if (url.pathname === "/errors") return errors(request, env);
   if (url.pathname === "/feedback") {
     return feedback(request, env, (s, good, question) => recordRating(env, s, good, question));
   }
