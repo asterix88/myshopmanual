@@ -28,7 +28,7 @@ function doPost(e) {
   } catch (err) {
     return out_({ error: 'bad_request' });
   }
-  if (!req || KEY === 'GANTI_DENGAN_KODE_RAHASIA' || req.key !== KEY) return out_({ error: 'forbidden', message: 'Kode rahasia salah.' });
+  if (!req || KEY === 'GANTI_DENGAN_KODE_RAHASIA' || String(req.key).trim() !== KEY.trim()) return out_({ error: 'forbidden', message: 'Kode rahasia salah.' });
   try {
     // Throws when the robot is no longer allowed to open the sheet.
     const ss = SpreadsheetApp.openById(SHEET_ID);

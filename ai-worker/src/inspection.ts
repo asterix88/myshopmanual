@@ -91,14 +91,17 @@ export async function handleInspection(
   try {
     if (request.method === "GET" && path === "/inspection") {
       const { tabs, pop } = await readAll(ctx, sections);
-      const health = s.a ? ((await env.AUTH.get(HEALTH_KEY, "json")) as Health | null) : null;
+      // The sheet was just read: an old failure (from before a fix, e.g. a
+      // wrong code) is over, so it is cleared instead of waiting for the
+      // nightly check.
+      const health = (await env.AUTH.get(HEALTH_KEY, "json")) as Health | null;
+      if (health && !health.ok) await env.AUTH.delete(HEALTH_KEY);
       return json({
         sections,
         sheet_url: sheetUrl,
         inspector: inspectorOf(s),
         tabs,
         pop: pop.map((u) => [u.unit, u.model, u.section]),
-        ...(health && !health.ok ? { health } : {}),
       });
     }
     if (request.method !== "POST") return json({ error: "method" }, 405);
