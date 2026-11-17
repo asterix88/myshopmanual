@@ -1,10 +1,14 @@
 /**
  * Daily Inspection Monitoring: the "robot" that lets the MyManual server
- * read and write this sheet. Paste this whole file into the sheet's
- * Extensions > Apps Script, put your own secret code in KEY (the same text
- * as the GitHub secret SHEET_SCRIPT_KEY), then Deploy > New deployment >
- * Web app, Execute as: Me, Who has access: Anyone. The Web app URL goes in
- * the GitHub secret SHEET_SCRIPT_URL.
+ * read and write the sheet "MASTER DATA MONITORING DAILY INSPECTION".
+ *
+ * Setup, logged in as the robot Gmail (an Editor of the sheet):
+ * script.google.com > New project, paste this whole file, put your own
+ * secret code in KEY (the same text as the GitHub secret SHEET_SCRIPT_KEY),
+ * then Deploy > New deployment > Web app, Execute as: Me, Who has access:
+ * Anyone. The Web app URL goes in the GitHub secret SHEET_SCRIPT_URL.
+ * A separate project (not Extensions > Apps Script inside the sheet) keeps
+ * KEY hidden from the many people who can edit the sheet.
  *
  * Every call needs KEY, so the URL alone gives nobody access. The server
  * (ai-worker/src/google.ts) sends:
@@ -15,6 +19,7 @@
  *        nothing is written ({error: "taken"}) when a guard range has a value.
  */
 const KEY = 'GANTI_DENGAN_KODE_RAHASIA';
+const SHEET_ID = '1fm-KQv-b1ZKV08oT45LJ-GxEL6meSieANMF-Bf-Tw-E';
 
 function doPost(e) {
   let req;
@@ -24,7 +29,7 @@ function doPost(e) {
     return out_({ error: 'bad_request' });
   }
   if (!req || KEY === 'GANTI_DENGAN_KODE_RAHASIA' || req.key !== KEY) return out_({ error: 'forbidden', message: 'Kode rahasia salah.' });
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.openById(SHEET_ID);
   try {
     if (req.op === 'read') {
       return out_({ values: (req.ranges || []).map(function (r) {
@@ -59,7 +64,7 @@ function doPost(e) {
 
 /// A test from the browser: opening the Web app URL shows this.
 function doGet() {
-  return out_({ ok: true, sheet: SpreadsheetApp.getActiveSpreadsheet().getName() });
+  return out_({ ok: true, sheet: SpreadsheetApp.openById(SHEET_ID).getName() });
 }
 
 /// "'TAB'!B5:Q3000" in tab TAB. Rows past the end of the tab are left out
