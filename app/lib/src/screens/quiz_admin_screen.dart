@@ -16,8 +16,8 @@ import '../theme.dart';
 import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
 import 'quiz_crop_screen.dart';
-import 'quiz_screen.dart';
 import 'quiz_job_screen.dart';
+import 'quiz_screen.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
 

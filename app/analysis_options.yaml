@@ -26,8 +26,26 @@ linter:
   # `// ignore_for_file: name_of_lint` syntax on the line or in the file
   # producing the lint.
   rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+    # Added on top of flutter_lints so the code stays consistent and some
+    # bug-prone patterns are caught before review. Each one is explained in
+    # https://dart.dev/lints/<name>.
+    #
+    # Readability: one way to write the same thing.
+    directives_ordering: true          # imports sorted: dart:, package:, relative
+    prefer_single_quotes: true
+    prefer_const_constructors: true
+    prefer_final_locals: true
+    prefer_final_fields: true
+    unnecessary_lambdas: true
+    type_annotate_public_apis: true
+    always_declare_return_types: true
+    # Bugs: a Future nobody waits for must say so with unawaited(...), and
+    # streams/sinks must be closed.
+    unawaited_futures: true
+    cancel_subscriptions: true
+    close_sinks: true
+    avoid_dynamic_calls: true
+    only_throw_errors: true
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

@@ -1,4 +1,5 @@
 // Renders the viewer's nyel AI button and the chat it opens (not run in CI).
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -33,7 +34,7 @@ void main() {
 
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pump();
-    openViewer(tester.element(find.byType(Scaffold).first), store.catalog.files.single, page: 2);
+    unawaited(openViewer(tester.element(find.byType(Scaffold).first), store.catalog.files.single, page: 2));
     await settle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/a1_viewer_ai.png'));
     await tester.tap(find.byKey(const Key('viewer-ai')));

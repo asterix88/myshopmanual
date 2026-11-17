@@ -188,7 +188,7 @@ class _AnswerSheetState extends State<AnswerSheet> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                AppIcon(AppGlyph.shopManual, size: 14),
+                                const AppIcon(AppGlyph.shopManual, size: 14),
                                 const SizedBox(width: 4),
                                 Text(s, style: TextStyle(fontSize: 11, color: AppColors.navy)),
                               ],

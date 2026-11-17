@@ -10,6 +10,8 @@
 /// - `format.dart`        date/name text helpers (tested in stats_test.dart)
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -300,7 +302,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
           if (!mounted) return;
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ditandai sudah ditangani')));
-          _load();
+          unawaited(_load());
         },
       ));
 

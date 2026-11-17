@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -23,7 +24,7 @@ void main() {
       });
       await tester.pumpWidget(MyManualApp(store: store));
       await tester.pump();
-      openViewer(tester.element(find.byType(Scaffold).first), store.catalog.files.single);
+      unawaited(openViewer(tester.element(find.byType(Scaffold).first), store.catalog.files.single));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       expect(tester.takeException(), isNull);
@@ -41,7 +42,7 @@ void main() {
     });
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pump();
-    openViewer(tester.element(find.byType(Scaffold).first), store.catalog.files.single, page: 1);
+    unawaited(openViewer(tester.element(find.byType(Scaffold).first), store.catalog.files.single, page: 1));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 

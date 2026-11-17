@@ -4,13 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../auth.dart';
-
 import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
-import 'shell.dart';
 import '../widgets/entrance.dart';
 import '../widgets/excavator_loader.dart';
 import '../widgets/machine_icon.dart';
@@ -25,6 +23,7 @@ import 'machine_screen.dart';
 import 'quiz_admin_screen.dart';
 import 'quiz_hub_screen.dart';
 import 'report_screen.dart';
+import 'shell.dart';
 import 'stats_screen.dart';
 import 'updates_screen.dart';
 import 'viewer_screen.dart';

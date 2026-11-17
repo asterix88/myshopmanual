@@ -1,6 +1,8 @@
 /// The Input tab.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -100,7 +102,7 @@ class _AddFormState extends State<AddForm> {
         name: _name.text,
       );
       if (!mounted) return;
-      HapticFeedback.mediumImpact();
+      unawaited(HapticFeedback.mediumImpact());
       showToast(context, 'Tersimpan: $qty pcs $pn di $_unit ($_status)');
       setState(() {
         _pn.clear();

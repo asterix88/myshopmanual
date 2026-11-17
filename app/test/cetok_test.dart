@@ -21,7 +21,7 @@ const _parts = [
 class FakeCetok {
   final calls = <(String, Map<String, dynamic>)>[];
   String? failWith;
-  var parts = [..._parts];
+  List<Map<String, Object?>> parts = [..._parts];
 
   Future<http.Response> handle(http.Request request) async {
     final function = request.url.pathSegments.last;

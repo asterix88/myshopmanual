@@ -328,7 +328,7 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
 
   Rect _dragCrop(_Grip grip, Offset d) {
     final page = _page!;
-    var r = _edit.crop;
+    final r = _edit.crop;
     final w = page.width.toDouble();
     final h = page.height.toDouble();
     final least = math.max(w, h) * 0.06;

@@ -1,6 +1,8 @@
 /// The Transfer tab.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -73,7 +75,7 @@ class _MoveFormState extends State<MoveForm> {
     try {
       await widget.cetok.move(part, qty: qty, location: location, status: _status, note: _note.text, name: _name.text);
       if (!mounted) return;
-      HapticFeedback.mediumImpact();
+      unawaited(HapticFeedback.mediumImpact());
       showToast(context, '$qty pcs ${part.pn} dipindah ke $location ($_status)');
       _note.clear();
       widget.choice.value = null;

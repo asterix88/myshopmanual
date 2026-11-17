@@ -1,21 +1,20 @@
 // Renders the main screens to PNG files for a visual check:
 //   flutter test tool/screenshot_test.dart --update-goldens
 // Output goes to tool/screenshots/ (not committed, not run in CI).
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'dart:convert';
-
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mymanual/main.dart';
 import 'package:mymanual/src/screens/chat_screen.dart';
 import 'package:mymanual/src/screens/shell.dart';
 import 'package:mymanual/src/screens/specs_screen.dart';
-import 'package:mymanual/src/theme.dart';
 import 'package:mymanual/src/store.dart';
+import 'package:mymanual/src/theme.dart';
 
 import '../test/specs_test.dart' show catalogWithSpec;
 import '../test/store_test.dart' show fixtureServer;

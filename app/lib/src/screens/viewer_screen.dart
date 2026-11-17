@@ -277,7 +277,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
       }
       if (at >= _hitTotal) at = 0;
     }
-    _goToHit(at, scroll: fromPage == null || hits.every((h) => h.page != fromPage));
+    unawaited(_goToHit(at, scroll: fromPage == null || hits.every((h) => h.page != fromPage)));
   }
 
   void _clearHits() {
@@ -831,7 +831,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
               setState(_clearHits);
             }
           },
-          onSubmitted: (text) => _runSearch(text),
+          onSubmitted: _runSearch,
           style: const TextStyle(fontSize: 13),
           decoration: InputDecoration(
             isDense: true,
@@ -1087,11 +1087,11 @@ class _BookmarksSheetState extends State<_BookmarksSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 10),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Penanda', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                const Text('Penanda', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                 Text('Daftar isi bawaan dari file PDF', style: TextStyle(fontSize: 12, color: AppColors.muted)),
               ],
             ),

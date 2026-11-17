@@ -76,7 +76,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
           children: [
             if (store.online == false)
               Padding(
-                padding: EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
                   'Tidak ada sinyal. Update dicek otomatis saat HP tersambung internet.',
                   style: TextStyle(fontSize: 12, color: AppColors.muted),

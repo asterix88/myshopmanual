@@ -86,7 +86,7 @@ class RemotePdf {
       return (await run)[0];
     } finally {
       for (var b = id; b < end; b++) {
-        _inFlight.remove(b);
+        unawaited(_inFlight.remove(b));
       }
     }
   }

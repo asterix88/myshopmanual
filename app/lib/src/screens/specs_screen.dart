@@ -6,8 +6,8 @@ import '../store.dart';
 import '../widgets/app_icons.dart';
 import '../widgets/excavator_loader.dart';
 import 'shell.dart';
-import 'viewer_screen.dart';
 import 'unit_tabs.dart';
+import 'viewer_screen.dart';
 
 /// The Spek tab: one unit at a time (picked from the side menu), with its
 /// bolt torque, capacity and standard value pages under three tabs. Pages
