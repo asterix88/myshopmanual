@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # contents: write lets a merge to main publish a GitHub Release.
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: app
@@ -50,14 +53,19 @@ jobs:
 
       # The server address comes from the repository variable CATALOG_URL
       # (Settings > Secrets and variables > Actions > Variables).
-      # BUILD_ID (branch@commit) shows in menu ⋮ > Laporan masalah; the
-      # version from pubspec.yaml and the run number (build) show under the
-      # login screen and also become the Android version code.
-      - env:
+      # BUILD_ID (branch@commit) shows in menu ⋮ > Laporan masalah. The
+      # version is major.minor from pubspec.yaml plus this run's number
+      # (1.1.215); it shows under the login screen, and the run number is
+      # also the Android version code, so a newer APK always installs over
+      # an older one.
+      - id: build
+        env:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
-          VERSION=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
+          BASE=$(sed -n 's/^version: *\([0-9]*\.[0-9]*\).*/\1/p' pubspec.yaml)
+          VERSION=$BASE.$BUILD_NUMBER
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           flutter build apk --release --split-per-abi --build-name=$VERSION --build-number=$BUILD_NUMBER --dart-define=CATALOG_URL=${{ vars.CATALOG_URL }} --dart-define=AI_TOKEN=${{ secrets.AI_TOKEN }} --dart-define=BUILD_ID=${{ github.head_ref || github.ref_name }}@${HEAD_SHA::7} --dart-define=APP_VERSION=$VERSION --dart-define=BUILD_NUMBER=$BUILD_NUMBER
 
       - uses: actions/upload-artifact@v4
@@ -65,3 +73,24 @@ jobs:
           name: mymanual-apk
           path: app/build/app/outputs/flutter-apk/*.apk
           retention-days: 30
+
+      # Every merge to main becomes a numbered release (tag v1.1.215) with
+      # the APKs and a list of the merged pull requests, so any older APK can
+      # be downloaded again from the repo's Releases page (Actions artifacts
+      # are deleted after 30 days). Install app-arm64-v8a-release.apk on
+      # nearly every phone.
+      - name: Publish GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.build.outputs.version }}
+        run: |
+          # A re-run of the same run only replaces the APKs.
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            gh release upload "v$VERSION" build/app/outputs/flutter-apk/*.apk --clobber
+            exit 0
+          fi
+          gh release create "v$VERSION" build/app/outputs/flutter-apk/*.apk \
+            --target "$GITHUB_SHA" \
+            --title "MyManual $VERSION" \
+            --generate-notes
