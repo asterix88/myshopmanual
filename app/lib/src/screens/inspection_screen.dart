@@ -97,7 +97,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
       builder: (_) => _FindingSheet(row: row, inspection: data),
     );
     if (result == null || !mounted) return;
-    final status = result.action.isEmpty ? 'OPEN' : 'CLOSE';
+    final status = result.action.isEmpty ? 'OPEN' : 'CLOSED';
     _flashRow(row.id);
     final note = result.sent ? '' : ' · belum terkirim';
     final text = before.isNotEmpty && result.action.isNotEmpty ? '${row.unit} action disimpan$note' : '${row.unit} $status$note';
@@ -565,7 +565,7 @@ class StatusPill extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
         ),
         child: Text(
-          closed ? 'CLOSE' : 'OPEN',
+          closed ? 'CLOSED' : 'OPEN',
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w700,
@@ -581,7 +581,55 @@ String _who(InspectionRow r) {
   return r.inspector.contains(' ') ? '$first dkk' : first;
 }
 
-String _ageText(int d) => d <= 0 ? 'Hari ini' : '$d hr';
+String _ageText(int d) => d <= 0 ? 'Hari ini' : '$d hari';
+
+/// An open finding's age: quiet grey text, red with a dot only past 30 days
+/// (mockup v22 D1).
+class _AgeText extends StatelessWidget {
+  const _AgeText({required this.age});
+
+  final int? age;
+
+  @override
+  Widget build(BuildContext context) {
+    final a = age;
+    if (a == null) return const SizedBox.shrink();
+    final late = a > 30;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (late) ...[
+          Container(width: 6, height: 6, decoration: BoxDecoration(color: AppColors.danger, shape: BoxShape.circle)),
+          const SizedBox(width: 6),
+        ],
+        Text(
+          _ageText(a),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: late ? FontWeight.w600 : FontWeight.w400,
+            color: late ? AppColors.danger : AppColors.muted,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A closed finding: green check and CLOSED.
+class _ClosedMark extends StatelessWidget {
+  const _ClosedMark();
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_rounded, size: 16, color: AppColors.green),
+          const SizedBox(width: 4),
+          Text('CLOSED', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.green)),
+        ],
+      );
+}
 
 /// One unit's findings in one card: the unit code and its counts on top,
 /// then a row per finding.
@@ -638,7 +686,6 @@ class _FindingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final age = row.ageOn(today);
-    final old = age != null && age > 30;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 900),
       curve: Curves.easeOut,
@@ -697,25 +744,9 @@ class _FindingRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    StatusPill(closed: row.closed),
-                    if (!row.closed && age != null) ...[
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: old ? AppColors.amberSoft : AppColors.background,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          _ageText(age),
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: old ? AppColors.amber : AppColors.muted),
-                        ),
-                      ),
-                    ],
-                  ],
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: row.closed ? const _ClosedMark() : _AgeText(age: age),
                 ),
               ],
             ),
