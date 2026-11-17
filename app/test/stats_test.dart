@@ -9,6 +9,7 @@ import 'package:http/testing.dart';
 import 'package:mymanual/src/auth.dart';
 import 'package:mymanual/src/screens/search_screen.dart';
 import 'package:mymanual/src/screens/shell.dart';
+import 'package:mymanual/src/screens/stats/format.dart';
 import 'package:mymanual/src/screens/stats_screen.dart';
 import 'package:mymanual/src/stats.dart';
 import 'package:mymanual/src/store.dart';
