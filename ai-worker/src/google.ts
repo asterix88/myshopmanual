@@ -134,7 +134,7 @@ export function appsScriptSheets(url: string, key: string): Sheets {
       response = await fetch(url, {
         method: "POST",
         headers: { "content-type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ ...body, key }),
+        body: JSON.stringify({ ...body, key: key.trim() }),
         redirect: "follow",
         signal: AbortSignal.timeout(30_000),
       });
