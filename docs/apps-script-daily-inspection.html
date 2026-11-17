@@ -1,0 +1,278 @@
+<title>Robot Sheet Daily Inspection</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column, navy chapter heads like the app, code in tinted blocks */
+:root {
+  --bg: #F1F2F4; --surface: #FFFFFF; --ink: #1F2328; --muted: #5E656D; --line: #E1E4E8;
+  --navy: #1E3A64; --navy-soft: #E8EDF5; --orange: #C96A0A; --orange-soft: #FEF1E3;
+  --green: #1E7A46; --green-soft: #E8F6EE; --red: #B42318; --red-soft: #FDECEA; --code-bg: #F6F7F9;
+  --f-body: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111316; --surface: #1C1F24; --ink: #E6E8EB; --muted: #A2A8AF; --line: #2E333A;
+  --navy: #8FB3E8; --navy-soft: #1F2A3A; --orange: #F5B26B; --orange-soft: #3A2A18;
+  --green: #5CC98A; --green-soft: #16301F; --red: #EF8A80; --red-soft: #3A1D1A; --code-bg: #15181C; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111316; --surface: #1C1F24; --ink: #E6E8EB; --muted: #A2A8AF; --line: #2E333A;
+  --navy: #8FB3E8; --navy-soft: #1F2A3A; --orange: #F5B26B; --orange-soft: #3A2A18;
+  --green: #5CC98A; --green-soft: #16301F; --red: #EF8A80; --red-soft: #3A1D1A; --code-bg: #15181C; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.65; }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 28px; }
+header h1 { font-size: 28px; line-height: 1.2; margin: 0 0 8px; color: var(--navy); text-wrap: balance; }
+header p { margin: 0; color: var(--muted); max-width: 65ch; }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--orange); margin-bottom: 6px; }
+section { background: var(--surface); border-radius: 16px; padding: 22px 22px 24px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+h2 { font-size: 19px; margin: 0; color: var(--navy); text-wrap: balance; }
+h3 { font-size: 15px; margin: 8px 0 0; }
+p { margin: 0; max-width: 68ch; }
+ul, ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; max-width: 68ch; }
+code { font-family: var(--f-mono); font-size: 13px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 1px 5px; overflow-wrap: anywhere; }
+pre.code { font-family: var(--f-mono); font-size: 12.5px; line-height: 1.55; background: var(--code-bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 0; overflow-x: auto; white-space: pre; }
+.diagram { overflow-x: auto; background: var(--code-bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.diagram pre.mermaid { margin: 0; background: transparent; }
+.note { border-radius: 12px; padding: 12px 14px; background: var(--navy-soft); font-size: 14px; }
+.note.warn { background: var(--orange-soft); }
+.note.bad { background: var(--red-soft); }
+.note b { color: var(--navy); }
+.note.warn b { color: var(--orange); }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; min-width: 560px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+th { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.pill { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.pill.ok { background: var(--green-soft); color: var(--green); }
+.pill.no { background: var(--red-soft); color: var(--red); }
+.steps { counter-reset: s; list-style: none; padding: 0; gap: 12px; }
+.steps > li { counter-increment: s; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; }
+.steps > li::before { content: counter(s); width: 26px; height: 26px; border-radius: 13px; background: var(--navy); color: var(--surface); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.card { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.card .k { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.card .v { font-weight: 600; }
+.card p { font-size: 13.5px; color: var(--muted); }
+nav.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+nav.toc a { font-size: 13px; text-decoration: none; color: var(--navy); background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 4px 12px; }
+nav.toc a:focus-visible, a:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">MyManual · Daily Inspection Monitoring</div>
+    <h1>Cara kerja robot Apps Script untuk sheet Daily Inspection</h1>
+    <p>Penjelasan untuk siapa pun yang nanti merawat fitur ini, tanpa harus bertanya ke Anas atau ke Claude: apa saja bagiannya, bagaimana data mengalir, isi kodenya, cara memasang, dan apa yang dilakukan kalau ada masalah.</p>
+  </header>
+
+  <nav class="toc" aria-label="Isi">
+    <a href="#gambaran">Gambaran</a><a href="#kunci">Kunci dan pemegangnya</a><a href="#baca">Alur baca</a><a href="#tulis">Alur simpan</a><a href="#kode">Isi kode</a><a href="#pasang">Cara pasang</a><a href="#rawat">Perawatan</a><a href="#masalah">Kalau ada masalah</a>
+  </nav>
+
+  <section id="gambaran">
+    <h2>1. Gambaran besar</h2>
+    <p>Google hanya mengizinkan aplikasi menulis ke Google Sheet kalau ada <b>akun Google</b> yang bertanggung jawab, meskipun link sheet terbuka untuk diedit siapa saja. Apps Script adalah program kecil milik Google yang berjalan di server Google atas nama satu akun Gmail. Kita memakai satu Gmail khusus, disebut <b>akun robot</b>, sebagai "tangan" yang membuka sheet.</p>
+    <p>HP mekanik tidak pernah bicara langsung ke Google. Semua lewat server MyManual, yang memeriksa login NRP dan section, lalu meneruskan permintaan ke robot dengan kode rahasia.</p>
+    <div class="diagram"><pre class="mermaid">
+flowchart LR
+  HP["HP mekanik<br/>(app MyManual)"] -- "login NRP<br/>(token sesi)" --> W["Server MyManual<br/>ai.mymanual.my.id<br/>(Cloudflare Worker)"]
+  W -- "kode rahasia<br/>SHEET_SCRIPT_KEY" --> AS["Robot Apps Script<br/>(Web App, jalan sebagai<br/>Gmail robot)"]
+  AS -- "baca / tulis sel" --> S[("Google Sheet<br/>MASTER DATA MONITORING<br/>DAILY INSPECTION")]
+  ADM["Admin di browser"] -- "edit biasa" --> S
+  CRON["Cek tiap malam<br/>04.00 WIB"] -.-> W
+    </pre></div>
+    <div class="cards">
+      <div class="card"><span class="k">App di HP</span><span class="v">Tampilan dan antrean offline</span><p>Menyimpan salinan daftar di HP. Perubahan tanpa sinyal ditahan, lalu dikirim sendiri tiap menit.</p></div>
+      <div class="card"><span class="k">Server MyManual</span><span class="v">Penjaga pintu dan otak</span><p>Cek NRP dan section, cari baris kosong, susun rumus, cegah unit section lain. Kode: <code>ai-worker/src/inspection*.ts</code>.</p></div>
+      <div class="card"><span class="k">Robot Apps Script</span><span class="v">Tangan yang membuka sheet</span><p>Hanya membaca dan menulis sel yang diminta, kalau kode rahasianya benar. Kode: <code>tools/daily-inspection.gs</code>.</p></div>
+    </div>
+  </section>
+
+  <section id="kunci">
+    <h2>2. Kunci dan siapa yang memegangnya</h2>
+    <p>Supaya tidak bergantung pada satu orang, semua "kunci" disimpan di tempat yang bisa dibuka oleh lebih dari satu admin.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Kunci</th><th>Isinya</th><th>Disimpan di</th><th>Siapa yang perlu tahu</th></tr></thead>
+      <tbody>
+        <tr><td>Akun robot</td><td>Gmail khusus, misalnya <code>mymanual.robot@gmail.com</code>, plus password-nya</td><td>Pengelola password perusahaan atau catatan admin</td><td>Minimal 2 admin. Pasang nomor HP dan email pemulihan milik perusahaan.</td></tr>
+        <tr><td>Izin sheet</td><td>Akun robot sebagai <b>Editor</b> sheet</td><td>Sharing di Google Sheet</td><td>Pemilik sheet (admin Daily Inspection)</td></tr>
+        <tr><td>Kode rahasia</td><td>Teks acak panjang, misalnya 32 huruf dan angka</td><td>Baris <code>KEY</code> di skrip robot, dan GitHub secret <code>SHEET_SCRIPT_KEY</code></td><td>Yang mengelola repo GitHub</td></tr>
+        <tr><td>Link Web App</td><td><code>https://script.google.com/macros/s/…/exec</code></td><td>GitHub secret <code>SHEET_SCRIPT_URL</code></td><td>Yang mengelola repo GitHub</td></tr>
+        <tr><td>Nama tab</td><td><code>INSPECTION {SECTION} OPEN 2026</code></td><td><code>ai-worker/wrangler.toml</code>, baris <code>INSPECTION_TAB</code></td><td>Siapa pun yang bisa mengubah repo</td></tr>
+      </tbody>
+    </table></div>
+    <div class="note"><b>Kenapa skripnya proyek terpisah, bukan di menu Extensions sheet?</b> Sheet ini bisa diedit siapa saja yang punya link. Skrip yang ditempel lewat Extensions &gt; Apps Script ikut terlihat oleh semua editor, termasuk kode rahasianya. Proyek terpisah milik akun robot hanya terlihat oleh akun robot.</div>
+  </section>
+
+  <section id="baca">
+    <h2>3. Alur membuka daftar temuan</h2>
+    <div class="diagram"><pre class="mermaid">
+sequenceDiagram
+  participant HP as HP mekanik
+  participant W as Server MyManual
+  participant R as Robot Apps Script
+  participant S as Google Sheet
+  HP->>W: GET /inspection (token login NRP)
+  W->>W: cek token, ambil section NRP (TRACK / WHEEL / SUPPORT)
+  W->>R: {key, op: "read", ranges: tab section + T3 + POP UNIT}
+  R->>R: KEY cocok?
+  R->>S: getDisplayValues() tiap range
+  S-->>R: isi sel seperti tampil di sheet
+  R-->>W: {values: [...]}
+  W->>W: susun temuan, OPEN/CLOSE, daftar GL, POP UNIT
+  W-->>HP: JSON (hanya section NRP itu)
+  HP->>HP: simpan salinan di HP (inspection.json)
+    </pre></div>
+    <p>Robot hanya membaca persis range yang diminta. Pilihan tab per section, penyaringan, dan pengurutan dikerjakan server, jadi skrip robot tetap pendek dan jarang perlu diubah.</p>
+  </section>
+
+  <section id="tulis">
+    <h2>4. Alur mengisi Action dan menambah temuan</h2>
+    <div class="diagram"><pre class="mermaid">
+sequenceDiagram
+  participant HP as HP mekanik
+  participant W as Server MyManual
+  participant R as Robot Apps Script
+  participant S as Google Sheet
+  HP->>HP: masuk antrean (belum terkirim)
+  HP->>W: POST /inspection/add {unit, HM, tanggal, leader, problem}
+  W->>R: read: isi tab + POP UNIT
+  R-->>W: baris-baris sheet
+  W->>W: cek unit di POP, cari baris kosong pertama (F dan J kosong)
+  W->>R: write: data sel + guard "baris F/J harus masih kosong"
+  R->>R: kunci (LockService), cek guard
+  alt baris masih kosong
+    R->>S: setValues (seperti mengetik)
+    R-->>W: {ok: true}
+    W-->>HP: berhasil, keluar dari antrean
+  else baris keburu diisi HP lain
+    R-->>W: {error: "taken"}
+    W->>R: baca lagi, pakai baris kosong berikutnya
+  end
+    </pre></div>
+    <ul>
+      <li><b>Isi Action:</b> server menulis kolom K pada baris temuan. Rumus STATUS di sheet otomatis berubah menjadi CLOSE. Kalau admin sudah mengurutkan ulang sheet, server mencari baris itu lagi dari kode unit dan problem.</li>
+      <li><b>Temuan baru:</b> baris di bawah data sudah berisi rumus No, REMARK, STATUS dan SECTION. Server mengisi kolom B sampai J, rumus STATUS di M, dan SECTION di Q: rumus VLOOKUP kalau unit ada di POP UNIT, atau teks section NRP kalau belum ada.</li>
+      <li><b>LAST UPDATE</b> (sel T3) diisi jam WIB setiap ada perubahan dari app.</li>
+      <li><b>Kirim dua kali?</b> Setiap tambahan temuan membawa id unik. Kalau HP mengirim ulang karena jawaban sebelumnya hilang, server tahu dan tidak menulis dua kali.</li>
+    </ul>
+  </section>
+
+  <section id="kode">
+    <h2>5. Isi kode robot, bagian per bagian</h2>
+    <p>File lengkap: <code>tools/daily-inspection.gs</code> di repo. Seluruhnya sekitar 100 baris.</p>
+
+    <h3>a. Pengaturan</h3>
+    <pre class="code">const KEY = 'GANTI_DENGAN_KODE_RAHASIA';
+const SHEET_ID = '1fm-KQv-b1ZKV08oT45LJ-GxEL6meSieANMF-Bf-Tw-E';</pre>
+    <p><code>KEY</code> adalah kode rahasia, harus sama persis dengan GitHub secret <code>SHEET_SCRIPT_KEY</code>. Selama masih tertulis <code>GANTI_DENGAN_KODE_RAHASIA</code>, robot menolak semua permintaan. <code>SHEET_ID</code> adalah bagian link sheet di antara <code>/d/</code> dan <code>/edit</code>.</p>
+
+    <h3>b. Pintu masuk: doPost</h3>
+    <pre class="code">function doPost(e) {
+  let req;
+  try { req = JSON.parse(e.postData.contents); }
+  catch (err) { return out_({ error: 'bad_request' }); }
+  if (!req || KEY === 'GANTI_DENGAN_KODE_RAHASIA' || req.key !== KEY)
+    return out_({ error: 'forbidden', message: 'Kode rahasia salah.' });
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    ...</pre>
+    <p>Google menjalankan <code>doPost</code> setiap kali server mengirim permintaan ke link Web App. Langkah pertama: baca pesan JSON dan periksa kode rahasia. Tanpa kode yang benar, tidak ada yang dibaca atau ditulis. Lalu sheet dibuka dengan hak akses akun robot.</p>
+
+    <h3>c. Membaca</h3>
+    <pre class="code">if (req.op === 'read') {
+  return out_({ values: (req.ranges || []).map(function (r) {
+    const range = range_(ss, r, false);
+    return range ? trim_(range.getDisplayValues()) : [];
+  }) });
+}</pre>
+    <p>Untuk setiap range, misalnya <code>'INSPECTION TRACK OPEN 2026'!B5:Q3000</code>, robot mengambil teks persis seperti yang terlihat di sheet (<code>getDisplayValues</code>). Tanggal tetap terbaca <code>04/11/2026</code>, HM tetap <code>10615,0</code>. Baris kosong di ujung dibuang (<code>trim_</code>) supaya kiriman kecil.</p>
+
+    <h3>d. Menulis, dengan kunci dan penjaga</h3>
+    <pre class="code">if (req.op === 'write') {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const taken = (req.guard || []).some(function (r) { ... ada isinya? ... });
+    if (taken) return out_({ error: 'taken', message: 'Baris sudah terisi.' });
+    (req.data || []).forEach(function (d) {
+      range_(ss, d.range, true).setValues(d.values);
+    });
+    SpreadsheetApp.flush();
+  } finally {
+    lock.releaseLock();
+  }
+  return out_({ ok: true });
+}</pre>
+    <ul>
+      <li><b>LockService</b>: kalau dua HP menyimpan bersamaan, yang kedua menunggu sampai yang pertama selesai (maksimal 20 detik). Jadi dua tulisan tidak saling timpa.</li>
+      <li><b>guard</b>: daftar sel yang harus masih kosong, yaitu kolom CODE UNIT dan PROBLEM di baris tujuan. Kalau sudah terisi (keburu dipakai HP lain), robot menolak dengan <code>taken</code> dan server mencari baris kosong berikutnya.</li>
+      <li><b>setValues</b> mengisi sel seperti orang mengetik: teks <code>=IF(...)</code> menjadi rumus, <code>14/11/2026</code> dibaca sebagai tanggal seperti biasa. Teks dari mekanik yang diawali <code>=</code>, <code>+</code>, <code>-</code> atau <code>@</code> diberi tanda <code>'</code> oleh server, supaya tidak berubah jadi rumus.</li>
+    </ul>
+
+    <h3>e. Pembantu</h3>
+    <pre class="code">function range_(ss, a1, grow)  // "'TAB'!B5:Q3000" -> range di tab itu
+function trim_(rows)           // buang baris kosong di ujung
+function out_(o)               // kirim balik sebagai JSON
+function doGet()               // tes dari browser: {"ok":true,"sheet":"..."}</pre>
+    <p><code>range_</code> mencari tab dari namanya. Saat membaca, baris yang melewati ujung tab dipotong. Saat menulis, tab ditambah barisnya kalau perlu. Tab yang namanya tidak ada dibalas <code>error: "range"</code>, dan server mengubahnya menjadi pesan "Nama tab di sheet berubah".</p>
+
+    <h3>f. Pasangannya di server</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>File</th><th>Tugas</th></tr></thead>
+      <tbody>
+        <tr><td><code>ai-worker/src/google.ts</code></td><td><code>appsScriptSheets()</code> mengirim permintaan ke link Web App dan menerjemahkan jawaban robot menjadi kode kesalahan.</td></tr>
+        <tr><td><code>ai-worker/src/inspection-sheet.ts</code></td><td>Logika sheet: membaca temuan, POP UNIT, nama GL, mencari baris kosong, menyusun rumus, cek akses tiap malam. Diuji dengan sheet palsu di <code>ai-worker/test/inspection.test.mjs</code>.</td></tr>
+        <tr><td><code>ai-worker/src/inspection.ts</code></td><td>Alamat <code>/inspection</code>, <code>/inspection/action</code>, <code>/inspection/add</code>: cek login NRP dan section, lalu memanggil logika di atas.</td></tr>
+        <tr><td><code>app/lib/src/inspection.dart</code></td><td>Di HP: salinan offline, antrean "belum terkirim", kirim ulang otomatis.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="pasang">
+    <h2>6. Cara memasang (sekali saja, tanpa kartu kredit)</h2>
+    <ol class="steps">
+      <li><div><b>Buat Gmail robot.</b> Misalnya <code>mymanual.robot@gmail.com</code>. Isi nomor HP dan email pemulihan milik perusahaan, lalu simpan password-nya di tempat yang bisa dibuka minimal dua admin.</div></li>
+      <li><div><b>Jadikan robot Editor sheet.</b> Pemilik sheet: Share, masukkan email robot, pilih Editor.</div></li>
+      <li><div><b>Buat kode rahasia.</b> Teks acak panjang, misalnya 32 huruf dan angka campur. Jangan dikirim di grup WA.</div></li>
+      <li><div><b>Buat proyek skrip.</b> Masuk sebagai akun robot, buka <code>script.google.com</code>, pilih New project. Hapus isinya, tempel seluruh isi <code>tools/daily-inspection.gs</code>, ganti <code>GANTI_DENGAN_KODE_RAHASIA</code> dengan kode dari langkah 3, lalu Save. Beri nama proyek, misalnya "MyManual Daily Inspection".</div></li>
+      <li><div><b>Deploy sebagai Web App.</b> Deploy &gt; New deployment &gt; jenis Web app. Execute as: <b>Me</b> (akun robot). Who has access: <b>Anyone</b>. Klik Deploy, lalu Authorize access dan pilih akun robot. Kalau muncul "Google hasn't verified this app", pilih Advanced &gt; Go to … (unsafe). Ini wajar karena skrip buatan sendiri.</div></li>
+      <li><div><b>Salin link Web app</b> (berakhiran <code>/exec</code>). Tes dengan membukanya di browser. Hasilnya harus seperti <code>{"ok":true,"sheet":"MASTER DATA MONITORING DAILY INSPECTION"}</code>.</div></li>
+      <li><div><b>Simpan dua GitHub secret</b> di repo (Settings &gt; Secrets and variables &gt; Actions): <code>SHEET_SCRIPT_URL</code> berisi link dari langkah 6, dan <code>SHEET_SCRIPT_KEY</code> berisi kode dari langkah 3.</div></li>
+      <li><div><b>Merge PR atau jalankan ulang workflow "Deploy AI server".</b> Workflow mengunggah kedua secret ke server. Setelah itu tile Daily Inspection di app langsung bisa dipakai.</div></li>
+    </ol>
+    <div class="note warn"><b>Kenapa "Anyone" aman?</b> "Anyone" artinya link boleh dipanggil tanpa login Google. Tapi tanpa kode rahasia robot menolak semuanya. Link dan kode hanya ada di GitHub secret dan di server.</div>
+  </section>
+
+  <section id="rawat">
+    <h2>7. Perawatan</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Kejadian</th><th>Yang dilakukan</th></tr></thead>
+      <tbody>
+        <tr><td>Ganti tahun (tab baru "… OPEN 2027")</td><td>Ubah <code>INSPECTION_TAB</code> di <code>ai-worker/wrangler.toml</code>, lalu merge. Skrip robot tidak perlu diubah.</td></tr>
+        <tr><td>Kode rahasia bocor</td><td>Buat kode baru. Ganti <code>KEY</code> di skrip lalu Deploy &gt; Manage deployments &gt; edit (pensil) &gt; Version: New version &gt; Deploy (link tetap sama). Ganti GitHub secret <code>SHEET_SCRIPT_KEY</code>, lalu jalankan ulang "Deploy AI server".</td></tr>
+        <tr><td>Kode skrip diubah</td><td>Setelah Save, wajib Manage deployments &gt; edit &gt; New version. Tanpa langkah ini, Web App tetap memakai versi lama. Jangan pilih "New deployment", karena itu membuat link baru.</td></tr>
+        <tr><td>Pemilik sheet pindah ke file baru</td><td>Ganti <code>SHEET_ID</code> di skrip (lalu New version) dan <code>INSPECTION_SHEET_ID</code> di <code>wrangler.toml</code>. Jadikan robot Editor di file baru.</td></tr>
+        <tr><td>Admin yang pegang akun robot keluar</td><td>Ganti password akun robot dan serahkan ke admin berikutnya. Skrip, link dan kode tetap jalan.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Setiap malam pukul 04.00 WIB server mencoba membaca sheet lewat robot. Kalau gagal, admin melihat bar merah di layar Daily Inspection berisi penyebabnya.</p>
+    <p>Batas Google untuk akun Gmail gratis jauh di atas pemakaian 50 mekanik. Setiap simpan berjalan beberapa detik, dan satu panggilan Web App boleh berjalan sampai 6 menit.</p>
+  </section>
+
+  <section id="masalah">
+    <h2>8. Kalau ada masalah</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Pesan di app</th><th>Arti</th><th>Cara membereskan</th></tr></thead>
+      <tbody>
+        <tr><td>Daily Inspection belum disiapkan admin</td><td>Server belum punya link atau kode robot</td><td>Cek dua GitHub secret, lalu jalankan ulang "Deploy AI server"</td></tr>
+        <tr><td>Robot tidak bisa membuka sheet (Kode rahasia salah)</td><td><code>KEY</code> di skrip tidak sama dengan secret</td><td>Samakan keduanya. Jangan lupa New version di skrip.</td></tr>
+        <tr><td>Robot tidak bisa membuka sheet (izin)</td><td>Robot bukan Editor sheet lagi</td><td>Share sheet ke email robot sebagai Editor</td></tr>
+        <tr><td>Web App Apps Script tidak bisa dibuka</td><td>Deploy belum "Anyone", atau deployment dihapus</td><td>Cek Manage deployments. Kalau terpaksa membuat deployment baru, link berubah, jadi ganti juga <code>SHEET_SCRIPT_URL</code>.</td></tr>
+        <tr><td>Nama tab di sheet berubah</td><td>Tab di-rename</td><td>Kembalikan nama tab, atau ubah <code>INSPECTION_TAB</code></td></tr>
+        <tr><td>N update belum terkirim</td><td>Tidak ada sinyal, atau server atau robot sedang tidak menjawab</td><td>Tidak perlu apa-apa. HP mengirim ulang sendiri tiap menit dan saat daftar ditarik ke bawah.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="note"><b>Cadangan:</b> server juga bisa memakai Google Cloud service account (secret <code>GOOGLE_SERVICE_ACCOUNT</code>) kalau suatu saat perusahaan punya akun Google Cloud. Kalau link dan kode Apps Script ada, server memakai Apps Script.</div>
+  </section>
+</div>
