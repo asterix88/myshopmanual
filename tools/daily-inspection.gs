@@ -28,7 +28,7 @@ function doPost(e) {
   } catch (err) {
     return out_({ error: 'bad_request' });
   }
-  if (!req || KEY === 'GANTI_DENGAN_KODE_RAHASIA' || String(req.key).trim() !== KEY.trim()) return out_({ error: 'forbidden', message: 'Kode rahasia salah.' });
+  if (!req || !keyReady_() || String(req.key).trim() !== KEY.trim()) return out_({ error: 'forbidden', message: 'Kode rahasia salah.' });
   try {
     // Throws when the robot is no longer allowed to open the sheet.
     const ss = SpreadsheetApp.openById(SHEET_ID);
@@ -64,8 +64,10 @@ function doPost(e) {
 }
 
 /// A test from the browser: opening the Web app URL shows this.
+// Opening the Web App link in a browser shows which script version runs and
+// whether KEY was filled in (its length only, never the code itself).
 function doGet() {
-  return out_({ ok: true, sheet: SpreadsheetApp.openById(SHEET_ID).getName() });
+  return out_({ ok: true, sheet: SpreadsheetApp.openById(SHEET_ID).getName(), script: 2, keyReady: keyReady_(), keyLength: KEY.trim().length });
 }
 
 /// "'TAB'!B5:Q3000" in tab TAB. Rows past the end of the tab are left out
@@ -98,6 +100,13 @@ function trim_(rows) {
   let n = rows.length;
   while (n > 0 && rows[n - 1].every(function (c) { return c === ''; })) n--;
   return rows.slice(0, n);
+}
+
+// KEY must be changed from the example text and be at least 12 characters.
+// (No second copy of the example text here, so a find-and-replace of it
+// cannot break this check.)
+function keyReady_() {
+  return KEY.trim().length >= 12 && KEY.indexOf('GANTI_DENGAN') !== 0;
 }
 
 function out_(o) {
