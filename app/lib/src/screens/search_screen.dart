@@ -120,7 +120,7 @@ class _SearchScreenState extends State<SearchScreen> with WidgetsBindingObserver
               child: Container(
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
                 ),
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
                 child: Column(
@@ -276,13 +276,13 @@ class _SearchScreenState extends State<SearchScreen> with WidgetsBindingObserver
               ),
             ),
           ] else
-            Padding(
-              padding: const EdgeInsets.only(top: 32),
+            const Padding(
+              padding: EdgeInsets.only(top: 32),
               child: Column(
                 children: [
                   DocTile(AppGlyph.search, size: 56),
-                  const SizedBox(height: 12),
-                  const Text('Cari di semua manual', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  SizedBox(height: 12),
+                  Text('Cari di semua manual', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),

@@ -7,11 +7,11 @@ import 'package:flutter/services.dart';
 import '../auth.dart';
 import '../diagnostics.dart';
 import '../haptics.dart';
+import '../theme.dart';
 import '../widgets/excavator_loader.dart';
 import '../widgets/logo_mark.dart';
 import 'intro_screen.dart';
 import 'shell.dart';
-import '../theme.dart';
 
 /// Digits in a PIN (the server checks the same).
 const pinLength = 4;
@@ -133,7 +133,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       _busy = false;
       _done = true;
     });
-    HapticFeedback.lightImpact();
+    unawaited(HapticFeedback.lightImpact());
     await Future<void>.delayed(const Duration(milliseconds: 450));
     if (!mounted) return;
     await _leave.forward();
@@ -879,7 +879,7 @@ class _ChoosePinScreenState extends State<ChoosePinScreen> {
                       key: const Key('pin-new'),
                       controller: _pin,
                       autofocus: true,
-                      onCompleted: () => _repeatFocus.requestFocus(),
+                      onCompleted: _repeatFocus.requestFocus,
                     ),
                     const SizedBox(height: 20),
                     const _FieldLabel('Ulangi PIN'),

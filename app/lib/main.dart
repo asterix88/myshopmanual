@@ -11,9 +11,9 @@ import 'src/keep_alive.dart';
 import 'src/quiz_reminders.dart';
 import 'src/screens/intro_screen.dart';
 import 'src/screens/login_screen.dart';
-import 'src/screens/unit_screen.dart';
 import 'src/screens/shell.dart';
 import 'src/screens/splash_screen.dart';
+import 'src/screens/unit_screen.dart';
 import 'src/screens/updates_screen.dart';
 import 'src/store.dart';
 import 'src/theme.dart';
@@ -48,7 +48,7 @@ Future<void> main() async {
   // opens today's quiz.
   unawaited(startUpdateNotifications(
     onOpenUpdates: () => _navigator.currentState?.push(
-      MaterialPageRoute(builder: (_) => UpdatesScreen()),
+      MaterialPageRoute(builder: (_) => const UpdatesScreen()),
     ),
     onOpenQuiz: () => QuizReminders.openRequested.value = true,
     onPermissionAnswered: permission.complete,
@@ -63,7 +63,7 @@ Future<void> main() async {
     ));
   }));
   // Check the server in the background; the app works offline meanwhile.
-  store.refresh();
+  unawaited(store.refresh());
 }
 
 /// Before this version the AI and the PDF viewer could write the same cache

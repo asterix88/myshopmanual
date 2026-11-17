@@ -16,12 +16,12 @@ import 'package:mymanual/src/quiz_edit.dart';
 import 'package:mymanual/src/quiz_reminders.dart';
 import 'package:mymanual/src/screens/quiz_admin_screen.dart';
 import 'package:mymanual/src/screens/quiz_crop_screen.dart';
-import 'package:pdfrx/pdfrx.dart';
 import 'package:mymanual/src/screens/quiz_hub_screen.dart';
 import 'package:mymanual/src/screens/quiz_screen.dart';
 import 'package:mymanual/src/screens/shell.dart';
 import 'package:mymanual/src/search.dart' show pageHeading;
 import 'package:mymanual/src/store.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 import 'store_test.dart' show fixtureCatalog, fixtureServer, testSession;
 
@@ -458,13 +458,13 @@ void main() {
     const b = Rect.fromLTRB(200, 12, 260, 30); // top right
     const c1 = Rect.fromLTRB(100, 200, 160, 215); // "Control"
     const c2 = Rect.fromLTRB(104, 220, 150, 235); // "pump", under it
-    final edit = QuizEdit(
-      crop: const Rect.fromLTRB(0, 0, 400, 300),
+    final edit = const QuizEdit(
+      crop: Rect.fromLTRB(0, 0, 400, 300),
       labels: [
-        const QuizLabel(c1, 'Control', [(text: 'Control', box: c1)]),
-        const QuizLabel(b, 'PSV'),
-        const QuizLabel(c2, 'pump', [(text: 'pump', box: c2)]),
-        const QuizLabel(a, 'PD'),
+        QuizLabel(c1, 'Control', [(text: 'Control', box: c1)]),
+        QuizLabel(b, 'PSV'),
+        QuizLabel(c2, 'pump', [(text: 'pump', box: c2)]),
+        QuizLabel(a, 'PD'),
       ],
       ask: 1,
     );

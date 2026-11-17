@@ -29,7 +29,7 @@ String indexWithToc(Directory dir, String name, List<(String, int)> toc) {
 Map<String, dynamic> catalogWithSpec() {
   final catalog = fixtureCatalog();
   final unit = (catalog['units'] as List).single as Map<String, dynamic>;
-  final pdf = (unit['files'] as List).single['pdf'] as Map<String, dynamic>;
+  final pdf = ((unit['files'] as List).single as Map<String, dynamic>)['pdf'] as Map<String, dynamic>;
   unit['spec'] = {
     ...pdf,
     'pages': [
@@ -141,7 +141,7 @@ void main() {
     await tester.runAsync(() async {
       final catalog = catalogWithSpec();
       final spec = ((catalog['units'] as List).single as Map<String, dynamic>)['spec'] as Map<String, dynamic>;
-      final index = ((catalog['units'] as List).single['files'] as List).single['index'] as Map<String, dynamic>;
+      final index = ((((catalog['units'] as List).single as Map<String, dynamic>)['files'] as List).single as Map<String, dynamic>)['index'] as Map<String, dynamic>;
       spec.addAll(index);
       final old = store.readySpecPath(unit)!;
       store = await AppStore.open(root: root, client: fixtureServer(catalog: catalog));

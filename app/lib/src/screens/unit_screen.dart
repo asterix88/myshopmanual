@@ -96,7 +96,7 @@ class _UnitScreenState extends State<UnitScreen> {
           children: [
             if (_editing)
               Padding(
-                padding: EdgeInsets.fromLTRB(4, 0, 4, 12),
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
                 child: Text(
                   'Pilih file yang ingin dihapus dari HP. File bisa diunduh lagi kapan saja.',
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
@@ -478,7 +478,7 @@ class _FileCard extends StatelessWidget {
       // Some phones keep a snackbar with a button up (accessibility
       // settings); close it ourselves after the 2 seconds.
       var open = true;
-      shown.closed.then((_) => open = false);
+      unawaited(shown.closed.then((_) => open = false));
       Timer(const Duration(seconds: 2), () {
         if (open) shown.close();
       });
