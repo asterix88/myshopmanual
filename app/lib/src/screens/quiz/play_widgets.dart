@@ -232,3 +232,23 @@ class _Sheet extends StatelessWidget {
     );
   }
 }
+
+/// The white bar at the bottom of a question, above the system bar.
+class _BottomBar extends StatelessWidget {
+  const _BottomBar({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      elevation: 8,
+      shadowColor: const Color(0x33101828),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 14, 16, 14 + MediaQuery.paddingOf(context).bottom),
+        child: SizedBox(width: double.infinity, child: child),
+      ),
+    );
+  }
+}

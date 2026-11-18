@@ -7,7 +7,8 @@ import 'package:http/http.dart' as http;
 
 import 'ai.dart' show aiUrl;
 import 'auth.dart';
-import 'page_image.dart' show quizPictureTarget;
+import 'page_image.dart' show QuizPage, quizPictureTarget;
+import 'quiz_edit.dart';
 import 'quiz_reminders.dart';
 import 'store.dart';
 
@@ -432,7 +433,7 @@ class QuizQuestion {
   final String manualId;
   final int page;
 
-  /// A "gambar" question's picture (its key on the server), or null.
+  /// The question's picture (its key on the server), or null.
   final String? image;
 
   /// What "Atur gambar" last saved for the picture (see QuizEdit), or null.
@@ -444,9 +445,36 @@ class QuizQuestion {
 
   String get topicName => quizTopics[topic] ?? topic;
 
-  /// What a picture question's picture is about (see [quizPictureTarget]).
-  String? get pictureTarget => quizPictureTarget(prompt, choices, answer);
+  /// A kartu: no choices. The mechanic answers in their own words, turns the
+  /// card to see the page, then rates how easy it was ([cardRatings]).
+  bool get isCard => type == 'kartu';
+
+  /// Shown with a picture of the page, which the admin's phone makes.
+  bool get needsPagePicture => type == 'gambar' || isCard;
+
+  /// A kartu's key points: one per line of [explain], without any "-" or
+  /// "1." in front (the app numbers them itself).
+  List<String> get keyPoints => [
+        for (final line in explain.split('\n'))
+          if (line.replaceFirst(_bullet, '').trim() case final point when point.isNotEmpty) point,
+      ];
+
+  static final _bullet = RegExp(r'^\s*([-•*]|\d+[.)])\s*');
+
+  /// The right answer as text; null for a kartu, which has none.
+  String? get answerText => answer >= 0 && answer < choices.length ? choices[answer] : null;
+
+  /// What a picture question's picture is about (see [quizPictureTarget]);
+  /// null for a kartu, whose picture is the page as it is.
+  String? get pictureTarget => isCard ? null : quizPictureTarget(prompt, choices, answer);
+
+  /// The automatic picture of this question on its drawn [page].
+  QuizEdit autoEdit(QuizPage page) => QuizEdit.forQuestion(page, type: type, prompt: prompt, target: pictureTarget);
 }
+
+/// A kartu's ratings, in the order the server counts them (chosen 0..3).
+/// Lupa counts as wrong and comes back; the others as right.
+const cardRatings = ['Lupa', 'Sulit', 'Bisa', 'Mudah'];
 
 class QuizSession {
   QuizSession(Map<String, dynamic> j)
@@ -588,7 +616,7 @@ class AdminQuestion {
 
   /// Curator 7+ and the numbers found on the page: "Setujui semua" takes it.
   bool get passed => json['passed'] == true;
-  bool get needsPicture => question.type == 'gambar' && question.image == null;
+  bool get needsPicture => question.needsPagePicture && question.image == null;
 }
 
 class GenerateResult {
@@ -596,6 +624,7 @@ class GenerateResult {
       : saved = _int(j['saved']),
         pictures = [for (final id in j['pictures'] as List? ?? const []) '$id'],
         callouts = {for (final e in (j['callouts'] as Map? ?? const {}).entries) '${e.key}': '${e.value}'},
+        references = [for (final id in j['references'] as List? ?? const []) '$id'],
         dropped = _int(j['dropped']);
 
   final int saved;
@@ -605,6 +634,9 @@ class GenerateResult {
 
   /// The number each picture question asks about, by question id.
   final Map<String, String> callouts;
+
+  /// Saved kartu, which still need the picture of their page.
+  final List<String> references;
 
   /// Thrown away by the curator.
   final int dropped;

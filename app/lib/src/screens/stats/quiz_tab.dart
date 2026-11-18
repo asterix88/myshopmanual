@@ -265,7 +265,13 @@ class QuizQuestionSheet extends StatelessWidget {
           final admin = AdminQuestion(s.question);
           final q = admin.question;
           final total = s.picks.fold<int>(0, (a, b) => a + b);
-          final rightPct = total == 0 ? 0 : (s.picks.elementAtOrNull(q.answer) ?? 0) * 100 ~/ total;
+          // A kartu is rated, not answered: its rows are the ratings, and
+          // everything but Lupa counts as remembered.
+          final rows = q.isCard ? cardRatings : q.choices;
+          bool counts(int i) => q.isCard ? i > 0 : i == q.answer;
+          bool marked(int i) => !q.isCard && i == q.answer;
+          final right = [for (final (i, n) in s.picks.indexed) if (counts(i)) n].fold<int>(0, (a, b) => a + b);
+          final rightPct = total == 0 ? 0 : right * 100 ~/ total;
           final store = StoreScope.read(context);
           final file = q.manualId.isEmpty ? null : store.fileByKey(q.manualId);
           return ListView(
@@ -279,9 +285,9 @@ class QuizQuestionSheet extends StatelessWidget {
               const SizedBox(height: 6),
               Text(q.prompt, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.45)),
               const SizedBox(height: 4),
-              Text('${s.answers} jawaban · $rightPct% benar', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+              Text('${s.answers} jawaban · $rightPct% ${q.isCard ? 'ingat' : 'benar'}', style: TextStyle(fontSize: 12, color: AppColors.muted)),
               const SizedBox(height: 8),
-              for (final (i, c) in q.choices.indexed) ...[
+              for (final (i, c) in rows.indexed) ...[
                 Divider(height: 1, color: AppColors.divider),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 9),
@@ -292,8 +298,8 @@ class QuizQuestionSheet extends StatelessWidget {
                           c,
                           style: TextStyle(
                             fontSize: 13,
-                            fontWeight: i == q.answer ? FontWeight.w600 : FontWeight.w400,
-                            color: i == q.answer ? AppColors.green : null,
+                            fontWeight: marked(i) ? FontWeight.w600 : FontWeight.w400,
+                            color: marked(i) ? AppColors.green : null,
                           ),
                         ),
                       ),
@@ -302,7 +308,7 @@ class QuizQuestionSheet extends StatelessWidget {
                         width: 80,
                         child: _ScoreBar(
                           total == 0 ? 0 : (s.picks.elementAtOrNull(i) ?? 0) / total,
-                          color: i == q.answer ? AppColors.green : AppColors.faint,
+                          color: marked(i) ? AppColors.green : AppColors.faint,
                         ),
                       ),
                       SizedBox(

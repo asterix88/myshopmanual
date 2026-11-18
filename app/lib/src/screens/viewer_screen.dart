@@ -396,6 +396,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
                         context: context,
                         isScrollControlled: true,
                         useSafeArea: true,
+                        showDragHandle: true,
                         builder: (_) => QuizGenerateSheet(file: file, page: _page),
                       ),
                       icon: AppIcon(AppGlyph.quiz, color: AppColors.ink, size: 22),

@@ -197,6 +197,14 @@ enum AppGlyph {
     _P('M9.6 9.2a2.4 2.4 0 1 1 3.4 2.2c-.6.3-1 .8-1 1.5v.6', accent: true),
     _C(12, 16.3, 1.1, accent: true, fill: true),
   ]),
+  // Question types on "Buat soal quiz".
+  typePg([_C(6, 7, 2), _C(6, 17, 2, accent: true, fill: true), _P('M11 7h9M11 17h9')]),
+  typeBs([_P('M4 12.5l3.5 3.5L14 9', width: 2), _P('M15 15l5 5M20 15l-5 5', accent: true)]),
+  typeGambar([_R(3, 5, 18, 14, 2), _C(9, 10, 1.6, accent: true), _P('M21 16l-5-5-8 8')]),
+  typeKartu([_R(4, 6.5, 12.5, 14, 2), _P('M8 3.5h10a2 2 0 0 1 2 2V17', accent: true)]),
+  typeCampur([_R(4, 4, 7, 7, 1.5), _R(13, 4, 7, 7, 1.5), _R(4, 13, 7, 7, 1.5), _C(16.5, 16.5, 3.5, accent: true)]),
+  /// Turn a kartu over.
+  flip([_P('M4 12a8 8 0 0 1 13.7-5.6L20 9M20 4v5h-5'), _P('M20 12a8 8 0 0 1-13.7 5.6L4 15M4 20v-5h5')]),
   flame([_P('M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 1.6 1 2.5 2 3 .5-3 .5-5.5.5-8z')]),
   trophy([_P('M8 4h8v5a4 4 0 0 1-8 0z'), _P('M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 20h8')]),
   unit([_P('M3 17h13l3-4h2'), _C(6, 18, 2), _C(14, 18, 2), _P('M5 13V8h6l2 5')]),

@@ -89,7 +89,9 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
         page.dispose();
         return;
       }
-      final auto = QuizEdit.auto(page, _target, labelled: widget.question.prompt.contains('[X]'));
+      final auto = widget.question.isCard
+          ? QuizEdit.reference(page)
+          : QuizEdit.auto(page, _target, labelled: widget.question.prompt.contains('[X]'));
       final saved =
           QuizEdit.fromJson(QuizApi.savedEdit(widget.question.id) ?? widget.question.imageEdit, page.scale) ?? auto;
       setState(() {
