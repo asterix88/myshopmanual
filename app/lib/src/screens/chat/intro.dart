@@ -164,10 +164,11 @@ class _Intro extends StatelessWidget {
         if (!hasManuals) ...[
           const SizedBox(height: 8),
           Text(
-            'Daftar manual belum termuat. Sambungkan ke internet lalu buka tab Home.',
+            'Daftar manual belum tersedia.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.orangeText),
+            style: TextStyle(fontSize: 13, color: AppColors.orangeText),
           ),
+          const Center(child: RetryButton()),
         ],
         const SizedBox(height: 24),
         Padding(

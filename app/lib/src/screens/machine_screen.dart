@@ -4,7 +4,6 @@ import '../models.dart';
 import '../store.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import '../widgets/rise.dart';
 import '../widgets/unit_icon.dart';
 import 'shell.dart';
 import 'unit_screen.dart';
@@ -47,7 +46,7 @@ class MachineScreen extends StatelessWidget {
                   children: [
                     for (final (i, unit) in units.indexed) ...[
                       if (i > 0) const SizedBox(height: 10),
-                      Rise(delay: Rise.stagger(i, step: 50), child: UnitRow(unit: unit, store: store)),
+                      UnitRow(unit: unit, store: store),
                     ],
                   ],
                 ),

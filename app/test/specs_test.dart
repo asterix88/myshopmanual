@@ -98,7 +98,7 @@ void main() {
       expect(find.text(tab), findsOneWidget);
     }
     // The fixture manual has no spec bookmarks.
-    expect(find.text('Tidak ditemukan di bookmark manual unit ini'), findsOneWidget);
+    expect(find.text('Tidak ada di bookmark manual'), findsOneWidget);
     root.deleteSync(recursive: true);
   });
 

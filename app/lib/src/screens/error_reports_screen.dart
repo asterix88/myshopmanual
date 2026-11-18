@@ -86,7 +86,7 @@ class _ErrorReportsScreenState extends State<ErrorReportsScreen> {
                     ),
             )
           : groups.isEmpty
-              ? const EmptyState(icon: Icons.verified_outlined, title: 'Belum ada error dari HP mekanik.')
+              ? const EmptyState(icon: Icons.verified_outlined, title: 'Belum ada laporan error')
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView.separated(

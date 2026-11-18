@@ -47,13 +47,13 @@ class _Preparing extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Menyiapkan indeks pencarian AI: ${p.ready} dari ${p.total} manual'
-            '${p.totalBytes == 0 ? '' : ' (${formatSize(p.receivedBytes)} dari ${formatSize(p.totalBytes)})'}',
+            'Menyiapkan indeks AI: ${p.ready}/${p.total} manual'
+            '${p.totalBytes == 0 ? '' : ' (${formatSize(p.receivedBytes)}/${formatSize(p.totalBytes)})'}',
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.navy),
           ),
           const SizedBox(height: 2),
           Text(
-            'Sementara itu AI menjawab dari manual yang indeksnya sudah siap.',
+            'Jawaban sementara dari manual yang sudah terindeks.',
             style: TextStyle(fontSize: 11, color: AppColors.muted),
           ),
           const SizedBox(height: 6),
