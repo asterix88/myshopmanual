@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../screens/shell.dart';
 import '../theme.dart';
 
 /// White rounded card used for every grouped list, like the company app.
@@ -123,7 +124,9 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    // Full width so the text is centred on the screen, not under the icon.
+    return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -156,4 +159,34 @@ void showError(BuildContext context, Object error) {
     _ => '$error',
   };
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $text')));
+}
+
+/// "Coba lagi" under an empty state that waits for the manual list: fetches
+/// the catalog again (search indexes follow) and says so when still offline.
+class RetryButton extends StatefulWidget {
+  const RetryButton({super.key});
+
+  @override
+  State<RetryButton> createState() => _RetryButtonState();
+}
+
+class _RetryButtonState extends State<RetryButton> {
+  bool _busy = false;
+
+  Future<void> _retry() async {
+    final store = StoreScope.read(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    await store.refresh();
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (store.online != true) {
+      messenger.showSnackBar(const SnackBar(content: Text('Belum tersambung ke internet.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(onPressed: _busy ? null : _retry, child: Text(_busy ? 'Memuat…' : 'Coba lagi'));
+  }
 }

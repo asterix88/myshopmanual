@@ -146,8 +146,9 @@ class UnitTabsPage extends StatelessWidget {
               child: unit == null
                   ? const EmptyState(
                       icon: Icons.cloud_download_outlined,
-                      title: 'Belum ada manual',
-                      message: 'Sambungkan ke internet sebentar agar daftar manual diambil.',
+                      title: 'Daftar manual belum tersedia',
+                      message: 'Hubungkan ke internet untuk mengunduh.',
+                      action: RetryButton(),
                     )
                   : showTabs
                   ? TabBarView(children: views)
@@ -197,8 +198,8 @@ class PageRowList extends StatelessWidget {
     if (rows.isEmpty && after.isEmpty) {
       return EmptyState(
         icon: Icons.search_off,
-        title: emptyTitle ?? 'Tidak ditemukan di bookmark manual unit ini',
-        message: 'Coba cari di tab Cari.',
+        title: emptyTitle ?? 'Tidak ada di bookmark manual',
+        message: 'Coba lewat tab Cari.',
       );
     }
     final hint = this.hint;

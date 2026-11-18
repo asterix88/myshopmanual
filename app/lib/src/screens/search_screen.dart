@@ -140,7 +140,7 @@ class _SearchScreenState extends State<SearchScreen> with WidgetsBindingObserver
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: AppColors.background,
-                        hintText: 'Cth: Part number, kode error, nama komponen',
+                        hintText: 'Part number, kode error, komponen',
                         hintStyle: TextStyle(fontSize: 13, color: AppColors.faint),
                         hintMaxLines: 1,
                         prefixIcon: Padding(
@@ -196,16 +196,20 @@ class _SearchScreenState extends State<SearchScreen> with WidgetsBindingObserver
               const SliverToBoxAdapter(
                 child: EmptyState(
                   icon: Icons.cloud_download_outlined,
-                  title: 'Indeks pencarian belum ada',
-                  message: 'Sambungkan ke internet sebentar: indeks semua manual diambil otomatis, '
-                      'lalu pencarian bisa dipakai tanpa sinyal.',
+                  title: 'Indeks belum tersedia',
+                  message: 'Perlu koneksi internet.',
+                  action: RetryButton(),
                 ),
               )
             else if (result == null)
               SliverToBoxAdapter(child: _start(store))
             else if (result.hits.isEmpty)
               SliverToBoxAdapter(
-                child: EmptyState(icon: Icons.search_off, title: 'Tidak ada hasil untuk "$_query"'),
+                child: EmptyState(
+                  icon: Icons.search_off,
+                  title: 'Tidak ada hasil untuk "$_query"',
+                  message: 'Cek ejaan atau ganti filter.',
+                ),
               )
             else
               ..._resultSlivers(result),

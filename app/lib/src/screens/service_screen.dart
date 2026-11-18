@@ -49,8 +49,8 @@ class ServiceScreen extends StatelessWidget {
       ],
       empty: const EmptyState(
         icon: Icons.event_note_outlined,
-        title: 'Jadwal servis unit ini belum ada',
-        message: 'Muncul setelah manual unit ini diperbarui di server.',
+        title: 'Jadwal servis belum tersedia',
+        message: 'Belum terbaca dari manual unit ini.',
       ),
     );
   }

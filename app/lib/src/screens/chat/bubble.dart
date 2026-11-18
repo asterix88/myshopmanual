@@ -251,7 +251,7 @@ class _AnswerFooter extends StatelessWidget {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          'Sebagian dari pengetahuan umum, belum dicek di manual. Cek manual unit sebelum dipakai.',
+                          'Sebagian jawaban bukan dari manual.',
                           style: TextStyle(fontSize: 12, height: 1.35, color: AppColors.muted),
                         ),
                       ),
