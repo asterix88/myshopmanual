@@ -84,6 +84,7 @@ Rules:
 - Type "gambar", numbered drawing: a drawing page whose text has a numbered legend (lines like "3. Main relief valve"). The mechanic sees the drawing with its numbers but WITHOUT the legend. Ask what one numbered part is ("Pada gambar <name of the drawing>, komponen nomor 3 adalah?"); 4 choices taken from the same legend, exactly one right; put the number in the field "callout".
 - Type "gambar", labelled photo or drawing: a page whose text is mostly short part names placed on a photo or drawing (like "PSV", "TVC valve", "Servo valve", each a label on the picture, few or no sentences). The mechanic sees the picture with every label hidden and replaced by a letter. Ask what one label is, writing [X] where its letter goes ("Pada foto <what the picture shows, with the unit>, komponen bertanda [X] adalah?"); 4 choices taken from the labels on the same page, written exactly as the page writes them, exactly one right; put the right label, exactly as on the page, in the field "callout".
 - When the page is such a labelled picture, write only "gambar" questions, whatever types were asked, each about a different label. If a page has neither a numbered legend nor labels, write "pg" instead of "gambar".
+- Type "kartu": a flash card. An open question that asks the mechanic to explain something the page explains well: how a system works, what a component does, why a procedure has its order ("Jelaskan cara kerja sistem CLSS pada PC210-10."). No choices: "choices": [] and "answer": -1. The mechanic answers in his own words, then sees the page. explain: 2 to 4 key points the answer must contain, each one short sentence from the page, separated by "\n". Never ask for a single value or name in a "kartu"; that belongs in "pg".
 - The question must be answerable without seeing the page (except "gambar"); name the unit and the component.
 - Types "pg" and "bs" are shown WITHOUT any picture. In them never write callout numbers such as "(35)" or "nomor 3", and never refer to a drawing ("gambar", "ilustrasi", "illustration"); name each part by its name only. A fact that needs the drawing belongs in a "gambar" question or nowhere.
 - explain: one or two short sentences giving the fact itself, as the page says it. Start with the fact; never start with "Halaman menyatakan", "Menurut manual" or similar.
@@ -91,7 +92,7 @@ Rules:
 
 Reply with JSON only: {"questions": [{"type": "pg", "prompt": "...", "choices": ["...", "...", "...", "..."], "answer": 0, "explain": "...", "callout": null}]} where answer is the index of the right choice (0 = first).`;
 
-export type Wanted = { pg: number; bs: number; gambar: number };
+export type Wanted = { pg: number; bs: number; gambar: number; kartu?: number };
 
 export type Draft = QuestionInput & { callout?: string | null };
 
@@ -104,6 +105,8 @@ export function wantedFor(kind: string, count: number): Wanted {
       return { pg: 0, bs: count, gambar: 0 };
     case "gambar":
       return { pg: 0, bs: 0, gambar: count };
+    case "kartu":
+      return { pg: 0, bs: 0, gambar: 0, kartu: count };
     default: {
       const bs = count >= 3 ? 1 : 0;
       return { pg: count - bs, bs, gambar: 0 };
@@ -121,11 +124,13 @@ export async function writeQuestions(
   wanted: Wanted,
   avoid: string[] = [],
 ): Promise<{ drafts: Draft[]; skipped: string[] } | null> {
-  const total = wanted.pg + wanted.bs + wanted.gambar;
+  const kartu = wanted.kartu ?? 0;
+  const total = wanted.pg + wanted.bs + wanted.gambar + kartu;
   const parts = [
     wanted.pg ? `${wanted.pg} of type "pg"` : "",
     wanted.bs ? `${wanted.bs} of type "bs"` : "",
     wanted.gambar ? `${wanted.gambar} of type "gambar"` : "",
+    kartu ? `${kartu} of type "kartu"` : "",
   ].filter(Boolean);
   const reply = await ask(
     WRITE_PROMPT,
@@ -148,7 +153,7 @@ export async function writeQuestions(
       explain: cleanExplain(String(raw.explain ?? "")),
       callout: raw.callout == null ? null : String(raw.callout),
     };
-    if (q.type === "bs") q.choices = ["Benar", "Salah"];
+    fitType(q);
     stripCallouts(q);
     const bad = questionProblem(q);
     if (bad) skipped.push(bad);
@@ -157,9 +162,25 @@ export async function writeQuestions(
   return { drafts, skipped };
 }
 
+/// The fixed parts of a type, whatever the model wrote: "bs" always has
+/// Benar/Salah, a "kartu" never has choices.
+function fitType(q: Draft): void {
+  if (q.type === "bs") q.choices = ["Benar", "Salah"];
+  if (q.type === "kartu") {
+    q.choices = [];
+    q.answer = -1;
+  }
+}
+
 /// What the server can check by itself: numbers in the right answer must be
 /// on the page; for a picture question, its number and the part's name too.
+/// A kartu has no single answer to check; its key points go to the curator.
 export function selfCheck(q: Draft, text: string): { ok: boolean; note: string } {
+  if (q.type === "kartu") {
+    return PICTURE_WORDS.test(q.prompt)
+      ? { ok: false, note: "Kartu menyebut gambar, padahal depan kartu tampil tanpa gambar." }
+      : { ok: true, note: `Poin kunci dari halaman ${q.page}.` };
+  }
   if (q.type === "gambar") {
     const name = q.choices[q.answer] ?? "";
     const number = String(q.callout ?? "").trim();
@@ -193,6 +214,7 @@ For each question give a score from 1 to 10:
 - 1-3: the key is wrong or not on the page, or two choices could be right.
 - Type "gambar" on a labelled photo: the mechanic sees the picture with every label replaced by a letter, and [X] in the question becomes the asked label's letter. Judge it by the labels on the page; the right answer is the asked label itself.
 - Types "pg" and "bs" are shown without the drawing: one that mentions callout numbers like "(35)" or refers to a picture must be "perbaiki" (rewrite without them) or "buang" when it cannot be answered without the drawing.
+- Type "kartu" is a flash card: an open question, no choices; "explain" holds its key points, one per line. Judge whether the page really explains the answer and whether every key point is on the page. A kartu asking for one value or name should be "buang".
 
 verdict: "lolos" (score 7+), "perbaiki" (you can fix it: give the whole fixed question in "fixed", same JSON shape, and score the fixed version), or "buang".
 note: one short sentence in Bahasa Indonesia for the admin, saying what is good or what to check.
@@ -238,7 +260,7 @@ export async function curate(ask: Ask, drafts: Draft[], text: string): Promise<{
         explain: cleanExplain(String(f.explain ?? d.explain)),
         callout: f.callout == null ? d.callout : String(f.callout),
       };
-      if (d.type === "bs") fixed.choices = ["Benar", "Salah"];
+      fitType(fixed);
       stripCallouts(fixed);
       if (!questionProblem(fixed)) q = fixed;
     }

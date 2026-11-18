@@ -334,3 +334,30 @@ test("saving or removing a picture keeps the draft in its place in the list", as
   assert.deepEqual(await order(), ["new", "old"]);
   assert.equal((await quiz.listQuestions(db, "draf", null)).length, 2);
 });
+
+test("a kartu is rated by the mechanic and needs its page picture before it is published", async () => {
+  const db = fresh();
+  await quiz.addQuestion(
+    db,
+    { section: "TRACK", unit: "PC210", topic: "sistem", type: "kartu", prompt: "Jelaskan cara kerja sistem CLSS.", choices: [], answer: -1, explain: "Debit pompa mengikuti beban.\nLS valve membandingkan tekanan.", manual_id: "pm", page: 115 },
+    { status: "draf", source: "ai", by: "ADM", id: "K1", now: NOW, passed: true },
+  );
+  // No picture of the page yet: stays a draft.
+  assert.deepEqual(await quiz.approvePassed(db, ["K1"], "ADM", NOW), { published: 0, left: ["K1"] });
+  await quiz.setImage(db, "K1", "quiz/img/k1.png", NOW);
+  assert.equal(await quiz.removeImage(db, "K1", NOW), false);
+  assert.equal((await quiz.approvePassed(db, ["K1"], "ADM", NOW)).published, 1);
+
+  await quiz.ensureUser(db, ali, () => 0.1);
+  const s = await quiz.startSession(db, ali, "harian", null, { now: NOW });
+  const k = s.questions.find((q) => q.id === "K1");
+  assert.deepEqual(k.choices, []);
+  // "Bisa": counts as right, the card goes up one level from 0.
+  const out = await quiz.answer(db, ali, { id: "r1", session_id: s.id, question_id: "K1", chosen: 2, ms: 20_000 }, NOW);
+  assert.equal(out.correct, true);
+  assert.equal(out.level, 1);
+  assert.equal(out.xp, 5);
+  const { questionStats } = await import("../src/quiz-stats.ts");
+  const stats = await questionStats(db, "K1");
+  assert.deepEqual(stats.picks, [0, 0, 1, 0]);
+});

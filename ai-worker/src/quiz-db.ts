@@ -5,12 +5,11 @@
 // XP, streak) are in quiz-rules.ts.
 
 import {
-  answerXp,
   capDaily,
   daysBetween,
+  grade,
   isMastered,
   monthId,
-  nextCard,
   nextStreak,
   pickSession,
   quizDay,
@@ -269,7 +268,7 @@ export async function answer(db: Db, who: Who, a: AnswerIn, now = Date.now()): P
   if (!session) return { error: "session" };
   const ids = (JSON.parse(String(session.questions)) as { id: string }[]).map((q) => q.id);
   if (!ids.includes(a.question_id)) return { error: "question" };
-  const q = await db.first("SELECT answer, unit FROM question WHERE id = ?", a.question_id);
+  const q = await db.first("SELECT type, answer, unit FROM question WHERE id = ?", a.question_id);
   if (!q) return { error: "question" };
 
   // Phones offline send their answers later with the time they answered.
@@ -279,21 +278,16 @@ export async function answer(db: Db, who: Who, a: AnswerIn, now = Date.now()): P
   if (now - at > LATE_LIMIT_MS) return { error: "late" };
 
   const day = await today(db, who, at);
-  const correct = Number(a.chosen) === Number(q.answer);
   const card = await db.first("SELECT level, next_date, last_correct_day FROM card_state WHERE nrp = ? AND question_id = ?", who.nrp, a.question_id);
   const before = card ? { level: Number(card.level), next_date: String(card.next_date), last_correct_day: card.last_correct_day as string | null } : null;
-  const next = nextCard(before, correct, day);
-  const stats = await db.first("SELECT xp FROM daily_stats WHERE day = ? AND nrp = ?", day, who.nrp);
-  const xp = capDaily(
-    stats ? Number(stats.xp) : 0,
-    answerXp({
-      correct,
-      ms: Number(a.ms) || 0,
-      levelBefore: before?.level ?? null,
-      due: next.due,
-      correctToday: before?.last_correct_day === day,
-    }),
+  const result = grade(
+    { type: String(q.type), answer: Number(q.answer) },
+    { chosen: Number(a.chosen), ms: Number(a.ms) || 0, card: before, day },
   );
+  const { correct } = result;
+  const next = { level: result.level, next_date: result.next_date };
+  const stats = await db.first("SELECT xp FROM daily_stats WHERE day = ? AND nrp = ?", day, who.nrp);
+  const xp = capDaily(stats ? Number(stats.xp) : 0, result.xp);
   const c = correct ? 1 : 0;
   await db.batch([
     [
@@ -706,10 +700,10 @@ export async function setImage(db: Db, id: string, key: string, now = Date.now()
 }
 
 /// "Hapus gambar": takes the picture off a pg/bs question. A "gambar"
-/// question keeps its picture (it cannot be asked without one).
+/// question or a "kartu" keeps its picture (neither works without one).
 export async function removeImage(db: Db, id: string, now = Date.now()): Promise<boolean> {
   return (
-    (await db.run("UPDATE question SET image = NULL, image_edit = NULL WHERE id = ? AND type <> 'gambar'", id)) > 0
+    (await db.run("UPDATE question SET image = NULL, image_edit = NULL WHERE id = ? AND type NOT IN ('gambar', 'kartu')", id)) > 0
   );
 }
 
@@ -722,7 +716,8 @@ export async function setImageEdit(db: Db, id: string, edit: unknown, now = Date
 }
 
 /// "Setujui semua yang lolos": publishes the drafts among [ids] that passed
-/// the curator and the checks; a picture question needs its picture first.
+/// the curator and the checks; a picture question or a kartu needs its
+/// picture first.
 /// Returns how many were published and the ids left as drafts.
 export async function approvePassed(db: Db, ids: string[], by: string, now = Date.now()): Promise<{ published: number; left: string[] }> {
   let published = 0;
@@ -730,7 +725,7 @@ export async function approvePassed(db: Db, ids: string[], by: string, now = Dat
   for (const id of ids.slice(0, 200)) {
     const changed = await db.run(
       `UPDATE question SET status = 'terbit', reviewed_by = ?, check_note = NULL, updated_at = ?
-       WHERE id = ? AND status = 'draf' AND passed = 1 AND (type <> 'gambar' OR image IS NOT NULL)`,
+       WHERE id = ? AND status = 'draf' AND passed = 1 AND (type NOT IN ('gambar', 'kartu') OR image IS NOT NULL)`,
       by, now, id,
     );
     if (changed) published++;

@@ -266,3 +266,19 @@ test("a second job on the same manual tells nyel AI what exists and drops repeat
   assert.match(users[1], /Already made from this page[^]*Berapa tekanan main relief/);
   assert.equal((await db.all("SELECT id FROM question")).length, 1);
 });
+
+test("nyel AI writes a kartu without choices; its key points are kept", async () => {
+  let asked = "";
+  const ask = async (_system, user) => {
+    asked = user;
+    return { questions: [{ type: "kartu", prompt: "Jelaskan cara kerja sistem CLSS pada PC210-10.", choices: ["x"], answer: 0, explain: "Debit pompa mengikuti beban.\nLS valve membandingkan tekanan pompa dan LS." }] };
+  };
+  const base = { section: "TRACK", unit: "PC210", topic: "sistem", manual_id: "pm", page: 115 };
+  const out = await writeQuestions(ask, base, "CLSS text ".repeat(20), wantedFor("kartu", 1));
+  assert.match(asked, /1 of type "kartu"/);
+  assert.equal(out.drafts.length, 1);
+  const k = out.drafts[0];
+  assert.deepEqual([k.choices, k.answer], [[], -1]);
+  assert.equal(k.explain.split("\n").length, 2);
+  assert.equal(selfCheck(k, "").ok, true);
+});

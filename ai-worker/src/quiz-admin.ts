@@ -3,7 +3,7 @@
 // decision in the Quiz PRD). All need an active admin's session.
 //
 //   POST /admin/quiz/generate           {section, unit, topic, manual_id, page, text, count, kind}
-//                                       one page -> drafts (kind: campur | pg | bs | gambar)
+//                                       one page -> drafts (kind: campur | pg | bs | gambar | kartu)
 //   POST /admin/quiz/plan               {unit, topic, toc, pages, count, mix} -> pages to use
 //   POST /admin/quiz/job                {section, unit, manual_id, title, topic, count, mix, pages}
 //                                       -> a "Buat draf kuis" job, run by the cron (quiz-jobs.ts)
@@ -61,7 +61,7 @@ async function generate(env: QuizEnv, b: Record<string, unknown>, by: string): P
   const problem = base && questionProblem(base);
   if (!base || problem) return json({ error: "bad_request", message: problem ?? "Data soal tidak lengkap." }, 400);
   if (text.trim().length < 80) return json({ error: "bad_request", message: "Teks halaman terlalu pendek untuk dibuat soal." }, 400);
-  const kind = ["pg", "bs", "gambar"].includes(String(b.kind)) ? String(b.kind) : "campur";
+  const kind = ["pg", "bs", "gambar", "kartu"].includes(String(b.kind)) ? String(b.kind) : "campur";
 
   const ask = askWith(env);
   const db = quiz.d1(env.QUIZ);
@@ -96,7 +96,8 @@ async function generate(env: QuizEnv, b: Record<string, unknown>, by: string): P
     ok: true,
     saved: saved.length,
     ids: saved.map((s) => s.id),
-    pictures: saved.filter((s) => s.type === "gambar").map((s) => s.id),
+    // Questions shown with a picture of the page, made by the app next.
+    pictures: saved.filter((s) => s.type === "gambar" || s.type === "kartu").map((s) => s.id),
     // The asked number of each picture question, so the app can cut out its drawing.
     callouts: Object.fromEntries(saved.filter((s) => s.type === "gambar" && s.callout).map((s) => [s.id, s.callout])),
     skipped: out.skipped,
