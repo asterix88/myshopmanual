@@ -136,7 +136,9 @@ void main() {
         expiresAt: DateTime.now().add(const Duration(days: 28)),
       ),
     );
-    expect(calls, ['/auth/refresh lama', '/catalog.json baru']);
+    // The Cetok sites are asked for alongside, with the new session too.
+    expect(calls.where((c) => !c.startsWith('/app/config')), ['/auth/refresh lama', '/catalog.json baru']);
+    expect(calls.where((c) => c.startsWith('/app/config')), everyElement('/app/config baru'));
     expect(store.online, isTrue);
     store.dispose();
 
@@ -404,5 +406,85 @@ void main() {
     expect(find.text('4'), findsOneWidget);
     expect(find.text('8'), findsOneWidget);
     await tester.runAsync(() async => store.dispose());
+  });
+
+  group('Cetok Online per section', () {
+    Session wheel() => Session(
+          token: 't',
+          nrp: '30001',
+          name: 'Wawan',
+          admin: false,
+          sections: const ['WHEEL'],
+          issuedAt: DateTime.now(),
+          expiresAt: DateTime.now().add(const Duration(days: 30)),
+        );
+
+    http.Client server(Map<String, dynamic> cetok, List<String> hosts) => MockClient((request) async {
+          if (request.url.path == '/app/config') {
+            return http.Response(jsonEncode({'cetok_all': false, 'cetok': cetok}), 200);
+          }
+          if (request.url.host.contains('supabase')) {
+            hosts.add(request.url.host);
+            return http.Response(jsonEncode({'parts': []}), 200);
+          }
+          return _files(request);
+        });
+
+    test('a Wheel NRP gets no Cetok until the server has one for Wheel', () async {
+      final hosts = <String>[];
+      final store = await AppStore.open(root: root, client: server(const {}, hosts));
+      await store.signIn(wheel(), refreshNow: false);
+      expect(store.cetokSection, 'WHEEL');
+      expect(store.cetokSite, isNull, reason: "Track's built-in Cetok is not Wheel's");
+      store.dispose();
+    });
+
+    test("the server's Wheel entry opens Wheel's own database", () async {
+      final hosts = <String>[];
+      final store = await AppStore.open(
+        root: root,
+        client: server({
+          'WHEEL': {'url': 'https://wheel.supabase.co', 'key': 'k', 'unit': ['HD785-7'], 'show_all': true},
+        }, hosts),
+      );
+      await store.signIn(wheel(), refreshNow: false);
+      await store.refreshCetokSites();
+      expect(store.cetokSite?.url, 'https://wheel.supabase.co');
+      await store.cetok.open();
+      expect(hosts, ['wheel.supabase.co']);
+      expect(store.cetok.unitModels, ['HD785-7']);
+      expect(store.cetok.showAll, isTrue);
+      store.dispose();
+
+      // Kept on the phone for the next start, offline too.
+      final again = await AppStore.open(root: root, client: fixtureServer());
+      expect(again.cetokSites.keys, ['WHEEL']);
+      again.dispose();
+    });
+
+    test('a Track NRP keeps the Track Cetok', () async {
+      final hosts = <String>[];
+      final store = await AppStore.open(root: root, client: server(const {}, hosts));
+      await store.signIn(testSession(), refreshNow: false);
+      expect(store.cetokSection, 'TRACK');
+      expect(store.cetokSite, isNotNull);
+      store.dispose();
+    });
+
+    testWidgets('Cetok Online for a section without one says it is in development', (tester) async {
+      late AppStore store;
+      await tester.runAsync(() async {
+        store = await AppStore.open(root: root, client: server(const {}, []));
+        await store.signIn(wheel(), refreshNow: false);
+      });
+      await tester.pumpWidget(MyManualApp(store: store));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('tool-cetok')));
+      await tester.tap(find.byKey(const Key('tool-cetok')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('cetok-unavailable')), findsOneWidget);
+      expect(find.text('Section Wheel'), findsOneWidget);
+      await tester.runAsync(() async => store.dispose());
+    });
   });
 }

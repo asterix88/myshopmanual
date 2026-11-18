@@ -24,7 +24,7 @@ class AddForm extends StatefulWidget {
 }
 
 class _AddFormState extends State<AddForm> {
-  String _unit = Cetok.unitModels.first;
+  late String _unit = widget.cetok.unitModels.first;
   final _pn = TextEditingController();
   final _desc = TextEditingController();
   final _location = TextEditingController();
@@ -63,7 +63,7 @@ class _AddFormState extends State<AddForm> {
 
   void _fillFrom(CetokPart p) {
     _desc.text = p.desc;
-    if (Cetok.unitModels.contains(p.unit)) _unit = p.unit;
+    if (widget.cetok.unitModels.contains(p.unit)) _unit = p.unit;
   }
 
   void _pnChanged() {
@@ -146,7 +146,7 @@ class _AddFormState extends State<AddForm> {
           spacing: 6,
           runSpacing: 6,
           children: [
-            for (final u in Cetok.unitModels)
+            for (final u in cetok.unitModels)
               CetokChip(label: u, selected: _unit == u, onTap: () => setState(() => _unit = u)),
           ],
         ),

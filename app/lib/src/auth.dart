@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import 'ai.dart';
+import 'cetok.dart';
 import 'diagnostics.dart' show appVersionText;
 
 /// Header that carries the session to the server (ai-worker/src/auth.ts).
@@ -166,12 +167,25 @@ class Employee {
 
 /// Settings an admin changes in the app that every phone follows.
 class AppConfig {
-  const AppConfig({required this.cetokAll});
+  const AppConfig({required this.cetokAll, this.cetok});
 
-  factory AppConfig.fromJson(Map<String, dynamic> json) => AppConfig(cetokAll: json['cetok_all'] as bool? ?? false);
+  factory AppConfig.fromJson(Map<String, dynamic> json) => AppConfig(
+        cetokAll: json['cetok_all'] as bool? ?? false,
+        cetok: switch (json['cetok']) {
+          final Map<String, dynamic> m => {
+              for (final e in m.entries)
+                if (e.value is Map) e.key.toUpperCase(): CetokSite.fromJson((e.value as Map).cast<String, dynamic>()),
+            },
+          _ => null,
+        },
+      );
 
   /// Cetok Online shows every location instead of hiding some.
   final bool cetokAll;
+
+  /// The Cetok Online of each of the NRP's sections that has one; null from
+  /// a server older than Cetok per section.
+  final Map<String, CetokSite>? cetok;
 }
 
 /// What the app sends about this phone: a random id made once, and the

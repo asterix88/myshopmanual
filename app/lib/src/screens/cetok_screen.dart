@@ -22,12 +22,22 @@ import 'cetok/part_sheet.dart';
 import 'cetok/stock_tab.dart';
 import 'cetok/style.dart';
 import 'cetok/take_form.dart';
+import 'cetok/unavailable.dart';
 import 'shell.dart';
 
-/// Opens Cetok Online; with [search] the search box gets the keyboard.
-Future<void> openCetok(BuildContext context, {bool search = false}) => Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => CetokScreen(focusSearch: search)),
-    );
+/// Opens Cetok Online of the section in use; with [search] the search box
+/// gets the keyboard. A section without its own Cetok yet gets
+/// "Fitur sedang dalam tahap pengembangan".
+Future<void> openCetok(BuildContext context, {bool search = false}) {
+  final store = StoreScope.read(context);
+  return Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => store.cetokSite == null
+          ? CetokUnavailableScreen(section: store.cetokSection)
+          : CetokScreen(focusSearch: search),
+    ),
+  );
+}
 
 /// Cetok Online inside MyManual: Stok (look up and open a part), Ambil,
 /// Transfer and Input, using the same database functions as the website.

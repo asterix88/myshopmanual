@@ -122,6 +122,30 @@ https://ai.mymanual.my.id harus menampilkan `{"ok":true,...}`. Model dan alamat 
 `ai-worker/wrangler.toml` (`MODEL`, `API_URL`); API lain yang kompatibel dengan format OpenAI (misalnya
 Gemini atau OpenRouter) juga bisa dipakai dengan mengganti keduanya dan kuncinya.
 
+### Cetok Online per section (`ai-worker/cetok.json`)
+
+Setiap section yang punya Cetok Online sendiri ditulis satu baris di
+`ai-worker/cetok.json`. HP hanya menerima Cetok milik section NRP-nya. Section
+yang tidak ada di file ini menampilkan "Fitur sedang dalam tahap pengembangan".
+
+```json
+{
+  "TRACK": { "url": "https://xxxx.supabase.co", "key": "<anon key>", "web": "https://...", "unit": ["PC210-10MO"] },
+  "WHEEL": { "url": "https://yyyy.supabase.co", "key": "<anon key>", "web": "https://...", "unit": ["HD785-7"] }
+}
+```
+
+- `url`, `key`: project Supabase Cetok section itu dan anon key-nya (sama
+  seperti di website Cetok-nya). Database-nya harus punya tabel dan fungsi
+  yang sama dengan Cetok Track (`get_all_data`, `ambil_barang`,
+  `input_barang`, `transfer_stok`).
+- `unit`: model unit yang bisa dipilih di tab Input.
+- `semua_lokasi` (opsional): `true` tampilkan semua lokasi, `false` sembunyikan
+  sebagian; kosong = ikut pilihan admin di aplikasi (menu ⋮ > Data Cetok Online).
+
+Edit file ini di GitHub lalu merge: server ter-deploy otomatis, HP mendapat
+Cetok barunya saat aplikasi dibuka lagi. Tidak perlu APK baru.
+
 ## Aplikasi Android (`app/`)
 
 Flutter, dengan penampil PDF PDFium (`pdfrx`) dan indeks pencarian SQLite FTS5 (`sqlite3`).
