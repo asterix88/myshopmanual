@@ -22,7 +22,7 @@
 // search index; the server checks that the numbers in the right answer are
 // on that page and writes what it found in check_note.
 
-import { requireAdmin } from "./auth";
+import { requireQuizAdmin } from "./auth";
 import { askWith, curate, isRepeat, planPages, selfCheck, wantedFor, writeQuestions, MAX_PAGE_TEXT } from "./quiz-ai.ts";
 import * as quiz from "./quiz-db.ts";
 import { createJob, listJobs, mixFrom, MAX_JOB_PAGES, MAX_JOB_QUESTIONS, PASS_SCORE, targets, type JobPage } from "./quiz-jobs.ts";
@@ -173,10 +173,10 @@ async function putImage(request: Request, env: QuizEnv, id: string): Promise<Res
   return json({ ok: true, image: key });
 }
 
-/// Handles /admin/quiz/*.
+/// Handles /admin/quiz/*: admins and Admin kuis.
 export async function handleQuizAdmin(request: Request, env: QuizEnv, path: string): Promise<Response> {
   if (!["POST", "GET", "PUT", "DELETE"].includes(request.method)) return json({ error: "method" }, 405);
-  const auth = await requireAdmin(env, request);
+  const auth = await requireQuizAdmin(env, request);
   if (auth.error) return auth.error;
   const by = auth.session.n;
   if (path.startsWith("/admin/quiz/image-edit/")) {

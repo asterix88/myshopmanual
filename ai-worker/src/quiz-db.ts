@@ -55,7 +55,8 @@ export function d1(db: D1Database): Db {
 }
 
 /// The mechanic, from their login: sections null = admin (every section).
-export type Who = { nrp: string; name: string; sections: string[] | null; departemen: string; site?: string };
+/// offBoard: never on the leaderboard (an Admin kuis, who knows the answers).
+export type Who = { nrp: string; name: string; sections: string[] | null; departemen: string; site?: string; offBoard?: boolean };
 
 export type Question = {
   id: string;
@@ -114,17 +115,23 @@ export async function today(db: Db, who: Who, now = Date.now()): Promise<string>
 }
 
 /// Makes or refreshes the mechanic's row; a new one gets a random avatar.
+/// [Who.offBoard] hides the row from the leaderboard; it stays hidden when
+/// the person is no longer Admin kuis, until an admin shows it again
+/// (/admin/quiz/leaderboard/hide).
 export async function ensureUser(db: Db, who: Who, random: () => number = Math.random): Promise<void> {
+  const offBoard = who.offBoard ? 1 : 0;
   await db.run(
-    `INSERT INTO quiz_user (nrp, name, site, departemen, section, avatar) VALUES (?, ?, ?, ?, ?, ?)
+    `INSERT INTO quiz_user (nrp, name, site, departemen, section, avatar, hidden) VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT (nrp) DO UPDATE SET name = excluded.name, site = excluded.site,
-       departemen = excluded.departemen, section = excluded.section`,
+       departemen = excluded.departemen, section = excluded.section,
+       hidden = MAX(quiz_user.hidden, excluded.hidden)`,
     who.nrp,
     who.name,
     siteOf(who),
     who.departemen,
     (who.sections ?? []).join(","),
     Math.floor(random() * 10),
+    offBoard,
   );
 }
 

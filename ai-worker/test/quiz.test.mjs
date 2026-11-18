@@ -131,6 +131,23 @@ test("finish: bonus, streak and the leaderboard", async () => {
   assert.equal((await quiz.leaderboard(db, budi, "week", NOW)).rows[0].nrp, "B2");
 });
 
+test("an Admin kuis plays but stays off the leaderboard, also after the role ends", async () => {
+  const db = fresh();
+  await seed(db, 30);
+  const tutor = { ...ali, offBoard: true };
+  await quiz.ensureUser(db, budi);
+  await quiz.ensureUser(db, tutor);
+  await play(db, tutor, await quiz.startSession(db, tutor, "harian", null, { now: NOW }));
+  await play(db, budi, await quiz.startSession(db, budi, "harian", null, { now: NOW }));
+  const board = await quiz.leaderboard(db, budi, "week", NOW);
+  assert.deepEqual(board.rows.map((r) => r.nrp), ["B2"]);
+  // No longer Admin kuis: still hidden until an admin shows them again.
+  await quiz.ensureUser(db, ali);
+  assert.deepEqual((await quiz.leaderboard(db, budi, "week", NOW)).rows.map((r) => r.nrp), ["B2"]);
+  await quiz.hideFromBoard(db, "A1", false);
+  assert.equal((await quiz.leaderboard(db, budi, "week", NOW)).rows.length, 2);
+});
+
 test("next day: wrong answers come back as reviews, streak goes on", async () => {
   const db = fresh();
   await seed(db, 30);

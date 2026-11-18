@@ -24,6 +24,7 @@ import 'quiz_admin_screen.dart';
 import 'quiz_hub_screen.dart';
 import 'report_screen.dart';
 import 'shell.dart';
+import 'stats/quiz_stats_screen.dart';
 import 'stats_screen.dart';
 import 'updates_screen.dart';
 import 'viewer_screen.dart';
@@ -122,6 +123,7 @@ class HomeScreen extends StatelessWidget {
         'errors' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ErrorReportsScreen())),
         'theme' => _chooseTheme(context, store),
         'quiz' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QuizAdminScreen())),
+        'quiz_stats' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QuizStatsScreen())),
         'cetok' => showDialog<void>(context: context, builder: (_) => const _CetokDataDialog()),
         'logout' => _logout(context, store),
         _ => _editServer(context, store),
@@ -138,7 +140,10 @@ class HomeScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.ink),
                 ),
                 Text(
-                  session.admin ? 'NRP ${session.nrp} · Admin' : 'NRP ${session.nrp}',
+                  [
+                    'NRP ${session.nrp}',
+                    if (session.admin) 'Admin' else if (session.quizAdmin) 'Admin kuis',
+                  ].join(' · '),
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
                 if (session.sections.isNotEmpty)
@@ -158,8 +163,11 @@ class HomeScreen extends StatelessWidget {
           const PopupMenuItem(value: 'stats', child: Text('Statistik pemakaian')),
         if (store.session?.admin ?? false)
           const PopupMenuItem(value: 'errors', child: Text('Laporan error')),
-        if (store.session?.admin ?? false)
+        if (store.session?.managesQuiz ?? false)
           const PopupMenuItem(value: 'quiz', child: Text('Kelola soal quiz')),
+        // Admins find the quiz numbers in Statistik pemakaian, tab Quiz.
+        if (store.session case Session(quizAdmin: true, admin: false))
+          const PopupMenuItem(value: 'quiz_stats', child: Text('Statistik quiz')),
         // Penilaian nyel AI is in Statistik pemakaian, tab nyel AI (Anas, 3 Nov 2026).
         if (store.session?.admin ?? false)
           const PopupMenuItem(value: 'cetok', child: Text('Data Cetok Online')),

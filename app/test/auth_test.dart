@@ -318,6 +318,36 @@ void main() {
     await tester.runAsync(() async => store.dispose());
   });
 
+  test('a session remembers Admin kuis', () {
+    final s = Session.fromJson({...testSession().toJson(), 'quiz_admin': true});
+    expect(s.quizAdmin, isTrue);
+    expect(s.managesQuiz, isTrue);
+    expect(Session.fromJson(s.toJson()).quizAdmin, isTrue);
+    expect(testSession().managesQuiz, isFalse);
+    expect(testSession(admin: true).managesQuiz, isTrue);
+  });
+
+  testWidgets('an Admin kuis sees Kelola soal quiz and Statistik quiz, not the other admin menus', (tester) async {
+    late AppStore store;
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: MockClient(_files));
+      await store.signIn(testSession(quizAdmin: true), refreshNow: false);
+    });
+    await tester.pumpWidget(MyManualApp(store: store, requireLogin: true));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Lainnya'));
+    await tester.pumpAndSettle();
+    expect(find.text('NRP 21045678 · Admin kuis'), findsOneWidget);
+    expect(find.text('Kelola soal quiz'), findsOneWidget);
+    expect(find.text('Statistik quiz'), findsOneWidget);
+    for (final adminOnly in ['Kelola karyawan', 'Statistik pemakaian', 'Laporan error', 'Data Cetok Online', 'Alamat server']) {
+      expect(find.text(adminOnly), findsNothing, reason: adminOnly);
+    }
+    await tester.tapAt(const Offset(5, 500));
+    await tester.pumpAndSettle();
+    await tester.runAsync(() async => store.dispose());
+  });
+
   testWidgets('only admins see Kelola karyawan, which lists employees, PIN reset requests and makes a temporary PIN', (tester) async {
     late AppStore store;
     final client = MockClient((request) async {

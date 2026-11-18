@@ -488,11 +488,12 @@ void main() {
 }
 
 /// A session as the server would give it, for tests.
-Session testSession({bool admin = false, String token = 't', String nrp = '21045678'}) => Session(
+Session testSession({bool admin = false, bool quizAdmin = false, String token = 't', String nrp = '21045678'}) => Session(
       token: token,
       nrp: nrp,
       name: admin ? 'Admin' : 'Budi',
       admin: admin,
+      quizAdmin: quizAdmin,
       issuedAt: DateTime.now(),
       expiresAt: DateTime.now().add(const Duration(days: 30)),
     );
