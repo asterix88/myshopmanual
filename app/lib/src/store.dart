@@ -216,6 +216,12 @@ class AppStore extends ChangeNotifier {
       themeMode = themeChosen ? json['theme'] as String? ?? 'light' : 'light';
       _aiDay = json['ai_day'] as String? ?? '';
       _homeSection = json['home_section'] as String? ?? '';
+      if (json['cetok_sites'] case final Map<String, dynamic> sites) {
+        cetokSites = {
+          for (final e in sites.entries)
+            if (e.value is Map) e.key: CetokSite.fromJson((e.value as Map).cast<String, dynamic>()),
+        };
+      }
       _reportedApp = json['reported_app'] as String? ?? '';
       if (json['convert'] case {'kind': final String kind, 'from': final String from, 'to': final String to}) {
         lastConvert = (kind: kind, from: from, to: to);
@@ -451,12 +457,44 @@ class AppStore extends ChangeNotifier {
     renew: () async => await renewSession() != null,
   );
 
-  /// Cetok Online's parts stock (its own server), opened from the Home tab.
-  late final Cetok cetok = Cetok(
-    cachePath: p.join(_root.path, 'cetok.json'),
-    client: _client,
-    showAllSetting: _cetokShowAll,
-  );
+  /// The Cetok Online of each section that has one, as the server last
+  /// sent it; Track's built in until then.
+  Map<String, CetokSite> cetokSites = const {defaultSection: CetokSite.track};
+
+  final Map<String, Cetok> _cetoks = {};
+
+  /// The section whose Cetok Online opens: the one picked on Home when the
+  /// NRP has several, else the NRP's own (sessions from before sections
+  /// are Track).
+  String get cetokSection {
+    final s = session;
+    if (s == null || s.admin) return homeSection;
+    final mine = [for (final x in s.sections) x.toUpperCase()];
+    if (mine.isEmpty) return defaultSection;
+    return mine.contains(homeSection) ? homeSection : mine.first;
+  }
+
+  /// The Cetok Online of [cetokSection]; null when that section has none
+  /// yet ("Fitur sedang dalam tahap pengembangan").
+  CetokSite? get cetokSite {
+    final site = cetokSites[cetokSection];
+    return site != null && site.usable ? site : null;
+  }
+
+  /// Cetok Online's parts stock (its own server) for [cetokSection], opened
+  /// from Fitur lainnya on Home. Each section keeps its own copy on the phone.
+  Cetok get cetok {
+    final section = cetokSection;
+    return _cetoks.putIfAbsent(
+      section,
+      () => Cetok(
+        cachePath: p.join(_root.path, section == defaultSection ? 'cetok.json' : 'cetok-${section.toLowerCase()}.json'),
+        client: _client,
+        site: cetokSites[section] ?? CetokSite.track,
+        showAllSetting: () => _cetokShowAll(section),
+      ),
+    );
+  }
 
   /// Daily Inspection Monitoring (the admin's Google Sheet, through the
   /// MyManual server), opened from Fitur lainnya on Home.
@@ -475,18 +513,38 @@ class AppStore extends ChangeNotifier {
     return s.sections.any((x) => inspectionSections.contains(x.toUpperCase()));
   }
 
-  /// The admin's choice of all or some Cetok locations; null when offline.
-  Future<bool?> _cetokShowAll() async {
+  /// Asks the server for the Cetok Online of the NRP's sections; null when
+  /// offline (the last answer stays).
+  Future<AppConfig?> refreshCetokSites() async {
     for (var attempt = 0; attempt < 2; attempt++) {
       final s = session;
       if (s == null) return null;
       try {
-        return (await auth.appConfig(s)).cetokAll;
+        final config = await auth.appConfig(s);
+        if (config.cetok case final sites?) {
+          cetokSites = sites;
+          for (final e in _cetoks.entries) {
+            if (sites[e.key] case final site?) e.value.site = site;
+          }
+          _scheduleSave();
+          notifyListeners();
+        }
+        return config;
       } on AuthException catch (e) {
         if (e.code != 'refresh' || attempt > 0 || await renewSession() == null) return null;
+      } on Object catch (e) {
+        debugPrint('cetok sites: $e');
+        return null;
       }
     }
     return null;
+  }
+
+  /// All or some Cetok locations for [section]; null when offline.
+  Future<bool?> _cetokShowAll(String section) async {
+    final config = await refreshCetokSites();
+    if (config == null) return null;
+    return config.cetok?[section]?.showAll ?? config.cetokAll;
   }
 
   Timer? _saveTimer;
@@ -529,6 +587,7 @@ class AppStore extends ChangeNotifier {
       'theme_chosen': themeChosen,
       'ai_day': _aiDay,
       if (_homeSection.isNotEmpty) 'home_section': _homeSection,
+      'cetok_sites': {for (final e in cetokSites.entries) e.key: e.value.toJson()},
       if (_reportedApp.isNotEmpty) 'reported_app': _reportedApp,
       'ai_asked': _aiAsked,
       if (lastConvert case final c?) 'convert': {'kind': c.kind, 'from': c.from, 'to': c.to},
@@ -571,6 +630,8 @@ class AppStore extends ChangeNotifier {
     // A new APK tells the server its version (Kelola karyawan, Statistik)
     // through the session swap, without waiting for the session to age.
     if ((session?.stale ?? false) || (session != null && _reportedApp != currentApp)) await renewSession();
+    // Which sections have a Cetok Online may change on the server.
+    if (session != null) unawaited(refreshCetokSites());
     if (serverUrl.isEmpty) {
       online = false;
       lastError = 'Alamat server belum diatur';

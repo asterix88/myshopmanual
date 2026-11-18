@@ -77,32 +77,80 @@ class CetokException implements Exception {
 String unitModelCode(String unit) =>
     RegExp(r'^[A-Z]+\d+').firstMatch(unit.toUpperCase().replaceAll(RegExp(r'[\s_]'), ''))?[0] ?? unit.toUpperCase();
 
+/// One section's Cetok Online: its Supabase project and the unit models
+/// offered in Input. The MyManual server sends the ones of the NRP's
+/// sections (ai-worker/cetok.json), so a section gets its Cetok without an
+/// app update; a section with none shows "Fitur sedang dalam tahap
+/// pengembangan".
+class CetokSite {
+  const CetokSite({required this.url, required this.key, this.units = const [], this.showAll});
+
+  factory CetokSite.fromJson(Map<String, dynamic> json) => CetokSite(
+        url: json['url'] as String? ?? '',
+        key: json['key'] as String? ?? '',
+        units: [for (final u in json['unit'] as List? ?? const []) '$u'],
+        showAll: json['show_all'] as bool?,
+      );
+
+  /// Track's Cetok, used until the server has answered once (phones that
+  /// updated the app offline keep working).
+  static const track = CetokSite(
+    url: 'https://zdmlydqxvtvuktcfijzx.supabase.co',
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkbWx5ZHF4dnR2dWt0Y2Zpanp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMjE2NTksImV4cCI6MjEwMjY5NzY1OX0.HbZY03oiDZ9J7RkakbtVR3S3Dze89ttd2NbLQkqGYPY',
+    units: [
+      'PC2000-11R',
+      'PC1250SP-11',
+      'CAT395',
+      'PC500LC-10R',
+      'PC210-10MO',
+      'D375A-6R',
+      'D155A-6R',
+      'D85ESS-2',
+    ],
+  );
+
+  /// The Supabase project. The key is the public (anon) one the website
+  /// ships; what it may do is limited by the database's own rules.
+  final String url;
+  final String key;
+
+  /// Unit models for new stock, as on the website.
+  final List<String> units;
+
+  /// Every location (true) or some (false), as the server settled it; null
+  /// from a server that only sends the admin's choice.
+  final bool? showAll;
+
+  bool get usable => url.startsWith('https://') && key.isNotEmpty;
+
+  Map<String, dynamic> toJson() => {
+        'url': url,
+        'key': key,
+        'unit': units,
+        if (showAll != null) 'show_all': showAll,
+      };
+}
+
 /// Cetok Online's parts stock, read and changed through the same database
 /// functions (Supabase RPC) as its website and WhatsApp bot, so the stock
 /// rules (no negative stock, upper case, every change in its history) stay
 /// in the database. The last list read is kept on the phone for offline use.
+/// One per section; [site] says which database.
 class Cetok extends ChangeNotifier {
-  Cetok({required this.cachePath, required this.client, this.showAllSetting, Uri? baseUrl, String? key})
-      : _base = baseUrl ?? Uri.parse(supabaseUrl),
-        _key = key ?? publishableKey;
+  Cetok({required this.cachePath, required this.client, this.showAllSetting, CetokSite? site, Uri? baseUrl, String? key})
+      : site = baseUrl == null && key == null
+            ? site ?? CetokSite.track
+            : CetokSite(
+                url: (baseUrl ?? Uri.parse((site ?? CetokSite.track).url)).toString(),
+                key: key ?? (site ?? CetokSite.track).key,
+                units: (site ?? CetokSite.track).units,
+              );
 
-  /// Cetok Online's Supabase project. The key is the public (anon) one the
-  /// website ships; what it may do is limited by the database's own rules.
-  static const supabaseUrl = 'https://zdmlydqxvtvuktcfijzx.supabase.co';
-  static const publishableKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpkbWx5ZHF4dnR2dWt0Y2Zpanp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMjE2NTksImV4cCI6MjEwMjY5NzY1OX0.HbZY03oiDZ9J7RkakbtVR3S3Dze89ttd2NbLQkqGYPY';
+  /// The database this stock comes from; the server may change it.
+  CetokSite site;
 
   /// Unit models for new stock, as on the website.
-  static const unitModels = [
-    'PC2000-11R',
-    'PC1250SP-11',
-    'CAT395',
-    'PC500LC-10R',
-    'PC210-10MO',
-    'D375A-6R',
-    'D155A-6R',
-    'D85ESS-2',
-  ];
+  List<String> get unitModels => site.units.isEmpty ? CetokSite.track.units : site.units;
 
   final String cachePath;
 
@@ -115,8 +163,8 @@ class Cetok extends ChangeNotifier {
   /// cetok-online.vercel.app (the database hides the rest).
   bool showAll = false;
   final http.Client client;
-  final Uri _base;
-  final String _key;
+  Uri get _base => Uri.parse(site.url);
+  String get _key => site.key;
 
   List<CetokPart> parts = const [];
   DateTime? updated;

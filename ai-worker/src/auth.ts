@@ -9,6 +9,8 @@
 // (/auth/refresh), and that swap is where a deactivated NRP is turned away.
 
 import { DEFAULT_SECTION, cleanSections, type Allowed } from "./sections";
+import { cetokSitesFor } from "./cetok";
+import cetokSites from "../cetok.json";
 
 export interface AuthEnv {
   AUTH: KVNamespace;
@@ -364,7 +366,9 @@ async function readConfig(env: AuthEnv): Promise<AppConfig> {
 async function appConfig(request: Request, env: AuthEnv): Promise<Response> {
   const auth = await requireSession(env, request);
   if (auth.error) return auth.error;
-  return json(await readConfig(env));
+  const config = await readConfig(env);
+  // Only the Cetok of this NRP's sections (admins: every section).
+  return json({ ...config, cetok: cetokSitesFor(cetokSites, allowedOf(auth.session), config.cetok_all) });
 }
 
 async function setAppConfig(request: Request, env: AuthEnv): Promise<Response> {
