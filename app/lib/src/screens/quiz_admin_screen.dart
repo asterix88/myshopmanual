@@ -101,18 +101,18 @@ class _QuizAdminScreenState extends State<QuizAdminScreen> {
 }
 
 /// Question types with their names on screen.
-const quizTypes = {'pg': 'Pilihan ganda', 'bs': 'Benar/Salah', 'gambar': 'Gambar'};
+const quizTypes = {'pg': 'Pilihan ganda', 'bs': 'Benar/Salah', 'gambar': 'Gambar', 'kartu': 'Kartu'};
 
-/// Draws [page] of [file] once and sends each picture question of that page
-/// ([targets]: question id -> the callout number it asks about, or on a
-/// labelled photo the asked label) the drawing that holds it; on a labelled
-/// photo every label shows as a letter.
-Future<void> sendQuizPicture(AppStore store, QuizApi api, ManualFile file, int page, Map<String, String?> targets,
+/// Draws [page] of [file] once and sends each question of that page its
+/// picture: [edits] maps a question id to how its picture is made from the
+/// drawn page (usually [QuizQuestion.autoEdit]).
+Future<void> sendQuizPicture(
+    AppStore store, QuizApi api, ManualFile file, int page, Map<String, QuizEdit Function(QuizPage)> edits,
     {Future<PdfDocument> Function()? open}) async {
   final drawn = await renderQuizPage(store, file, page, open: open);
   try {
-    for (final MapEntry(key: id, value: target) in targets.entries) {
-      final edit = QuizEdit.auto(drawn, target);
+    for (final MapEntry(key: id, value: makeEdit) in edits.entries) {
+      final edit = makeEdit(drawn);
       final Uint8List png = await edit.png(drawn);
       await api.uploadImage(id, png, letter: edit.letter);
     }

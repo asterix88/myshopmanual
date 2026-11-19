@@ -51,18 +51,7 @@ class _QuizReviewScreenState extends State<QuizReviewScreen> {
                                 ),
                                 if (_open == i) ...[
                                   const SizedBox(height: 8),
-                                  Text.rich(
-                                    TextSpan(children: [
-                                      const TextSpan(text: 'Jawaban: '),
-                                      TextSpan(
-                                        text: q.choices[q.answer.clamp(0, q.choices.length - 1)],
-                                        style: const TextStyle(fontWeight: FontWeight.w700),
-                                      ),
-                                    ]),
-                                    style: const TextStyle(fontSize: 13),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(q.explain, style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.inkSoft)),
+                                  _Answer(question: q, chosen: widget.chosen[q.id]),
                                   if (q.page > 0)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 4),
@@ -83,6 +72,38 @@ class _QuizReviewScreenState extends State<QuizReviewScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The right answer and why; for a kartu, the mechanic's rating and the
+/// key points.
+class _Answer extends StatelessWidget {
+  const _Answer({required this.question, required this.chosen});
+
+  final QuizQuestion question;
+  final int? chosen;
+
+  @override
+  Widget build(BuildContext context) {
+    final q = question;
+    final rating = q.isCard ? cardRatings.elementAtOrNull(chosen ?? -1) : null;
+    final (label, value) = q.isCard ? ('Penilaianmu: ', rating) : ('Jawaban: ', q.answerText);
+    final why = q.isCard ? [for (final (i, p) in q.keyPoints.indexed) '${i + 1}. $p'].join('\n') : q.explain;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (value != null)
+          Text.rich(
+            TextSpan(children: [
+              TextSpan(text: label),
+              TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w700)),
+            ]),
+            style: const TextStyle(fontSize: 13),
+          ),
+        const SizedBox(height: 4),
+        Text(why, style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.inkSoft)),
+      ],
     );
   }
 }

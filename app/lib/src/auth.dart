@@ -27,6 +27,7 @@ class Session {
     required this.admin,
     required this.issuedAt,
     required this.expiresAt,
+    this.quizAdmin = false,
     this.sections = const [],
     this.department = '',
   });
@@ -36,6 +37,7 @@ class Session {
         nrp: json['nrp'] as String,
         name: json['name'] as String? ?? json['nrp'] as String,
         admin: json['admin'] as bool? ?? false,
+        quizAdmin: json['quiz_admin'] as bool? ?? false,
         sections: [for (final s in json['sections'] as List? ?? const []) s as String],
         department: json['department'] as String? ?? '',
         issuedAt: DateTime.fromMillisecondsSinceEpoch((json['iat'] as num).toInt() * 1000),
@@ -48,6 +50,13 @@ class Session {
 
   /// Sees "Kelola karyawan", every section, and has no daily nyel AI limit.
   final bool admin;
+
+  /// Admin kuis (Admin column "kuis" in karyawan.xlsx): manages the quiz
+  /// questions and sees the quiz statistics, nothing else of the admin's.
+  final bool quizAdmin;
+
+  /// Makes and approves quiz questions: admins and Admin kuis.
+  bool get managesQuiz => admin || quizAdmin;
 
   /// The Section column of karyawan.xlsx (TRACK, WHEEL, ...); empty in
   /// sessions saved before sections. The server decides what it shows.
@@ -68,6 +77,7 @@ class Session {
         'nrp': nrp,
         'name': name,
         'admin': admin,
+        if (quizAdmin) 'quiz_admin': true,
         if (sections.isNotEmpty) 'sections': sections,
         if (department.isNotEmpty) 'department': department,
         'iat': issuedAt.millisecondsSinceEpoch ~/ 1000,
@@ -118,6 +128,7 @@ class Employee {
     required this.lastSeen,
     required this.devices,
     required this.aiToday,
+    this.quizAdmin = false,
     this.resetAt,
     this.sections = const [],
     this.department = '',
@@ -128,6 +139,7 @@ class Employee {
         nrp: json['nrp'] as String,
         name: json['name'] as String? ?? json['nrp'] as String,
         admin: json['admin'] as bool? ?? false,
+        quizAdmin: json['quiz_admin'] as bool? ?? false,
         active: json['active'] as bool? ?? true,
         isNew: json['status'] == 'new',
         lastSeen: (json['seen'] as num? ?? 0) == 0
@@ -146,6 +158,9 @@ class Employee {
   final String nrp;
   final String name;
   final bool admin;
+
+  /// Admin kuis (see [Session.quizAdmin]).
+  final bool quizAdmin;
   bool active;
 
   /// Has not logged in yet.

@@ -25,6 +25,12 @@ class Parse(unittest.TestCase):
         self.assertEqual(employees[0]["sections"], ["TRACK"])
         self.assertEqual(len(problems), 1)
 
+    def test_admin_column_ya_or_kuis(self):
+        employees, _ = parse([HEADER, ["1", "A", "1234", "ya", "TRACK", ""], ["2", "B", "1234", " Kuis ", "TRACK", ""],
+                              ["3", "C", "1234", "", "TRACK", ""]])
+        self.assertEqual([(e["admin"], e["quiz_admin"]) for e in employees],
+                         [(True, False), (False, True), (False, False)])
+
 
 if __name__ == "__main__":
     unittest.main()

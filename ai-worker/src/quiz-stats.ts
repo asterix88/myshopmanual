@@ -3,7 +3,7 @@
 // (D1), for the staff list the admin screen counts (src/stats.ts).
 
 import { DEFAULT_SITE, questionRow, siteTz, type Db } from "./quiz-db.ts";
-import { quizDay, streakNow } from "./quiz-rules.ts";
+import { quizDay, streakNow, RATINGS } from "./quiz-rules.ts";
 
 export type Person = { nrp: string; name: string; sections: string[] };
 export type Range = { since: number; until?: number; section: string };
@@ -159,7 +159,8 @@ export async function quizStats(db: Db, f: Range, staff: Person[], sections: str
 export async function questionStats(db: Db, id: string) {
   const row = await questionRow(db, id);
   if (!row) return null;
-  const picks = row.choices.map(() => 0);
+  // A kartu has no choices: its "picks" are the ratings Lupa ... Mudah.
+  const picks = (row.type === "kartu" ? RATINGS : row.choices).map(() => 0);
   const rows = await db.all("SELECT chosen, COUNT(*) AS n FROM review_log WHERE question_id = ? GROUP BY chosen", id);
   let answers = 0;
   for (const r of rows) {

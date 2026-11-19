@@ -401,7 +401,7 @@ void main() {
     });
     expect(q.pictureTarget, 'Servo valve');
     await tester.runAsync(() async {
-      await sendQuizPicture(store, QuizApi(store, client), file, 1, {'L1': q.pictureTarget},
+      await sendQuizPicture(store, QuizApi(store, client), file, 1, {'L1': q.autoEdit},
           open: () => PdfDocument.openFile(File('test/fixtures/quiz_labels.pdf').absolute.path));
     });
     expect(sent.single.path, '/admin/quiz/image/L1');
@@ -695,6 +695,167 @@ void main() {
     expect(find.text('Ketuk untuk perbesar'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(() async => store.dispose());
+  });
+
+  Map<String, dynamic> kartu(String id) => {
+        ...question(id),
+        'type': 'kartu',
+        'prompt': 'Jelaskan bagaimana cara kerja sistem CLSS.',
+        'choices': <String>[],
+        'answer': -1,
+        'explain': '- Debit pompa mengikuti beban.\n- LS valve membandingkan tekanan pompa dan LS.',
+      };
+
+  testWidgets('a kartu: Balik kartu, the page and key points, a rating sends it and moves on; Lupa comes back',
+      (tester) async {
+    final answers = <(String, int)>[];
+    final client = MockClient((request) async {
+      final body = request.body.isEmpty ? <String, dynamic>{} : jsonDecode(request.body) as Map<String, dynamic>;
+      return switch (request.url.path) {
+        '/quiz/session' => http.Response(
+            jsonEncode({'id': 's1', 'questions': [kartu('k1'), question('q1')], 'answered': []}),
+            200,
+          ),
+        '/quiz/answer' => () {
+            answers.add((body['question_id'] as String, body['chosen'] as int));
+            return http.Response(jsonEncode({'correct': body['chosen'] != 0, 'xp': 5, 'level': 1, 'next_days': 1}), 200);
+          }(),
+        '/quiz/finish' => http.Response(
+            jsonEncode({'score': 1, 'total': 2, 'xp_session': 15, 'streak': 4, 'freeze_used': false, 'rank': 2}),
+            200,
+          ),
+        _ => http.Response(jsonEncode(homeJson()), 200),
+      };
+    });
+    final store = await openStore(tester, client);
+    await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(home: QuizPlayScreen(client: client))));
+    await settle(tester);
+
+    // Front: only the question and the hint.
+    expect(find.text('Jelaskan bagaimana cara kerja sistem CLSS.'), findsOneWidget);
+    expect(find.text('Jelaskan dengan bahasamu sendiri, lalu balik kartu.'), findsOneWidget);
+    expect(find.text('Seberapa mudah kamu menjawab soal ini?'), findsNothing);
+    await tester.tap(find.text('Balik kartu'));
+    await settle(tester);
+
+    // Back: the page and the key points, numbered by the app.
+    expect(find.text('Buka penuh'), findsOneWidget);
+    expect(find.text('Halaman 12'), findsOneWidget);
+    expect(find.text('1. Debit pompa mengikuti beban.'), findsOneWidget);
+    expect(find.text('Seberapa mudah kamu menjawab soal ini?'), findsOneWidget);
+    await tester.tap(find.text('POIN KUNCI'));
+    await tester.pump();
+    expect(find.text('1. Debit pompa mengikuti beban.'), findsNothing);
+
+    // Lupa: straight on to the next question, the kartu comes back.
+    await tester.tap(find.text('Lupa'));
+    await settle(tester);
+    expect(find.text('Soal q1: fungsi main relief valve?'), findsOneWidget);
+    await tester.tap(find.text('Membatasi tekanan'));
+    await tester.pump();
+    await tester.tap(find.text('Periksa'));
+    await settle(tester);
+    await tester.tap(find.text('Lanjut'));
+    await settle(tester);
+    expect(find.text('Ulangan'), findsOneWidget);
+    expect(find.text('Balik kartu'), findsOneWidget);
+    await tester.tap(find.text('Balik kartu'));
+    await settle(tester);
+    await tester.tap(find.text('Mudah'));
+    await settle(tester);
+
+    expect(answers, [('k1', 0), ('q1', 0), ('k1', 3)]);
+    expect(find.text('Selesai'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
+
+  testWidgets('Soal sesi ini shows a kartu with the rating given and its key points', (tester) async {
+    final q = QuizQuestion(kartu('k1'));
+    await tester.pumpWidget(MaterialApp(
+      home: QuizReviewScreen(questions: [q], first: const {'k1': true}, chosen: const {'k1': 2}),
+    ));
+    await tester.tap(find.text('Jelaskan bagaimana cara kerja sistem CLSS.'));
+    await tester.pump();
+    expect(find.text('Penilaianmu: Bisa', findRichText: true), findsOneWidget);
+    expect(find.textContaining('2. LS valve membandingkan'), findsOneWidget);
+  });
+
+  testWidgets('Buat soal quiz: types as icon tiles; Kartu is new and makes kartu', (tester) async {
+    final file = Catalog.fromJson(fixtureCatalog()).units.single.files.first;
+    final client = MockClient((request) async => http.Response('{}', 200));
+    final store = await openStore(tester, client, admin: true);
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(home: Scaffold(body: QuizGenerateSheet(file: file, page: 12, client: client))),
+    ));
+    for (final label in ['Pilihan ganda', 'Benar/Salah', 'Gambar', 'Kartu', 'Campur']) {
+      expect(find.text(label), findsOneWidget, reason: label);
+    }
+    expect(find.text('BARU'), findsOneWidget);
+    expect(find.text('Buat 3 soal'), findsOneWidget);
+    await tester.tap(find.text('Kartu'));
+    await tester.pump();
+    expect(find.text('Buat 3 kartu'), findsOneWidget);
+    expect(find.text('Mekanik menjawab sendiri, lalu melihat halaman ini.'), findsOneWidget);
+    await tester.tap(find.text('5'));
+    await tester.pump();
+    expect(find.text('Buat 5 kartu'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
+
+  testWidgets('Kelola soal: a kartu shows its key points and Atur area halaman, never Hapus gambar', (tester) async {
+    final png = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+    final client = MockClient((request) async {
+      final body = request.body.isEmpty ? <String, dynamic>{} : jsonDecode(request.body) as Map<String, dynamic>;
+      return switch (request.url.path) {
+        '/admin/quiz/questions' => http.Response(
+            jsonEncode({
+              'questions': body['status'] == 'draf'
+                  ? [
+                      {
+                        ...kartu('k1'),
+                        'section': 'TRACK',
+                        'status': 'draf',
+                        'source': 'ai',
+                        'reports': 0,
+                        'answered': 0,
+                        'passed': true,
+                        'image': 'quiz/img/k1.png',
+                      },
+                    ]
+                  : [],
+            }),
+            200),
+        '/admin/quiz/jobs' => http.Response(jsonEncode({'jobs': []}), 200),
+        '/quiz/image/k1' => http.Response.bytes(png, 200, headers: {'content-type': 'image/png'}),
+        _ => http.Response(jsonEncode({'reports': []}), 200),
+      };
+    });
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final store = await openStore(tester, client, admin: true);
+    await tester.pumpWidget(StoreScope(store: store, child: MaterialApp(home: QuizAdminScreen(client: client))));
+    await settle(tester);
+    expect(find.text('Kartu'), findsWidgets);
+    expect(find.text('POIN KUNCI'), findsOneWidget);
+    expect(find.text('2. LS valve membandingkan tekanan pompa dan LS.'), findsOneWidget);
+    expect(find.text('Atur area halaman'), findsOneWidget);
+    expect(find.text('Hapus gambar'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
+
+  test('a kartu has no answer and no picture target; its key points lose their bullets', () {
+    final card = QuizQuestion(kartu('k1'));
+    expect(card.isCard, isTrue);
+    expect(card.needsPagePicture, isTrue);
+    expect(card.pictureTarget, isNull);
+    expect(card.answerText, isNull);
+    expect(QuizQuestion({...kartu('k2'), 'explain': '1. Satu\n\n2) Dua\n• Tiga'}).keyPoints, ['Satu', 'Dua', 'Tiga']);
+    expect(QuizQuestion(question('q1')).answerText, 'Membatasi tekanan');
   });
 
   testWidgets('Kelola soal: Tambah gambar on a pg question, Hapus gambar once it has one', (tester) async {

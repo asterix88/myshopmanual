@@ -22,8 +22,8 @@ test("level 9 tetap diulang 90 hari lagi", () => {
 
 // ---- Aturan lain (ditambahkan bersama backend Quiz) ----
 import {
-  addDays, answerXp, capDaily, nextCard, nextStreak, numbersMissing, pickSession,
-  questionProblem, quizDay, sessionBonus, streakBonus, streakNow, weekId, monthId,
+  addDays, answerXp, capDaily, grade, nextCard, nextRatedCard, nextStreak, numbersMissing, pickSession,
+  questionProblem, MAX_CARDS, quizDay, sessionBonus, streakBonus, streakNow, weekId, monthId,
 } from "../src/quiz-rules.ts";
 
 test("hari quiz mulai jam 04.00: jam 01.00 WIB masih hari kemarin", () => {
@@ -136,4 +136,54 @@ test("angka jawaban dicek di halaman sumber", () => {
   assert.deepEqual(numbersMissing("98 Nm", "Tightening torque 98 Nm {10 kgm}"), []);
   assert.deepEqual(numbersMissing("1,5 l", "capacity 1.5 l"), []);
   assert.deepEqual(numbersMissing("120 Nm", "Tightening torque 98 Nm"), ["120"]);
+});
+
+// ---- Kartu ----
+
+const KDAY = "2026-11-18";
+const card = (level, next_date = KDAY) => ({ level, next_date, last_correct_day: null });
+
+test("kartu: Lupa ke level 0 besok, Sulit tetap, Bisa naik 1, Mudah naik 2", () => {
+  assert.deepEqual(nextRatedCard(card(3), 0, KDAY), { level: 0, next_date: "2026-11-19", due: true });
+  assert.equal(nextRatedCard(card(3), 1, KDAY).level, 3);
+  assert.equal(nextRatedCard(card(3), 2, KDAY).level, 4);
+  assert.equal(nextRatedCard(card(3), 3, KDAY).level, 5);
+  // A new card starts at level 0.
+  assert.equal(nextRatedCard(null, 1, KDAY).level, 0);
+  assert.equal(nextRatedCard(null, 3, KDAY).level, 2);
+  // Never above the top level.
+  assert.equal(nextRatedCard(card(6), 3, KDAY).level, 6);
+});
+
+test("kartu dinilai sebelum jadwalnya: hanya Lupa yang mengubahnya", () => {
+  const early = card(2, "2026-11-25");
+  assert.deepEqual(nextRatedCard(early, 3, KDAY), { level: 2, next_date: "2026-11-25", due: false });
+  assert.equal(nextRatedCard(early, 0, KDAY).level, 0);
+});
+
+test("kartu: XP 5 untuk nilai apa pun, 0 kalau dibalik dalam 5 detik", () => {
+  const kartu = { type: "kartu", answer: -1 };
+  for (const chosen of [0, 1, 2, 3]) assert.equal(grade(kartu, { chosen, ms: 9000, card: null, day: KDAY }).xp, 5);
+  assert.equal(grade(kartu, { chosen: 3, ms: 3000, card: null, day: KDAY }).xp, 0);
+  assert.equal(grade(kartu, { chosen: 0, ms: 9000, card: null, day: KDAY }).correct, false);
+  assert.equal(grade(kartu, { chosen: 2, ms: 9000, card: null, day: KDAY }).correct, true);
+  // A normal question is still checked against its key.
+  const pg = { type: "pg", answer: 1 };
+  assert.equal(grade(pg, { chosen: 1, ms: 9000, card: null, day: KDAY }).correct, true);
+  assert.equal(grade(pg, { chosen: 1, ms: 9000, card: null, day: KDAY }).xp, 10);
+});
+
+test("kartu tidak punya pilihan; poin kuncinya wajib", () => {
+  const base = { section: "TRACK", unit: "PC210", topic: "sistem", type: "kartu", prompt: "Jelaskan cara kerja CLSS.", explain: "Poin 1\nPoin 2", manual_id: "pm", page: 115 };
+  assert.equal(questionProblem({ ...base, choices: [], answer: -1 }), null);
+  assert.equal(questionProblem({ ...base, choices: ["A", "B"], answer: 0 }), "Kartu tidak punya pilihan jawaban.");
+  assert.equal(questionProblem({ ...base, choices: [], answer: -1, explain: " " }), "Poin kunci kosong.");
+});
+
+test("satu sesi berisi paling banyak 3 kartu", () => {
+  const kartu = Array.from({ length: 8 }, (_, i) => ({ id: `k${i}`, type: "kartu" }));
+  const pg = Array.from({ length: 4 }, (_, i) => ({ id: `p${i}`, type: "pg" }));
+  const picked = pickSession([], [...kartu, ...pg], [], () => 0.5);
+  assert.equal(picked.filter((p) => p.question.type === "kartu").length, MAX_CARDS);
+  assert.equal(picked.length, MAX_CARDS + 4);
 });

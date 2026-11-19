@@ -2,6 +2,7 @@
 /// quiz pages and pieces are part files under `quiz/`:
 ///
 /// - `play_widgets.dart`    options, tags, skeleton, error view, sheets
+/// - `card_widgets.dart`    a kartu: front, back and the rating buttons
 /// - `summary_screen.dart`  score after a quiz
 /// - `review_screen.dart`   looking back at the answers
 /// - `picture.dart`         a question's picture and its zoom
@@ -23,6 +24,7 @@ import 'quiz_hub_screen.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
 
+part 'quiz/card_widgets.dart';
 part 'quiz/picture.dart';
 part 'quiz/play_widgets.dart';
 part 'quiz/review_screen.dart';
@@ -61,8 +63,9 @@ class QuizBar extends StatelessWidget implements PreferredSizeWidget {
 }
 
 /// One set of 10 questions: Quiz harian ([unit] null) or Quiz per unit.
-/// Choose an answer, Periksa, read why, Lanjut. Wrong answers come back at
-/// the end of the set ("Ulangan").
+/// Choose an answer, Periksa, read why, Lanjut. A kartu is turned over and
+/// rated instead. Wrong answers (and Lupa) come back at the end of the set
+/// ("Ulangan").
 class QuizPlayScreen extends StatefulWidget {
   const QuizPlayScreen({super.key, this.unit, this.client});
 
@@ -88,6 +91,12 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
   AnswerResult? _result;
   bool _sent = false;
   late DateTime _shownAt;
+
+  /// A kartu shows its back.
+  bool _flipped = false;
+
+  /// Answers still on their way; the set is finished only after them.
+  final _sending = <Future<void>>{};
 
   /// First answers: question id -> right or wrong.
   final _first = <String, bool>{};
@@ -155,22 +164,48 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
       _result = null;
       _sent = false;
     });
-    final firstTime = !_first.containsKey(q.id);
-    if (firstTime) {
-      _first[q.id] = right;
-      _chosen[q.id] = _picked!;
-      if (!right) _queue.add(q);
-    }
-    _api.answer(QuizAnswer(sessionId: _session!.id, questionId: q.id, chosen: _picked!, ms: ms)).then((r) {
-      if (!mounted) return;
-      if (r != null) _xp += r.xp;
-      setState(() {
-        _result = r;
-        _sent = true;
-      });
-    }, onError: (Object e) {
-      if (mounted) setState(() => _sent = true);
+    _record(q, _picked!, right: right);
+    _send(q, _picked!, ms).then((r) {
+      if (mounted) {
+        setState(() {
+          _result = r;
+          _sent = true;
+        });
+      }
     });
+  }
+
+  /// A kartu rated: Lupa counts as wrong (it comes back), the rest as right.
+  /// The next question follows straight away; the answer is sent meanwhile.
+  void _rate(int rating) {
+    final q = _q;
+    final ms = DateTime.now().difference(_shownAt).inMilliseconds;
+    unawaited(HapticFeedback.selectionClick());
+    _record(q, rating, right: rating > 0);
+    unawaited(_send(q, rating, ms));
+    _next();
+  }
+
+  /// Keeps the first answer to [q] for the summary; a wrong one comes back.
+  void _record(QuizQuestion q, int chosen, {required bool right}) {
+    if (_first.containsKey(q.id)) return;
+    _first[q.id] = right;
+    _chosen[q.id] = chosen;
+    if (!right) _queue.add(q);
+  }
+
+  /// Sends one answer and counts its XP. Null when it could not be sent now.
+  Future<AnswerResult?> _send(QuizQuestion q, int chosen, int ms) {
+    final answer = _api.answer(QuizAnswer(sessionId: _session!.id, questionId: q.id, chosen: chosen, ms: ms)).then(
+      (r) {
+        if (r != null) _xp += r.xp;
+        return r;
+      },
+      onError: (Object e) => null,
+    );
+    final done = answer.then((_) {});
+    _sending.add(done);
+    return answer.whenComplete(() => _sending.remove(done));
   }
 
   void _next() {
@@ -182,6 +217,7 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
       _i++;
       _picked = null;
       _checked = false;
+      _flipped = false;
       _result = null;
       _shownAt = DateTime.now();
     });
@@ -191,6 +227,7 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
     final session = _session!;
     FinishResult? result;
     Object? error;
+    await Future.wait(_sending.toList());
     try {
       result = await _api.finish(session.id);
     } catch (e) {
@@ -288,7 +325,11 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
   void _askAi() {
     final q = _q;
     final store = StoreScope.read(context);
-    store.askAi('Jelaskan soal quiz ini: ${q.prompt}\nJawaban benar: ${q.choices[q.answer]}');
+    final answer = q.answerText;
+    store.askAi([
+      'Jelaskan soal quiz ini: ${q.prompt}',
+      if (answer != null) 'Jawaban benar: $answer',
+    ].join('\n'));
     Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
@@ -328,6 +369,7 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
           (_, final Object e) => _ErrorView(error: e, unit: widget.unit, onRetry: _load),
           (null, _) => const _QuizSkeleton(),
           _ when _i >= _queue.length => const _QuizSkeleton(),
+          _ when _q.isCard => _card(context),
           _ => _question(context),
         },
       ),
@@ -336,26 +378,13 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
 
   Widget _question(BuildContext context) {
     final q = _q;
-    final bottom = MediaQuery.paddingOf(context).bottom;
     return Column(
       children: [
         Expanded(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
             children: [
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  if (q.unit != null) Pill(q.unit!, background: AppColors.navySoft, foreground: AppColors.navy),
-                  Text(q.topicName, style: TextStyle(fontSize: 12, color: AppColors.muted)),
-                  if (_inRetry)
-                    Pill('Ulangan', background: AppColors.orangeSoft, foreground: AppColors.orangeText)
-                  else if (q.review)
-                    _RecallTag(),
-                ],
-              ),
+              _tags(q),
               const SizedBox(height: 14),
               Text(q.prompt, style: const TextStyle(fontSize: 17, height: 1.45, fontWeight: FontWeight.w600)),
               if (q.image != null) ...[
@@ -381,14 +410,47 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
             ],
           ),
         ),
-        Material(
-          color: AppColors.surface,
-          elevation: 8,
-          shadowColor: const Color(0x33101828),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 16, 14 + bottom),
-            child: _checked ? _feedback(q) : _checkButton(),
-          ),
+        _BottomBar(child: _checked ? _feedback(q) : _checkButton()),
+      ],
+    );
+  }
+
+  /// Unit, topic, and why the question is here again.
+  Widget _tags(QuizQuestion q) => Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          if (q.unit != null) Pill(q.unit!, background: AppColors.navySoft, foreground: AppColors.navy),
+          Text(q.topicName, style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          if (_inRetry)
+            Pill('Ulangan', background: AppColors.orangeSoft, foreground: AppColors.orangeText)
+          else if (q.review)
+            _RecallTag(),
+        ],
+      );
+
+  /// A kartu: the front with "Balik kartu", then the back with the ratings.
+  Widget _card(BuildContext context) {
+    final q = _q;
+    return Column(
+      children: [
+        Expanded(
+          child: _flipped
+              ? _CardBack(question: q, tags: _tags(q), api: _api, onOpenManual: _openManual)
+              : _CardFront(question: q, tags: _tags(q)),
+        ),
+        _BottomBar(
+          child: _flipped
+              ? _RatingBar(onRate: _rate)
+              : SizedBox(
+                  height: 52,
+                  child: FilledButton.icon(
+                    onPressed: () => setState(() => _flipped = true),
+                    icon: const AppIcon(AppGlyph.flip, size: 20, color: Colors.white),
+                    label: const Text('Balik kartu', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  ),
+                ),
         ),
       ],
     );

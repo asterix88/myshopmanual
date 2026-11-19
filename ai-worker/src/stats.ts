@@ -4,7 +4,7 @@
 // (src/stats-db.ts). Admins read them through /admin/stats*.
 
 import { DurableObject } from "cloudflare:workers";
-import { employeeRows, requireAdmin, requireSession, type Row, type Session } from "./auth";
+import { employeeRows, requireAdmin, requireQuizAdmin, requireSession, type Row, type Session } from "./auth";
 import { readCatalog, type FilesEnv } from "./files";
 import { DEFAULT_SECTION, SHARED_SECTION, unitSection } from "./sections";
 import * as db from "./stats-db";
@@ -98,7 +98,9 @@ export async function handleStats(request: Request, env: StatsEnv, path: string)
     return json({ ok: true, saved: events.length });
   }
 
-  const auth = await requireAdmin(env, request);
+  // Admin kuis sees the quiz statistics only.
+  const quizOnly = path === "/admin/stats/quiz" || path === "/admin/stats/quiz/question";
+  const auth = await (quizOnly ? requireQuizAdmin : requireAdmin)(env, request);
   if (auth.error) return auth.error;
   const section = typeof b.section === "string" ? b.section.trim().toUpperCase() : "";
   const days = b.period === "all" ? 0 : b.period === "7" ? 7 : 30;
@@ -146,10 +148,10 @@ export async function handleStats(request: Request, env: StatsEnv, path: string)
 }
 
 /// The people the quiz statistics count (as "Pengguna aktif": active staff,
-/// no admins) and the section chips in order.
+/// no admins and no Admin kuis) and the section chips in order.
 async function staffList(env: StatsEnv) {
   const employees = await employeeRows(env);
-  const staff = [...employees].filter(([, r]) => r.active && !r.admin);
+  const staff = [...employees].filter(([, r]) => r.active && !r.admin && !r.quiz_admin);
   const all = [...new Set(staff.flatMap(([, r]) => r.sections))].filter((x) => x !== SHARED_SECTION);
   return {
     people: staff.map(([nrp, r]) => ({ nrp, name: r.name, sections: r.sections })),

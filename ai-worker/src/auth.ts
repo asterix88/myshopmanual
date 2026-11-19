@@ -42,7 +42,11 @@ type Device = { model: string; seen: number; app?: string };
 type Employee = {
   nrp: string;
   name: string;
+  /// Admin column "ya": everything, including the employee list.
   admin: boolean;
+  /// Admin column "kuis" (Admin kuis): the quiz questions and the quiz
+  /// statistics only. Never set together with [admin].
+  quiz_admin?: boolean;
   active: boolean;
   // From the Section and Departemen columns; missing for employees
   // imported before them (TRACK, no department).
@@ -72,6 +76,7 @@ type Employee = {
 export type Row = {
   name: string;
   admin: boolean;
+  quiz_admin?: boolean;
   active: boolean;
   sections: string[];
   dept?: string;
@@ -179,6 +184,7 @@ function rowOf(e: Employee): Row {
   return {
     name: e.name,
     admin: e.admin,
+    ...(e.quiz_admin ? { quiz_admin: true } : {}),
     active: e.active,
     sections: sectionsOf(e),
     ...(e.department ? { dept: e.department } : {}),
@@ -210,7 +216,7 @@ async function issue(env: AuthEnv, e: Employee): Promise<Response> {
   const sections = sectionsOf(e);
   const token = await sign(env, { n: e.nrp, nm: e.name, a: e.admin, s: sections, iat, exp: iat + SESSION_DAYS * 86400 });
   return json({
-    status: "ok", token, nrp: e.nrp, name: e.name, admin: e.admin, sections,
+    status: "ok", token, nrp: e.nrp, name: e.name, admin: e.admin, quiz_admin: isQuizAdmin(e), sections,
     ...(e.department ? { department: e.department } : {}), iat, exp: iat + SESSION_DAYS * 86400,
   });
 }
@@ -392,7 +398,9 @@ async function importList(request: Request, env: AuthEnv): Promise<Response> {
   const b = await body(request);
   const list = Array.isArray(b?.employees) ? (b!.employees as Record<string, unknown>[]) : null;
   if (!list) return json({ error: "bad_request" }, 400);
-  type Imported = { name: string; pin: string; admin: boolean; sections: string[] | null; department: string | null };
+  type Imported = {
+    name: string; pin: string; admin: boolean; quiz_admin: boolean; sections: string[] | null; department: string | null;
+  };
   const rows = new Map<string, Imported>();
   const problems: string[] = [];
   for (const r of list) {
@@ -405,6 +413,7 @@ async function importList(request: Request, env: AuthEnv): Promise<Response> {
     }
     rows.set(nrp, {
       name: String(r.name ?? "").trim() || nrp, pin, admin: r.admin === true,
+      quiz_admin: r.admin !== true && r.quiz_admin === true,
       // null: an upload_karyawan.py from before these columns; keep what is saved.
       sections: cleanSections(r.sections),
       department: typeof r.department === "string" ? r.department.trim().toUpperCase() : null,
@@ -431,7 +440,8 @@ async function importList(request: Request, env: AuthEnv): Promise<Response> {
       const salt = b64url(crypto.getRandomValues(new Uint8Array(12)));
       const hash = await pinHash(env, salt, r.pin);
       await save(env, {
-        nrp, name: r.name, admin: r.admin, active: true, pin: hash, salt, must_change: true,
+        nrp, name: r.name, admin: r.admin, ...(r.quiz_admin ? { quiz_admin: true } : {}),
+        active: true, pin: hash, salt, must_change: true,
         ...(r.sections ? { sections: r.sections } : {}),
         ...(r.department ? { department: r.department } : {}),
         file_pin: await pinHash(env, "file", r.pin), fails: 0, lock_until: 0, last_seen: 0, devices: {},
@@ -443,11 +453,13 @@ async function importList(request: Request, env: AuthEnv): Promise<Response> {
     const sections = r.sections ?? e.sections;
     const department = r.department === null ? e.department : r.department || undefined;
     if (
-      e.name !== r.name || e.admin !== r.admin || department !== e.department ||
+      e.name !== r.name || e.admin !== r.admin || isQuizAdmin(e) !== r.quiz_admin || department !== e.department ||
       (sections ?? []).join(",") !== (e.sections ?? []).join(",")
     ) {
       e.name = r.name;
       e.admin = r.admin;
+      if (r.quiz_admin) e.quiz_admin = true;
+      else delete e.quiz_admin;
       if (sections) e.sections = sections;
       if (department) e.department = department;
       else delete e.department;
@@ -508,24 +520,39 @@ export async function countQuestion(env: AuthEnv, s: Session): Promise<Response 
   return () => put(asked);
 }
 
-/// The caller's session when it belongs to an active admin; otherwise the
-/// response to send.
-export async function requireAdmin(
-  env: AuthEnv,
-  request: Request,
-): Promise<{ session: Session; error?: undefined } | { session?: undefined; error: Response }> {
+/// Admin kuis: manages the quiz, nothing else.
+const isQuizAdmin = (e: Employee) => !e.admin && e.quiz_admin === true;
+
+type Auth = { session: Session; error?: undefined } | { session?: undefined; error: Response };
+
+/// The caller's session when the employee is active and [allowed];
+/// otherwise the response to send. Read from the employee list, not the
+/// token, so a change in karyawan.xlsx counts straight away.
+async function requireRole(env: AuthEnv, request: Request, allowed: (e: Employee) => boolean, message: string): Promise<Auth> {
   const auth = await requireSession(env, request);
   if (auth.error) return auth;
   const me = await load(env, auth.session.n);
-  if (!me || !me.active || !me.admin) return { error: json({ error: "forbidden", message: "Khusus admin." }, 403) };
+  if (!me || !me.active || !allowed(me)) return { error: json({ error: "forbidden", message }, 403) };
   return auth;
 }
 
-/// The employee's department (Departemen column of karyawan.xlsx) and
-/// whether they are still active, for the Quiz leaderboard.
-export async function employeeInfo(env: AuthEnv, nrp: string): Promise<{ department: string; active: boolean } | null> {
+/// Full admins only (employee list, PINs, settings, usage statistics).
+export const requireAdmin = (env: AuthEnv, request: Request) =>
+  requireRole(env, request, (e) => e.admin, "Khusus admin.");
+
+/// Admins and Admin kuis: the quiz questions and the quiz statistics.
+export const requireQuizAdmin = (env: AuthEnv, request: Request) =>
+  requireRole(env, request, (e) => e.admin || isQuizAdmin(e), "Khusus admin kuis.");
+
+/// The employee's department (Departemen column of karyawan.xlsx), whether
+/// they are still active, and whether they are an Admin kuis (who knows the
+/// answers, so stays off the leaderboard), for the Quiz.
+export async function employeeInfo(
+  env: AuthEnv,
+  nrp: string,
+): Promise<{ department: string; active: boolean; quizAdmin: boolean } | null> {
   const e = await load(env, nrp);
-  return e ? { department: e.department ?? "", active: e.active } : null;
+  return e ? { department: e.department ?? "", active: e.active, quizAdmin: isQuizAdmin(e) } : null;
 }
 
 /// Every employee as the admin screen lists them, by NRP.

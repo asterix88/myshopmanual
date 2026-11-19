@@ -62,7 +62,8 @@ class _QuizEditScreenState extends State<QuizEditScreen> {
           const SizedBox(height: 12),
           TextField(controller: _prompt, maxLines: null, decoration: const InputDecoration(labelText: 'Pertanyaan')),
           const SizedBox(height: 16),
-          const SectionLabel('Pilihan (ketuk lingkaran untuk kunci jawaban)'),
+          // A kartu has no choices; its key points are the explanation.
+          if (!q.isCard) const SectionLabel('Pilihan (ketuk lingkaran untuk kunci jawaban)'),
           for (final (i, c) in _choices.indexed)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -87,7 +88,11 @@ class _QuizEditScreenState extends State<QuizEditScreen> {
               ),
             ),
           const SizedBox(height: 8),
-          TextField(controller: _explain, maxLines: null, decoration: const InputDecoration(labelText: 'Penjelasan')),
+          TextField(
+            controller: _explain,
+            maxLines: null,
+            decoration: InputDecoration(labelText: q.isCard ? 'Poin kunci (satu per baris)' : 'Penjelasan'),
+          ),
         ],
       ),
       bottomNavigationBar: Padding(

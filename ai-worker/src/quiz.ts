@@ -42,11 +42,15 @@ export async function readBody(request: Request): Promise<Record<string, unknown
 }
 
 /// The mechanic as the Quiz sees them: sections from the login, department
-/// from the employee list. Everyone is at site SBS for now.
+/// from the employee list. Everyone is at site SBS for now. An Admin kuis
+/// plays (to try the questions) but is kept off the leaderboard.
 async function whoOf(env: QuizEnv, s: Session): Promise<quiz.Who | Response> {
   const info = await employeeInfo(env, s.n);
   if (!info || !info.active) return json({ error: "inactive", message: "NRP ini sudah tidak aktif, hubungi admin." }, 403);
-  return { nrp: s.n, name: s.nm, sections: allowedOf(s), departemen: info.department, site: quiz.DEFAULT_SITE };
+  return {
+    nrp: s.n, name: s.nm, sections: allowedOf(s), departemen: info.department, site: quiz.DEFAULT_SITE,
+    ...(info.quizAdmin ? { offBoard: true } : {}),
+  };
 }
 
 const MESSAGES: Record<string, [number, string]> = {

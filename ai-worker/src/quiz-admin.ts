@@ -3,7 +3,7 @@
 // decision in the Quiz PRD). All need an active admin's session.
 //
 //   POST /admin/quiz/generate           {section, unit, topic, manual_id, page, text, count, kind}
-//                                       one page -> drafts (kind: campur | pg | bs | gambar)
+//                                       one page -> drafts (kind: campur | pg | bs | gambar | kartu)
 //   POST /admin/quiz/plan               {unit, topic, toc, pages, count, mix} -> pages to use
 //   POST /admin/quiz/job                {section, unit, manual_id, title, topic, count, mix, pages}
 //                                       -> a "Buat draf kuis" job, run by the cron (quiz-jobs.ts)
@@ -22,7 +22,7 @@
 // search index; the server checks that the numbers in the right answer are
 // on that page and writes what it found in check_note.
 
-import { requireAdmin } from "./auth";
+import { requireQuizAdmin } from "./auth";
 import { askWith, curate, isRepeat, planPages, selfCheck, wantedFor, writeQuestions, MAX_PAGE_TEXT } from "./quiz-ai.ts";
 import * as quiz from "./quiz-db.ts";
 import { createJob, listJobs, mixFrom, MAX_JOB_PAGES, MAX_JOB_QUESTIONS, PASS_SCORE, targets, type JobPage } from "./quiz-jobs.ts";
@@ -61,7 +61,7 @@ async function generate(env: QuizEnv, b: Record<string, unknown>, by: string): P
   const problem = base && questionProblem(base);
   if (!base || problem) return json({ error: "bad_request", message: problem ?? "Data soal tidak lengkap." }, 400);
   if (text.trim().length < 80) return json({ error: "bad_request", message: "Teks halaman terlalu pendek untuk dibuat soal." }, 400);
-  const kind = ["pg", "bs", "gambar"].includes(String(b.kind)) ? String(b.kind) : "campur";
+  const kind = ["pg", "bs", "gambar", "kartu"].includes(String(b.kind)) ? String(b.kind) : "campur";
 
   const ask = askWith(env);
   const db = quiz.d1(env.QUIZ);
@@ -97,6 +97,8 @@ async function generate(env: QuizEnv, b: Record<string, unknown>, by: string): P
     saved: saved.length,
     ids: saved.map((s) => s.id),
     pictures: saved.filter((s) => s.type === "gambar").map((s) => s.id),
+    // Kartu, shown with their whole page as it is; the app draws it next.
+    references: saved.filter((s) => s.type === "kartu").map((s) => s.id),
     // The asked number of each picture question, so the app can cut out its drawing.
     callouts: Object.fromEntries(saved.filter((s) => s.type === "gambar" && s.callout).map((s) => [s.id, s.callout])),
     skipped: out.skipped,
@@ -171,10 +173,10 @@ async function putImage(request: Request, env: QuizEnv, id: string): Promise<Res
   return json({ ok: true, image: key });
 }
 
-/// Handles /admin/quiz/*.
+/// Handles /admin/quiz/*: admins and Admin kuis.
 export async function handleQuizAdmin(request: Request, env: QuizEnv, path: string): Promise<Response> {
   if (!["POST", "GET", "PUT", "DELETE"].includes(request.method)) return json({ error: "method" }, 405);
-  const auth = await requireAdmin(env, request);
+  const auth = await requireQuizAdmin(env, request);
   if (auth.error) return auth.error;
   const by = auth.session.n;
   if (path.startsWith("/admin/quiz/image-edit/")) {

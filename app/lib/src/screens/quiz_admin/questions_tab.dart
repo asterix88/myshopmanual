@@ -123,7 +123,7 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
     final store = StoreScope.read(context);
     final file = store.fileByKey(q.question.manualId);
     if (file == null) throw Exception('Manual soal ini tidak ada di daftar. Gambarnya tidak bisa dibuat.');
-    await sendQuizPicture(store, widget.api, file, q.question.page, {q.question.id: q.question.pictureTarget});
+    await sendQuizPicture(store, widget.api, file, q.question.page, {q.question.id: q.question.autoEdit});
   }
 
   /// "Setujui semua yang lolos": pictures first, then one call.
@@ -143,7 +143,7 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
     setState(() => _bulk = true);
     try {
       final store = StoreScope.read(context);
-      // One drawing per page, shared by its picture questions.
+      // One drawing per page, shared by the questions that need a picture.
       final byPage = <String, List<AdminQuestion>>{};
       for (final q in passed.where((q) => q.needsPicture)) {
         byPage.putIfAbsent('${q.question.manualId}#${q.question.page}', () => []).add(q);
@@ -153,7 +153,7 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
         if (file == null) continue;
         try {
           await sendQuizPicture(store, widget.api, file, group.first.question.page,
-              {for (final q in group) q.question.id: q.question.pictureTarget});
+              {for (final q in group) q.question.id: q.question.autoEdit});
         } on Object {
           // Left as a draft; the admin sees it after.
         }
@@ -383,6 +383,28 @@ class _LinkButton extends StatelessWidget {
       );
 }
 
+/// A kartu's key points, which it shows instead of choices.
+class _KeyPoints extends StatelessWidget {
+  const _KeyPoints({required this.points});
+
+  final List<String> points;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('POIN KUNCI',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: .8, color: AppColors.muted)),
+          const SizedBox(height: 4),
+          for (final (i, point) in points.indexed)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 3),
+              child: Text('${i + 1}. $point', style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.inkSoft)),
+            ),
+        ],
+      );
+}
+
 class _QuestionCard extends StatelessWidget {
   const _QuestionCard({required this.item, required this.api, required this.onAction});
 
@@ -396,6 +418,12 @@ class _QuestionCard extends StatelessWidget {
     final store = StoreScope.of(context);
     final note = item.checkNote;
     final warn = note != null && (note.startsWith('Cek') || note.startsWith('Ditarik') || note.startsWith('Lebih'));
+    // Gambar and kartu always have a picture; other types may add one.
+    final (pictureIcon, pictureLabel) = switch (q) {
+      QuizQuestion(isCard: true) => (Icons.crop, 'Atur area halaman'),
+      QuizQuestion(image: null, needsPagePicture: false) => (Icons.add_photo_alternate_outlined, 'Tambah gambar'),
+      _ => (Icons.crop, 'Atur gambar'),
+    };
     return AppCard(
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -420,10 +448,13 @@ class _QuestionCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(q.prompt, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, height: 1.4)),
-          if (q.type == 'gambar' || q.image != null) ...[
+          if (q.needsPagePicture || q.image != null) ...[
             const SizedBox(height: 8),
             q.image == null
-                ? Text('Gambar dibuat dari halaman ${q.page} saat soal disetujui.',
+                ? Text(
+                    q.isCard
+                        ? 'Halaman ${q.page} dipasang utuh di balik kartu saat disetujui.'
+                        : 'Gambar dibuat dari halaman ${q.page} saat soal disetujui.',
                     style: TextStyle(fontSize: 12, color: AppColors.muted))
                 : QuizPicture(
                     key: ValueKey('${q.id}#${QuizApi.imageVersion(q.id)}'), api: api, questionId: q.id, height: 160),
@@ -431,12 +462,8 @@ class _QuestionCard extends StatelessWidget {
           Wrap(
             spacing: 4,
             children: [
-              _LinkButton(
-                icon: q.image == null && q.type != 'gambar' ? Icons.add_photo_alternate_outlined : Icons.crop,
-                label: q.image == null && q.type != 'gambar' ? 'Tambah gambar' : 'Atur gambar',
-                onPressed: () => onAction('gambar'),
-              ),
-              if (q.image != null && q.type != 'gambar')
+              _LinkButton(icon: pictureIcon, label: pictureLabel, onPressed: () => onAction('gambar')),
+              if (q.image != null && !q.needsPagePicture)
                 _LinkButton(
                   icon: Icons.delete_outline,
                   label: 'Hapus gambar',
@@ -446,33 +473,37 @@ class _QuestionCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          for (final (i, c) in q.choices.indexed)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 22,
-                    child: i == q.answer
-                        ? AppIcon(AppGlyph.check, size: 16, color: AppColors.green)
-                        : Text('ABCD'[i.clamp(0, 3)], style: TextStyle(fontSize: 13, color: AppColors.muted)),
-                  ),
-                  Expanded(
-                    child: Text(
-                      c,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: i == q.answer ? FontWeight.w600 : FontWeight.w400,
-                        color: i == q.answer ? AppColors.green : AppColors.ink,
+          if (q.isCard)
+            _KeyPoints(points: q.keyPoints)
+          else ...[
+            for (final (i, c) in q.choices.indexed)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 22,
+                      child: i == q.answer
+                          ? AppIcon(AppGlyph.check, size: 16, color: AppColors.green)
+                          : Text('ABCD'[i.clamp(0, 3)], style: TextStyle(fontSize: 13, color: AppColors.muted)),
+                    ),
+                    Expanded(
+                      child: Text(
+                        c,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: i == q.answer ? FontWeight.w600 : FontWeight.w400,
+                          color: i == q.answer ? AppColors.green : AppColors.ink,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          const SizedBox(height: 4),
-          Text(q.explain, style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.inkSoft)),
+            const SizedBox(height: 4),
+            Text(q.explain, style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.inkSoft)),
+          ],
           const SizedBox(height: 6),
           InkWell(
             onTap: store.fileByKey(q.manualId) == null

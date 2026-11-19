@@ -603,6 +603,7 @@ class _Status extends StatelessWidget {
     if (!e.active) return Pill('Nonaktif', background: AppColors.danger.withValues(alpha: 0.12), foreground: AppColors.danger);
     if (e.isNew) return Pill('Belum login', background: AppColors.greySoft, foreground: AppColors.muted);
     if (e.admin) return Pill('Admin', background: AppColors.navySoft, foreground: AppColors.navy);
+    if (e.quizAdmin) return Pill('Admin kuis', background: AppColors.navySoft, foreground: AppColors.navy);
     if (long) return Pill('Aktif', background: AppColors.greenSoft, foreground: AppColors.green);
     return Text(_lastSeen(e.lastSeen), style: TextStyle(fontSize: 12, color: AppColors.muted));
   }

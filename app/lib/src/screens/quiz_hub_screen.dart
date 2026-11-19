@@ -84,7 +84,7 @@ class _QuizHubScreenState extends State<QuizHubScreen> {
       backgroundColor: AppColors.background,
       appBar: QuizBar(
         title: 'Quiz',
-        trailing: (store.session?.admin ?? false)
+        trailing: (store.session?.managesQuiz ?? false)
             ? IconButton(
                 tooltip: 'Kelola soal',
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QuizAdminScreen())),

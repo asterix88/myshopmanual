@@ -18,7 +18,7 @@ class QuizGenerateSheet extends StatefulWidget {
 class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
   late final http.Client _client = widget.client ?? http.Client();
   String _topic = 'struktur';
-  String _kind = 'campur';
+  String _kind = 'pg';
   int _count = 3;
   bool _busy = false;
   String? _status;
@@ -57,11 +57,13 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
         count: _count,
         kind: _kind,
       );
-      if (result.pictures.isNotEmpty && mounted) {
+      if ((result.pictures.isNotEmpty || result.references.isNotEmpty) && mounted) {
         setState(() => _status = 'Membuat gambar soal…');
         try {
-          await sendQuizPicture(store, QuizApi(store, _client), file, page,
-              {for (final id in result.pictures) id: result.callouts[id]});
+          await sendQuizPicture(store, QuizApi(store, _client), file, page, {
+            for (final id in result.pictures) id: (drawn) => QuizEdit.auto(drawn, result.callouts[id]),
+            for (final id in result.references) id: QuizEdit.reference,
+          });
         } on Object {
           // Made again when the question is approved.
         }
@@ -85,44 +87,46 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
     }
   }
 
+  /// The question types on the sheet, in the order of the approved design
+  /// (mockup Kuis Kartu v4): one row of icon tiles.
+  static const _kinds = [
+    (kind: 'pg', label: 'Pilihan ganda', glyph: AppGlyph.typePg),
+    (kind: 'bs', label: 'Benar/Salah', glyph: AppGlyph.typeBs),
+    (kind: 'gambar', label: 'Gambar', glyph: AppGlyph.typeGambar),
+    (kind: 'kartu', label: 'Kartu', glyph: AppGlyph.typeKartu),
+    (kind: 'campur', label: 'Campur', glyph: AppGlyph.typeCampur),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final kinds = [('campur', 'Campur'), for (final e in quizTypes.entries) (e.key, e.value)];
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Buat soal quiz', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 2),
-            Text(
-              '${widget.file.title} · hal. ${widget.page}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 12.5, color: AppColors.muted),
-            ),
-            const SizedBox(height: 18),
+            _SheetHeader(title: 'Buat soal quiz', subtitle: '${widget.file.title} · hal. ${widget.page}'),
+            const SizedBox(height: 16),
             const _SheetLabel('Jenis soal'),
             Row(children: [
-              for (final (i, (k, label)) in kinds.take(2).indexed) ...[
-                if (i > 0) const SizedBox(width: 8),
-                Expanded(child: _Choice(label: label, selected: _kind == k, onTap: _busy ? null : () => setState(() => _kind = k))),
+              for (final (i, k) in _kinds.indexed) ...[
+                if (i > 0) const SizedBox(width: 6),
+                Expanded(
+                  child: _KindTile(
+                    label: k.label,
+                    glyph: k.glyph,
+                    isNew: k.kind == 'kartu',
+                    selected: _kind == k.kind,
+                    onTap: _busy ? null : () => setState(() => _kind = k.kind),
+                  ),
+                ),
               ],
             ]),
-            const SizedBox(height: 8),
-            Row(children: [
-              for (final (i, (k, label)) in kinds.skip(2).indexed) ...[
-                if (i > 0) const SizedBox(width: 8),
-                Expanded(child: _Choice(label: label, selected: _kind == k, onTap: _busy ? null : () => setState(() => _kind = k))),
-              ],
-            ]),
-            if (_kind == 'gambar')
+            if (_kindHint case final hint?)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: Text('Mekanik melihat gambar bernomor, tanpa keterangan.',
-                    style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                child: Text(hint, style: TextStyle(fontSize: 12, color: AppColors.muted)),
               ),
             const SizedBox(height: 16),
             const _SheetLabel('Topik'),
@@ -130,11 +134,11 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
               initialValue: _topic,
               isDense: true,
               icon: Icon(Icons.expand_more, color: AppColors.muted),
-              style: TextStyle(fontSize: 14, color: AppColors.ink, fontFamily: 'Poppins'),
+              style: TextStyle(fontSize: 13, color: AppColors.ink, fontFamily: 'Poppins'),
               decoration: InputDecoration(
                 filled: true,
                 fillColor: AppColors.surface,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
                 enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
                 focusedBorder: OutlineInputBorder(
@@ -143,15 +147,19 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
               items: [for (final t in quizTopics.entries) DropdownMenuItem(value: t.key, child: Text(t.value))],
               onChanged: _busy ? null : (v) => setState(() => _topic = v ?? _topic),
             ),
-            const SizedBox(height: 16),
-            const _SheetLabel('Jumlah soal'),
-            Row(children: [
-              for (final (i, n) in const [1, 3, 5].indexed) ...[
-                if (i > 0) const SizedBox(width: 8),
-                Expanded(child: _Choice(label: '$n', selected: _count == n, onTap: _busy ? null : () => setState(() => _count = n))),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Text('Jumlah', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: AppColors.inkSoft)),
+                const Spacer(),
+                _CountPicker(
+                  counts: const [1, 3, 5],
+                  value: _count,
+                  onChanged: _busy ? null : (n) => setState(() => _count = n),
+                ),
               ],
-            ]),
-            const SizedBox(height: 20),
+            ),
+            const SizedBox(height: 18),
             SizedBox(
               height: 48,
               child: FilledButton(
@@ -165,18 +173,64 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
                           Text(_status ?? ''),
                         ],
                       )
-                    : const Text('Buat draf'),
+                    : Text('Buat $_count ${_kind == 'kartu' ? 'kartu' : 'soal'}'),
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Draf dicek kurator, terbit setelah admin setuju.',
+              'Dicek kurator, terbit setelah admin setuju.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11.5, color: AppColors.muted),
+              style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// One line under the types, for the ones that work differently.
+  String? get _kindHint => switch (_kind) {
+        'gambar' => 'Mekanik melihat gambar bernomor, tanpa keterangan.',
+        'kartu' => 'Mekanik menjawab sendiri, lalu melihat halaman ini.',
+        _ => null,
+      };
+}
+
+/// Title and the page the questions come from, with a small page icon.
+class _SheetHeader extends StatelessWidget {
+  const _SheetHeader({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 44,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: const Center(child: AppIcon(AppGlyph.shopManual, size: 20)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+              Text(subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: AppColors.muted)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -193,42 +247,122 @@ class _SheetLabel extends StatelessWidget {
       );
 }
 
-/// One option box of the "Buat soal quiz" sheet.
-class _Choice extends StatelessWidget {
-  const _Choice({required this.label, required this.selected, required this.onTap});
+/// One question type: its icon over its name; [isNew] adds a "BARU" badge.
+class _KindTile extends StatelessWidget {
+  const _KindTile({required this.label, required this.glyph, required this.selected, required this.onTap, this.isNew = false});
 
   final String label;
+  final AppGlyph glyph;
   final bool selected;
+  final bool isNew;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      selected: selected,
-      button: true,
-      child: Material(
-        color: selected ? AppColors.navySoft : AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: selected ? AppColors.navy : AppColors.border, width: selected ? 1.5 : 1),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: SizedBox(
-            height: 44,
-            child: Center(
-              child: Text(
+    final tile = Material(
+      color: selected ? AppColors.navySoft : AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: selected ? AppColors.navy : AppColors.border, width: selected ? 1.5 : 1),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          height: 68,
+          // Full width also inside the Stack that holds the BARU badge.
+          width: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AppIcon(glyph, size: 22),
+              const SizedBox(height: 4),
+              Text(
                 label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
                 style: TextStyle(
-                  fontSize: 13.5,
+                  fontSize: 11,
+                  height: 1.2,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                   color: selected ? AppColors.navy : AppColors.inkSoft,
                 ),
               ),
-            ),
+            ],
           ),
         ),
+      ),
+    );
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: !isNew
+          ? tile
+          : Stack(
+              clipBehavior: Clip.none,
+              children: [
+                tile,
+                Positioned(
+                  top: -7,
+                  right: -2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(color: AppColors.orange, borderRadius: BorderRadius.circular(999)),
+                    child: const Text('BARU',
+                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+/// A small segmented row of numbers (1 / 3 / 5).
+class _CountPicker extends StatelessWidget {
+  const _CountPicker({required this.counts, required this.value, required this.onChanged});
+
+  final List<int> counts;
+  final int value;
+  final ValueChanged<int>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (i, n) in counts.indexed)
+            Semantics(
+              selected: n == value,
+              button: true,
+              child: InkWell(
+                onTap: onChanged == null ? null : () => onChanged!(n),
+                child: Container(
+                  width: 48,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: n == value ? AppColors.navy : null,
+                    border: i == 0 ? null : Border(left: BorderSide(color: AppColors.border)),
+                  ),
+                  child: Text(
+                    '$n',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: n == value ? FontWeight.w600 : FontWeight.w400,
+                      color: n == value ? Colors.white : AppColors.ink,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

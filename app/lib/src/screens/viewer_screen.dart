@@ -389,13 +389,14 @@ class _ViewerScreenState extends State<ViewerScreen> {
                   ],
                 ),
                 actions: [
-                  if (store.session?.admin ?? false)
+                  if (store.session?.managesQuiz ?? false)
                     IconButton(
                       tooltip: 'Buat soal quiz dari halaman ini',
                       onPressed: () => showModalBottomSheet<void>(
                         context: context,
                         isScrollControlled: true,
                         useSafeArea: true,
+                        showDragHandle: true,
                         builder: (_) => QuizGenerateSheet(file: file, page: _page),
                       ),
                       icon: AppIcon(AppGlyph.quiz, color: AppColors.ink, size: 22),

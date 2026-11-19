@@ -131,6 +131,23 @@ test("finish: bonus, streak and the leaderboard", async () => {
   assert.equal((await quiz.leaderboard(db, budi, "week", NOW)).rows[0].nrp, "B2");
 });
 
+test("an Admin kuis plays but stays off the leaderboard, also after the role ends", async () => {
+  const db = fresh();
+  await seed(db, 30);
+  const tutor = { ...ali, offBoard: true };
+  await quiz.ensureUser(db, budi);
+  await quiz.ensureUser(db, tutor);
+  await play(db, tutor, await quiz.startSession(db, tutor, "harian", null, { now: NOW }));
+  await play(db, budi, await quiz.startSession(db, budi, "harian", null, { now: NOW }));
+  const board = await quiz.leaderboard(db, budi, "week", NOW);
+  assert.deepEqual(board.rows.map((r) => r.nrp), ["B2"]);
+  // No longer Admin kuis: still hidden until an admin shows them again.
+  await quiz.ensureUser(db, ali);
+  assert.deepEqual((await quiz.leaderboard(db, budi, "week", NOW)).rows.map((r) => r.nrp), ["B2"]);
+  await quiz.hideFromBoard(db, "A1", false);
+  assert.equal((await quiz.leaderboard(db, budi, "week", NOW)).rows.length, 2);
+});
+
 test("next day: wrong answers come back as reviews, streak goes on", async () => {
   const db = fresh();
   await seed(db, 30);
@@ -333,4 +350,31 @@ test("saving or removing a picture keeps the draft in its place in the list", as
   await quiz.removeImage(db, "old", NOW + 6000);
   assert.deepEqual(await order(), ["new", "old"]);
   assert.equal((await quiz.listQuestions(db, "draf", null)).length, 2);
+});
+
+test("a kartu is rated by the mechanic and needs its page picture before it is published", async () => {
+  const db = fresh();
+  await quiz.addQuestion(
+    db,
+    { section: "TRACK", unit: "PC210", topic: "sistem", type: "kartu", prompt: "Jelaskan cara kerja sistem CLSS.", choices: [], answer: -1, explain: "Debit pompa mengikuti beban.\nLS valve membandingkan tekanan.", manual_id: "pm", page: 115 },
+    { status: "draf", source: "ai", by: "ADM", id: "K1", now: NOW, passed: true },
+  );
+  // No picture of the page yet: stays a draft.
+  assert.deepEqual(await quiz.approvePassed(db, ["K1"], "ADM", NOW), { published: 0, left: ["K1"] });
+  await quiz.setImage(db, "K1", "quiz/img/k1.png", NOW);
+  assert.equal(await quiz.removeImage(db, "K1", NOW), false);
+  assert.equal((await quiz.approvePassed(db, ["K1"], "ADM", NOW)).published, 1);
+
+  await quiz.ensureUser(db, ali, () => 0.1);
+  const s = await quiz.startSession(db, ali, "harian", null, { now: NOW });
+  const k = s.questions.find((q) => q.id === "K1");
+  assert.deepEqual(k.choices, []);
+  // "Bisa": counts as right, the card goes up one level from 0.
+  const out = await quiz.answer(db, ali, { id: "r1", session_id: s.id, question_id: "K1", chosen: 2, ms: 20_000 }, NOW);
+  assert.equal(out.correct, true);
+  assert.equal(out.level, 1);
+  assert.equal(out.xp, 5);
+  const { questionStats } = await import("../src/quiz-stats.ts");
+  const stats = await questionStats(db, "K1");
+  assert.deepEqual(stats.picks, [0, 0, 1, 0]);
 });

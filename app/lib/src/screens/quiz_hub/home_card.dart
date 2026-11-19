@@ -67,7 +67,7 @@ class _QuizHomeCardState extends State<QuizHomeCard> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final home = _home;
-    final admin = store.session?.admin ?? false;
+    final admin = store.session?.managesQuiz ?? false;
     if (store.session == null || home == null) return const SizedBox.shrink();
     if (home.questions == 0 && !admin) return const SizedBox.shrink();
 

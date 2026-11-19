@@ -10,6 +10,7 @@ import 'package:mymanual/src/auth.dart';
 import 'package:mymanual/src/screens/search_screen.dart';
 import 'package:mymanual/src/screens/shell.dart';
 import 'package:mymanual/src/screens/stats/format.dart';
+import 'package:mymanual/src/screens/stats/quiz_stats_screen.dart';
 import 'package:mymanual/src/screens/stats_screen.dart';
 import 'package:mymanual/src/stats.dart';
 import 'package:mymanual/src/store.dart';
@@ -430,6 +431,46 @@ void main() {
     expect(asked.last, contains('"id":"q1"'));
     expect(find.text('14 jawaban · 21% benar'), findsOneWidget);
     expect(find.text('Tarik soal'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async => store.dispose());
+  });
+
+  testWidgets('Statistik quiz (Admin kuis) asks only for the quiz numbers; a section chip loads them again', (tester) async {
+    final asked = <String>[];
+    final client = MockClient((request) async {
+      asked.add('${request.url.path} ${request.body}');
+      return request.url.path == '/admin/stats/quiz'
+          ? http.Response(
+              jsonEncode({
+                'players': 2, 'users': 9, 'correct': 70, 'sets': 3, 'per_section': [],
+                'topics': [{'topic': 'standar', 'answers': 10, 'correct': 7}], 'hard': [], 'top': [], 'never': [],
+              }),
+              200)
+          : http.Response('{}', 403);
+    });
+    late AppStore store;
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer());
+      await store.signIn(testSession(quizAdmin: true), refreshNow: false);
+    });
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(theme: buildTheme(dark: false), home: QuizStatsScreen(client: client)),
+    ));
+    Future<void> wait() async {
+      for (var i = 0; i < 5; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+    }
+
+    await wait();
+    expect(find.text('Statistik quiz'), findsOneWidget);
+    expect(find.text('70%'), findsWidgets);
+    await tester.tap(find.text('WHEEL'));
+    await wait();
+    expect(asked.map((a) => a.split(' ').first).toSet(), {'/admin/stats/quiz'});
+    expect(asked.last, contains('"section":"WHEEL"'));
     await tester.pumpWidget(const SizedBox());
     await tester.runAsync(() async => store.dispose());
   });

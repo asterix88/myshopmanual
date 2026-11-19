@@ -73,6 +73,23 @@ export function nextCard(card: Card | null, correct: boolean, day: string): { le
   return { level, next_date: addDays(day, daysUntilNext(level)), due };
 }
 
+// ---- Kartu (dijawab sendiri, lalu dinilai sendiri) ----
+
+/// Nilai kartu, urut sesuai tombol di app: chosen 0 = Lupa ... 3 = Mudah.
+export const RATINGS = ["lupa", "sulit", "bisa", "mudah"] as const;
+
+/// Kartu yang dinilai pada hari [day]. Lupa kembali ke level 0 (besok);
+/// Sulit tetap di levelnya; Bisa naik 1; Mudah naik 2. Kartu baru mulai
+/// dari level 0. Dinilai sebelum jadwalnya: hanya Lupa yang mengubah kartu.
+export function nextRatedCard(card: Card | null, rating: number, day: string): { level: number; next_date: string; due: boolean } {
+  const due = !card || card.next_date <= day;
+  if (rating <= 0) return { level: 0, next_date: addDays(day, daysUntilNext(0)), due };
+  if (card && !due) return { level: card.level, next_date: card.next_date, due };
+  const step = rating - 1; // Sulit 0, Bisa 1, Mudah 2
+  const level = Math.min((card?.level ?? 0) + step, MAX_LEVEL);
+  return { level, next_date: addDays(day, daysUntilNext(level)), due };
+}
+
 // ---- XP ----
 
 export const XP = {
@@ -85,6 +102,8 @@ export const XP = {
   streakMax: 35,
   dailyCap: 400,
   minMs: 2000,
+  card: 5,
+  cardMinMs: 5000,
 };
 
 /// XP satu jawaban, sebelum batas harian.
@@ -98,6 +117,32 @@ export function answerXp(a: { correct: boolean; ms: number; levelBefore: number 
   if (!a.correct) return XP.wrong;
   if (a.correctToday || !a.due) return 0;
   return a.levelBefore !== null && isMastered(a.levelBefore) ? XP.correctMastered : XP.correct;
+}
+
+/// XP satu kartu, sebelum batas harian: 5 untuk nilai apa pun, supaya
+/// tidak ada alasan menekan Mudah demi poin. 0 kalau kartu dibalik dalam
+/// kurang dari 5 detik, atau dinilai sebelum jadwalnya.
+export function cardXp(a: { ms: number; due: boolean; correctToday: boolean }): number {
+  if (a.ms < XP.cardMinMs || !a.due || a.correctToday) return 0;
+  return XP.card;
+}
+
+/// Hasil satu jawaban: soal biasa dicek dengan kunci, kartu memakai nilai
+/// yang dipilih mekanik ([chosen] 0 = Lupa ... 3 = Mudah; Lupa = salah).
+export function grade(
+  q: { type: string; answer: number },
+  a: { chosen: number; ms: number; card: Card | null; day: string },
+): { correct: boolean; level: number; next_date: string; xp: number } {
+  const correctToday = a.card?.last_correct_day === a.day;
+  if (q.type === "kartu") {
+    const rating = Math.min(Math.max(Math.round(a.chosen), 0), RATINGS.length - 1);
+    const next = nextRatedCard(a.card, rating, a.day);
+    return { correct: rating > 0, level: next.level, next_date: next.next_date, xp: cardXp({ ms: a.ms, due: next.due, correctToday }) };
+  }
+  const correct = a.chosen === q.answer;
+  const next = nextCard(a.card, correct, a.day);
+  const xp = answerXp({ correct, ms: a.ms, levelBefore: a.card?.level ?? null, due: next.due, correctToday });
+  return { correct, level: next.level, next_date: next.next_date, xp };
 }
 
 /// [xp] dipotong supaya total hari ini tidak lewat 400.
@@ -154,13 +199,15 @@ export function streakNow(s: StreakState, day: string): number {
 
 export const SESSION_SIZE = 10;
 export const MAX_REVIEWS = 3;
+/// Kartu paling banyak 3 dalam satu sesi, supaya sesi tetap terasa quiz.
+export const MAX_CARDS = 3;
 
 /// Memilih soal sesi dari tiga daftar yang sudah diurutkan server:
 /// [due] ulangan (paling lama terlambat dulu), [fresh] soal yang belum pernah
 /// dijawab, [fallback] soal level terendah yang belum waktunya. Maksimal 3
 /// ulangan, sisanya soal baru, kekurangan diisi fallback; lalu diacak.
-/// [random] diganti di tes supaya hasilnya tetap.
-export function pickSession<T extends { id: string }>(
+/// Kartu paling banyak [MAX_CARDS]. [random] diganti di tes supaya hasilnya tetap.
+export function pickSession<T extends { id: string; type?: string }>(
   due: T[],
   fresh: T[],
   fallback: T[],
@@ -168,10 +215,15 @@ export function pickSession<T extends { id: string }>(
 ): { question: T; review: boolean }[] {
   const picked: { question: T; review: boolean }[] = [];
   const seen = new Set<string>();
+  let cards = 0;
   const take = (list: T[], max: number, review: boolean) => {
     for (const q of list) {
       if (picked.length >= SESSION_SIZE || max <= 0) return;
       if (seen.has(q.id)) continue;
+      if (q.type === "kartu") {
+        if (cards >= MAX_CARDS) continue;
+        cards++;
+      }
       seen.add(q.id);
       picked.push({ question: q, review });
       max--;
@@ -190,7 +242,7 @@ export function pickSession<T extends { id: string }>(
 // ---- Bentuk soal ----
 
 export const TOPICS = ["struktur", "torsi", "kapasitas", "standar", "fault", "servis", "sistem"];
-export const TYPES = ["pg", "bs", "gambar"];
+export const TYPES = ["pg", "bs", "gambar", "kartu"];
 export const STATUSES = ["draf", "terbit", "ditolak", "ditarik", "perlu_cek"];
 
 export type QuestionInput = {
@@ -207,14 +259,18 @@ export type QuestionInput = {
 };
 
 /// Kesalahan pertama pada soal, atau null kalau soal boleh disimpan.
-/// pg dan gambar: 2 sampai 4 pilihan; bs: tepat "Benar" dan "Salah".
+/// pg dan gambar: 2 sampai 4 pilihan; bs: tepat "Benar" dan "Salah";
+/// kartu: tanpa pilihan (answer -1), [explain] berisi poin kunci.
 export function questionProblem(q: QuestionInput): string | null {
   if (!q.section) return "Section kosong.";
   if (!TOPICS.includes(q.topic)) return `Topik harus salah satu dari: ${TOPICS.join(", ")}.`;
-  if (!TYPES.includes(q.type)) return "Jenis soal harus pg, bs atau gambar.";
+  if (!TYPES.includes(q.type)) return "Jenis soal harus pg, bs, gambar atau kartu.";
   if (!q.prompt.trim()) return "Pertanyaan kosong.";
-  if (!q.explain.trim()) return "Penjelasan kosong.";
+  if (!q.explain.trim()) return q.type === "kartu" ? "Poin kunci kosong." : "Penjelasan kosong.";
   if (!q.manual_id.trim() || !(q.page >= 1)) return "Manual dan halaman sumber wajib diisi.";
+  if (q.type === "kartu") {
+    return q.choices.length === 0 && q.answer === -1 ? null : "Kartu tidak punya pilihan jawaban.";
+  }
   if (q.type === "bs") {
     if (q.choices.length !== 2) return "Soal benar/salah harus punya 2 pilihan.";
   } else if (q.choices.length < 2 || q.choices.length > 4) {

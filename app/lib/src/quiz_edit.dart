@@ -60,6 +60,16 @@ class QuizEdit {
     );
   }
 
+  /// A kartu's picture: the whole page as it is, nothing covered, because
+  /// the page is the answer the mechanic checks against.
+  factory QuizEdit.reference(QuizPage page) =>
+      QuizEdit(crop: ui.Rect.fromLTWH(0, 0, page.width.toDouble(), page.height.toDouble()));
+
+  /// The automatic picture for a question of [type] (see [QuizEdit.auto]
+  /// and [QuizEdit.reference]).
+  factory QuizEdit.forQuestion(QuizPage page, {required String type, required String prompt, String? target}) =>
+      type == 'kartu' ? QuizEdit.reference(page) : QuizEdit.auto(page, target, labelled: prompt.contains('[X]'));
+
   QuizEdit copyWith({
     ui.Rect? crop,
     List<QuizLabel>? labels,

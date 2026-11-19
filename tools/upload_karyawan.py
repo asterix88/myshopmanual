@@ -9,7 +9,9 @@ The file has a header row with these columns (any order, any case):
   then asks for a new PIN. Changing it in the file later resets that
   employee's PIN to the new starting PIN.
 - Admin: "ya" for employees who manage the list in the app (menu
-  Kelola karyawan). At least one is needed.
+  Kelola karyawan). At least one is needed. "kuis" for an Admin kuis, who
+  only manages the quiz (Kelola soal quiz, Statistik quiz) and stays off
+  the quiz leaderboard.
 - Section: which manuals the employee sees, e.g. TRACK or WHEEL; more
   than one separated by commas ("TRACK, WHEEL"). The names are those of the
   "SECTION <name>" folders in source/ (see tools/sections.py); SEMUA is seen
@@ -143,7 +145,7 @@ def parse(rows: list[list[str]]) -> tuple[list[dict], list[str]]:
             "nrp": nrp,
             "name": get(row, "name") or nrp,
             "pin": pin,
-            "admin": get(row, "admin").lower() in ("ya", "y", "yes", "admin", "1", "true", "v", "x"),
+            **role_of(get(row, "admin")),
         })
     if where["sections"] is None:
         problems.append(f"Kolom 'Section' belum ada: semua karyawan dianggap section {DEFAULT_SECTION}.")
@@ -151,6 +153,16 @@ def parse(rows: list[list[str]]) -> tuple[list[dict], list[str]]:
         # A skipped row would log that employee out, so nothing is uploaded.
         return [], problems + ["Perbaiki kolom Section di baris di atas, lalu jalankan lagi."]
     return employees, problems
+
+
+ADMIN_YES = ("ya", "y", "yes", "admin", "1", "true", "v", "x")
+QUIZ_ADMIN = ("kuis", "quiz", "admin kuis", "admin quiz")
+
+
+def role_of(cell: str) -> dict[str, bool]:
+    """The Admin column: "ya" = admin, "kuis" = Admin kuis, else neither."""
+    value = " ".join(cell.split()).lower()
+    return {"admin": value in ADMIN_YES, "quiz_admin": value in QUIZ_ADMIN}
 
 
 def main() -> int:
@@ -166,7 +178,10 @@ def main() -> int:
     for p in problems:
         print("PERIKSA  " + p)
     admins = [e["name"] for e in employees if e["admin"]]
+    quiz_admins = [e["name"] for e in employees if e["quiz_admin"]]
     print(f"{len(employees)} karyawan, admin: {', '.join(admins) or '-'}")
+    if quiz_admins:
+        print(f"Admin kuis: {', '.join(quiz_admins)}")
     counts: dict[str, int] = {}
     for e in employees:
         for section in e["sections"]:
