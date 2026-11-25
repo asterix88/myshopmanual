@@ -316,7 +316,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           ),
         ),
         const SizedBox(height: 2),
-        _part(n++, Text('Masuk dengan NRP dan PIN Anda', style: TextStyle(fontSize: 13, color: AppColors.muted))),
+        _part(n++, Text('Masuk dengan NRP dan PIN', style: TextStyle(fontSize: 13, color: AppColors.muted))),
         const SizedBox(height: 22),
         _part(n++, const _FieldLabel('NRP')),
         _part(

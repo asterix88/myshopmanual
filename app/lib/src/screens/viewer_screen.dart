@@ -526,8 +526,8 @@ class _ViewerScreenState extends State<ViewerScreen> {
         icon: _online ? Icons.cloud_off : Icons.error_outline,
         title: _online ? 'Gagal membuka file secara online' : 'File tidak bisa dibuka',
         message: _online
-            ? 'Periksa sinyal, atau unduh file ini supaya bisa dibuka tanpa internet.'
-            : 'Coba hapus lalu unduh ulang file ini.',
+            ? 'Periksa sinyal, atau unduh untuk dibuka offline.'
+            : 'Hapus lalu unduh ulang file ini.',
       );
     },
   );

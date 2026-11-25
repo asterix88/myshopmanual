@@ -92,7 +92,7 @@ class DownloadCancelled implements Exception {}
 /// try continues from there.
 class DownloadInterrupted implements Exception {
   @override
-  String toString() => 'Koneksi terputus. Ketuk "Lanjutkan unduhan" untuk meneruskan dari posisi terakhir.';
+  String toString() => 'Koneksi terputus. Ketuk "Lanjutkan unduhan".';
 }
 
 /// Everything the app knows: the server catalog (cached for offline use),

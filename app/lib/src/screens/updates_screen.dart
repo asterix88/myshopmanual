@@ -78,7 +78,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Text(
-                  'Tidak ada sinyal. Update dicek otomatis saat HP tersambung internet.',
+                  'Tidak ada sinyal. Update dicek otomatis saat online.',
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ),
@@ -195,7 +195,7 @@ class _UpdateCard extends StatelessWidget {
         ),
       UpdateKind.withdrawn => (
           Pill('Ditarik', background: AppColors.greySoft, foreground: AppColors.ink),
-          'Sudah tidak ada di server. File yang sudah diunduh tetap bisa dibuka.',
+          'Ditarik dari server. File di HP tetap bisa dibuka.',
         ),
     };
 

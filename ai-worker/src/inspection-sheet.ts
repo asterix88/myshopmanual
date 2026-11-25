@@ -165,7 +165,7 @@ export async function writeAction(
     const [all] = await ctx.sheets.read([`${tab}!B${FIRST_ROW}:Q${LAST_ROW}`]);
     const hits = (all ?? []).map((r, i) => (same(r) ? FIRST_ROW + i : 0)).filter(Boolean);
     if (hits.length !== 1) {
-      return fail(409, "moved", "Temuan ini sudah berubah atau dihapus di sheet. Tarik ulang daftar lalu coba lagi.");
+      return fail(409, "moved", "Temuan sudah berubah atau dihapus di sheet. Muat ulang daftar.");
     }
     row = hits[0];
   }

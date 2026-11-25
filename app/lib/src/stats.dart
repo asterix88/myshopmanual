@@ -22,7 +22,7 @@ class StatsApi {
 
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body, {bool renewed = false}) async {
     final session = store.session;
-    if (session == null) throw AuthException('login', 'Silakan masuk lagi.');
+    if (session == null) throw AuthException('login', 'Sesi berakhir. Masuk lagi.');
     final http.Response response;
     try {
       response = await client
@@ -103,7 +103,7 @@ class StatsApi {
   /// The monthly Excel report ([month] '2026-10'), saved to [path].
   Future<void> report(String month, String section, String path, {bool renewed = false}) async {
     final session = store.session;
-    if (session == null) throw AuthException('login', 'Silakan masuk lagi.');
+    if (session == null) throw AuthException('login', 'Sesi berakhir. Masuk lagi.');
     final http.Response response;
     try {
       response = await client

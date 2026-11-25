@@ -462,7 +462,7 @@ class AiChat {
     }
     if (counted) store.countAiQuestion(learning: learning);
     return ChatEntry.assistant(
-      'AI belum menemukan jawabannya di manual. Coba tanyakan dengan lebih spesifik.',
+      'Jawaban tidak ditemukan di manual. Coba pertanyaan yang lebih spesifik.',
       failed: true,
     );
   }
@@ -541,7 +541,7 @@ class AiChat {
               : client.post(url, headers: headers, body: jsonEncode(body)))
           .timeout(const Duration(seconds: 120));
     } on Exception {
-      throw AiException('Tidak bisa terhubung ke AI. Periksa sinyal internet.');
+      throw AiException('Gagal terhubung ke AI. Periksa sinyal.');
     }
     Map<String, dynamic>? data;
     try {

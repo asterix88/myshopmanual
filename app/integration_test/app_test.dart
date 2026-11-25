@@ -79,7 +79,7 @@ void main() {
     step('tap save icon');
     await tester.tap(find.byTooltip('Simpan file'));
     await pumpUntil(tester, find.text('Simpan file?'));
-    expect(find.text('File disimpan di folder /Download/MyManual'), findsOneWidget);
+    expect(find.text('Tersimpan di /Download/MyManual'), findsOneWidget);
     step('confirm');
     await tester.tap(find.text('Ya'));
 

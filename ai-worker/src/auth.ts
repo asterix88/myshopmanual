@@ -162,7 +162,7 @@ export async function requireSession(
 ): Promise<{ session: Session; error?: undefined } | { session?: undefined; error: Response }> {
   const s = await verify(env, request.headers.get(SESSION_HEADER));
   if (!s || s.t === "setup") {
-    return { error: json({ error: "login", message: "Silakan masuk lagi dengan NRP dan PIN." }, 401) };
+    return { error: json({ error: "login", message: "Masuk lagi dengan NRP dan PIN." }, 401) };
   }
   if (s.iat < now() - FRESH_SECONDS) {
     return { error: json({ error: "refresh", message: "Sesi perlu diperbarui." }, 401) };
@@ -333,7 +333,7 @@ async function setPin(request: Request, env: AuthEnv): Promise<Response> {
   if (!b) return json({ error: "bad_request" }, 400);
   const s = await verify(env, String(b.setup ?? ""));
   if (!s || s.t !== "setup") {
-    return json({ error: "expired", message: "Waktu habis. Silakan masuk lagi dengan PIN awal." }, 401);
+    return json({ error: "expired", message: "Waktu habis. Masuk lagi dengan PIN awal." }, 401);
   }
   const pin = String(b.pin ?? "").trim();
   if (!validPin(pin)) return json({ error: "pin_format", message: `PIN harus ${PIN_LENGTH} angka.` }, 400);
@@ -351,7 +351,7 @@ async function setPin(request: Request, env: AuthEnv): Promise<Response> {
 async function refresh(request: Request, env: AuthEnv): Promise<Response> {
   const b = (await body(request)) ?? {};
   const s = await verify(env, request.headers.get(SESSION_HEADER));
-  if (!s || s.t === "setup") return json({ error: "login", message: "Silakan masuk lagi dengan NRP dan PIN." }, 401);
+  if (!s || s.t === "setup") return json({ error: "login", message: "Masuk lagi dengan NRP dan PIN." }, 401);
   const e = await load(env, s.n);
   if (!e) return notFound();
   if (!e.active) return inactive();

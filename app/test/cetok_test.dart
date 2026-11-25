@@ -83,7 +83,7 @@ void main() {
     final offline = cetok(client: MockClient((_) async => throw const SocketException('offline')));
     await offline.open();
     expect(offline.parts.map((p) => p.pn), c.parts.map((p) => p.pn));
-    expect(offline.error, contains('Tidak bisa terhubung'));
+    expect(offline.error, contains('Gagal terhubung'));
   });
 
   test('changes go through the existing database functions', () async {

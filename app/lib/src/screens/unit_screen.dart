@@ -98,7 +98,7 @@ class _UnitScreenState extends State<UnitScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
                 child: Text(
-                  'Pilih file yang ingin dihapus dari HP. File bisa diunduh lagi kapan saja.',
+                  'Pilih file yang akan dihapus dari HP.',
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ),
@@ -303,7 +303,7 @@ class _UnitScreenState extends State<UnitScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Hapus $count file dari HP?'),
-        content: const Text('File bisa diunduh lagi nanti saat ada sinyal.'),
+        content: const Text('File bisa diunduh lagi.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           FilledButton(
@@ -420,7 +420,7 @@ class _FileCard extends StatelessWidget {
                       ),
                     if (!file.searchable)
                       Text(
-                        'Gambar atau hasil scan: tidak bisa melakukan pencarian',
+                        'Hasil scan, tidak bisa dicari',
                         style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
                     if (status != null) ...[const SizedBox(height: 2), status],
@@ -445,7 +445,7 @@ class _FileCard extends StatelessWidget {
         title: const Text('Simpan file?'),
         content: const SizedBox(
           width: double.maxFinite,
-          child: Text('File disimpan di folder /Download/MyManual'),
+          child: Text('Tersimpan di /Download/MyManual'),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Tidak')),

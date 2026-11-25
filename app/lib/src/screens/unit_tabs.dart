@@ -147,7 +147,7 @@ class UnitTabsPage extends StatelessWidget {
                   ? const EmptyState(
                       icon: Icons.cloud_download_outlined,
                       title: 'Daftar manual belum tersedia',
-                      message: 'Hubungkan ke internet untuk mengunduh.',
+                      message: 'Perlu koneksi internet.',
                       action: RetryButton(),
                     )
                   : showTabs

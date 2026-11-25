@@ -33,7 +33,7 @@ class CetokUnavailableScreen extends StatelessWidget {
                 const RoadworkPicture(size: 136),
                 const SizedBox(height: 20),
                 Text(
-                  'Fitur sedang dalam tahap pengembangan',
+                  'Fitur sedang dikembangkan',
                   key: const Key('cetok-unavailable'),
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.ink),

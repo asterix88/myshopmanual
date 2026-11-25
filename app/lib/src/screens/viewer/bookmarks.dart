@@ -146,7 +146,7 @@ class _BookmarksSheetState extends State<_BookmarksSheet> {
       return const EmptyState(
         icon: Icons.bookmark_border,
         title: 'Belum ada tanda',
-        message: 'Ketuk ikon pita di atas untuk menandai halaman yang sering dibuka.',
+        message: 'Ketuk ikon pita untuk menandai halaman.',
       );
     }
     return ListView(
