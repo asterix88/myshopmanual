@@ -208,7 +208,14 @@ class _ChatScreenState extends State<ChatScreen> {
   void _showLimit({required bool learning}) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(learning ? AiChat.learningLimitMessage : AiChat.limitMessage)));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(learning ? AiChat.learningLimitMessage : AiChat.limitMessage),
+          // Short: one sentence, read at a glance. A swipe down hides it sooner.
+          duration: const Duration(seconds: 2),
+          dismissDirection: DismissDirection.down,
+        ),
+      );
   }
 
   /// The switch of mode belajar. Turning it on starts with the tutor's
