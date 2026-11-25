@@ -168,7 +168,7 @@ class HomeScreen extends StatelessWidget {
         // Admins find the quiz numbers in Statistik pemakaian, tab Quiz.
         if (store.session case Session(quizAdmin: true, admin: false))
           const PopupMenuItem(value: 'quiz_stats', child: Text('Statistik quiz')),
-        // Penilaian nyel AI is in Statistik pemakaian, tab nyel AI (Anas, 3 Nov 2026).
+        // Penilaian Nyel AI is in Statistik pemakaian, tab Nyel AI (Anas, 3 Nov 2026).
         if (store.session?.admin ?? false)
           const PopupMenuItem(value: 'cetok', child: Text('Data Cetok Online')),
         const PopupMenuItem(value: 'theme', child: Text('Tampilan (terang / gelap)')),

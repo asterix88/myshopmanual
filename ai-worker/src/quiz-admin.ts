@@ -1,4 +1,4 @@
-// The Quiz's admin endpoints: nyel AI drafts questions from the manuals, an
+// The Quiz's admin endpoints: Nyel AI drafts questions from the manuals, an
 // admin checks and approves them before mechanics see them (Anas's
 // decision in the Quiz PRD). All need an active admin's session.
 //
@@ -70,7 +70,7 @@ async function generate(env: QuizEnv, b: Record<string, unknown>, by: string): P
   const made = await quiz.madeFrom(db, base.manual_id);
   const avoid = made.filter((m) => m.page === base.page).map((m) => m.prompt);
   const out = await writeQuestions(ask, where, text, wantedFor(kind, count), avoid);
-  if (!out) return json({ error: "upstream", message: "nyel AI belum bisa membuat soal sekarang. Coba lagi nanti." }, 502);
+  if (!out) return json({ error: "upstream", message: "Nyel AI belum bisa membuat soal sekarang. Coba lagi nanti." }, 502);
   const fresh = out.drafts.filter((q) => {
     if (isRepeat(q, made)) return false;
     made.push({ page: base.page, prompt: q.prompt, answer: q.choices[q.answer] ?? "" });
@@ -119,8 +119,8 @@ async function plan(env: QuizEnv, b: Record<string, unknown>): Promise<Response>
   // About 2-3 kept questions per page; a few spare pages for the curator.
   const want = Math.min(MAX_JOB_PAGES, Math.ceil(count / 2.5) + 3);
   const chosen = await planPages(askWith(env), toc, pages, want, topic, targets(count, mix, true).gambar > 0);
-  if (!chosen) return json({ error: "upstream", message: "nyel AI belum bisa memilih halaman sekarang. Coba lagi nanti." }, 502);
-  if (!chosen.length) return json({ error: "empty", message: "nyel AI tidak menemukan halaman yang cocok di daftar isi file ini." }, 404);
+  if (!chosen) return json({ error: "upstream", message: "Nyel AI belum bisa memilih halaman sekarang. Coba lagi nanti." }, 502);
+  if (!chosen.length) return json({ error: "empty", message: "Nyel AI tidak menemukan halaman yang cocok di daftar isi file ini." }, 404);
   return json({ pages: chosen });
 }
 

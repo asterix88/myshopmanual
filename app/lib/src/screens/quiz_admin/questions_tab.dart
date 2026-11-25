@@ -49,7 +49,7 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
         _jobs = jobs;
         _error = null;
       });
-      // While nyel AI is working, look again every 15 s.
+      // While Nyel AI is working, look again every 15 s.
       _poll?.cancel();
       if (jobs.any((j) => j.running)) _poll = Timer(const Duration(seconds: 15), _load);
     } catch (e) {
@@ -312,7 +312,7 @@ class _JobCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            Text('Boleh tutup aplikasi, nyel AI tetap bekerja di server.',
+            Text('Boleh tutup aplikasi, Nyel AI tetap bekerja di server.',
                 style: TextStyle(fontSize: 12, color: AppColors.muted)),
           ],
         ],
@@ -443,7 +443,7 @@ class _QuestionCard extends StatelessWidget {
                   background: score >= 7 ? AppColors.greenSoft : AppColors.amberSoft,
                   foreground: score >= 7 ? AppColors.green : AppColors.amber,
                 ),
-              if (item.source == 'ai') Pill('nyel AI', background: AppColors.orangeSoft, foreground: AppColors.orangeText),
+              if (item.source == 'ai') Pill('Nyel AI', background: AppColors.orangeSoft, foreground: AppColors.orangeText),
             ],
           ),
           const SizedBox(height: 8),

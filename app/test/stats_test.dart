@@ -271,7 +271,7 @@ void main() {
     expect(find.text('Shop Manual'), findsOneWidget);
     expect(find.text('Semua section · 9 orang'), findsOneWidget);
 
-    // Swipe to nyel AI: the numbers stay.
+    // Swipe to Nyel AI: the numbers stay.
     await tester.drag(find.text('Shop Manual'), const Offset(-250, 0));
     await tester.pumpAndSettle();
     expect(find.textContaining('Relief valve', findRichText: true), findsOneWidget);

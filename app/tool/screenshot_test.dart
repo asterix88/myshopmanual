@@ -84,7 +84,7 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}4_search.png'));
 
-    await tester.tap(find.text('nyel AI').last);
+    await tester.tap(find.text('Nyel AI').last);
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}5_chat.png'));
 

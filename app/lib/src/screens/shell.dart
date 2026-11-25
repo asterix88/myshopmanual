@@ -25,7 +25,7 @@ class StoreScope extends InheritedNotifier<AppStore> {
       context.getInheritedWidgetOfExactType<StoreScope>()!.notifier!;
 }
 
-/// Bottom navigation: Home, Cari, nyel AI (raised, in the middle), Standar,
+/// Bottom navigation: Home, Cari, Nyel AI (raised, in the middle), Standar,
 /// Servis.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, this.entrance = false});
@@ -97,7 +97,7 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     if (store.aiAsks != _aiAsks) {
-      // "Tanya nyel AI" on a page: show the chat with the question in it.
+      // "Tanya Nyel AI" on a page: show the chat with the question in it.
       _aiAsks = store.aiAsks;
       _tab = chatTab;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -118,7 +118,7 @@ class _HomeShellState extends State<HomeShell> {
         if (!didPop) _select(0);
       },
       child: Scaffold(
-        // Pages run on under the bar, so the space beside the raised nyel AI
+        // Pages run on under the bar, so the space beside the raised Nyel AI
         // button shows the page instead of an empty band. They keep their
         // last rows clear of it with MediaQuery's bottom padding.
         extendBody: true,
@@ -181,12 +181,12 @@ class _NavBar extends StatelessWidget {
   static const _items = [
     (AppGlyph.home, 'Home'),
     (AppGlyph.search, 'Cari'),
-    (AppGlyph.nyel, 'nyel AI'),
+    (AppGlyph.nyel, 'Nyel AI'),
     (AppGlyph.standar, 'Standar'),
     (AppGlyph.servis, 'Servis'),
   ];
 
-  /// How far the nyel AI button rises above the bar.
+  /// How far the Nyel AI button rises above the bar.
   static const _rise = 24.0;
   static const _barHeight = 66.0;
 
@@ -283,7 +283,7 @@ class _NavBar extends StatelessWidget {
   }
 }
 
-/// The raised round nyel AI button in the middle of the bar.
+/// The raised round Nyel AI button in the middle of the bar.
 class _AiButton extends StatelessWidget {
   const _AiButton({required this.item, required this.active, required this.onTap});
 

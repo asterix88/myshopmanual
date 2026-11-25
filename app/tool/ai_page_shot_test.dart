@@ -1,4 +1,4 @@
-// Renders the viewer's nyel AI button and the chat it opens (not run in CI).
+// Renders the viewer's Nyel AI button and the chat it opens (not run in CI).
 import 'dart:async';
 import 'dart:io';
 
@@ -13,7 +13,7 @@ import '../test/store_test.dart' show fixtureServer;
 import 'screenshot_test.dart' show loadFonts;
 
 void main() {
-  testWidgets('viewer nyel AI button', (tester) async {
+  testWidgets('viewer Nyel AI button', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 2.75;
     Pdfrx.pdfiumModulePath ??= File('build/native_assets/linux/libpdfium.so').absolute.path;

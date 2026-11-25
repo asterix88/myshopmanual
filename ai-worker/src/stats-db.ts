@@ -1,6 +1,6 @@
 // What "Statistik pemakaian" (admin) shows, from one table of events: a
 // phone opening a manual, viewing a chapter, downloading, searching, asking
-// nyel AI, and the 👍/👎 ratings. Phones keep events while offline and send
+// Nyel AI, and the 👍/👎 ratings. Phones keep events while offline and send
 // them to POST /stats later (src/stats.ts); the NRP, name and sections come
 // from the session, so the section filter is the reader's section.
 //
@@ -221,7 +221,7 @@ export function overview(sql: Sql, f: Filter, sharedUnits: string[]) {
 }
 
 /// The three headline numbers of a period, for the trend against the
-/// period before: manuals opened, nyel AI questions, and who did anything.
+/// period before: manuals opened, Nyel AI questions, and who did anything.
 export function totals(sql: Sql, f: Filter) {
   const w = where(f);
   const b = binds(f);
@@ -314,7 +314,7 @@ export function person(sql: Sql, f: Filter, nrp: string) {
   };
 }
 
-/// One nyel AI question with its answer and the rating it got, if any.
+/// One Nyel AI question with its answer and the rating it got, if any.
 export function answer(sql: Sql, id: number) {
   const r = rows(sql, "SELECT id, at, nrp, name, secs, sec, unit, q, extra FROM events WHERE id = ? AND kind = 'ai'", id)[0];
   if (!r) return null;
@@ -346,7 +346,7 @@ export function markHandled(sql: Sql, q: string, at = Date.now()): void {
   sql.exec("INSERT INTO handled (q, at) VALUES (?, ?) ON CONFLICT (q) DO UPDATE SET at = excluded.at", q.toLowerCase(), at);
 }
 
-// Words that say nothing about the topic of a nyel AI search.
+// Words that say nothing about the topic of a Nyel AI search.
 const STOP = new Set(
   `a an and are as at be by for from how in is it of on or the to what when where which with without
    check checking procedure method specification specifications standard value values adjust adjusting
@@ -356,7 +356,7 @@ const STOP = new Set(
 const CODE = /^(?:[A-Z]{1,3}\d{2,5}[A-Z]{0,2}|E\d{2})$/;
 const MODEL = /^(?:PC|D|HD|WA|GD|CAT|HM|SK|EX)\d{2,4}/i;
 
-/// The subjects nyel AI searched for most: in each question's searches, a
+/// The subjects Nyel AI searched for most: in each question's searches, a
 /// pair of neighbouring words ("relief valve", "track roller") or a fault
 /// code ("Kode error"); each question counts a subject once.
 export function topics(queries: string[][], limit = 8): { name: string; n: number }[] {

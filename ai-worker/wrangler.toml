@@ -1,4 +1,4 @@
-# Cloudflare Worker behind the app: nyel AI (holds the AI keys so they never
+# Cloudflare Worker behind the app: Nyel AI (holds the AI keys so they never
 # ship inside the APK), the employee login (NRP + PIN) and, on
 # files.mymanual.my.id, the manuals for logged-in phones. GitHub Actions
 # deploys it (.github/workflows/ai-worker.yml) whenever this folder changes
@@ -20,7 +20,7 @@ routes = [
 binding = "BUCKET"
 bucket_name = "mymanual"
 
-# Employees, sessions' signing key and nyel AI's daily counts (src/auth.ts).
+# Employees, sessions' signing key and Nyel AI's daily counts (src/auth.ts).
 # The deploy workflow creates the namespace "mymanual-auth" on first run and
 # puts its id here.
 [[kv_namespaces]]
@@ -65,7 +65,7 @@ MODEL = "deepseek:deepseek-v4-flash,openai/gpt-oss-120b,qwen/qwen3.8-27b,openai/
 # Used instead of MODEL once the AI has looked at a page picture: only these
 # models can see pictures.
 VISION_MODEL = "deepseek:deepseek-v4-flash,qwen/qwen3.8-27b"
-# "1": nyel AI refuses phones that are not logged in (app versions from
+# "1": Nyel AI refuses phones that are not logged in (app versions from
 # before the NRP login). Set by Anas on 29 Oct 2026 with sections, since a
 # section's manuals must only reach its NRPs.
 REQUIRE_LOGIN = "1"

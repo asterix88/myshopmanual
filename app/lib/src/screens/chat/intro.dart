@@ -106,28 +106,6 @@ class _AttachedPage extends StatelessWidget {
   }
 }
 
-/// How many of today's questions are left on this phone.
-class _QuestionsLeft extends StatelessWidget {
-  const _QuestionsLeft({required this.left});
-
-  final int left;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: AppColors.surface,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Text(
-        left == 0
-            ? 'Jatah ${AppStore.aiDailyLimit} pertanyaan hari ini sudah habis.'
-            : 'Sisa $left dari ${AppStore.aiDailyLimit} pertanyaan hari ini',
-        style: TextStyle(fontSize: 12, color: left == 0 ? AppColors.orangeText : AppColors.muted),
-      ),
-    );
-  }
-}
-
 class _Intro extends StatelessWidget {
   const _Intro({required this.examples, required this.hasManuals, required this.onExample});
 

@@ -70,7 +70,7 @@ function json(body: unknown, status = 200): Response {
 
 const who = (s: Session): db.Who => ({ nrp: s.n, name: s.nm, sections: s.s?.length ? s.s : [DEFAULT_SECTION] });
 
-/// A 👍/👎 on a nyel AI answer (src/feedback.ts).
+/// A 👍/👎 on a Nyel AI answer (src/feedback.ts).
 export async function recordRating(env: StatsEnv, s: Session, good: boolean, question: string): Promise<void> {
   if (s.a) return;
   await stub(env).add(who(s), [{ at: Date.now(), kind: "rate", q: question.trim().slice(0, 1000), hits: good ? 1 : 0 }]);
@@ -276,7 +276,7 @@ export async function report(env: StatsEnv, f: db.Filter, label: string): Promis
         ["Pengguna aktif", o.active],
         ["Jumlah pengguna", o.users],
         ["Manual dibuka", o.opens],
-        ["Tanya nyel AI", o.ai],
+        ["Tanya Nyel AI", o.ai],
         ["Jawaban membantu", o.ratings.good],
         ["Jawaban dinilai salah", o.ratings.bad],
         ["Kata tidak ketemu", o.missing.length],
@@ -301,11 +301,11 @@ export async function report(env: StatsEnv, f: db.Filter, label: string): Promis
     },
     { name: "Paling dicari", rows: [head("Kata", "Dicari", "Orang"), ...o.searches.map((x) => [x.q, x.n, x.people])] },
     { name: "Tidak ketemu", rows: [head("Kata", "Dicari", "Orang"), ...o.missing.map((x) => [x.q, x.n, x.people])] },
-    { name: "Topik nyel AI", rows: [head("Topik", "Pertanyaan"), ...o.topics.map((t) => [t.name, t.n])] },
+    { name: "Topik Nyel AI", rows: [head("Topik", "Pertanyaan"), ...o.topics.map((t) => [t.name, t.n])] },
     {
       name: "Pengguna",
       rows: [
-        head("NRP", "Nama", "Section", "Manual dibuka", "Tanya nyel AI", "Cari", "Terakhir aktif"),
+        head("NRP", "Nama", "Section", "Manual dibuka", "Tanya Nyel AI", "Cari", "Terakhir aktif"),
         ...o.people.map((p) => [p.nrp, p.name, p.sections.join(", "), p.manuals, p.ai, p.searches, day(p.last)]),
       ],
     },

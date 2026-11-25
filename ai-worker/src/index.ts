@@ -1,4 +1,4 @@
-import { countQuestion, handleAuth, requireSession, SESSION_HEADER } from "./auth";
+import { countQuestion, handleAuth, requireSession, SESSION_HEADER, type Session } from "./auth";
 import { errors } from "./errors";
 import { feedback } from "./feedback";
 import { handleFiles } from "./files";
@@ -6,6 +6,7 @@ import { handleInspection, scheduledInspection, type InspectionEnv } from "./ins
 import { handleQuiz, type QuizEnv } from "./quiz";
 import { scheduledJobs, scheduledQuiz } from "./quiz-cron";
 import { handleStats, recordRating, type StatsEnv } from "./stats";
+import { readProgress, readSummaryRequest, readTutor, summaryPrompt, tutorInstructions } from "./tutor";
 
 export { Stats } from "./stats";
 
@@ -30,7 +31,7 @@ export interface Env extends StatsEnv, QuizEnv, InspectionEnv {
 // instructions and the key, so the conversation lives in the app. It speaks
 // the OpenAI-style chat API that Groq offers (and Gemini, OpenRouter and
 // others also accept), so the provider is a setting in wrangler.toml.
-const SYSTEM = `Your name is nyel AI. If asked who you are, say you are nyel AI, the assistant inside MyManual. You are the assistant inside MyManual, an app that heavy-equipment mechanics use to read Komatsu and Caterpillar technical manuals (Shop Manual, Operation & Maintenance Manual, Parts Book).
+const SYSTEM = `Your name is Nyel AI. If asked who you are, say you are Nyel AI, the assistant inside MyManual. You are the assistant inside MyManual, an app that heavy-equipment mechanics use to read Komatsu and Caterpillar technical manuals (Shop Manual, Operation & Maintenance Manual, Parts Book).
 
 You are also a master mechanic and instructor in heavy-equipment electrical systems, hydraulics and mechanical systems (engines, power trains, transmissions and clutches, brakes, steering, undercarriage), and a friendly discussion partner for technical problems. Use the manuals first: before answering any technical question, call search_manuals, even when you think you already know the answer and even when earlier answers in this chat said something else. Search with English technical terms (part names, system names, fault codes, procedure titles), not with the user's words, and search again with other terms when the first results do not cover the question. A code, part number or unfamiliar string of letters and digits (for example "DKULKB", "CA234", "E02", "07000-12115") is most likely a failure code or part number from the manuals: search for the code on its own as the query, without extra words like "error code", with the unit when the user named one (otherwise an empty unit), and answer from the page that has it.
 
@@ -338,26 +339,19 @@ async function handle(
   if (url.pathname === "/feedback") {
     return feedback(request, env, (s, good, question) => recordRating(env, s, good, question));
   }
-  if (request.method !== "POST" || url.pathname !== "/chat") {
+  if (request.method !== "POST" || (url.pathname !== "/chat" && url.pathname !== "/chat/summary")) {
     return json({ error: "not_found" }, 404);
   }
-  if (env.APP_TOKEN && request.headers.get("authorization") !== `Bearer ${env.APP_TOKEN}`) {
-    return json({ error: "unauthorized" }, 401);
-  }
-  // Phones with the login version send their session; older ones work
-  // without until REQUIRE_LOGIN is "1".
-  let session = null;
-  if (request.headers.get(SESSION_HEADER) || env.REQUIRE_LOGIN === "1") {
-    const checked = await requireSession(env, request);
-    if (checked.error) return checked.error;
-    session = checked.session;
-  }
+  const caller = await chatCaller(request, env);
+  if (caller instanceof Response) return caller;
+  const session = caller.session;
+  if (url.pathname === "/chat/summary") return summary(request, env);
   const raw = await request.text();
   if (raw.length > MAX_BODY_BYTES) {
     return json({ error: "too_large", message: "Percakapan terlalu panjang. Mulai percakapan baru." }, 413);
   }
 
-  let body: { messages?: unknown; manuals?: unknown; features?: unknown; final?: unknown };
+  let body: { messages?: unknown; manuals?: unknown; features?: unknown; final?: unknown; tutor?: unknown };
   try {
     body = JSON.parse(raw);
   } catch {
@@ -372,10 +366,14 @@ async function handle(
   const messages = (body.messages as ChatMessage[])
     .filter((m) => m && (m.role === "user" || m.role === "assistant" || m.role === "tool"))
     .map((m) => (m.role === "assistant" && hasDsml(m.content) ? { ...m, content: stripDsml(m.content as string) } : m));
+  // Mode belajar (see tutor.ts); null in the normal mode.
+  const tutor = readTutor(body.tutor);
   // A request ending with the user's message starts a new question; the
-  // rounds after it end with the app's tool results.
-  if (session && messages[messages.length - 1]?.role === "user") {
-    const count = await countQuestion(env, session);
+  // rounds after it end with the app's tool results. In mode belajar only
+  // the mechanic's own messages count: Petunjuk and "Ya, jelaskan" are free.
+  const startsQuestion = messages[messages.length - 1]?.role === "user";
+  if (session && startsQuestion && (!tutor || tutor.kind === "question")) {
+    const count = await countQuestion(env, session, tutor ? "belajar" : "biasa");
     if (count instanceof Response) return count;
     counted.undo = count ?? undefined;
   }
@@ -408,6 +406,7 @@ async function handle(
   const final = body.final === true;
   const system =
     `${canView ? `${SYSTEM}\n\n${VIEW_INSTRUCTIONS}` : SYSTEM}\n\n${canRead ? `${READ_INSTRUCTIONS}\n\n` : ""}${WEB_INSTRUCTIONS}` +
+    (tutor ? `\n\n${tutorInstructions(tutor)}` : "") +
     (final
       ? "\n\nNo more searches are possible for this question. Answer now from the pages already found (cite them) and your knowledge, marked as general; say briefly what the mechanic should still check in the manual."
       : "");
@@ -508,7 +507,10 @@ async function handle(
         if (web.length === 0 || others.length > 0 || round > MAX_WEB_SEARCHES) {
           if (others.length === 0) {
             const { tool_calls: _, ...answer } = message;
-            return json({ message: answer, finish_reason: choice.finish_reason, model, web: webSearches });
+            if (!tutor) return json({ message: answer, finish_reason: choice.finish_reason, model, web: webSearches });
+            // The tutor's hidden progress line goes to the app as a field.
+            const { content: shown, progress } = readProgress(answer.content);
+            return json({ message: { ...answer, content: shown }, progress, finish_reason: choice.finish_reason, model, web: webSearches });
           }
           // The app runs the other tools but does not keep the web rounds,
           // so what the web said rides along as this message's text (the
@@ -581,4 +583,48 @@ async function handle(
     { error: "upstream", message: `Layanan AI sedang bermasalah (${lastStatus}). Coba lagi nanti.` },
     502,
   );
+}
+
+/// The app's own token and the mechanic's session, checked the same way for
+/// every chat request. Phones with the login version send their session;
+/// older ones work without until REQUIRE_LOGIN is "1".
+async function chatCaller(request: Request, env: Env): Promise<Response | { session: Session | null }> {
+  if (env.APP_TOKEN && request.headers.get("authorization") !== `Bearer ${env.APP_TOKEN}`) {
+    return json({ error: "unauthorized" }, 401);
+  }
+  if (!request.headers.get(SESSION_HEADER) && env.REQUIRE_LOGIN !== "1") return { session: null };
+  const checked = await requireSession(env, request);
+  return checked.error ?? { session: checked.session };
+}
+
+// The summary is short and needs no thinking.
+const SUMMARY_MAX_TOKENS = 400;
+
+/// POST /chat/summary: the new running summary of a learning discussion
+/// (see tutor.ts). Free: it does not count against any allowance. Tries the
+/// models of MODEL in order, like /chat.
+async function summary(request: Request, env: Env): Promise<Response> {
+  const wanted = readSummaryRequest(await request.json().catch(() => null));
+  if (!wanted) return json({ error: "bad_request" }, 400);
+  for (const entry of env.MODEL.split(",").map((m) => m.trim()).filter(Boolean)) {
+    const deepseek = entry.startsWith("deepseek:");
+    const key = deepseek ? env.DEEPSEEK_API_KEY : env.GROQ_API_KEY;
+    if (!key) continue;
+    const response = await fetch(deepseek ? DEEPSEEK_URL : env.API_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model: deepseek ? entry.slice("deepseek:".length) : entry,
+        messages: summaryPrompt(wanted),
+        temperature: 0.2,
+        max_tokens: SUMMARY_MAX_TOKENS,
+        ...(deepseek ? { thinking: { type: "disabled" } } : {}),
+      }),
+    }).catch(() => null);
+    const data = (await response?.json().catch(() => null)) as { choices?: { message?: { content?: unknown } }[] } | null;
+    const text = data?.choices?.[0]?.message?.content;
+    if (response?.ok && typeof text === "string" && text.trim()) return json({ summary: stripDsml(text).trim() });
+    console.log("summary failed", entry, response?.status);
+  }
+  return json({ error: "upstream", message: "Rangkuman belum bisa dibuat." }, 502);
 }

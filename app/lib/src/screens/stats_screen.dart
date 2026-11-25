@@ -4,7 +4,7 @@
 ///
 /// - `manual_tab.dart`, `ai_tab.dart`, `search_tab.dart`, `people_tab.dart`,
 ///   `quiz_tab.dart`   one file per tab
-/// - `sheets.dart`        bottom sheets: a manual, a nyel AI answer, a search
+/// - `sheets.dart`        bottom sheets: a manual, a Nyel AI answer, a search
 /// - `person_pages.dart`  one person's page and the "belum aktif" list
 /// - `widgets.dart`       small pieces every tab shares
 /// - `format.dart`        date/name text helpers (tested in stats_test.dart)
@@ -36,7 +36,7 @@ import 'stats/widgets.dart';
 
 /// Admins: how the mechanics use the app, so it is clear what they need.
 /// Period and section filters and three numbers on top; tabs Manual,
-/// nyel AI, Cari and Pengguna below, swiped left and right.
+/// Nyel AI, Cari and Pengguna below, swiped left and right.
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key, this.client});
 
@@ -178,7 +178,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
                     Expanded(
                       child: StatsNumber(
                         value: data == null ? '–' : '${data.ai}',
-                        label: 'Tanya nyel AI',
+                        label: 'Tanya Nyel AI',
                         trend: data?.trendAi,
                       ),
                     ),
@@ -205,7 +205,7 @@ class _StatsScreenState extends State<StatsScreen> with SingleTickerProviderStat
             labelPadding: const EdgeInsets.symmetric(horizontal: 10),
             labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             unselectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-            tabs: const [Tab(text: 'Manual'), Tab(text: 'nyel AI'), Tab(text: 'Cari'), Tab(text: 'Pengguna'), Tab(text: 'Quiz')],
+            tabs: const [Tab(text: 'Manual'), Tab(text: 'Nyel AI'), Tab(text: 'Cari'), Tab(text: 'Pengguna'), Tab(text: 'Quiz')],
           ),
           Expanded(child: _body(data)),
         ],

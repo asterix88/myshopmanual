@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'models.dart';
 
 /// What this phone's user did, for the admins' "Statistik pemakaian": a
-/// manual opened, a chapter read, a download, a search, a nyel AI question.
+/// manual opened, a chapter read, a download, a search, a Nyel AI question.
 /// Kept in a file and sent to the server (POST /stats,
 /// ai-worker/src/stats.ts) each time the app reaches it (AppStore.refresh),
 /// so what was done offline arrives later; the server adds who it was from
@@ -113,7 +113,7 @@ class UsageLog {
     unawaited(_add({'kind': 'search', 'q': q, 'hits': hits}));
   }
 
-  /// A nyel AI question that got an answer; [queries] are the searches the
+  /// A Nyel AI question that got an answer; [queries] are the searches the
   /// AI made, which give the statistics their topics.
   void asked({
     required String question,

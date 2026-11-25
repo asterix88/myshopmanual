@@ -150,7 +150,7 @@ void main() {
     step('done');
   }, timeout: const Timeout(Duration(minutes: 4)));
 
-  testWidgets('a tap on the page goes full screen with only the nyel AI button', (tester) async {
+  testWidgets('a tap on the page goes full screen with only the Nyel AI button', (tester) async {
     final root = Directory('${(await getTemporaryDirectory()).path}/it-${DateTime.now().microsecondsSinceEpoch}')
       ..createSync(recursive: true);
     final store = await AppStore.open(root: root, client: fixtureServer());

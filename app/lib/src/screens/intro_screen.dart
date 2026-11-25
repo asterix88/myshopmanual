@@ -14,7 +14,7 @@ double introArtHeight(BuildContext context) {
   return MediaQuery.paddingOf(context).top + (size.height * 0.47).clamp(300.0, 420.0);
 }
 
-/// Four pages shown once, after the first login: manuals, search, nyel AI,
+/// Four pages shown once, after the first login: manuals, search, Nyel AI,
 /// and the Standar and Servis tabs. "Lewati" or "Mulai" goes to Home.
 class IntroScreen extends StatefulWidget {
   const IntroScreen({super.key});
@@ -75,7 +75,7 @@ class _IntroScreenState extends State<IntroScreen> {
                 ),
                 _Slide(
                   current: _page == 2,
-                  title: 'nyel AI, rekan diskusi teknis',
+                  title: 'Nyel AI, rekan diskusi teknis',
                   body: 'Uraikan gejala kerusakan, dapatkan arah pemeriksaan beserta halaman rujukannya.',
                   art: const _ChatArt(),
                 ),
@@ -477,7 +477,7 @@ class _SearchCardState extends State<_SearchCard> {
   }
 }
 
-/// A question and nyel AI's answer pointing at a manual page.
+/// A question and Nyel AI's answer pointing at a manual page.
 class _ChatArt extends StatelessWidget {
   const _ChatArt();
 

@@ -6,7 +6,7 @@
 ///
 /// - `downloads.dart`   download, pause, cancel, retry, delete manuals
 /// - `updates.dart`     the bell: new / updated / withdrawn manuals
-/// - `ai_index.dart`    search indexes fetched in the background for nyel AI
+/// - `ai_index.dart`    search indexes fetched in the background for Nyel AI
 /// - `spec_packs.dart`  per-unit spek.pdf for the Standar and Servis tabs
 ///
 /// They are `part` files, so they may use AppStore's private fields. Their
@@ -227,6 +227,7 @@ class AppStore extends ChangeNotifier {
         lastConvert = (kind: kind, from: from, to: to);
       }
       _aiAsked = json['ai_asked'] as int? ?? 0;
+      _learningAsked = json['ai_learning_asked'] as int? ?? 0;
     }
     if (_deviceId.isEmpty) _deviceId = DeviceInfo.newId();
     if (await _sessionFile.exists()) {
@@ -243,31 +244,42 @@ class AppStore extends ChangeNotifier {
     }
   }
 
-  /// Questions to nyel AI per day on this phone, to keep the AI bill small.
+  /// Questions to Nyel AI per day on this phone, to keep the AI bill small.
+  /// The normal mode and mode belajar each have this many.
   static const aiDailyLimit = 10;
 
   /// Admins have no daily limit.
   bool get aiOwner => session?.admin ?? false;
   String _aiDay = '';
   int _aiAsked = 0;
+  int _learningAsked = 0;
 
   static String _today() => DateTime.now().toIso8601String().substring(0, 10);
 
-  /// Questions left today, or null when there is no limit.
-  int? get aiQuestionsLeft {
+  /// Questions left today in the normal mode, or null when there is no limit.
+  int? get aiQuestionsLeft => _left(_aiAsked);
+
+  /// Questions left today in mode belajar, or null when there is no limit.
+  int? get learningQuestionsLeft => _left(_learningAsked);
+
+  int? _left(int asked) {
     if (aiOwner) return null;
-    final asked = _aiDay == _today() ? _aiAsked : 0;
-    return (aiDailyLimit - asked).clamp(0, aiDailyLimit);
+    return (aiDailyLimit - (_aiDay == _today() ? asked : 0)).clamp(0, aiDailyLimit);
   }
 
-  /// Counts one answered question against today's limit.
-  void countAiQuestion() {
+  /// Counts one answered question against today's limit of its mode.
+  void countAiQuestion({bool learning = false}) {
     final today = _today();
     if (_aiDay != today) {
       _aiDay = today;
       _aiAsked = 0;
+      _learningAsked = 0;
     }
-    _aiAsked++;
+    if (learning) {
+      _learningAsked++;
+    } else {
+      _aiAsked++;
+    }
     _scheduleSave();
     notifyListeners();
   }
@@ -443,7 +455,7 @@ class AppStore extends ChangeNotifier {
         .whenComplete(() => _renewing = null);
   }
 
-  /// Where the nyel AI conversation is kept between app starts.
+  /// Where the Nyel AI conversation is kept between app starts.
   String get chatHistoryPath => p.join(_root.path, 'chat.json');
 
   /// What the user did, sent for the admins' usage statistics.
@@ -590,6 +602,7 @@ class AppStore extends ChangeNotifier {
       'cetok_sites': {for (final e in cetokSites.entries) e.key: e.value.toJson()},
       if (_reportedApp.isNotEmpty) 'reported_app': _reportedApp,
       'ai_asked': _aiAsked,
+      'ai_learning_asked': _learningAsked,
       if (lastConvert case final c?) 'convert': {'kind': c.kind, 'from': c.from, 'to': c.to},
     };
     return jsonEncode(json);
@@ -797,7 +810,7 @@ class AppStore extends ChangeNotifier {
 
   /// Index files of every downloaded, searchable manual: {fileKey: path}.
   /// Whether a successful [refresh] fetches the search index of every manual
-  /// in the background, so nyel AI never waits for one. The app turns it on;
+  /// in the background, so Nyel AI never waits for one. The app turns it on;
   /// tests leave it off.
   bool autoFetchAiIndexes = false;
 
@@ -819,12 +832,12 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// A question waiting to be put in nyel AI's input box (from "Tanya nyel
+  /// A question waiting to be put in Nyel AI's input box (from "Tanya nyel
   /// AI" on a page); the chat takes it with [takeAiQuestion].
   String? get pendingAiQuestion => _pendingAiQuestion;
   String? _pendingAiQuestion;
 
-  /// Counts [askAi] calls, so the tab bar switches to nyel AI once per ask.
+  /// Counts [askAi] calls, so the tab bar switches to Nyel AI once per ask.
   int aiAsks = 0;
 
   void askAi(String question) {
@@ -833,7 +846,7 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Goes up whenever the nyel AI conversation is saved or cleared, so a
+  /// Goes up whenever the Nyel AI conversation is saved or cleared, so a
   /// chat screen showing an older copy reloads it.
   int chatRevision = 0;
 
@@ -851,7 +864,7 @@ class AppStore extends ChangeNotifier {
   bool _fetchingSpecs = false;
 
   /// Where the search index of a manual that is not downloaded is kept for
-  /// nyel AI; the version is in the name so an update fetches it afresh.
+  /// Nyel AI; the version is in the name so an update fetches it afresh.
   /// Pieces of a manual read online, kept so its pages open again at once
   /// (see [RemotePdf]).
   String pdfBlockDir(ManualFile f) =>

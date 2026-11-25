@@ -153,7 +153,7 @@ void main() {
     root.deleteSync(recursive: true);
   });
 
-  testWidgets('Servis lists each interval, and Tanya nyel AI fills the chat', (tester) async {
+  testWidgets('Servis lists each interval, and Tanya Nyel AI fills the chat', (tester) async {
     Pdfrx.pdfiumModulePath ??= File('build/native_assets/linux/libpdfium.so').absolute.path;
     Pdfrx.cacheDirectoryPath ??= Directory.systemTemp.createTempSync('pdfcache').path;
     late AppStore store;

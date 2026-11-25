@@ -1,6 +1,6 @@
-// nyel AI's work for the Quiz: choosing pages of a manual, writing questions
+// Nyel AI's work for the Quiz: choosing pages of a manual, writing questions
 // from one page, and checking them as a second pair of eyes (the curator).
-// The calls go to the models in MODEL in order, like nyel AI: DeepSeek
+// The calls go to the models in MODEL in order, like Nyel AI: DeepSeek
 // first, Groq when DeepSeek is busy. Every function takes the "ask"
 // function, so the tests run them without the network.
 

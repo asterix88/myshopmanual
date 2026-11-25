@@ -1,6 +1,8 @@
 part of '../chat_screen.dart';
 
 // One chat bubble: the answer text, its page pictures and the rating footer.
+// In mode belajar it also shows the tutor's question, a hint or the offer of
+// the full answer.
 
 class _Bubble extends StatelessWidget {
   const _Bubble({
@@ -9,10 +11,22 @@ class _Bubble extends StatelessWidget {
     this.popIn = false,
     this.highlight = '',
     this.current = false,
+    this.card,
+    this.userBubble,
     this.onRate,
+    this.onExplain,
+    this.onTryAgain,
   });
 
   final ChatEntry entry;
+
+  /// The answer card and the question bubble, which follow the chat's mode.
+  final Color? card;
+  final Color? userBubble;
+
+  /// The two answers to the offer of the full answer; null once answered.
+  final VoidCallback? onExplain;
+  final VoidCallback? onTryAgain;
 
   /// Rates the answer 👍 (true) or 👎 (false); null for questions and errors.
   final void Function(bool good)? onRate;
@@ -134,7 +148,7 @@ class _Bubble extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(left: 48, bottom: 12),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(14)),
+          decoration: BoxDecoration(color: userBubble ?? AppColors.navy, borderRadius: BorderRadius.circular(14)),
           // Selectable like the answers, so a question can be copied. The
           // usual navy highlight and handles vanish on the navy bubble.
           child: Theme(
@@ -182,45 +196,92 @@ class _Bubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(right: 24, bottom: 12),
       child: AppCard(
+        color: card,
         padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Manual pages first, like a photo sent with a message; the
-            // sources stay under the text.
-            for (final picture in entry.pictures) ...[_PagePicture(source: picture), const SizedBox(height: 12)],
-            SelectionArea(child: _answerText(withoutSourceNumbers(entry.text))),
-            if (entry.sources.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                'Sumber',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  for (final s in entry.sources)
-                    ActionChip(
-                      visualDensity: VisualDensity.compact,
-                      backgroundColor: AppColors.navySoft,
-                      side: BorderSide.none,
-                      avatar: AppIcon(docGlyph(s.file), size: 16),
-                      label: Text(
-                        '${s.unitName} · ${s.file.typeLabel} · hlm ${s.page}',
-                        style: TextStyle(fontSize: 12, color: AppColors.navy),
-                      ),
-                      onPressed: () => openViewer(context, s.file, page: s.page),
-                    ),
-                ],
-              ),
-            ],
-            if (!entry.failed) _AnswerFooter(entry: entry, onRate: onRate),
-          ],
-        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: _content(context)),
       ),
     );
+  }
+
+  /// What goes in the answer card, by the kind of entry.
+  List<Widget> _content(BuildContext context) {
+    switch (entry.kind) {
+      case EntryKind.opening:
+        return [_TutorQuestion(entry.text)];
+      case EntryKind.offer:
+        return [
+          Text(entry.text, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.navy)),
+          if (onExplain != null || onTryAgain != null) ...[
+            const SizedBox(height: 10),
+            _OfferActions(onExplain: onExplain, onTryAgain: onTryAgain),
+          ],
+        ];
+      case EntryKind.hint:
+        return [
+          Row(
+            children: [
+              AppIcon(AppGlyph.hint, size: 15, color: AppColors.muted),
+              const SizedBox(width: 6),
+              Text(
+                'Petunjuk',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ..._answer(context, entry.text),
+        ];
+      case EntryKind.message:
+        if (!entry.tutor || entry.failed) return [..._answer(context, entry.text), _footer];
+        final (:text, :question) = splitTutorQuestion(entry.text);
+        return [
+          ..._answer(context, text),
+          if (question != null) ...[const SizedBox(height: 10), _TutorQuestion(question)],
+          _footer,
+        ];
+      case EntryKind.learningOn:
+      case EntryKind.learningOff:
+        // Drawn as a divider by the chat, never as a bubble.
+        return const [];
+    }
+  }
+
+  Widget get _footer => entry.failed ? const SizedBox.shrink() : _AnswerFooter(entry: entry, onRate: onRate);
+
+  /// The answer's text with its page pictures above and its sources below.
+  List<Widget> _answer(BuildContext context, String text) {
+    return [
+      // Manual pages first, like a photo sent with a message; the sources
+      // stay under the text.
+      for (final picture in entry.pictures) ...[_PagePicture(source: picture), const SizedBox(height: 12)],
+      if (text.isNotEmpty) SelectionArea(child: _answerText(withoutSourceNumbers(text))),
+      if (entry.sources.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        Text(
+          'Sumber',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.muted),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final s in entry.sources)
+              ActionChip(
+                visualDensity: VisualDensity.compact,
+                backgroundColor: AppColors.navySoft,
+                side: BorderSide.none,
+                avatar: AppIcon(docGlyph(s.file), size: 16),
+                label: Text(
+                  '${s.unitName} · ${s.file.typeLabel} · hlm ${s.page}',
+                  style: TextStyle(fontSize: 12, color: AppColors.navy),
+                ),
+                onPressed: () => openViewer(context, s.file, page: s.page),
+              ),
+          ],
+        ),
+      ],
+    ];
   }
 }
 

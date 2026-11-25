@@ -154,7 +154,7 @@ class QuizApi {
 
   // ---- Admin ----
 
-  /// nyel AI writes draft questions from one manual page; [kind] is campur,
+  /// Nyel AI writes draft questions from one manual page; [kind] is campur,
   /// pg, bs or gambar. The curator checks them before they are saved.
   Future<GenerateResult> generate({
     required String section,
@@ -179,7 +179,7 @@ class QuizApi {
     return GenerateResult(data);
   }
 
-  /// "Buat draf kuis" step 1: nyel AI picks pages from the table of contents.
+  /// "Buat draf kuis" step 1: Nyel AI picks pages from the table of contents.
   Future<List<PlannedPage>> plan({
     required String unit,
     required String topic,

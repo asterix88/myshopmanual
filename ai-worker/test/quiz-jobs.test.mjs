@@ -1,5 +1,5 @@
 // "Buat draf kuis" and the curator (src/quiz-ai.ts, src/quiz-jobs.ts), with
-// a fake nyel AI instead of DeepSeek, on node:sqlite with the real migrations.
+// a fake Nyel AI instead of DeepSeek, on node:sqlite with the real migrations.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -34,7 +34,7 @@ function fresh() {
 const TABLE = "STANDARD VALUE TABLE\nMain relief pressure (power max) 37.3 MPa {380 kg/cm2}\nSwing relief 28.4 MPa {290 kg/cm2}\nTravel relief 37.3 MPa\nPilot pressure 3.2 MPa {33 kg/cm2} at engine high idle";
 const DRAWING = "CONTROL VALVE\n1. Boom spool\n2. Arm spool\n3. Main relief valve\n4. Safety-suction valve\n5. Pressure compensation valve\nA: To boom cylinder head";
 
-/// A fake nyel AI: writes the questions asked for, and the curator gives
+/// A fake Nyel AI: writes the questions asked for, and the curator gives
 /// every question 8 except ones whose prompt says "jelek" (2).
 function fakeAsk(calls = []) {
   return async (system, user) => {
@@ -187,7 +187,7 @@ test("a job stops when time is up and goes on in the next run", async () => {
   assert.equal(done.pages_done, 3);
 });
 
-test("a job where nyel AI never answers fails with a message", async () => {
+test("a job where Nyel AI never answers fails with a message", async () => {
   const db = fresh();
   const NOW = Date.UTC(2026, 10, 6, 2);
   await createJob(db, { section: "TRACK", unit: null, manual_id: "m", title: "M", topic: "semua", count: 5, mix: { pg: 100, bs: 0, gambar: 0 }, pages: [{ page: 1, kind: "teks", topic: "standar", text: TABLE }] }, "ADM", NOW);
@@ -241,11 +241,11 @@ test("a repeat of a question already made is spotted, other questions are not", 
   assert.equal(isRepeat(q("Swing relief 28.4 MPa.", ["Benar", "Salah"]), [{ prompt: "Main relief 37.3 MPa.", answer: "Benar" }]), false);
 });
 
-test("a second job on the same manual tells nyel AI what exists and drops repeats", async () => {
+test("a second job on the same manual tells Nyel AI what exists and drops repeats", async () => {
   const NOW = Date.UTC(2026, 10, 8, 2);
   const db = fresh();
   const users = [];
-  // A nyel AI that writes the same question every time.
+  // A Nyel AI that writes the same question every time.
   const ask = async (system, user) => {
     if (system.includes("senior heavy-equipment instructor")) {
       const list = JSON.parse(user.slice(user.indexOf("Questions:\n") + 11));
@@ -267,7 +267,7 @@ test("a second job on the same manual tells nyel AI what exists and drops repeat
   assert.equal((await db.all("SELECT id FROM question")).length, 1);
 });
 
-test("nyel AI writes a kartu without choices; its key points are kept", async () => {
+test("Nyel AI writes a kartu without choices; its key points are kept", async () => {
   let asked = "";
   const ask = async (_system, user) => {
     asked = user;

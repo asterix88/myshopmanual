@@ -19,7 +19,7 @@ class AppIcon extends StatelessWidget {
   final Color? color;
 
   /// The one highlighted part; orange when not given. Pass [color] to draw
-  /// the whole icon in one color (white on the orange nyel AI button).
+  /// the whole icon in one color (white on the orange Nyel AI button).
   final Color? accent;
 
   @override
@@ -140,7 +140,7 @@ enum AppGlyph {
 
   home([_P('M4 10.5L12 4l8 6.5V20h-5.5v-5.5h-5V20H4z')]),
   search([_C(10.5, 10.5, 6), _P('M15 15l5 5', width: 2)]),
-  // nyel AI: the hex nut of the MyManual logo inside a speech bubble.
+  // Nyel AI: the hex nut of the MyManual logo inside a speech bubble.
   nyel([
     _P('M4 6.5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-6l-4.5 4v-4H7a3 3 0 0 1-3-3z', width: 1.9),
     _P('M12 6.6l2.7 1.55v3.1L12 12.8l-2.7-1.55v-3.1z', width: 1.7),
@@ -175,6 +175,11 @@ enum AppGlyph {
     _C(4.8, 17.5, 1.3, fill: true),
   ]),
   bell([_P('M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2H4.5z'), _P('M10 20.5h4')]),
+  // Petunjuk (a hint) in mode belajar: a light bulb.
+  hint([
+    _P('M9 17.5h6M10 20.5h4'),
+    _P('M12 3.5a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2v.2h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3.5z', accent: true),
+  ]),
   trash([_P('M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v5.5M14 11v5.5')]),
   clock([_C(12, 12, 8.5), _P('M12 7.5V12l3 2')]),
   info([_C(12, 12, 8.5), _P('M12 11v5.5'), _C(12, 7.8, 1.1, fill: true)]),

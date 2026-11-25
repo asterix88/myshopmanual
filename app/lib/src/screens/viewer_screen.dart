@@ -5,7 +5,7 @@
 ///
 /// - `search.dart`     find in this manual, hit highlighting, search bar
 /// - `torque.dart`     yellow torque marks and their bar
-/// - `page_bar.dart`   page number box and the nyel AI button
+/// - `page_bar.dart`   page number box and the Nyel AI button
 /// - `bookmarks.dart`  the bookmarks sheet
 /// - `layout.dart`     page layout that keeps the reading position steady
 library;
@@ -451,9 +451,9 @@ class _ViewerScreenState extends State<ViewerScreen> {
                       params: _viewerParams,
                     ),
             ),
-            // On the left: the nyel AI button has the right corner.
+            // On the left: the Nyel AI button has the right corner.
             if (full)
-              // Full screen keeps only the nyel AI button.
+              // Full screen keeps only the Nyel AI button.
               const Positioned(left: 0, top: 0, child: SizedBox.shrink())
             else if (_searching && _matchCount > 0)
               Positioned(left: 16, bottom: 24, child: _matchPill())
@@ -474,7 +474,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
   }
 
   /// Full screen: a tap on the page hides the bars (also Android's status
-  /// and navigation bars), leaving only the pages and the nyel AI button;
+  /// and navigation bars), leaving only the pages and the Nyel AI button;
   /// another tap, or back, brings them back. Like Xodo.
   bool _fullScreen = false;
 
@@ -490,7 +490,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
     return false;
   }
 
-  /// Opens nyel AI over the viewer with the page shown now attached, so the
+  /// Opens Nyel AI over the viewer with the page shown now attached, so the
   /// mechanic can ask "terjemahkan halaman ini"; back returns here.
   Future<void> _askAi(ManualFile file) async {
     // The chat covers the viewer, which then draws nothing: the AI may draw

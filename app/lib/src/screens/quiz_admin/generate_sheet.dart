@@ -1,8 +1,8 @@
 part of '../quiz_admin_screen.dart';
 
-// 'Buat draf kuis': the sheet that asks nyel AI to write questions from a manual.
+// 'Buat draf kuis': the sheet that asks Nyel AI to write questions from a manual.
 
-/// From the viewer (admins): nyel AI drafts questions from this page. The
+/// From the viewer (admins): Nyel AI drafts questions from this page. The
 /// page text comes from the manual's search index on the phone.
 class QuizGenerateSheet extends StatefulWidget {
   const QuizGenerateSheet({super.key, required this.file, required this.page, this.client});
@@ -46,7 +46,7 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
       final text = found?.text.trim() ?? '';
       if (text.length < 80) throw Exception('Halaman ini hampir tanpa teks. Pilih halaman lain.');
       if (!mounted) return;
-      setState(() => _status = 'nyel AI menyusun soal…');
+      setState(() => _status = 'Nyel AI menyusun soal…');
       final result = await QuizApi(store, _client).generate(
         section: store.unitById(file.unitId)?.section ?? 'TRACK',
         unit: file.unitId,

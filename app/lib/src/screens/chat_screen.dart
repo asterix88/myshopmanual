@@ -1,16 +1,18 @@
-/// nyel AI chat. This file holds the chat page and its logic (sending a
-/// question, history, quota); the pieces it draws are part files under
-/// `chat/`:
+/// Nyel AI chat. This file holds the chat page and its logic (sending a
+/// question, history, quota, mode belajar); the pieces it draws are part
+/// files under `chat/`:
 ///
-/// - `intro.dart`      intro, attached page, questions left today
+/// - `intro.dart`      intro and the attached page
 /// - `bubble.dart`     one bubble: answer text, page pictures, rating
 /// - `input_bar.dart`  "working" indicators and the input bar
+/// - `learning.dart`   mode belajar: switch, colors, logo, tutor bubbles
 library;
 
 import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../ai.dart';
@@ -26,16 +28,18 @@ import 'viewer_screen.dart';
 part 'chat/bubble.dart';
 part 'chat/input_bar.dart';
 part 'chat/intro.dart';
+part 'chat/learning.dart';
 
-/// nyel AI: answers from the manuals downloaded on the phone, citing the
-/// pages it used. Needs internet; the search itself runs on the phone.
+/// Nyel AI: answers from the manuals, citing the pages it used. Needs
+/// internet; the search itself runs on the phone. In mode belajar it
+/// answers as a Socratic tutor (see [AiChat.learning]).
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key, this.client, this.file, this.page});
 
   /// For tests; the app uses a plain [http.Client].
   final http.Client? client;
 
-  /// The manual page open in the viewer when nyel AI was opened from it: the
+  /// The manual page open in the viewer when Nyel AI was opened from it: the
   /// next question is about that page. The chat then opens over the viewer,
   /// so going back returns to the page.
   final ManualFile? file;
@@ -125,51 +129,124 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _send([String? text]) async {
     final question = (text ?? _input.text).trim();
     if (question.isEmpty || _status != null) return;
-    if (StoreScope.read(context).aiQuestionsLeft == 0) return;
-    final chat = _chat;
+    if (_chat.questionsLeft == 0) return;
     final store = StoreScope.read(context);
     final file = _file;
     final page = _page;
     _input.clear();
+    setState(() => _file = null);
+    final entry = ChatEntry.user(
+      question,
+      page: file == null || page == null
+          ? null
+          : AiSource(id: 0, file: file, unitName: store.unitNameOf(file), page: page),
+    );
+    await _run(entry, (onStatus) => _chat.ask(question, file: file, page: page, onStatus: onStatus));
+  }
+
+  /// Petunjuk: a hint for the tutor's last question, with no bubble of the
+  /// mechanic's own.
+  Future<void> _hint() => _run(null, (onStatus) => _chat.hint(onStatus: onStatus));
+
+  /// "Ya, jelaskan" on the tutor's offer.
+  Future<void> _explain(ChatEntry offer) {
+    setState(() => offer.answered = true);
+    return _run(ChatEntry.user('Ya, jelaskan.'), (onStatus) => _chat.explain(onStatus: onStatus));
+  }
+
+  /// "Coba lagi" on the tutor's offer: the mechanic keeps thinking.
+  void _tryAgain(ChatEntry offer) {
+    setState(() => offer.answered = true);
+    _chat.resetProgress();
+    _save();
+  }
+
+  /// Shows [shown] (the mechanic's message, if any), waits for [request]
+  /// and shows its answer, then what follows from it: the offer of the full
+  /// answer, or the end of today's allowance.
+  Future<void> _run(ChatEntry? shown, Future<ChatEntry> Function(void Function(String) onStatus) request) async {
+    if (_status != null) return;
     setState(() {
-      _file = null;
-      final entry = ChatEntry.user(
-        question,
-        page: file == null || page == null
-            ? null
-            : AiSource(id: 0, file: file, unitName: store.unitNameOf(file), page: page),
-      );
-      _fresh.add(entry);
-      _entries.add(entry);
+      if (shown != null) _add(shown);
       _status = 'Memahami pertanyaan…';
     });
     _scrollToEnd();
     ChatEntry answer;
     try {
-      answer = await chat.ask(
-        question,
-        file: file,
-        page: page,
-        onStatus: (s) {
-          if (mounted) setState(() => _status = s);
-        },
-      );
+      answer = await request((s) {
+        if (mounted) setState(() => _status = s);
+      });
     } on AiException catch (e) {
       answer = ChatEntry.assistant(e.message, failed: true);
     } catch (e, stack) {
       // Never leave the chat stuck on its status line.
-      debugPrint('nyel AI failed: $e\n$stack');
+      debugPrint('Nyel AI failed: $e\n$stack');
       answer = ChatEntry.assistant('Terjadi kesalahan di aplikasi saat mencari jawaban. Coba lagi.', failed: true);
     }
     if (!mounted) return;
     setState(() {
-      _fresh.add(answer);
-      _entries.add(answer);
+      _add(answer);
       _status = null;
+      if (_chat.offerDue) {
+        _add(ChatEntry.offer());
+        _chat.resetProgress();
+      }
     });
+    if (_chat.questionsLeft == 0) _limitReached();
     _scrollToEnd();
+    await _save();
+  }
+
+  /// Today's allowance of the current mode is used up: a short notice, and
+  /// mode belajar goes back to the normal mode (which has its own).
+  void _limitReached() {
+    final learning = _chat.learning;
+    _showLimit(learning: learning);
+    if (learning) _setLearning(false);
+  }
+
+  void _showLimit({required bool learning}) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(learning ? AiChat.learningLimitMessage : AiChat.limitMessage)));
+  }
+
+  /// The switch of mode belajar. Turning it on starts with the tutor's
+  /// opening question; with today's learning allowance used up it only
+  /// shows the notice, and the input stays off.
+  void _setLearning(bool on) {
+    if (_status != null || on == _chat.learning) return;
+    _chat.setLearning(on);
+    final usedUp = on && _chat.questionsLeft == 0;
+    setState(() {
+      if (on && !usedUp) {
+        _add(ChatEntry.learning(on: true, at: DateTime.now()));
+        _add(ChatEntry.opening());
+      } else if (!on && _learningShown) {
+        _add(ChatEntry.learning(on: false, at: DateTime.now()));
+      }
+    });
+    if (usedUp) _showLimit(learning: true);
+    _scrollToEnd();
+    _save();
+  }
+
+  /// Whether the chat's last mode line says the tutor is on.
+  bool get _learningShown {
+    for (final e in _entries.reversed) {
+      if (e.isDivider) return e.kind == EntryKind.learningOn;
+    }
+    return false;
+  }
+
+  void _add(ChatEntry entry) {
+    _fresh.add(entry);
+    _entries.add(entry);
+  }
+
+  Future<void> _save() async {
     try {
-      await chat.save(_entries);
+      await _chat.save(_entries);
     } on Object catch (e) {
       debugPrint('saving the chat failed: $e');
     }
@@ -194,7 +271,7 @@ class _ChatScreenState extends State<ChatScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Jawaban ini dikirim ke admin untuk diperiksa dan dipakai memperbaiki nyel AI.'),
+                const Text('Jawaban ini dikirim ke admin untuk diperiksa dan dipakai memperbaiki Nyel AI.'),
                 const SizedBox(height: 12),
                 TextField(
                   controller: note,
@@ -240,10 +317,21 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _newChat() {
-    setState(_entries.clear);
+  /// Percakapan baru: forgets the conversation, the learning summary too. In
+  /// mode belajar the tutor starts again with its opening question.
+  Future<void> _newChat() async {
+    setState(() {
+      _entries.clear();
+      _fresh.clear();
+      if (_chat.learning && _chat.questionsLeft != 0) {
+        _entries
+          ..add(ChatEntry.learning(on: true, at: DateTime.now()))
+          ..add(ChatEntry.opening());
+      }
+    });
     _closeSearch();
-    _chat.clear();
+    await _chat.clear();
+    if (_entries.isNotEmpty) await _save();
   }
 
   String get _query => _searchInput.text.trim();
@@ -311,7 +399,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     if (store.pendingAiQuestion != null) {
-      // "Tanya nyel AI" on a page: put the question in the box to edit or send.
+      // "Tanya Nyel AI" on a page: put the question in the box to edit or send.
       final question = store.takeAiQuestion()!;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _input.value = TextEditingValue(
@@ -337,132 +425,191 @@ class _ChatScreenState extends State<ChatScreen> {
     final offline = store.online == false;
     final aboutPage = _file != null && _page != null;
     final hasManuals = store.catalog.files.isNotEmpty || store.local.isNotEmpty;
-    return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 64,
-        titleSpacing: 14,
-        shape: Border(bottom: BorderSide(color: AppColors.line)),
-        title: _searching
-            ? TextField(
-                controller: _searchInput,
-                autofocus: true,
-                textInputAction: TextInputAction.search,
-                onChanged: (_) => _findHits(),
-                style: const TextStyle(fontSize: 15),
-                decoration: const InputDecoration(
-                  hintText: 'Cari di obrolan…',
-                  border: InputBorder.none,
-                  isDense: true,
+    final learning = _chat.learning;
+    final usedUp = _chat.questionsLeft == 0;
+    final last = _entries.lastOrNull;
+    // Petunjuk is there after each tutor question, once.
+    final hintFor = learning &&
+        last != null &&
+        (last.kind == EntryKind.opening || last.kind == EntryKind.hint || (last.tutor && last.kind == EntryKind.message && !last.failed));
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: learning ? 1 : 0),
+      duration: const Duration(milliseconds: 350),
+      builder: (context, t, _) {
+        final colors = _ChatPalette.lerp(t);
+        return Scaffold(
+          backgroundColor: colors.background,
+          appBar: _appBar(colors, learning: learning),
+          body: Column(
+            children: [
+              Expanded(
+                child: _entries.isEmpty && aboutPage
+                    ? const _PageIntro()
+                    : _entries.isEmpty
+                    ? _Intro(examples: _examples, hasManuals: hasManuals, onExample: offline ? null : _send)
+                    // Every bubble is built (the chat keeps at most 60), so a
+                    // search hit far up can be scrolled to.
+                    // Reversed like WhatsApp: the view stays at the newest
+                    // message, so a new one grows in at the bottom and pushes the
+                    // rest up instead of appearing below the screen.
+                    : SingleChildScrollView(
+                        controller: _scroll,
+                        reverse: true,
+                        padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final (i, entry) in _entries.indexed) _entry(i, entry, colors),
+                            if (_status != null) _Working(status: _status!),
+                          ],
+                        ),
+                      ),
+              ),
+              if (store.aiIndexProgress case final p?) _Preparing(progress: p),
+              if (aboutPage)
+                _AttachedPage(
+                  file: _file!,
+                  page: _page,
+                  suggestions: _pageSuggestions,
+                  onSuggestion: offline || _status != null || usedUp ? null : _send,
+                  onRemove: () => setState(() => _file = null),
                 ),
-              )
-            : Row(
-                children: [
-                  Image.asset('assets/images/logo.png', width: 42, height: 42),
-                  const SizedBox(width: 10),
-                  Column(
+              if (hintFor)
+                Container(
+                  color: colors.surface,
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                  child: _HintButton(
+                    used: last.kind == EntryKind.hint,
+                    onPressed: offline || _status != null ? null : _hint,
+                  ),
+                ),
+              _InputBar(
+                controller: _input,
+                enabled: !offline && _status == null && !usedUp,
+                // Used up: the field stays as it is, only dimmed; the notice
+                // said why.
+                dimmed: usedUp,
+                background: colors.surface,
+                fill: colors.field,
+                hint: offline
+                    ? 'Butuh internet untuk bertanya'
+                    : learning
+                    ? 'Tulis jawabanmu…'
+                    : 'Tulis pertanyaan…',
+                onSend: _send,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  PreferredSizeWidget _appBar(_ChatPalette colors, {required bool learning}) {
+    return AppBar(
+      toolbarHeight: 64,
+      titleSpacing: 14,
+      backgroundColor: colors.bar,
+      foregroundColor: colors.barIcon,
+      iconTheme: IconThemeData(color: colors.barIcon),
+      systemOverlayStyle: SystemUiOverlayStyle(
+        statusBarColor: colors.bar,
+        statusBarIconBrightness: learning || AppColors.dark ? Brightness.light : Brightness.dark,
+      ),
+      shape: Border(bottom: BorderSide(color: learning ? colors.bar : AppColors.line)),
+      title: _searching
+          ? TextField(
+              controller: _searchInput,
+              autofocus: true,
+              textInputAction: TextInputAction.search,
+              onChanged: (_) => _findHits(),
+              style: TextStyle(fontSize: 15, color: colors.title),
+              decoration: InputDecoration(
+                hintText: 'Cari di obrolan…',
+                hintStyle: TextStyle(color: colors.subtitle),
+                border: InputBorder.none,
+                isDense: true,
+              ),
+            )
+          : Row(
+              children: [
+                _SpinningLogo(learning: learning),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'nyel AI',
-                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.navy),
+                        'Nyel AI',
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: colors.title),
                       ),
                       Text(
-                        'Teman diskusi masalah teknismu :)',
-                        style: TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
+                        learning ? 'Mode belajar' : 'Teman diskusi masalah teknismu :)',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 11, color: colors.subtitle, fontWeight: FontWeight.w400),
                       ),
                     ],
                   ),
-                ],
-              ),
-        actions: [
-          if (_searching) ...[
-            if (_query.isNotEmpty)
-              Center(
-                child: Text(
-                  _hits.isEmpty ? '0' : '${_hits.length - _hit}/${_hits.length}',
-                  style: TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
+              ],
+            ),
+      actions: [
+        if (_searching) ...[
+          if (_query.isNotEmpty)
+            Center(
+              child: Text(
+                _hits.isEmpty ? '0' : '${_hits.length - _hit}/${_hits.length}',
+                style: TextStyle(fontSize: 13, color: colors.subtitle),
               ),
-            IconButton(
-              tooltip: 'Lebih lama',
-              onPressed: _hits.isNotEmpty && _hit > 0 ? () => _moveHit(-1) : null,
-              icon: const Icon(Icons.keyboard_arrow_up),
             ),
-            IconButton(
-              tooltip: 'Lebih baru',
-              onPressed: _hits.isNotEmpty && _hit < _hits.length - 1 ? () => _moveHit(1) : null,
-              icon: const Icon(Icons.keyboard_arrow_down),
-            ),
-            IconButton(tooltip: 'Tutup pencarian', onPressed: _closeSearch, icon: const Icon(Icons.close)),
-          ] else if (_entries.isNotEmpty) ...[
-            IconButton(
-              tooltip: 'Cari di obrolan',
-              onPressed: () => setState(() => _searching = true),
-              icon: const Icon(Icons.search),
-            ),
-            IconButton(
-              tooltip: 'Percakapan baru',
-              onPressed: _status == null ? _newChat : null,
-              icon: const Icon(Icons.add_comment_outlined),
-            ),
-          ],
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _entries.isEmpty && aboutPage
-                ? const _PageIntro()
-                : _entries.isEmpty
-                ? _Intro(examples: _examples, hasManuals: hasManuals, onExample: offline ? null : _send)
-                // Every bubble is built (the chat keeps at most 60), so a
-                // search hit far up can be scrolled to.
-                // Reversed like WhatsApp: the view stays at the newest
-                // message, so a new one grows in at the bottom and pushes the
-                // rest up instead of appearing below the screen.
-                : SingleChildScrollView(
-                    controller: _scroll,
-                    reverse: true,
-                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (final (i, entry) in _entries.indexed)
-                          _Bubble(
-                            key: _bubbleKey(i),
-                            entry: entry,
-                            popIn: _fresh.contains(entry),
-                            highlight: _searching ? _query : '',
-                            current: _searching && _hits.isNotEmpty && _hits[_hit] == i,
-                            onRate: entry.fromUser || entry.failed || _status != null ? null : (good) => _rate(i, good: good),
-                          ),
-                        if (_status != null) _Working(status: _status!),
-                      ],
-                    ),
-                  ),
+          IconButton(
+            tooltip: 'Lebih lama',
+            onPressed: _hits.isNotEmpty && _hit > 0 ? () => _moveHit(-1) : null,
+            icon: const Icon(Icons.keyboard_arrow_up),
           ),
-          if (store.aiIndexProgress case final p?) _Preparing(progress: p),
-          if (store.aiQuestionsLeft case final left?) _QuestionsLeft(left: left),
-          if (aboutPage)
-            _AttachedPage(
-              file: _file!,
-              page: _page,
-              suggestions: _pageSuggestions,
-              onSuggestion: offline || _status != null || store.aiQuestionsLeft == 0 ? null : _send,
-              onRemove: () => setState(() => _file = null),
-            ),
-          _InputBar(
-            controller: _input,
-            enabled: !offline && _status == null && store.aiQuestionsLeft != 0,
-            hint: offline
-                ? 'Butuh internet untuk bertanya'
-                : store.aiQuestionsLeft == 0
-                ? 'Jatah hari ini habis, coba lagi besok'
-                : 'Tulis pertanyaan…',
-            onSend: _send,
+          IconButton(
+            tooltip: 'Lebih baru',
+            onPressed: _hits.isNotEmpty && _hit < _hits.length - 1 ? () => _moveHit(1) : null,
+            icon: const Icon(Icons.keyboard_arrow_down),
+          ),
+          IconButton(tooltip: 'Tutup pencarian', onPressed: _closeSearch, icon: const Icon(Icons.close)),
+        ] else ...[
+          _LearningSwitch(value: learning, onChanged: _status == null ? _setLearning : null),
+          // Search and Percakapan baru sit in a menu, so the subtitle has room.
+          PopupMenuButton<String>(
+            tooltip: 'Lainnya',
+            enabled: _entries.isNotEmpty,
+            icon: Icon(Icons.more_vert, color: colors.barIcon),
+            onSelected: (value) => switch (value) {
+              'search' => setState(() => _searching = true),
+              _ => _status == null ? _newChat() : null,
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'search', child: Text('Cari di obrolan')),
+              PopupMenuItem(value: 'new', child: Text('Percakapan baru')),
+            ],
           ),
         ],
-      ),
+      ],
+    );
+  }
+
+  Widget _entry(int i, ChatEntry entry, _ChatPalette colors) {
+    if (entry.isDivider) return _LearningDivider(key: _bubbleKey(i), entry: entry);
+    return _Bubble(
+      key: _bubbleKey(i),
+      entry: entry,
+      popIn: _fresh.contains(entry),
+      highlight: _searching ? _query : '',
+      current: _searching && _hits.isNotEmpty && _hits[_hit] == i,
+      card: colors.surface,
+      userBubble: colors.userBubble,
+      onRate: entry.fromUser || entry.failed || entry.kind != EntryKind.message || _status != null
+          ? null
+          : (good) => _rate(i, good: good),
+      onExplain: entry.kind == EntryKind.offer && !entry.answered && _status == null ? () => _explain(entry) : null,
+      onTryAgain: entry.kind == EntryKind.offer && !entry.answered && _status == null ? () => _tryAgain(entry) : null,
     );
   }
 }

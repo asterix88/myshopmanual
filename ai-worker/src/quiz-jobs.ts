@@ -1,12 +1,12 @@
-// "Buat draf kuis": nyel AI makes drafts from a whole manual in the
+// "Buat draf kuis": Nyel AI makes drafts from a whole manual in the
 // background, so the admin can close the app.
 //
-// 1. The admin's phone sends the manual's table of contents; nyel AI picks
+// 1. The admin's phone sends the manual's table of contents; Nyel AI picks
 //    pages (planPages, answered at once).
 // 2. The phone reads those pages' text from its search index and sends them;
 //    a job is saved (createJob).
 // 3. Every minute Cloudflare runs runJobs (cron in wrangler.toml): page by
-//    page nyel AI writes questions, the curator checks them, the server
+//    page Nyel AI writes questions, the curator checks them, the server
 //    checks the numbers, and the drafts are saved with their score. It stops
 //    when enough questions are kept or the pages run out.
 // 4. The admin approves in Kelola soal quiz > Draf.
@@ -242,7 +242,7 @@ async function runOne(db: Db, ask: Ask, job: Record<string, unknown>, deadline: 
     ]);
   }
   if (failures && failures === pages.length && !(await db.first("SELECT 1 FROM question WHERE job_id = ? LIMIT 1", id))) {
-    await db.run("UPDATE quiz_job SET error = ? WHERE id = ?", "nyel AI tidak menjawab. Coba lagi nanti.", id);
+    await db.run("UPDATE quiz_job SET error = ? WHERE id = ?", "Nyel AI tidak menjawab. Coba lagi nanti.", id);
     return "gagal";
   }
   return "selesai";
