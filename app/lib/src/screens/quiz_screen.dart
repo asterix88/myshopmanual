@@ -6,6 +6,7 @@
 /// - `summary_screen.dart`  score after a quiz
 /// - `review_screen.dart`   looking back at the answers
 /// - `picture.dart`         a question's picture and its zoom
+/// - preview_screen.dart    an admin's preview of one question.
 library;
 
 import 'dart:async';
@@ -27,6 +28,7 @@ import 'viewer_screen.dart';
 part 'quiz/card_widgets.dart';
 part 'quiz/picture.dart';
 part 'quiz/play_widgets.dart';
+part 'quiz/preview_screen.dart';
 part 'quiz/review_screen.dart';
 part 'quiz/summary_screen.dart';
 

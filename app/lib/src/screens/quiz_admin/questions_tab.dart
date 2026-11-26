@@ -181,6 +181,11 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
     await _decide(q, edit.remove('_publish') == true ? 'setujui' : 'ubah', edit: edit);
   }
 
+  /// The eye button: the question as a mechanic sees it. Nothing is sent.
+  Future<void> _preview(AdminQuestion q) => Navigator.of(context).push<void>(
+        MaterialPageRoute(builder: (_) => QuizPreviewScreen(question: q.question, api: widget.api)),
+      );
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -252,6 +257,7 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
                   'ubah' => _edit(q),
                   'gambar' => _crop(q),
                   'hapus_gambar' => _removePicture(q),
+                  'preview' => _preview(q),
                   _ => _decide(q, action),
                 },
               ),
@@ -405,6 +411,69 @@ class _KeyPoints extends StatelessWidget {
       );
 }
 
+/// The small outlined eye in a question card's corner: opens the preview.
+/// 24 px tall to match the unit pill; the padding makes the tap area 40 px.
+class _PreviewEyeButton extends StatelessWidget {
+  const _PreviewEyeButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: 'Preview soal',
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            child: Container(
+              height: 24,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.navy),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.visibility_outlined, size: 15, color: AppColors.navy),
+            ),
+          ),
+        ),
+      );
+}
+
+/// One piece of small information under a card's header: an icon or a dot,
+/// then a short text (type, curator score, Nyel AI).
+class _CardMeta extends StatelessWidget {
+  const _CardMeta({required this.leading, required this.label});
+
+  final Widget leading;
+  final String label;
+
+  /// A coloured dot as wide as an icon, for the curator score.
+  static Widget dot(Color color) => SizedBox(
+        width: 15,
+        child: Center(
+          child: Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          leading,
+          const SizedBox(width: 5),
+          Text(label, style: TextStyle(fontSize: 12, color: AppColors.muted)),
+        ],
+      );
+}
+
+/// The small icon of a question's type.
+IconData _typeIconFor(QuizQuestion q) => q.isCard
+    ? Icons.style_outlined
+    : q.type == 'bs'
+        ? Icons.toggle_on_outlined
+        : Icons.checklist;
+
 class _QuestionCard extends StatelessWidget {
   const _QuestionCard({required this.item, required this.api, required this.onAction});
 
@@ -429,21 +498,41 @@ class _QuestionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Row 1 never wraps: unit, topic (cut with ...), and the eye button.
+          Row(
+            children: [
+              if (q.unit != null) ...[
+                Pill(q.unit!, background: AppColors.navySoft, foreground: AppColors.navy),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Text(
+                  '${q.topicName} · ${item.section}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+              ),
+              _PreviewEyeButton(onPressed: () => onAction('preview')),
+            ],
+          ),
+          // Row 2: small information, no pill backgrounds.
           Wrap(
-            spacing: 8,
+            spacing: 14,
             runSpacing: 4,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              if (q.unit != null) Pill(q.unit!, background: AppColors.navySoft, foreground: AppColors.navy),
-              Text('${q.topicName} · ${item.section}', style: TextStyle(fontSize: 12, color: AppColors.muted)),
-              Pill(quizTypes[q.type] ?? q.type, background: AppColors.greySoft, foreground: AppColors.inkSoft),
+              _CardMeta(
+                leading: Icon(_typeIconFor(q), size: 15, color: AppColors.muted),
+                label: quizTypes[q.type] ?? q.type,
+              ),
               if (item.curatorScore case final score?)
-                Pill(
-                  'Kurator $score/10',
-                  background: score >= 7 ? AppColors.greenSoft : AppColors.amberSoft,
-                  foreground: score >= 7 ? AppColors.green : AppColors.amber,
+                _CardMeta(
+                  leading: _CardMeta.dot(score >= 7 ? AppColors.green : AppColors.amber),
+                  label: 'Kurator $score/10',
                 ),
-              if (item.source == 'ai') Pill('Nyel AI', background: AppColors.orangeSoft, foreground: AppColors.orangeText),
+              if (item.source == 'ai')
+                _CardMeta(leading: AppIcon(AppGlyph.nyel, size: 15, color: AppColors.navy), label: 'Nyel AI'),
             ],
           ),
           const SizedBox(height: 8),
