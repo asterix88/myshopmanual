@@ -276,7 +276,7 @@ class _QuizJobScreenState extends State<QuizJobScreen> {
           children: [
             for (final (label, mix) in _mixes)
               ListTile(
-                title: Text(label, style: const TextStyle(fontSize: 14)),
+                title: Text(label, style: const TextStyle(fontSize: 13)),
                 trailing: mix.pg == _mix.pg && mix.bs == _mix.bs ? Icon(Icons.check, color: AppColors.navy) : null,
                 onTap: () => Navigator.pop(context, mix),
               ),

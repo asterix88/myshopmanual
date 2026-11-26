@@ -129,7 +129,7 @@ class _UnitScreenState extends State<UnitScreen> {
                             onPressed: () => setState(_filter.clear),
                           ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
                   ),
@@ -449,7 +449,7 @@ class _FileCard extends StatelessWidget {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Tidak')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.navy),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.navyFill),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Ya'),
           ),
@@ -531,7 +531,7 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: AppColors.navyFill, borderRadius: BorderRadius.circular(16)),
       padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
       child: Row(
         children: [
@@ -676,9 +676,9 @@ class _WaitingCard extends StatelessWidget {
               const SizedBox(height: 18),
               FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.navy,
+                  backgroundColor: AppColors.navyFill,
                   minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('Mengerti'),

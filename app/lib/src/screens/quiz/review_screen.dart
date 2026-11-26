@@ -43,7 +43,7 @@ class _QuizReviewScreenState extends State<QuizReviewScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(q.prompt, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                                Text(q.prompt, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                                 const SizedBox(height: 2),
                                 Text(
                                   [?q.unit, widget.first[q.id] == false ? 'Diulang besok' : q.topicName].join(' · '),

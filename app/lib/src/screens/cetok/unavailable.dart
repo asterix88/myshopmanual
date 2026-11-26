@@ -19,7 +19,7 @@ class CetokUnavailableScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-          backgroundColor: AppColors.navy,
+          backgroundColor: AppColors.navyFill,
           foregroundColor: Colors.white,
           systemOverlayStyle: SystemUiOverlayStyle.light,
           title: const Text('Cetok Online', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),

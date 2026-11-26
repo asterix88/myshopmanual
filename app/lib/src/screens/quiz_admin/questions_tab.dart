@@ -339,7 +339,7 @@ class _BulkCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-      decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: AppColors.navyFill, borderRadius: BorderRadius.circular(16)),
       child: Row(
         children: [
           Expanded(

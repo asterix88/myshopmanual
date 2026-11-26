@@ -265,7 +265,7 @@ class _RatingBar extends StatelessWidget {
                       padding: EdgeInsets.zero,
                       foregroundColor: i == 0 ? AppColors.danger : AppColors.ink,
                       side: BorderSide(color: AppColors.border),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                   ),

@@ -326,7 +326,7 @@ class _Header extends StatelessWidget {
                     child: InkWell(
                       key: const Key('home-brand'),
                       onTap: section == null ? null : onPickSection,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       highlightColor: Colors.white.withValues(alpha: .10),
                       splashColor: Colors.white.withValues(alpha: .14),
                       child: Padding(
@@ -403,24 +403,24 @@ class _Header extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Material(
-            color: Colors.white,
+            color: AppColors.dark ? const Color(0x1AFFFFFF) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             child: InkWell(
               key: const Key('home-search'),
               borderRadius: BorderRadius.circular(12),
               onTap: onSearch,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
                 child: Row(
                   children: [
-                    AppIcon(AppGlyph.search, size: 20, color: Color(0xFF6B7178)),
-                    SizedBox(width: 10),
+                    AppIcon(AppGlyph.search, size: 20, color: AppColors.dark ? AppColors.headerMuted : const Color(0xFF6B7178)),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         'Cari manual, part number, kode error',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 13, color: Color(0xFF6B7178)),
+                        style: TextStyle(fontSize: 13, color: AppColors.dark ? AppColors.headerMuted : const Color(0xFF6B7178)),
                       ),
                     ),
                   ],
@@ -568,7 +568,7 @@ class _ContinueReading extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 20),
       child: Material(
         color: AppColors.header,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => openViewer(context, file, page: lastRead.page),

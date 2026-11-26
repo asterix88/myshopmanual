@@ -99,7 +99,7 @@ extension _ViewerTorque on _ViewerScreenState {
           height: 38,
           padding: const EdgeInsets.symmetric(horizontal: 14),
           alignment: Alignment.center,
-          decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(19)),
+          decoration: BoxDecoration(color: AppColors.navyFill, borderRadius: BorderRadius.circular(19)),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

@@ -99,12 +99,12 @@ class FormCta extends StatelessWidget {
           height: 52,
           decoration: BoxDecoration(
             color: ready ? color : AppColors.greySoft,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Material(
             type: MaterialType.transparency,
             child: InkWell(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               onTap: enabled ? onPressed : null,
               child: Center(
                 child: AnimatedSwitcher(
@@ -183,7 +183,7 @@ Future<bool> confirmSheet(
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () => Navigator.pop(sheet, false),
                     child: const Text('Batal'),
@@ -196,7 +196,7 @@ Future<bool> confirmSheet(
                       backgroundColor: color,
                       foregroundColor: Colors.white,
                       minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () => Navigator.pop(sheet, true),
                     child: Text(yes),
@@ -460,7 +460,7 @@ class _PickedPart extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
-      decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: AppColors.navySoft, borderRadius: BorderRadius.circular(16)),
       child: Row(
         children: [
           Expanded(

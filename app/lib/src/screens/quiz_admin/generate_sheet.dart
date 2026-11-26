@@ -150,7 +150,7 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
             const SizedBox(height: 14),
             Row(
               children: [
-                Text('Jumlah', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: AppColors.inkSoft)),
+                Text('Jumlah', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.inkSoft)),
                 const Spacer(),
                 _CountPicker(
                   counts: const [1, 3, 5],
@@ -243,7 +243,7 @@ class _SheetLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Text(text, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: AppColors.inkSoft)),
+        child: Text(text, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.inkSoft)),
       );
 }
 

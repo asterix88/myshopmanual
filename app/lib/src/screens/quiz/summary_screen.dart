@@ -48,7 +48,7 @@ class QuizSummaryScreen extends StatelessWidget {
                 Text.rich(
                   TextSpan(children: [
                     TextSpan(text: '$right', style: TextStyle(fontSize: 44, fontWeight: FontWeight.w700, color: AppColors.navy)),
-                    TextSpan(text: '/$total', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.muted)),
+                    TextSpan(text: '/$total', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.muted)),
                   ]),
                 ),
                 Text(minutes < 2 ? 'sekitar 1 menit' : '$minutes menit', style: TextStyle(fontSize: 12, color: AppColors.muted)),
@@ -127,7 +127,7 @@ class QuizSummaryScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Lihat ${questions.length} soal', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                      Text('Lihat ${questions.length} soal', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
@@ -162,7 +162,7 @@ class _Stat extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         child: Column(
           children: [
-            Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.navy)),
+            Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.navy)),
             Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.muted)),
           ],
         ),

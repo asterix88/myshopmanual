@@ -95,7 +95,7 @@ Future<void> showPartSheet(
                 minimumSize: const Size.fromHeight(48),
                 foregroundColor: AppColors.navy,
                 side: BorderSide(color: AppColors.navy, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
               onPressed: () {
@@ -155,7 +155,7 @@ class _BigButton extends StatelessWidget {
         disabledBackgroundColor: AppColors.greySoft,
         disabledForegroundColor: AppColors.muted,
         minimumSize: const Size.fromHeight(48),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
       onPressed: onPressed,

@@ -177,13 +177,13 @@ class _SearchScreenState extends State<SearchScreen> with WidgetsBindingObserver
                             visualDensity: VisualDensity.compact,
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             labelPadding: const EdgeInsets.symmetric(horizontal: 4),
-                            selectedColor: AppColors.navy,
+                            selectedColor: AppColors.navyFill,
                             labelStyle: TextStyle(
                               fontSize: 12,
                               color: _type == type ? Colors.white : AppColors.inkSoft,
                               fontWeight: _type == type ? FontWeight.w600 : FontWeight.w400,
                             ),
-                            side: BorderSide(color: _type == type ? AppColors.navy : AppColors.border),
+                            side: BorderSide(color: _type == type ? AppColors.navyFill : AppColors.border),
                             shape: const StadiumBorder(),
                             onSelected: (_) {
                               setState(() => _type = type);

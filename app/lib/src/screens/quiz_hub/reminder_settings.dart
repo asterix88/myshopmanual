@@ -216,7 +216,7 @@ class _SwitchRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
                 subtitle,
               ],

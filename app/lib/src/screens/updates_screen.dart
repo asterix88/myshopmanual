@@ -47,12 +47,12 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Update manual', style: TextStyle(color: AppColors.navy, fontWeight: FontWeight.w700)),
+            const Text('Update manual'),
             Text(
               store.online == true && checked != null
                   ? 'Dicek dari server · ${_time(checked)}'
                   : 'Belum tersambung ke server',
-              style: TextStyle(fontSize: 11, color: AppColors.muted, fontWeight: FontWeight.w400),
+              style: TextStyle(fontSize: 12, color: AppColors.muted, fontWeight: FontWeight.w400),
             ),
           ],
         ),
@@ -213,7 +213,7 @@ class _UpdateCard extends StatelessWidget {
       final isUpdate = update.kind == UpdateKind.newVersion;
       action = isUpdate
           ? FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: AppColors.navy, minimumSize: const Size.fromHeight(40)),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.navyFill, minimumSize: const Size.fromHeight(40)),
               onPressed: () => _download(context, store),
               child: const Text('Perbarui'),
             )

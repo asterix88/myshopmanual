@@ -35,7 +35,7 @@ class _ChatPalette {
           background: AppColors.background,
           surface: AppColors.surface,
           field: AppColors.field,
-          userBubble: AppColors.navy,
+          userBubble: AppColors.navyFill,
         );
 
   /// [t] 0 is the normal mode, 1 is mode belajar.

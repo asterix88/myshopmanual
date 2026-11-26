@@ -91,7 +91,7 @@ class _QuizUnitsScreenState extends State<QuizUnitsScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(store.unitById(u.unit)?.name ?? u.unit,
-                                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                                           const SizedBox(height: 4),
                                           ClipRRect(
                                             borderRadius: BorderRadius.circular(3),

@@ -230,7 +230,7 @@ class _Segments extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: const Color(0x1AFFFFFF), borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: const Color(0x1AFFFFFF), borderRadius: BorderRadius.circular(16)),
       child: LayoutBuilder(
         builder: (context, box) {
           final w = (box.maxWidth - _gap * (_items.length - 1)) / _items.length;

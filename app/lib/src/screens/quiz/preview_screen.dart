@@ -136,7 +136,7 @@ class _QuizPreviewScreenState extends State<QuizPreviewScreen> {
         ConstrainedBox(
           constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .22),
           child: SingleChildScrollView(
-            child: Text(q.explain, style: TextStyle(fontSize: 14, height: 1.5, color: AppColors.inkSoft)),
+            child: Text(q.explain, style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.inkSoft)),
           ),
         ),
         const SizedBox(height: 6),

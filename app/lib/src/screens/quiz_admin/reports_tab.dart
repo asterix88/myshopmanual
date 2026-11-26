@@ -55,7 +55,7 @@ class _ReportsTabState extends State<_ReportsTab> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(r.prompt, maxLines: 2, overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 2),
                           Text('${r.note.isEmpty ? 'Tanpa catatan' : r.note} · ${r.name}',
                               style: TextStyle(fontSize: 12, color: AppColors.muted)),

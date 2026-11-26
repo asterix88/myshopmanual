@@ -157,7 +157,7 @@ class _PartsbookSearchScreenState extends State<PartsbookSearchScreen> {
                   Container(
                     margin: const EdgeInsets.only(left: 8),
                     padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
-                    decoration: BoxDecoration(color: const Color(0x1AFFFFFF), borderRadius: BorderRadius.circular(14)),
+                    decoration: BoxDecoration(color: const Color(0x1AFFFFFF), borderRadius: BorderRadius.circular(16)),
                     child: Row(
                       children: [
                         Expanded(
