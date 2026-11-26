@@ -317,7 +317,7 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
     final store = StoreScope.read(context);
     if (store.fileByKey(q.manualId) == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Manual ${q.manualId} tidak ada di daftar manual HP ini.')),
+        SnackBar(content: Text('Manual ${q.manualId} tidak ada di HP ini')),
       );
       return;
     }

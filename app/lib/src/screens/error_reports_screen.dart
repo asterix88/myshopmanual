@@ -95,7 +95,7 @@ class _ErrorReportsScreenState extends State<ErrorReportsScreen> {
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (context, i) => i == 0
                         ? Text(
-                            'Dikirim otomatis oleh aplikasi, 90 hari terakhir. Ketuk untuk melihat detail.',
+                            'Otomatis dikirim oleh aplikasi',
                             style: TextStyle(fontSize: 12, color: AppColors.muted),
                           )
                         : _GroupCard(group: groups[i - 1]),

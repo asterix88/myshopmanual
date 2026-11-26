@@ -63,20 +63,20 @@ class _IntroScreenState extends State<IntroScreen> {
                   title: 'Semua manual, satu genggaman',
                   body:
                       'Shop Manual, OMM, dan Partsbook tersusun per unit. '
-                      'Baca online atau unduh, akses kapan pun tanpa sinyal.',
+                      'Baca online atau unduh, akses kapan pun tanpa sinyal',
                   picture: 'assets/units/pc2000.png',
                   art: const _ManualsCard(),
                 ),
                 _Slide(
                   current: _page == 1,
                   title: 'Temukan dalam hitungan detik',
-                  body: 'Cari part number, kode error, atau istilah teknis di seluruh manual sekaligus.',
+                  body: 'Cari part number, kode error, atau istilah teknis di seluruh manual sekaligus',
                   art: _SearchCard(play: _page == 1),
                 ),
                 _Slide(
                   current: _page == 2,
                   title: 'Nyel AI, rekan diskusi teknis',
-                  body: 'Uraikan gejala kerusakan, dapatkan arah pemeriksaan beserta halaman rujukannya.',
+                  body: 'Uraikan gejala kerusakan, dapatkan arah pemeriksaan beserta halaman rujukannya',
                   art: const _ChatArt(),
                 ),
                 _Slide(
@@ -84,7 +84,7 @@ class _IntroScreenState extends State<IntroScreen> {
                   title: 'Nilai standar tanpa membuka ribuan halaman',
                   body:
                       'Torsi baut, kapasitas oli, nilai standar, dan servis per HM, '
-                      'tersusun per unit dan siap dibuka offline.',
+                      'tersusun per unit dan siap dibuka offline',
                   picture: 'assets/units/d375.png',
                   art: const _TorqueCard(),
                 ),

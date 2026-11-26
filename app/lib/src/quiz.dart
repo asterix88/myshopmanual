@@ -35,7 +35,7 @@ class QuizApi {
 
   Future<Map<String, dynamic>> _call(String path, [Map<String, dynamic>? body, bool renewed = false]) async {
     final session = store.session;
-    if (session == null) throw AuthException('login', 'Silakan masuk lagi.');
+    if (session == null) throw AuthException('login', 'Sesi berakhir. Silakan login kembali');
     final http.Response response;
     try {
       final headers = {'content-type': 'application/json', sessionHeader: session.token};
@@ -241,7 +241,7 @@ class QuizApi {
   /// puts it in place of "[X]" in the question.
   Future<void> uploadImage(String id, Uint8List png, {String? letter}) async {
     final session = store.session;
-    if (session == null) throw AuthException('login', 'Silakan masuk lagi.');
+    if (session == null) throw AuthException('login', 'Sesi berakhir. Silakan login kembali');
     final http.Response response;
     try {
       response = await client
@@ -264,7 +264,7 @@ class QuizApi {
   /// "Hapus gambar": takes the picture off a pg/bs question.
   Future<void> removeImage(String id) async {
     final session = store.session;
-    if (session == null) throw AuthException('login', 'Silakan masuk lagi.');
+    if (session == null) throw AuthException('login', 'Sesi berakhir. Silakan login kembali');
     final http.Response response;
     try {
       response = await client
@@ -285,7 +285,7 @@ class QuizApi {
   /// so the editor opens on it next time.
   Future<void> saveImageEdit(String id, Map<String, dynamic> edit) async {
     final session = store.session;
-    if (session == null) throw AuthException('login', 'Silakan masuk lagi.');
+    if (session == null) throw AuthException('login', 'Sesi berakhir. Silakan login kembali');
     final http.Response response;
     try {
       response = await client
@@ -321,7 +321,7 @@ class QuizApi {
     final known = _images[questionId];
     if (known != null) return known;
     final session = store.session;
-    if (session == null) throw AuthException('login', 'Silakan masuk lagi.');
+    if (session == null) throw AuthException('login', 'Sesi berakhir. Silakan login kembali');
     final http.Response response;
     try {
       response = await client
