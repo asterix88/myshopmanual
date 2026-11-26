@@ -53,7 +53,7 @@ class _Preparing extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            'Jawaban sementara dari manual yang sudah terindeks.',
+            'Jawaban sementara dari manual yang sudah terindeks',
             style: TextStyle(fontSize: 11, color: AppColors.muted),
           ),
           const SizedBox(height: 6),

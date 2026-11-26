@@ -167,7 +167,7 @@ class _ErrorView extends StatelessWidget {
     final (title, message) = switch (code) {
       'done' => ('Quiz harian sudah selesai', 'Coba Quiz per unit'),
       'empty' => ('Belum ada soal', 'Soal untuk ${unit ?? 'section-mu'} sedang disiapkan'),
-      'network' => ('Gagal memuat soal', 'Periksa koneksi internet.'),
+      'network' => ('Gagal memuat soal', 'Periksa koneksi internet'),
       _ => ('Gagal memuat soal', error is AuthException ? (error as AuthException).message : '$error'),
     };
     final retry = code == 'network' || code == 'server' || code == '';

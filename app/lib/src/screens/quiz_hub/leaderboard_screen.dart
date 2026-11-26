@@ -130,7 +130,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               EmptyState(
                 icon: Icons.cloud_off_outlined,
                 title: 'Gagal memuat leaderboard',
-                message: 'Periksa koneksi internet.',
+                message: 'Periksa koneksi internet',
                 action: FilledButton(onPressed: _load, child: const Text('Coba lagi')),
               )
             else if (board == null)

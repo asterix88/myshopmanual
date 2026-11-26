@@ -211,7 +211,7 @@ class HomeScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Keluar dari akun?'),
-        content: const Text('Manual yang sudah diunduh tetap tersimpan.'),
+        content: const Text('Manual yang sudah diunduh tetap tersimpan'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           FilledButton(
@@ -269,11 +269,11 @@ class _OfflineBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  store.lastError ?? 'Tidak ada koneksi internet.',
+                  store.lastError ?? 'Tidak ada koneksi internet',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink),
                 ),
                 Text(
-                  'Manual yang sudah diunduh tetap bisa dibuka.',
+                  'Manual yang sudah diunduh tetap bisa dibuka',
                   style: TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ],
@@ -310,7 +310,7 @@ class _Header extends StatelessWidget {
     return Container(
       padding: EdgeInsets.fromLTRB(16, MediaQuery.paddingOf(context).top + 10, 16, 18),
       decoration: const BoxDecoration(
-        color: Color(0xFF1E3A64),
+        color: AppColors.header,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
       ),
       child: Column(
@@ -374,11 +374,11 @@ class _Header extends StatelessWidget {
                                             titleCase(s),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(fontSize: 12, color: Color(0xFFC9D3E3)),
+                                            style: const TextStyle(fontSize: 12, color: AppColors.headerMuted),
                                           ),
                                         ),
                                         const SizedBox(width: 2),
-                                        const AppIcon(AppGlyph.chevronDown, size: 16, color: Color(0xFFC9D3E3)),
+                                        const AppIcon(AppGlyph.chevronDown, size: 16, color: AppColors.headerMuted),
                                       ],
                                     )
                                   else
@@ -386,7 +386,7 @@ class _Header extends StatelessWidget {
                                       greeting(name),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 12, color: Color(0xFFC9D3E3)),
+                                      style: const TextStyle(fontSize: 12, color: AppColors.headerMuted),
                                     ),
                                 ],
                               ),
@@ -567,7 +567,7 @@ class _ContinueReading extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Material(
-        color: const Color(0xFF1E3A64),
+        color: AppColors.header,
         borderRadius: BorderRadius.circular(14),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -613,7 +613,7 @@ class _ContinueReading extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                const Icon(Icons.chevron_right, color: Color(0xFFC9D3E3)),
+                const Icon(Icons.chevron_right, color: AppColors.headerMuted),
               ],
             ),
           ),
@@ -679,7 +679,7 @@ class _MachineFolders extends StatelessWidget {
             child: Text(
               store.online == false
                   ? 'Perlu koneksi internet untuk mengambil daftar manual'
-                  : 'Belum ada manual di server.',
+                  : 'Belum ada manual di server',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: AppColors.muted),
             ),

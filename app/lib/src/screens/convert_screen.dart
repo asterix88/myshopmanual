@@ -139,9 +139,9 @@ class _ConvertScreenState extends State<ConvertScreen> {
                 ),
                 const SizedBox(height: 8),
                 _Card(
-                  color: const Color(0xFF1E3A64),
+                  color: AppColors.header,
                   label: 'Ke',
-                  labelColor: const Color(0xFFC9D3E3),
+                  labelColor: AppColors.headerMuted,
                   value: Text(
                     formatValue(valueIn(_to)),
                     key: const Key('convert-result'),

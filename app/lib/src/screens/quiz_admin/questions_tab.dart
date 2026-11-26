@@ -79,7 +79,7 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
   Future<void> _crop(AdminQuestion q) async {
     final file = StoreScope.read(context).fileByKey(q.question.manualId);
     if (file == null) {
-      showError(context, Exception('Manual soal ini tidak ada di daftar.'));
+      showError(context, Exception('Manual soal ini tidak ada di daftar'));
       return;
     }
     final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
@@ -122,7 +122,7 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
   Future<void> _picture(AdminQuestion q) async {
     final store = StoreScope.read(context);
     final file = store.fileByKey(q.question.manualId);
-    if (file == null) throw Exception('Manual soal ini tidak ada di daftar. Gambarnya tidak bisa dibuat.');
+    if (file == null) throw Exception('Manual soal ini tidak ada di daftar. Gambarnya tidak bisa dibuat');
     await sendQuizPicture(store, widget.api, file, q.question.page, {q.question.id: q.question.autoEdit});
   }
 
@@ -132,7 +132,7 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Setujui ${passed.length} soal?'),
-        content: const Text('Soal yang lolos kurator langsung terbit ke quiz mekanik.'),
+        content: const Text('Soal yang lolos kurator langsung terbit ke quiz mekanik'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
           FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Setujui')),
@@ -244,7 +244,7 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
               icon: Icons.inbox_outlined,
               title: 'Tidak ada soal',
               message: _drafts
-                  ? 'Ketuk "Buat draf kuis" di atas, atau buka manual lalu ketuk ikon Quiz.'
+                  ? 'Ketuk "Buat draf kuis" di atas, atau buka manual lalu ketuk ikon Quiz'
                   : null,
             )
           else
@@ -542,8 +542,8 @@ class _QuestionCard extends StatelessWidget {
             q.image == null
                 ? Text(
                     q.isCard
-                        ? 'Halaman ${q.page} dipasang utuh di balik kartu saat disetujui.'
-                        : 'Gambar dibuat dari halaman ${q.page} saat soal disetujui.',
+                        ? 'Halaman ${q.page} dipasang utuh di balik kartu saat disetujui'
+                        : 'Gambar dibuat dari halaman ${q.page} saat soal disetujui',
                     style: TextStyle(fontSize: 12, color: AppColors.muted))
                 : QuizPicture(
                     key: ValueKey('${q.id}#${QuizApi.imageVersion(q.id)}'), api: api, questionId: q.id, height: 160),

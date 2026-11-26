@@ -76,7 +76,7 @@ class PersonPage extends StatelessWidget {
             ),
             const StatsCaps('Manual yang dibuka'),
             if (p.manuals.isEmpty)
-              const NoneYet('Belum membuka manual.')
+              const NoneYet('Belum membuka manual')
             else
               CardRows([
                 for (final m in p.manuals)
@@ -105,7 +105,7 @@ class PersonPage extends StatelessWidget {
               ]),
             const StatsCaps('Pertanyaan terakhir'),
             if (p.questions.isEmpty)
-              const NoneYet('Belum bertanya ke Nyel AI.')
+              const NoneYet('Belum bertanya ke Nyel AI')
             else
               CardRows([
                 for (final q in p.questions) QuestionTile(q, showName: false, onTap: () => onQuestion(q.id)),

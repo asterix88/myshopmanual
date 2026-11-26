@@ -167,7 +167,7 @@ class _AddFormState extends State<AddForm> {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          'Sudah ada: ${known.qty} pcs di ${known.loc.isEmpty ? '–' : known.loc}. Nama part diisi otomatis.',
+                          'Sudah ada: ${known.qty} pcs di ${known.loc.isEmpty ? '–' : known.loc}. Nama part diisi otomatis',
                           style: TextStyle(fontSize: 12, color: AppColors.green),
                         ),
                       ),

@@ -75,7 +75,7 @@ class _AnswerReportsScreenState extends State<AnswerReportsScreen> {
                     ),
             )
           : reports.isEmpty
-              ? const EmptyState(icon: Icons.thumb_up_alt_outlined, title: 'Belum ada penilaian jawaban.')
+              ? const EmptyState(icon: Icons.thumb_up_alt_outlined, title: 'Belum ada penilaian jawaban')
               : RefreshIndicator(
                   onRefresh: _load,
                   child: ListView.separated(

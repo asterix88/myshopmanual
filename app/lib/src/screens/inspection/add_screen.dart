@@ -38,7 +38,7 @@ class _AddInspectionScreenState extends State<AddInspectionScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Buang temuan ini?'),
-        content: const Text('Isian yang belum disimpan akan hilang.'),
+        content: const Text('Isian yang belum disimpan akan hilang'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Lanjut isi')),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Buang')),

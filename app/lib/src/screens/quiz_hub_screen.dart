@@ -98,7 +98,7 @@ class _QuizHubScreenState extends State<QuizHubScreen> {
               : EmptyState(
                   icon: Icons.cloud_off_outlined,
                   title: 'Gagal memuat quiz',
-                  message: 'Periksa koneksi internet.',
+                  message: 'Periksa koneksi internet',
                   action: FilledButton(onPressed: _load, child: const Text('Coba lagi')),
                 ))
           : RefreshIndicator(

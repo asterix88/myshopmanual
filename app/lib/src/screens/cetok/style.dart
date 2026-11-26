@@ -11,8 +11,8 @@ const cetokMotion = Duration(milliseconds: 300);
 const cetokCurve = Curves.easeOutCubic;
 
 /// The navy of the header, the same in light and dark mode (as on Home).
-const cetokNavy = Color(0xFF1E3A64);
-const cetokNavySoft = Color(0xFFC9D3E3);
+const cetokNavy = AppColors.header;
+const cetokNavySoft = AppColors.headerMuted;
 
 /// When the stock was last updated: "14.05" today, "3/11 14.05" before.
 String stockTime(DateTime t) {
