@@ -37,7 +37,7 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
       _status = 'Membaca halaman ${widget.page}…';
     });
     try {
-      if (!file.searchable) throw Exception('Manual ini berupa gambar, teksnya tidak bisa dibaca.');
+      if (!file.searchable) throw Exception('Dokumen hasil scan, tidak bisa melakukan pencarian pada dokumen ini');
       final indexes = await store.aiIndexes(where: (f) => f.key == file.key);
       final path = indexes[file.key];
       if (path == null) throw Exception('Indeks manual belum ada di HP. Coba lagi saat ada sinyal.');

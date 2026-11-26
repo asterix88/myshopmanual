@@ -353,7 +353,7 @@ class Inspection extends ChangeNotifier {
     final text = action.trim().toUpperCase();
     if (row.localId != null) {
       // Not on the sheet yet: change the queued finding instead.
-      throw InspectionException('Temuan ini belum terkirim ke sheet. Tunggu sampai terkirim, lalu isi Action.');
+      throw InspectionException('Temuan belum terkirim ke sheet');
     }
     // A newer action for the same finding replaces a queued one.
     _queue.removeWhere((q) =>
@@ -469,7 +469,7 @@ class Inspection extends ChangeNotifier {
               : client.post(url, headers: {'content-type': 'application/json'}, body: jsonEncode(body)))
           .timeout(const Duration(seconds: 30));
     } on Exception {
-      throw InspectionException('Tidak ada sinyal. Data yang tampil adalah salinan terakhir.', code: 'network', network: true);
+      throw InspectionException('Tidak ada koneksi internet', code: 'network', network: true);
     }
     Map<String, dynamic>? data;
     try {

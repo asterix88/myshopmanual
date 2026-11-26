@@ -55,7 +55,7 @@ void main() {
     await tester.tap(find.byTooltip('Simpan file'));
     await tester.pumpAndSettle();
     expect(find.text('Simpan file?'), findsOneWidget);
-    expect(find.text('File disimpan di folder /Download/MyManual'), findsOneWidget);
+    expect(find.text('Tersimpan di /Download/MyManual'), findsOneWidget);
 
     await tester.tap(find.text('Ya'));
     await tester.pumpAndSettle();

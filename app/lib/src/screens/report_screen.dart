@@ -29,7 +29,7 @@ class _ReportScreenState extends State<ReportScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               Text(
-                'Kalau aplikasi tertutup sendiri, salin laporan ini dan kirim ke admin.',
+                'Salin laporan',
                 style: TextStyle(color: AppColors.muted),
               ),
               const SizedBox(height: 12),

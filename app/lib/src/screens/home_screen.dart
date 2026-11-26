@@ -678,7 +678,7 @@ class _MachineFolders extends StatelessWidget {
             padding: const EdgeInsets.only(top: 16),
             child: Text(
               store.online == false
-                  ? 'Sambungkan HP ke internet sekali untuk mengambil daftar manual.'
+                  ? 'Perlu koneksi internet untuk mengambil daftar manual'
                   : 'Belum ada manual di server.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: AppColors.muted),
@@ -958,7 +958,7 @@ class _CetokDataDialogState extends State<_CetokDataDialog> {
             ),
           ),
           const SizedBox(height: 6),
-          Text('Berlaku untuk semua HP saat Cetok Online dibuka.', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+          Text('Berlaku untuk semua device', style: TextStyle(fontSize: 12, color: AppColors.muted)),
           if (_error != null) ...[
             const SizedBox(height: 8),
             Text(_error!, style: TextStyle(fontSize: 13, color: AppColors.danger)),

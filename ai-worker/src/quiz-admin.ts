@@ -113,7 +113,7 @@ async function plan(env: QuizEnv, b: Record<string, unknown>): Promise<Response>
   const count = Math.max(1, Math.min(MAX_JOB_QUESTIONS, Math.round(Number(b.count) || 20)));
   const topic = TOPICS.includes(String(b.topic)) ? String(b.topic) : "semua";
   if (toc.trim().length < 20 || pages < 1) {
-    return json({ error: "bad_request", message: "File ini tidak punya daftar isi (bookmark), jadi halaman tidak bisa dipilih otomatis." }, 400);
+    return json({ error: "bad_request", message: "File ini tidak punya bookmark, halaman tidak bisa dipilih otomatis" }, 400);
   }
   const mix = mixFrom(b.mix);
   // About 2-3 kept questions per page; a few spare pages for the curator.

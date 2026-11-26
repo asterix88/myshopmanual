@@ -497,7 +497,7 @@ async function handle(
           }
           message.content =
             text ||
-            "Maaf, jawabannya gagal disusun. Coba tanyakan lagi dengan kalimat yang sedikit berbeda.";
+            "Maaf, jawabannya gagal disusun. Coba tanyakan lagi dengan kalimat yang sedikit berbeda";
         }
         const calls = Array.isArray(message.tool_calls) ? (message.tool_calls as ToolCall[]) : [];
         const web = calls.filter((c) => c.function?.name === "web_search");
@@ -572,12 +572,12 @@ async function handle(
   }
   if (deepseekBusy) {
     return json(
-      { error: "busy", message: "Server DeepSeek sedang sibuk dan AI cadangan juga penuh. Coba lagi sebentar lagi." },
+      { error: "busy", message: "Server AI sedang sibuk. Coba lagi sebentar" },
       503,
     );
   }
   if (rateLimited) {
-    return json({ error: "busy", message: "Batas pemakaian AI gratis sedang penuh. Coba lagi dalam 1 menit." }, 429);
+    return json({ error: "busy", message: "Server AI sedang penuh. Coba lagi dalam 1 menit" }, 429);
   }
   return json(
     { error: "upstream", message: `Layanan AI sedang bermasalah (${lastStatus}). Coba lagi nanti.` },

@@ -85,7 +85,7 @@ export async function handleInspection(
     return json({ error: "section", message: "Daily Inspection hanya untuk section Track, Wheel dan Support." }, 403);
   }
   const sheets = make(env);
-  if (!sheets) return json({ error: "setup", message: "Daily Inspection belum disiapkan admin (Apps Script sheet belum disambungkan)." }, 503);
+  if (!sheets) return json({ error: "setup", message: "Daily Inspection belum disiapkan admin" }, 503);
   const ctx: Ctx = { sheets, tab: env.INSPECTION_TAB, kv: env.AUTH };
   const sheetUrl = `https://docs.google.com/spreadsheets/d/${env.INSPECTION_SHEET_ID}/edit`;
   try {
