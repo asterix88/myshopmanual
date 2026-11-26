@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../quiz.dart';
+import '../quiz_reminders.dart' show quizDayOf, quizMotivation;
 import '../theme.dart';
 import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
@@ -133,7 +134,7 @@ class _QuizHubScreenState extends State<QuizHubScreen> {
                                 _HubRow(
                                   glyph: AppGlyph.quiz,
                                   title: home.daily == 'lanjutkan' ? 'Lanjutkan quiz harian' : 'Mulai quiz harian',
-                                  subtitle: '10 soal · sekitar 4 menit',
+                                  subtitle: '10 soal · ${quizMotivation(home.day.isEmpty ? quizDayOf(DateTime.now()) : home.day)}',
                                   onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QuizPlayScreen())),
                                 ),
                               _HubRow(

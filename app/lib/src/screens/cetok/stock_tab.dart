@@ -173,15 +173,16 @@ class _StockTabState extends State<StockTab> {
                     ],
                   )
                 : ListView.separated(
-                    // A new filter plays the cards' entrance again.
+                    // A new filter starts at the top; the cards show at once.
                     key: ValueKey('$_unit|$_location'),
                     padding: const EdgeInsets.fromLTRB(16, 2, 16, 24),
                     itemCount: rows.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, i) => Rise(
+                    itemBuilder: (context, i) => PartCard(
                       key: ValueKey(rows[i].id),
-                      delay: Rise.stagger(i),
-                      child: PartCard(part: rows[i], highlight: query, onTap: () => widget.onOpen(rows[i])),
+                      part: rows[i],
+                      highlight: query,
+                      onTap: () => widget.onOpen(rows[i]),
                     ),
                   ),
           ),

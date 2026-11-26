@@ -226,6 +226,21 @@ void main() {
     await tester.tap(find.text('Hapus filter'));
     await tester.pumpAndSettle();
 
+    // A finding opened from a typed search: closing it leaves the keyboard down.
+    final search = find.byKey(const Key('inspection-search'));
+    bool searchFocused() =>
+        tester.widget<EditableText>(find.descendant(of: search, matching: find.byType(EditableText))).focusNode.hasFocus;
+    await tester.enterText(search, 'e5138');
+    await tester.pumpAndSettle();
+    expect(searchFocused(), isTrue);
+    await tester.tap(find.text('SEAL CYLINDER BOCOR'));
+    await tester.pumpAndSettle();
+    Navigator.of(tester.element(find.text('Inspector'))).pop();
+    await tester.pumpAndSettle();
+    expect(searchFocused(), isFalse);
+    await tester.enterText(search, '');
+    await tester.pumpAndSettle();
+
     // Close a finding.
     await tester.tap(find.text('PIN BUCKET AUS'));
     await tester.pumpAndSettle();

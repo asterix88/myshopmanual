@@ -101,7 +101,12 @@ class _InspectionScreenState extends State<InspectionScreen> {
     ));
   }
 
+  /// The search box lets go before a sheet or page opens, so closing it
+  /// does not bring the keyboard back; a tap on the box does.
+  void _dropKeyboard() => FocusManager.instance.primaryFocus?.unfocus();
+
   Future<void> _openRow(Inspection data, InspectionRow row) async {
+    _dropKeyboard();
     final before = row.action;
     final result = await showModalBottomSheet<_Saved>(
       context: context,
@@ -125,6 +130,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
   }
 
   Future<void> _openFilter(List<InspectionRow> rows) async {
+    _dropKeyboard();
     final picked = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -136,6 +142,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
   }
 
   Future<void> _add(Inspection data, String section) async {
+    _dropKeyboard();
     final message = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => AddInspectionScreen(section: section)),
     );

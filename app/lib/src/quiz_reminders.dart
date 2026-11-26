@@ -72,6 +72,21 @@ String quizDayOf(DateTime t) {
   return '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }
 
+/// Short lines that change each day, shown beside "10 soal".
+const quizMotivations = [
+  'Asah ilmumu hari ini',
+  'Makin paham tiap hari',
+  'Jaga ilmu tetap tajam',
+  'Satu langkah lebih ahli',
+];
+
+/// The line for quiz day [day] ("2026-11-06"); the same all day long.
+String quizMotivation(String day) {
+  final d = DateTime.tryParse('${day}T00:00:00Z');
+  final n = d == null ? 0 : d.millisecondsSinceEpoch ~/ Duration.millisecondsPerDay;
+  return quizMotivations[n % quizMotivations.length];
+}
+
 String _nextDay(String day) {
   final d = DateTime.tryParse('${day}T00:00:00Z');
   if (d == null) return '';
@@ -98,8 +113,8 @@ List<PlannedReminder> planReminders(DateTime now, ReminderSettings settings, Qui
       final at = DateTime(date.year, date.month, date.day, settings.hour, settings.minute);
       final day = quizDayOf(at);
       if (at.isAfter(now) && !done(day) && day.compareTo(today) >= 0) {
-        final streak = streakAlive(day) ? ' Streak ${home.streak} hari.' : '';
-        out.add(PlannedReminder(_dailyId + k, at, 'Quiz harian menunggu', '10 soal, sekitar 4 menit.$streak'));
+        final streak = streakAlive(day) ? ' · Streak ${home.streak} hari' : '';
+        out.add(PlannedReminder(_dailyId + k, at, 'Quiz harian menunggu', '10 soal · ${quizMotivation(day)}$streak'));
       }
     }
     if (settings.streak) {

@@ -1,4 +1,3 @@
-import 'package:flutter/gestures.dart' show Drag;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 
@@ -47,10 +46,6 @@ class _HomeShellState extends State<HomeShell> {
   bool _barHidden = false;
   final _pages = PageController();
 
-  /// A swipe that went past the end of a page's own sub-tabs (Standar,
-  /// Servis), carried on by the tab pages.
-  Drag? _carried;
-
   static const chatTab = 2;
 
   @override
@@ -70,7 +65,6 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void dispose() {
     QuizReminders.openRequested.removeListener(_openQuiz);
-    _carried?.cancel();
     _pages.dispose();
     super.dispose();
   }
@@ -84,24 +78,9 @@ class _HomeShellState extends State<HomeShell> {
     _pages.animateToPage(tab, duration: const Duration(milliseconds: 320), curve: Curves.easeOutCubic);
   }
 
-  /// Sideways swipes on a page's own tabs move those first; at their first
-  /// or last tab the swipe moves on to the next or previous main tab.
+  /// Vertical scrolling on a page hides or shows the bottom bar.
   bool _onPageScroll(ScrollNotification n) {
-    if (n.metrics.axis == Axis.vertical) {
-      _onVerticalScroll(n);
-      return false;
-    }
-    if (n.depth == 0 || n.metrics.axis != Axis.horizontal || !_pages.hasClients) return false;
-    if (n is OverscrollNotification && n.dragDetails != null) {
-      final d = n.dragDetails!;
-      _carried ??= _pages.position.drag(
-        DragStartDetails(globalPosition: d.globalPosition, localPosition: d.localPosition),
-        () => _carried = null,
-      );
-      _carried?.update(d);
-    } else if (n is ScrollEndNotification && _carried != null) {
-      _carried?.end(n.dragDetails ?? DragEndDetails(primaryVelocity: 0));
-    }
+    if (n.metrics.axis == Axis.vertical) _onVerticalScroll(n);
     return false;
   }
 
@@ -146,12 +125,12 @@ class _HomeShellState extends State<HomeShell> {
         // button shows the page instead of an empty band. They keep their
         // last rows clear of it with MediaQuery's bottom padding.
         extendBody: true,
-        // Swipe left or right to move between the tabs; the page follows the
-        // finger and the bar's orange line follows the page.
+        // Tabs change only from the bar; no sideways swipe between them.
         body: NotificationListener<ScrollNotification>(
           onNotification: _onPageScroll,
           child: PageView(
             controller: _pages,
+            physics: const NeverScrollableScrollPhysics(),
             onPageChanged: (i) => setState(() {
               _tab = i;
               _barHidden = false;
