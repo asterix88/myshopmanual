@@ -181,7 +181,7 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e, stack) {
       // Never leave the chat stuck on its status line.
       debugPrint('Nyel AI failed: $e\n$stack');
-      answer = ChatEntry.assistant('Gagal mencari jawaban. Coba lagi.', failed: true);
+      answer = ChatEntry.assistant('Gagal mencari jawaban. Coba lagi', failed: true);
     }
     if (!mounted) return;
     setState(() {
@@ -278,7 +278,7 @@ class _ChatScreenState extends State<ChatScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Jawaban dikirim ke admin untuk diperiksa.'),
+                const Text('Jawaban terkirim'),
                 const SizedBox(height: 12),
                 TextField(
                   controller: note,
@@ -313,14 +313,14 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) return;
       setState(() => entry.rating = good ? 'good' : 'bad');
       messenger.showSnackBar(SnackBar(
-        content: Text(good ? 'Penilaian terkirim.' : 'Laporan terkirim ke admin.'),
+        content: Text(good ? 'Penilaian terkirim' : 'Laporan terkirim'),
       ));
       await _chat.save(_entries);
     } on AiException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     } on Object catch (e) {
       debugPrint('rating failed: $e');
-      messenger.showSnackBar(const SnackBar(content: Text('Penilaian gagal terkirim. Coba lagi.')));
+      messenger.showSnackBar(const SnackBar(content: Text('Penilaian gagal terkirim. Coba lagi')));
     }
   }
 

@@ -54,11 +54,11 @@ async function whoOf(env: QuizEnv, s: Session): Promise<quiz.Who | Response> {
 }
 
 const MESSAGES: Record<string, [number, string]> = {
-  done: [409, "Quiz harian sudah selesai. Coba Quiz per unit."],
+  done: [409, "Quiz harian sudah selesai. Coba Quiz per unit"],
   empty: [404, "Soal baru sedang disiapkan."],
   session: [404, "Sesi quiz tidak ditemukan. Mulai quiz lagi."],
   question: [400, "Soal ini bukan bagian dari sesi."],
-  late: [410, "Jawaban lebih dari 3 hari, tidak dihitung."],
+  late: [410, "Jawaban tidak dihitung"],
 };
 
 function failed(error: string): Response {

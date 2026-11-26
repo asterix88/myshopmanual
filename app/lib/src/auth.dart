@@ -261,7 +261,7 @@ class AuthApi {
     } on TimeoutException {
       throw AuthException('network', 'Sinyal lemah, server tidak menjawab. Coba lagi.');
     } on Exception {
-      throw AuthException('network', 'Tidak ada koneksi internet.');
+      throw AuthException('network', 'Tidak ada koneksi internet');
     }
     Map<String, dynamic>? data;
     try {
@@ -349,7 +349,7 @@ class SessionClient extends http.BaseClient {
     await response.stream.drain<void>();
     final fresh = await renew();
     if (fresh == null) {
-      throw const HttpException('Sesi berakhir. Masuk lagi.');
+      throw const HttpException('Sesi berakhir. Silakan login kembali');
     }
     retry.headers[sessionHeader] = fresh.token;
     return _inner.send(retry);

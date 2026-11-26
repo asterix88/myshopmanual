@@ -312,7 +312,7 @@ class _JobCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            Text('Berjalan di server, aplikasi boleh ditutup.',
+            Text('Nyel AI tetap berjalan di server',
                 style: TextStyle(fontSize: 12, color: AppColors.muted)),
           ],
         ],

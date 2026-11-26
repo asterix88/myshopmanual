@@ -320,7 +320,7 @@ class Cetok extends ChangeNotifier {
           )
           .timeout(const Duration(seconds: 30));
     } on Exception {
-      throw CetokException('Gagal terhubung ke Cetok Online. Periksa sinyal.');
+      throw CetokException('Gagal terhubung ke Cetok Online. Periksa koneksi internet kamu');
     }
     final body = utf8.decode(response.bodyBytes);
     dynamic data;

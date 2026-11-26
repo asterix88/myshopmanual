@@ -113,7 +113,7 @@ class _QuizJobScreenState extends State<QuizJobScreen> {
       final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
       messenger.showSnackBar(const SnackBar(
-        content: Text('Draf sedang dibuat, sekitar 5–10 menit. Aplikasi boleh ditutup.'),
+        content: Text('Sedang membuat draf…'),
       ));
     } catch (e) {
       if (!mounted) return;
@@ -239,7 +239,7 @@ class _QuizJobScreenState extends State<QuizJobScreen> {
           const SizedBox(height: 16),
           Text(
             'Sekitar 5–10 menit di server, aplikasi boleh ditutup. Hasil masuk ke tab Draf. '
-            'Perkiraan biaya AI Rp${(_count * 18).clamp(100, 2000)}.',
+            'Perkiraan biaya AI Rp${(_count * 18).clamp(100, 2000)}',
             style: TextStyle(fontSize: 12, height: 1.5, color: AppColors.muted),
           ),
         ],

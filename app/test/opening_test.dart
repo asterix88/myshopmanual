@@ -95,7 +95,7 @@ void main() {
       await tester.tap(find.byKey(const Key('intro-next')));
       await tester.pumpAndSettle();
     }
-    expect(find.text('Nilai standar, langsung ketemu'), findsOneWidget);
+    expect(find.text('Nilai standar tanpa membuka ribuan halaman'), findsOneWidget);
     await tester.runAsync(() async {
       await tester.tap(find.byKey(const Key('intro-next')));
       await Future<void>.delayed(const Duration(milliseconds: 100));

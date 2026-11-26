@@ -8,7 +8,7 @@ class _RecallTag extends StatelessWidget {
     return Tooltip(
       triggerMode: TooltipTriggerMode.tap,
       showDuration: const Duration(seconds: 4),
-      message: 'Soal ulangan: pernah salah atau jadwal ulang',
+      message: 'Review soal sebelumnya',
       child: Container(
         padding: const EdgeInsets.fromLTRB(6, 3, 10, 3),
         decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(12)),

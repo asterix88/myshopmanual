@@ -12,7 +12,7 @@ class _PageIntro extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Text(
-          'Tanya tentang halaman ini.',
+          'Tanya tentang halaman ini',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.muted),
         ),

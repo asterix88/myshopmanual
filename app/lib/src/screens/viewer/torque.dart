@@ -114,7 +114,7 @@ extension _ViewerTorque on _ViewerScreenState {
                             ? '$count angka torsi ditemukan'
                             : widget.torque!.marks?.isEmpty ?? false
                                 ? 'Tidak ada standar torque khusus pada komponen ini'
-                                : 'Torsi tidak terbaca, cek dokumen',
+                                : 'Torsi tidak terbaca, silakan langsung cek dokumen',
                     maxLines: 1,
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 13, color: Colors.white),
