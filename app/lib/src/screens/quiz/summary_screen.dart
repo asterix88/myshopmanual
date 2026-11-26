@@ -105,7 +105,7 @@ class QuizSummaryScreen extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'XP dan streak dihitung saat ada sinyal',
+                      'XP dan streak dihitung saat ada koneksi internet',
                       style: TextStyle(fontSize: 12, color: AppColors.inkSoft),
                     ),
                   ),

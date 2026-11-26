@@ -199,7 +199,7 @@ class PageRowList extends StatelessWidget {
       return EmptyState(
         icon: Icons.search_off,
         title: emptyTitle ?? 'Tidak ada di bookmark manual',
-        message: 'Coba lewat tab Cari.',
+        message: 'Coba lewat tab Cari',
       );
     }
     final hint = this.hint;

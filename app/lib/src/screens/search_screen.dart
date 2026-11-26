@@ -173,6 +173,10 @@ class _SearchScreenState extends State<SearchScreen> with WidgetsBindingObserver
                             label: Text(type?.label ?? 'Semua'),
                             selected: _type == type,
                             showCheckmark: false,
+                            // Compact so all four filters fit on one row on a 360 dp phone.
+                            visualDensity: VisualDensity.compact,
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            labelPadding: const EdgeInsets.symmetric(horizontal: 4),
                             selectedColor: AppColors.navy,
                             labelStyle: TextStyle(
                               fontSize: 12,
@@ -197,7 +201,7 @@ class _SearchScreenState extends State<SearchScreen> with WidgetsBindingObserver
                 child: EmptyState(
                   icon: Icons.cloud_download_outlined,
                   title: 'Indeks belum tersedia',
-                  message: 'Perlu koneksi internet.',
+                  message: 'Perlu koneksi internet',
                   action: RetryButton(),
                 ),
               )
@@ -208,7 +212,7 @@ class _SearchScreenState extends State<SearchScreen> with WidgetsBindingObserver
                 child: EmptyState(
                   icon: Icons.search_off,
                   title: 'Tidak ada hasil untuk "$_query"',
-                  message: 'Cek ejaan atau ganti filter.',
+                  message: 'Cek ejaan atau ganti filter',
                 ),
               )
             else

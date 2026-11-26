@@ -187,7 +187,7 @@ void main() {
     await tester.tap(find.text('Schematic Diagram'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('Waiting for update from server.'), findsOneWidget);
+    expect(find.text('Waiting for update from server'), findsNWidgets(7)); // 6 cards + the sheet
     await tester.tap(find.text('Mengerti'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));

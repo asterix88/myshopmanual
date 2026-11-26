@@ -66,14 +66,14 @@ class _QuizJobScreenState extends State<QuizJobScreen> {
     try {
       final indexes = await store.aiIndexes(where: (f) => f.key == file.key);
       final path = indexes[file.key];
-      if (path == null) throw Exception('Indeks manual ini belum ada di HP. Coba lagi saat ada sinyal.');
+      if (path == null) throw Exception('Indeks manual ini belum ada di HP. Coba lagi saat ada koneksi internet');
       final toc = await loadTocInBackground(path);
       // No bookmarks (training slides, for one): the title line of each page
       // stands in for the table of contents.
       final lines = toc.isNotEmpty
           ? [for (final t in toc) '${t.page}\t${'  ' * (t.level.clamp(0, 6))}${t.title}'].join('\n')
           : [for (final h in await _headings(path)) '${h.page}\t${h.title}'].join('\n');
-      if (lines.trim().isEmpty) throw Exception('Teks file ini tidak terbaca (mungkin hasil scan).');
+      if (lines.trim().isEmpty) throw Exception('Teks file ini tidak terbaca (mungkin hasil scan)');
 
       if (!mounted) return;
       setState(() => _status = 'Nyel AI memilih halaman…');
@@ -94,7 +94,7 @@ class _QuizJobScreenState extends State<QuizJobScreen> {
           if ((texts[p.page] ?? '').trim().length >= 80)
             {'page': p.page, 'kind': p.kind, 'topic': p.topic, 'text': texts[p.page]},
       ];
-      if (withText.isEmpty) throw Exception('Halaman yang dipilih tidak punya teks (mungkin hasil scan).');
+      if (withText.isEmpty) throw Exception('Halaman yang dipilih tidak punya teks (mungkin hasil scan)');
 
       if (!mounted) return;
       setState(() => _status = 'Mengirim ke server…');

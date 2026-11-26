@@ -421,7 +421,7 @@ class _PartPickerState extends State<_PartPicker> {
         else if (found.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: Text('Tidak ada part yang cocok dengan "$q".', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+            child: Text('Tidak ada part yang cocok dengan "$q"', style: TextStyle(fontSize: 12, color: AppColors.muted)),
           )
         else
           for (var i = 0; i < found.length; i++)

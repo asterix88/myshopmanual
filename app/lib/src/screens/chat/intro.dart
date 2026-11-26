@@ -135,14 +135,14 @@ class _Intro extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Dijawab dari semua manual.',
+          'Dijawab dari semua manual',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 13, color: AppColors.muted),
         ),
         if (!hasManuals) ...[
           const SizedBox(height: 8),
           Text(
-            'Daftar manual belum tersedia.',
+            'Daftar manual belum tersedia',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13, color: AppColors.orangeText),
           ),

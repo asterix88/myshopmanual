@@ -56,7 +56,7 @@ void main() {
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}1_home.png'));
 
-    await tester.tap(find.text('EXCAVATOR'));
+    await tester.tap(find.text('Excavator'));
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}1b_excavator.png'));
     await tester.tap(find.text('TEST1-1'));
@@ -95,7 +95,7 @@ void main() {
     }
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}5b_spek.png'));
-    await tester.tap(find.descendant(of: find.byType(SpecsScreen), matching: find.byTooltip('Pilih unit')));
+    tester.state<ScaffoldState>(find.descendant(of: find.byType(SpecsScreen), matching: find.byType(Scaffold)).first).openDrawer();
     await tester.pumpAndSettle();
     await expectLater(find.byType(MaterialApp), matchesGoldenFile('screenshots/${prefix}5c_spek_units.png'));
     await tester.tapAt(const Offset(370, 300));
@@ -106,9 +106,9 @@ void main() {
 
     // A manual not on the phone: read online or download.
     await tester.runAsync(() => store.deleteManuals([store.catalog.files.single.key]));
-    await tester.tap(find.text('Unit').last);
+    await tester.tap(find.text('Home').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('EXCAVATOR'));
+    await tester.tap(find.text('Excavator'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('TEST1-1'));
     await tester.pumpAndSettle();

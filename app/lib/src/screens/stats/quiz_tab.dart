@@ -101,7 +101,7 @@ class _QuizTabState extends State<QuizStatsTab> with AutomaticKeepAliveClientMix
             ],
             const StatsCaps('Topik terlemah'),
             if (d.topics.isEmpty)
-              const NoneYet('Belum ada jawaban.')
+              const NoneYet('Belum ada jawaban')
             else
               CardRows([
                 for (final t in d.topics.take(5))
@@ -128,7 +128,7 @@ class _QuizTabState extends State<QuizStatsTab> with AutomaticKeepAliveClientMix
               ]),
             const StatsCaps('Soal paling sering salah'),
             if (d.hard.isEmpty)
-              const NoneYet('Belum ada soal dengan 5 jawaban atau lebih.')
+              const NoneYet('Belum ada soal dengan 5 jawaban atau lebih')
             else
               CardRows([
                 for (final q in d.hard)
@@ -159,7 +159,7 @@ class _QuizTabState extends State<QuizStatsTab> with AutomaticKeepAliveClientMix
               ]),
             const StatsCaps('Paling rajin'),
             if (d.top.isEmpty)
-              const NoneYet('Belum ada yang ikut quiz.')
+              const NoneYet('Belum ada yang ikut quiz')
             else
               CardRows([
                 for (final (i, p) in d.top.indexed)
@@ -353,7 +353,7 @@ class QuizQuestionSheet extends StatelessWidget {
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text('Tarik soal ini?'),
-                      content: const Text('Soal tidak muncul lagi di quiz.'),
+                      content: const Text('Soal tidak muncul lagi di quiz'),
                       actions: [
                         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
                         TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Tarik')),

@@ -2,13 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 /// Colors taken from the Track Section logo (navy + orange); the layout
-/// follows the company app the mechanics already use.
-/// Colors taken from the Track Section logo (navy + orange); the layout
 /// follows the company app the mechanics already use. Each color has a
 /// light and a dark version; [dark] picks which (set before the app is
 /// built, see [buildTheme]).
 abstract final class AppColors {
   static bool dark = false;
+
+  /// Navy of headers (Home, Konversi, Cetok, login): the same in light and
+  /// dark mode, so it can be used in const widgets.
+  static const header = Color(0xFF1E3A64);
+
+  /// Secondary text and icons on [header].
+  static const headerMuted = Color(0xFFC9D3E3);
 
   static Color _pick(int light, int night) => Color(dark ? night : light);
 

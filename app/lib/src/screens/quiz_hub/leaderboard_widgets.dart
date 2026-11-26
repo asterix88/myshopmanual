@@ -117,7 +117,7 @@ class _PodiumPlace extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: place == 1 ? const Color(0xFF1E3A64) : Colors.white,
+                    color: place == 1 ? AppColors.header : Colors.white,
                   ),
                 ),
               ),

@@ -181,7 +181,7 @@ class _RetryButtonState extends State<RetryButton> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (store.online != true) {
-      messenger.showSnackBar(const SnackBar(content: Text('Belum tersambung ke internet.')));
+      messenger.showSnackBar(const SnackBar(content: Text('Belum tersambung ke internet')));
     }
   }
 

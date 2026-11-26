@@ -263,8 +263,8 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
       builder: (context) => _Sheet(
         title: 'Keluar dari quiz?',
         message: widget.unit == null
-            ? 'Jawaban tersimpan. Bisa dilanjutkan sampai 04.00.'
-            : 'Jawaban tersimpan.',
+            ? 'Jawaban tersimpan. Bisa dilanjutkan sampai 04.00'
+            : 'Jawaban tersimpan',
         children: [
           FilledButton(onPressed: () => Navigator.pop(context, false), child: const Text('Lanjutkan quiz')),
           const SizedBox(height: 8),
@@ -474,7 +474,7 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
     final next = !right
         ? (firstWrong ? 'Diulang di akhir sesi dan besok' : 'Diulang besok')
         : _result == null
-            ? (_sent ? 'Dikirim saat ada sinyal' : '')
+            ? (_sent ? 'Dikirim saat ada koneksi internet' : '')
             : _result!.nextDays <= 1
                 ? 'Diulang besok'
                 : 'Diulang ${_result!.nextDays} hari lagi';

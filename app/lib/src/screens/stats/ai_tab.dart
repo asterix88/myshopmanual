@@ -69,7 +69,7 @@ class AiTab extends StatelessWidget {
       children: [
         const StatsCaps('Topik paling ditanya'),
         if (data.topics.isEmpty)
-          const NoneYet('Belum ada pertanyaan.')
+          const NoneYet('Belum ada pertanyaan')
         else
           Wrap(
             spacing: 8,
@@ -126,7 +126,7 @@ class AiTab extends StatelessWidget {
         ),
         const StatsCaps('Pertanyaan terbaru'),
         if (data.questions.isEmpty)
-          const NoneYet('Belum ada pertanyaan.')
+          const NoneYet('Belum ada pertanyaan')
         else
           CardRows([
             for (final q in data.questions) QuestionTile(q, showSection: showSection, onTap: () => onQuestion(q.id)),

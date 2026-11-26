@@ -541,7 +541,7 @@ class _SummaryCard extends StatelessWidget {
               children: [
                 const Text(
                   'DOKUMEN TEKNIS',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1, color: Color(0xFFC9D3E3)),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1, color: AppColors.headerMuted),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -550,7 +550,7 @@ class _SummaryCard extends StatelessWidget {
                 ),
                 if (isCat(unit)) ...[
                   const SizedBox(height: 10),
-                  const Text('Lihat lebih lengkap di', style: TextStyle(fontSize: 11, color: Color(0xFFC9D3E3))),
+                  const Text('Lihat lebih lengkap di', style: TextStyle(fontSize: 11, color: AppColors.headerMuted)),
                   const SizedBox(height: 6),
                   Material(
                     color: Colors.white.withValues(alpha: 0.14),
@@ -669,7 +669,7 @@ class _WaitingCard extends StatelessWidget {
               Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
               const SizedBox(height: 6),
               Text(
-                'Waiting for update from server.',
+                'Waiting for update from server',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: AppColors.inkSoft),
               ),

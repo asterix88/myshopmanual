@@ -162,7 +162,7 @@ class _StockTabState extends State<StockTab> {
                               if (cetok.parts.isNotEmpty)
                                 Text(
                                   query.isNotEmpty
-                                      ? 'Tidak ada part number atau nama yang cocok dengan "$query".'
+                                      ? 'Tidak ada part number atau nama yang cocok dengan "$query"'
                                       : 'Coba ganti unit atau lokasi',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(fontSize: 12, color: AppColors.muted),

@@ -28,7 +28,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
   Future<void> _send() async {
     if (_busy) return;
     if (_nrp.text.trim().isEmpty) {
-      setState(() => _error = 'Isi NRP.');
+      setState(() => _error = 'Isi NRP');
       return;
     }
     FocusScope.of(context).unfocus();
@@ -80,7 +80,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.ink),
         ),
         const SizedBox(height: 6),
-        Text('Admin akan membuatkan PIN sementara.', style: TextStyle(fontSize: 13, color: AppColors.muted)),
+        Text('Admin akan membuatkan PIN sementara', style: TextStyle(fontSize: 13, color: AppColors.muted)),
         const SizedBox(height: 28),
         const _FieldLabel('NRP'),
         Shake(
@@ -129,7 +129,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Minta PIN sementara ke admin.',
+          'Minta PIN sementara ke admin',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 13, color: AppColors.muted),
         ),

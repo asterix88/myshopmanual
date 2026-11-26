@@ -525,7 +525,7 @@ class _ChatArt extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Mulai dari tekanan travel motor kiri, lalu bandingkan dengan nilai standar di manual.',
+                    'Mulai dari tekanan travel motor kiri, lalu bandingkan dengan nilai standar di manual',
                     style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.ink),
                   ),
                   const SizedBox(height: 8),

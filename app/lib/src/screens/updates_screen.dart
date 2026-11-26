@@ -126,7 +126,7 @@ class _UpdatesScreenState extends State<UpdatesScreen> {
               const Text('Hapus semua notifikasi?', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               Text(
-                'Manual yang sudah diunduh tidak ikut terhapus.',
+                'Manual yang sudah diunduh tidak ikut terhapus',
                 style: TextStyle(fontSize: 13, color: AppColors.muted),
               ),
               const SizedBox(height: 20),

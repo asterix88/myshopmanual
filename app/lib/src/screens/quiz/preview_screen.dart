@@ -31,7 +31,7 @@ class _QuizPreviewScreenState extends State<QuizPreviewScreen> {
     final store = StoreScope.read(context);
     if (store.fileByKey(q.manualId) == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Manual ${q.manualId} tidak ada di daftar manual HP ini.')),
+        SnackBar(content: Text('Manual ${q.manualId} tidak ada di daftar manual HP ini')),
       );
       return;
     }
@@ -224,7 +224,7 @@ class _PendingPicture extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          'Gambar dibuat dari halaman $page saat soal disetujui.',
+          'Gambar dibuat dari halaman $page saat soal disetujui',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 12, color: AppColors.muted),
         ),

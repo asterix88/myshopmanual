@@ -152,7 +152,7 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
     final page = _page;
     if (page == null) return;
     if (_edit.labels.isNotEmpty && _edit.ask == null) {
-      showError(context, Exception('Tunjuk dulu label jawabannya: Label, lalu Ganti.'));
+      showError(context, Exception('Tunjuk dulu label jawabannya: Label, lalu Ganti'));
       return;
     }
     setState(() => _saving = true);
@@ -173,7 +173,7 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Buang perubahan?'),
-        content: const Text('Editan gambar ini belum disimpan.'),
+        content: const Text('Editan gambar ini belum disimpan'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Lanjut edit')),
           TextButton(
@@ -431,7 +431,7 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
                 ? const ExcavatorLoader()
                 : Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Text('Halaman tidak bisa digambar. Coba lagi saat ada sinyal.',
+                    child: Text('Halaman tidak bisa digambar. Coba lagi saat ada koneksi internet',
                         textAlign: TextAlign.center, style: TextStyle(color: AppColors.muted)),
                   ),
           )
@@ -560,7 +560,7 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
         builder: (context, snap) {
           final png = snap.data;
           if (snap.hasError) {
-            return Text('Gambar tidak bisa dibuat.', style: TextStyle(color: AppColors.muted));
+            return Text('Gambar tidak bisa dibuat', style: TextStyle(color: AppColors.muted));
           }
           if (png == null) return const SizedBox(height: 160, child: Center(child: ExcavatorLoader()));
           return ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.memory(png, fit: BoxFit.contain));
@@ -639,7 +639,7 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
           ]);
         } else {
           children.addAll([
-            Text('Ketuk huruf atau kotak putih untuk memilih.',
+            Text('Ketuk huruf atau kotak putih untuk memilih',
                 textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.muted)),
             const SizedBox(height: 4),
             _ActionBar([

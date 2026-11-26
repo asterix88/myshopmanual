@@ -4,7 +4,7 @@ library;
 enum DocType {
   shopManual('shop_manual', 'Shop Manual'),
   omm('omm', 'OMM'),
-  partsbook('partsbook', 'Partbook'),
+  partsbook('partsbook', 'Partsbook'),
   other('other', 'Lainnya');
 
   const DocType(this.id, this.label);
