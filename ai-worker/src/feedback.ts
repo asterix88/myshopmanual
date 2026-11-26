@@ -1,8 +1,8 @@
 import { requireSession, type AuthEnv, type Session } from "./auth";
 
-// Ratings of nyel AI answers: 👍 or 👎 "Jawaban salah". A phone sends the
+// Ratings of Nyel AI answers: 👍 or 👎 "Jawaban salah". A phone sends the
 // rating, the question, the answer and the pages it cited; admins list them
-// in the app to see where nyel AI goes right and wrong, and the wrong ones
+// in the app to see where Nyel AI goes right and wrong, and the wrong ones
 // become questions in the AI test (app/tool/ai_eval.json). Kept in the AUTH
 // KV as "fb:<time>", for a year.
 

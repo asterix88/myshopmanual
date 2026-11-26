@@ -1,6 +1,6 @@
-name: nyel AI test
+name: Nyel AI test
 
-# Asks nyel AI the questions it once got wrong (app/tool/ai_eval.json), on a
+# Asks Nyel AI the questions it once got wrong (app/tool/ai_eval.json), on a
 # local copy of the AI server with the real manuals and keys, whenever the
 # AI's instructions or the app's chat code change. Add a question there when
 # a "Jawaban salah" report shows a new mistake.

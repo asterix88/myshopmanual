@@ -29,7 +29,7 @@ python tools/search.py dist/units/PC210/index.sqlite "track tension"
 PDF tanpa lapisan teks (hasil scan, atau hasil "Microsoft Print to PDF") tetap diunggah,
 tetapi tidak bisa dicari. Kalau **Tesseract OCR** terpasang di PC, `update.bat` membacanya
 sendiri: teks hasil OCR masuk ke indeks pencarian file itu (PDF-nya tidak diubah), jadi Cari
-dan nyel AI bisa memakainya. Pasang sekali saja dari
+dan Nyel AI bisa memakainya. Pasang sekali saja dari
 <https://github.com/UB-Mannheim/tesseract/wiki> (installer Windows, pilih bahasa English),
 lalu jalankan `update.bat` seperti biasa.
 

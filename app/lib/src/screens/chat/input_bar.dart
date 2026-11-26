@@ -65,20 +65,38 @@ class _Preparing extends StatelessWidget {
 }
 
 class _InputBar extends StatelessWidget {
-  const _InputBar({required this.controller, required this.enabled, required this.hint, required this.onSend});
+  const _InputBar({
+    required this.controller,
+    required this.enabled,
+    required this.hint,
+    required this.onSend,
+    required this.background,
+    required this.fill,
+    this.dimmed = false,
+  });
 
   final TextEditingController controller;
   final bool enabled;
   final String hint;
   final VoidCallback onSend;
 
+  /// The bar and the field, which follow the chat's mode.
+  final Color background;
+  final Color fill;
+
+  /// Shown faded (today's questions are used up); the placeholder stays.
+  final bool dimmed;
+
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surface,
+      color: background,
       child: SafeArea(
         top: false,
-        child: Padding(
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: dimmed ? 0.45 : 1,
+          child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
           child: Row(
             children: [
@@ -96,7 +114,7 @@ class _InputBar extends StatelessWidget {
                   decoration: InputDecoration(
                     isDense: true,
                     filled: true,
-                    fillColor: AppColors.field,
+                    fillColor: fill,
                     hintText: hint,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
                   ),
@@ -109,6 +127,7 @@ class _InputBar extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

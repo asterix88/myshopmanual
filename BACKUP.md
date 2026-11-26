@@ -12,7 +12,7 @@ Panduan ini bisa dipakai tanpa bantuan siapa pun. Semua langkahnya dilakukan di 
 Yang **tidak** di-backup di sini:
 - **Stok Cetok Online (Supabase)**: sudah punya backup sendiri lewat bot Telegram.
 - **PDF manual**: aslinya ada di PC (`source\`).
-- **Statistik pemakaian** dan **penilaian nyel AI**: kalau hilang, kerja mekanik tidak terganggu.
+- **Statistik pemakaian** dan **penilaian Nyel AI**: kalau hilang, kerja mekanik tidak terganggu.
 
 ## Kapan backup dibuat
 

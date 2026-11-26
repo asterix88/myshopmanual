@@ -49,7 +49,7 @@ class _QuestionsTabState extends State<_QuestionsTab> with AutomaticKeepAliveCli
         _jobs = jobs;
         _error = null;
       });
-      // While nyel AI is working, look again every 15 s.
+      // While Nyel AI is working, look again every 15 s.
       _poll?.cancel();
       if (jobs.any((j) => j.running)) _poll = Timer(const Duration(seconds: 15), _load);
     } catch (e) {
@@ -318,7 +318,7 @@ class _JobCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            Text('Boleh tutup aplikasi, nyel AI tetap bekerja di server.',
+            Text('Boleh tutup aplikasi, Nyel AI tetap bekerja di server.',
                 style: TextStyle(fontSize: 12, color: AppColors.muted)),
           ],
         ],
@@ -441,7 +441,7 @@ class _PreviewEyeButton extends StatelessWidget {
 }
 
 /// One piece of small information under a card's header: an icon or a dot,
-/// then a short text (type, curator score, nyel AI).
+/// then a short text (type, curator score, Nyel AI).
 class _CardMeta extends StatelessWidget {
   const _CardMeta({required this.leading, required this.label});
 
@@ -532,7 +532,7 @@ class _QuestionCard extends StatelessWidget {
                   label: 'Kurator $score/10',
                 ),
               if (item.source == 'ai')
-                _CardMeta(leading: AppIcon(AppGlyph.nyel, size: 15, color: AppColors.navy), label: 'nyel AI'),
+                _CardMeta(leading: AppIcon(AppGlyph.nyel, size: 15, color: AppColors.navy), label: 'Nyel AI'),
             ],
           ),
           const SizedBox(height: 8),

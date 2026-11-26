@@ -33,7 +33,7 @@ void main() {
     });
   }
 
-  testWidgets('the round nyel AI button opens the chat about the page, back returns to it', (tester) async {
+  testWidgets('the round Nyel AI button opens the chat about the page, back returns to it', (tester) async {
     late AppStore store;
     await tester.runAsync(() async {
       store = await AppStore.open(root: Directory.systemTemp.createTempSync('viewer'), client: fixtureServer());

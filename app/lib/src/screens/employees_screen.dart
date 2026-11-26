@@ -766,7 +766,7 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
                   row('HP', e.devices.isEmpty ? '-' : e.devices.join(' · ')),
                   row('Versi app', e.app.isEmpty ? '-' : e.app),
                   row(
-                    'nyel AI hari ini',
+                    'Nyel AI hari ini',
                     e.admin ? 'tanpa batas' : '${e.aiToday} dari ${AppStore.aiDailyLimit}',
                     last: true,
                   ),

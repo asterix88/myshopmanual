@@ -109,7 +109,7 @@ class _QuizPreviewScreenState extends State<QuizPreviewScreen> {
         ),
       );
 
-  /// The result sheet without XP, the repeat note, "Tanya nyel AI" and the report flag.
+  /// The result sheet without XP, the repeat note, "Tanya Nyel AI" and the report flag.
   Widget _feedback() {
     final q = _q;
     final right = _picked == q.answer;

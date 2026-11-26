@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:mymanual/src/ai.dart';
 import 'package:mymanual/src/store.dart';
 
-/// Asks nyel AI the questions in tool/ai_eval.json (ones it once got wrong)
+/// Asks Nyel AI the questions in tool/ai_eval.json (ones it once got wrong)
 /// against a local AI server with the real manuals, and checks each answer.
 /// Run by .github/workflows/ai-eval.yml with the admin code (to read the
 /// manuals' indexes) and the AI keys.
@@ -35,7 +35,7 @@ class _AdminClient extends http.BaseClient {
 }
 
 void main() {
-  test('nyel AI answers the questions it once got wrong', () async {
+  test('Nyel AI answers the questions it once got wrong', () async {
     final cases = (jsonDecode(File('tool/ai_eval.json').readAsStringSync()) as List).cast<Map<String, dynamic>>();
     final client = _AdminClient(Platform.environment['OWNER_CODE'] ?? '');
     final store = await AppStore.open(root: Directory.systemTemp.createTempSync('eval'), client: client);

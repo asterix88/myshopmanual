@@ -63,7 +63,7 @@ chapters, groups and documents, which become the manual's bookmarks
 
 When Tesseract OCR is installed on the PC, such a PDF is read with OCR
 first: the recognised text goes into that file's search index (the PDF
-itself is shipped unchanged), so Cari and nyel AI can use it. OCR is slow,
+itself is shipped unchanged), so Cari and Nyel AI can use it. OCR is slow,
 about a second or two per page, so the result is cached in
 dist/.ocr/<sha>.json and only redone when the source PDF changes. Pass
 --no-ocr to skip it.

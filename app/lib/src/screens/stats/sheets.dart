@@ -158,7 +158,7 @@ class _AnswerSheetState extends State<AnswerSheet> {
                 TextSpan(text: ' · ${meta.join(' · ')}'),
               ]), style: TextStyle(fontSize: 12, color: AppColors.muted)),
             ),
-            const StatsCaps('Jawaban nyel AI'),
+            const StatsCaps('Jawaban Nyel AI'),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(12)),

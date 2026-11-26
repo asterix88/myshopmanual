@@ -39,21 +39,72 @@ class AiSource {
   }
 }
 
+/// What kind of bubble a [ChatEntry] is.
+enum EntryKind {
+  /// A question, or the answer to one.
+  message,
+
+  /// The tutor's first question when mode belajar is turned on, shown by
+  /// the app (no request to the AI).
+  opening,
+
+  /// A hint from the tutor (the Petunjuk button in mode belajar).
+  hint,
+
+  /// The tutor offers the full answer, with "Ya, jelaskan" and "Coba lagi".
+  offer,
+
+  /// Mode belajar was turned on or off: a line across the chat with the time.
+  learningOn,
+  learningOff,
+}
+
 /// What the user sees of one exchange.
 class ChatEntry {
-  ChatEntry.user(this.text, {this.page})
-      : fromUser = true,
-        sources = const [],
-        pictures = const [],
-        failed = false;
-  ChatEntry.assistant(this.text, {this.sources = const [], this.pictures = const [], this.failed = false})
-      : fromUser = false,
-        page = null;
+  ChatEntry._({
+    required this.kind,
+    required this.fromUser,
+    required this.text,
+    this.page,
+    this.sources = const [],
+    this.pictures = const [],
+    this.failed = false,
+    this.tutor = false,
+    this.at,
+  });
 
+  ChatEntry.user(String text, {AiSource? page})
+      : this._(kind: EntryKind.message, fromUser: true, text: text, page: page);
+
+  ChatEntry.assistant(String text,
+      {List<AiSource> sources = const [], List<AiSource> pictures = const [], bool failed = false, bool tutor = false})
+      : this._(
+            kind: EntryKind.message,
+            fromUser: false,
+            text: text,
+            sources: sources,
+            pictures: pictures,
+            failed: failed,
+            tutor: tutor);
+
+  ChatEntry.hint(String text, {List<AiSource> sources = const []})
+      : this._(kind: EntryKind.hint, fromUser: false, text: text, sources: sources, tutor: true);
+
+  ChatEntry.opening() : this._(kind: EntryKind.opening, fromUser: false, text: AiChat.openingQuestion, tutor: true);
+
+  /// Shown after [AiChat.offerAfter] tutor replies without progress.
+  ChatEntry.offer() : this._(kind: EntryKind.offer, fromUser: false, text: offerQuestion, tutor: true);
+
+  ChatEntry.learning({required bool on, required DateTime at})
+      : this._(kind: on ? EntryKind.learningOn : EntryKind.learningOff, fromUser: false, text: '', at: at);
+
+  static const offerQuestion = 'Perlu jawaban lengkapnya?';
+
+  final EntryKind kind;
   final bool fromUser;
   final String text;
 
-  /// The manual page the question was asked about (from the viewer's nyel AI
+  /// The manual page the question was asked about (from the viewer's Nyel AI
   /// button), shown above the question.
   final AiSource? page;
 
@@ -65,18 +116,34 @@ class ChatEntry {
   final List<AiSource> pictures;
   final bool failed;
 
+  /// Written by the tutor in mode belajar: its closing question is shown
+  /// apart from the rest of the text.
+  final bool tutor;
+
+  /// When mode belajar was turned on or off.
+  final DateTime? at;
+
   /// How the mechanic rated this answer: 'good' (👍) or 'bad' (👎, "Jawaban
   /// salah"); null when not rated.
   String? rating;
 
+  /// The mechanic chose "Ya, jelaskan" or "Coba lagi" on this offer.
+  bool answered = false;
+
+  bool get isDivider => kind == EntryKind.learningOn || kind == EntryKind.learningOff;
+
   Map<String, dynamic> toJson() => {
         'user': fromUser,
         'text': text,
+        if (kind != EntryKind.message) 'kind': kind.name,
         if (page != null) 'page': page!.toJson(),
         if (sources.isNotEmpty) 'sources': [for (final s in sources) s.toJson()],
         if (pictures.isNotEmpty) 'pictures': [for (final s in pictures) s.toJson()],
         if (failed) 'failed': true,
+        if (tutor) 'tutor': true,
+        if (at != null) 'at': at!.millisecondsSinceEpoch,
         if (rating != null) 'rating': rating,
+        if (answered) 'answered': true,
       };
 
   static ChatEntry fromJson(AppStore store, Map<String, dynamic> json) {
@@ -89,16 +156,31 @@ class ChatEntry {
     List<AiSource> list(String key) => [
           for (final s in (json[key] as List? ?? const [])) ?AiSource.fromJson(store, (s as Map).cast<String, dynamic>()),
         ];
-    return ChatEntry.assistant(text,
-        sources: list('sources'), pictures: list('pictures'), failed: json['failed'] == true)
+    final kind = EntryKind.values.asNameMap()[json['kind']] ?? EntryKind.message;
+    final at = DateTime.fromMillisecondsSinceEpoch((json['at'] as num?)?.toInt() ?? 0);
+    final entry = switch (kind) {
+      EntryKind.message => ChatEntry.assistant(text,
+          sources: list('sources'),
+          pictures: list('pictures'),
+          failed: json['failed'] == true,
+          tutor: json['tutor'] == true),
+      EntryKind.opening => ChatEntry.opening(),
+      EntryKind.hint => ChatEntry.hint(text, sources: list('sources')),
+      EntryKind.offer => ChatEntry.offer(),
+      EntryKind.learningOn => ChatEntry.learning(on: true, at: at),
+      EntryKind.learningOff => ChatEntry.learning(on: false, at: at),
+    };
+    return entry
       // Versions before 👍 kept only 'reported' for a 👎.
-      ..rating = json['rating'] as String? ?? (json['reported'] == true ? 'bad' : null);
+      ..rating = json['rating'] as String? ?? (json['reported'] == true ? 'bad' : null)
+      ..answered = json['answered'] == true;
   }
 
   /// Parts of the answer come from the AI's general knowledge rather than a
   /// manual page: it says so ("Secara umum", "pengetahuan umum") or cites no
   /// page at all.
   bool get hasUncheckedParts =>
+      kind == EntryKind.message &&
       !fromUser &&
       !failed &&
       (sources.isEmpty || RegExp(r'secara umum|pengetahuan umum|nilai umum', caseSensitive: false).hasMatch(text));
@@ -137,6 +219,19 @@ class AnswerReport {
   final String answer;
   final List<String> sources;
   final String note;
+}
+
+/// What a request in mode belajar asks the tutor for (see
+/// ai-worker/src/tutor.ts). Only [question] counts against the allowance.
+enum TutorKind {
+  /// The mechanic's own message.
+  question,
+
+  /// The Petunjuk button.
+  hint,
+
+  /// "Ya, jelaskan" on the tutor's offer of the full answer.
+  explain,
 }
 
 class AiException implements Exception {
@@ -188,6 +283,46 @@ class AiChat {
   static const maxViews = 6;
   var _views = 0;
 
+  /// Mode belajar: Nyel AI answers as a Socratic tutor. Saved with the
+  /// conversation, so it is still on after a restart.
+  bool learning = false;
+
+  /// What the chat shows first when mode belajar is turned on. The tutor
+  /// knows it asked this (see ai-worker/src/tutor.ts).
+  static const openingQuestion = 'Apa yang sedang ingin kamu pelajari?';
+
+  /// Shown when today's allowance of the mode is used up.
+  static const limitMessage = 'Batas pertanyaan hari ini telah tercapai.';
+  static const learningLimitMessage = 'Batas mode belajar hari ini telah tercapai.';
+
+  /// Questions left today in the current mode, or null when there is no limit.
+  int? get questionsLeft => learning ? store.learningQuestionsLeft : store.aiQuestionsLeft;
+
+  /// Tutor replies in a row where the mechanic made no progress (the
+  /// tutor judges each reply). At [offerAfter], the full answer is offered.
+  int _stuck = 0;
+  static const offerAfter = 3;
+
+  /// Whether the chat should offer the full answer now.
+  bool get offerDue => learning && _stuck >= offerAfter;
+
+  /// The offer is shown (or the mechanic chose "Coba lagi"): count again.
+  void resetProgress() => _stuck = 0;
+
+  /// The running summary of the learning discussion. The AI only sees the
+  /// latest messages ([rememberedQuestions]); the summary, made by the
+  /// Worker every [summaryEvery] messages, keeps what came before.
+  String summary = '';
+  int _sinceSummary = 0;
+  static const summaryEvery = 10;
+
+  /// Turns mode belajar on or off. The conversation carries on: only the
+  /// way the AI answers changes.
+  void setLearning(bool on) {
+    learning = on;
+    _stuck = 0;
+  }
+
   /// Asks [question]; [onStatus] reports what is happening while it works.
   /// With [file] and [page] the question is about that manual page (the one
   /// open in the viewer): its text goes with the question.
@@ -196,10 +331,29 @@ class AiChat {
     ManualFile? file,
     int? page,
     void Function(String status)? onStatus,
+  }) =>
+      _ask(question, TutorKind.question, file: file, page: page, onStatus: onStatus);
+
+  /// A hint for the tutor's last question (the Petunjuk button). Free.
+  Future<ChatEntry> hint({void Function(String status)? onStatus}) =>
+      _ask('Minta petunjuk.', TutorKind.hint, onStatus: onStatus);
+
+  /// The full answer the tutor offered ("Ya, jelaskan"). Free.
+  Future<ChatEntry> explain({void Function(String status)? onStatus}) =>
+      _ask('Ya, jelaskan jawaban lengkapnya.', TutorKind.explain, onStatus: onStatus);
+
+  Future<ChatEntry> _ask(
+    String question,
+    TutorKind kind, {
+    ManualFile? file,
+    int? page,
+    void Function(String status)? onStatus,
   }) async {
-    if (store.aiQuestionsLeft == 0) {
-      throw AiException('Jatah ${AppStore.aiDailyLimit} pertanyaan hari ini sudah habis. Coba lagi besok.');
+    final counted = kind == TutorKind.question;
+    if (counted && questionsLeft == 0) {
+      throw AiException(learning ? learningLimitMessage : limitMessage);
     }
+    if (learning && _sinceSummary >= summaryEvery) await _updateSummary(onStatus: onStatus);
     _dropOldPictures();
     _dropOldReasoning();
     _keepRecentQuestions();
@@ -235,6 +389,7 @@ class AiChat {
         'features': const ['view_page', 'reasoning', 'read_page'],
         // The last round: the server asks for the answer with what was found.
         if (round == maxRounds - 1) 'final': true,
+        if (learning) 'tutor': {'kind': kind.name, if (summary.isNotEmpty) 'summary': summary},
       });
       final message = (response['message'] as Map).cast<String, dynamic>();
       final toolCalls = (message['tool_calls'] as List? ?? const []).cast<Map<String, dynamic>>();
@@ -248,9 +403,10 @@ class AiChat {
       });
 
       if (toolCalls.isEmpty) {
-        store.countAiQuestion();
-        final answer = _answer(message['content'] as String? ?? '');
-        if (!answer.failed) {
+        if (counted) store.countAiQuestion(learning: learning);
+        final answer = _answer(message['content'] as String? ?? '', kind);
+        if (learning && !answer.failed) _tutorReplied(kind, response['progress']);
+        if (counted && !answer.failed) {
           store.usage.asked(
             question: question,
             answer: answer.text,
@@ -304,11 +460,43 @@ class AiChat {
         });
       }
     }
-    store.countAiQuestion();
+    if (counted) store.countAiQuestion(learning: learning);
     return ChatEntry.assistant(
       'AI belum menemukan jawabannya di manual. Coba tanyakan dengan lebih spesifik.',
       failed: true,
     );
+  }
+
+  /// Keeps count of the tutor's judgement of the mechanic's replies
+  /// ([progress] from the Worker: true, false or null) and of the messages
+  /// since the summary.
+  void _tutorReplied(TutorKind kind, Object? progress) {
+    _sinceSummary += 2;
+    if (kind == TutorKind.explain || progress == true) _stuck = 0;
+    if (kind == TutorKind.question && progress == false) _stuck++;
+  }
+
+  /// Asks the Worker for an up-to-date summary of the discussion. A failure
+  /// only means the old summary is kept a little longer.
+  Future<void> _updateSummary({void Function(String status)? onStatus}) async {
+    onStatus?.call('Merangkum diskusi…');
+    final texts = [
+      for (final m in _messages)
+        if ((m['role'] == 'user' || m['role'] == 'assistant') && m['content'] is String && m['content'] != '')
+          {'role': m['role'], 'content': m['content']},
+    ];
+    try {
+      final data = await _post({
+        'summary': summary,
+        'messages': texts.skip(texts.length > summaryEvery * 2 ? texts.length - summaryEvery * 2 : 0).toList(),
+      }, to: _endpoint.replace(path: '/chat/summary'));
+      if (data['summary'] case final String text when text.trim().isNotEmpty) {
+        summary = text.trim();
+        _sinceSummary = 0;
+      }
+    } on AiException catch (e) {
+      Diagnostics.log('summary failed: ${e.message}');
+    }
   }
 
   /// Sends the mechanic's rating of an answer, 'good' (👍) or 'bad' (👎,
@@ -543,16 +731,20 @@ class AiChat {
 
   /// Questions the AI still sees from earlier in the conversation. The whole
   /// history is sent with every question, so keeping it short keeps answers
-  /// fast and the AI bill small even when the chat is kept for days.
+  /// fast and the AI bill small even when the chat is kept for days. Mode
+  /// belajar goes back and forth in short steps, so it keeps more, with the
+  /// [summary] for what came before.
   static const rememberedQuestions = 5;
+  static const rememberedLearningQuestions = 10;
 
   void _keepRecentQuestions() {
+    final keep = learning ? rememberedLearningQuestions : rememberedQuestions;
     final starts = [
       for (final (i, m) in _messages.indexed)
         if (m['role'] == 'user' && m['content'] is String && !(m['content'] as String).startsWith('Page pictures')) i,
     ];
-    if (starts.length < rememberedQuestions) return;
-    _messages.removeRange(0, starts[starts.length - rememberedQuestions + 1]);
+    if (starts.length < keep) return;
+    _messages.removeRange(0, starts[starts.length - keep + 1]);
     // Pages only the forgotten questions used are not needed any more.
     final used = {
       for (final m in _messages)
@@ -576,6 +768,10 @@ class AiChat {
       'entries': [for (final e in entries.skip(entries.length > keptEntries ? entries.length - keptEntries : 0)) e.toJson()],
       'messages': _messages,
       'sources': [for (final s in _sources.values) s.toJson()],
+      'learning': learning,
+      if (summary.isNotEmpty) 'summary': summary,
+      'stuck': _stuck,
+      'since_summary': _sinceSummary,
     });
     final part = File('${file.path}.part');
     await part.writeAsString(json);
@@ -587,7 +783,7 @@ class AiChat {
   /// conversation; another chat screen saving makes them differ.
   int revision = -1;
 
-  /// Tells other chat screens (the nyel AI tab and the one opened from a
+  /// Tells other chat screens (the Nyel AI tab and the one opened from a
   /// manual page share one conversation) that it changed.
   void _changed() {
     store.chatChanged();
@@ -610,6 +806,10 @@ class AiChat {
       _sources
         ..clear()
         ..addAll({for (final source in sources) source.id: source});
+      learning = json['learning'] == true;
+      summary = json['summary'] as String? ?? '';
+      _stuck = json['stuck'] as int? ?? 0;
+      _sinceSummary = json['since_summary'] as int? ?? 0;
       return [
         for (final e in json['entries'] as List? ?? const []) ChatEntry.fromJson(store, (e as Map).cast<String, dynamic>()),
       ];
@@ -620,10 +820,14 @@ class AiChat {
     }
   }
 
-  /// Forgets the conversation, on the phone too.
+  /// Forgets the conversation, on the phone too, with the learning summary.
+  /// The mode stays as it is.
   Future<void> clear() async {
     _messages.clear();
     _sources.clear();
+    summary = '';
+    _stuck = 0;
+    _sinceSummary = 0;
     final file = File(store.chatHistoryPath);
     if (await file.exists()) await file.delete();
     _changed();
@@ -651,7 +855,7 @@ class AiChat {
     }
   }
 
-  ChatEntry _answer(String content) {
+  ChatEntry _answer(String content, [TutorKind kind = TutorKind.question]) {
     final cited = <AiSource>[];
     final pictures = <AiSource>[];
     // Some models cite as 【S3】 or 【S3†L4-L9】; read those as [S3].
@@ -676,8 +880,9 @@ class AiChat {
     for (final source in pictures) {
       if (!cited.contains(source)) cited.add(source);
     }
-    return ChatEntry.assistant(text.isEmpty ? 'AI tidak memberi jawaban. Coba lagi.' : text,
-        sources: cited, pictures: pictures, failed: text.isEmpty);
+    if (text.isEmpty) return ChatEntry.assistant('AI tidak memberi jawaban. Coba lagi.', failed: true);
+    if (learning && kind == TutorKind.hint) return ChatEntry.hint(text, sources: cited);
+    return ChatEntry.assistant(text, sources: cited, pictures: pictures, tutor: learning);
   }
 
   static String _normalize(String s) => s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');

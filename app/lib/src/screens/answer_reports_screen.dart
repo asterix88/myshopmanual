@@ -7,7 +7,7 @@ import '../widgets/common.dart';
 import '../widgets/excavator_loader.dart';
 import 'shell.dart';
 
-/// Admins: how mechanics rated nyel AI's answers, 👍 or 👎 "Jawaban salah",
+/// Admins: how mechanics rated Nyel AI's answers, 👍 or 👎 "Jawaban salah",
 /// newest first.
 class AnswerReportsScreen extends StatefulWidget {
   const AnswerReportsScreen({super.key, this.client});
@@ -55,7 +55,7 @@ class _AnswerReportsScreenState extends State<AnswerReportsScreen> {
     final reports = _reports;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Penilaian nyel AI'),
+        title: const Text('Penilaian Nyel AI'),
         shape: Border(bottom: BorderSide(color: AppColors.line)),
       ),
       body: reports == null
@@ -130,7 +130,7 @@ class _ReportCard extends StatelessWidget {
             Text(report.note, style: TextStyle(fontSize: 13, color: AppColors.danger)),
           ],
           const SizedBox(height: 8),
-          Text('Jawaban nyel AI', style: label),
+          Text('Jawaban Nyel AI', style: label),
           SelectableText(report.answer, style: TextStyle(fontSize: 13, height: 1.45, color: AppColors.inkSoft)),
           if (report.sources.isNotEmpty) ...[
             const SizedBox(height: 8),

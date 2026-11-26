@@ -1,13 +1,13 @@
 part of '../store.dart';
 
-/// Search indexes for nyel AI: every manual's small index is fetched in
+/// Search indexes for Nyel AI: every manual's small index is fetched in
 /// the background (never the PDF) and kept in sync with the server.
 extension AppStoreAiIndexes on AppStore {
   /// Progress of [fetchAllAiIndexes] while it runs: indexes ready of total,
   /// and bytes received of the bytes it has to fetch.
   AiIndexProgress? get aiIndexProgress => _aiIndexRun;
 
-  /// Fetches every missing search index for nyel AI (indexes only, never
+  /// Fetches every missing search index for Nyel AI (indexes only, never
   /// PDFs), a few at a time, and deletes cached indexes of manuals no longer
   /// on the server. A failed index is skipped; after several failures in a
   /// row (offline) it stops and tries again on the next refresh.
@@ -59,7 +59,7 @@ extension AppStoreAiIndexes on AppStore {
   String cachedIndexPath(ManualFile f) =>
       p.join(_root.path, 'index-cache', f.unitId, '${f.id}-${f.index.sha256.substring(0, 12)}.sqlite');
 
-  /// Search indexes for nyel AI over every manual on the server, by file
+  /// Search indexes for Nyel AI over every manual on the server, by file
   /// key: a downloaded manual uses its own index; for any other only the small
   /// index is fetched (not the PDF) and kept. [where] narrows the manuals, so
   /// a question about one unit only fetches that unit's indexes. A manual
@@ -101,7 +101,7 @@ extension AppStoreAiIndexes on AppStore {
   }
 
   /// The index of [file] if it is on the phone already (downloaded with
-  /// the manual, or fetched for nyel AI), else null.
+  /// the manual, or fetched for Nyel AI), else null.
   String? readyIndexPath(ManualFile file) => _readyAiIndex(file);
 
   /// Where the page sizes measured while [file] was open are kept (for
@@ -139,7 +139,7 @@ extension AppStoreAiIndexes on AppStore {
 
   /// Search indexes for the Cari tab, by file key: every manual whose index
   /// is on the phone, downloaded or not (the small indexes of the others are
-  /// fetched in the background for nyel AI).
+  /// fetched in the background for Nyel AI).
   Map<String, String> searchableIndexes({DocType? type}) => {
         for (final file in catalog.files.followedBy(local.values.map((m) => m.file)))
           if (file.searchable && (type == null || file.type == type))

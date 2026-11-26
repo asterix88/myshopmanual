@@ -18,8 +18,8 @@ Salinan yang sama ada di repo `asterix88/myshopmanual` sebagai `CATATAN.md`.
 
 - **MyManual**: aplikasi Android (Flutter) untuk mekanik membuka dan mencari dokumen teknis (Shop Manual, OMM, Partsbook, dll.) per unit, bisa offline. Dipakai internal di site **SBS**, Plant Dept, Section **TRACK** (Excavator, Bulldozer), sedang disiapkan untuk WHEEL dan SUPPORT. Sekitar 188 karyawan terdaftar.
 - Unit: PC210, PC500, PC1250, PC2000, CAT395, D85, D155, D375 (semua sudah punya gambar unit).
-- Tab bawah: **Home, Cari, nyel AI** (tombol oranye bulat di tengah), **Standar, Servis**. Bisa digeser kiri-kanan.
-- **nyel AI** (huruf n kecil): asisten tanya jawab yang membaca semua manual di server, mengutip halaman, bisa melihat gambar halaman, mencari di web kalau manual tidak memuat jawabannya.
+- Tab bawah: **Home, Cari, Nyel AI** (tombol oranye bulat di tengah), **Standar, Servis**. Bisa digeser kiri-kanan.
+- **Nyel AI** (huruf n kecil): asisten tanya jawab yang membaca semua manual di server, mengutip halaman, bisa melihat gambar halaman, mencari di web kalau manual tidak memuat jawabannya.
 - Fitur lain di Home ("Fitur lainnya"): **Cetok Online** (stok part), **Konversi Satuan**, **Daily Inspection Monitoring**, **Kuis Harian**.
 - Versi app sekarang: 1.1.x (angka belakang = nomor build GitHub Actions).
 
@@ -44,7 +44,7 @@ Salinan yang sama ada di repo `asterix88/myshopmanual` sebagai `CATATAN.md`.
 6. Konten nyata (foto unit, nomor halaman, nilai torsi) di atas dekorasi.
 7. Font **Poppins** saja. Ukuran: 22 judul besar, 17 app bar/sheet, 15 judul kartu/tombol, 13 isi, 12 meta, 11 LABEL CAPS; 30 untuk angka besar. Tebal: Regular isi, SemiBold judul/tombol, Bold hanya angka penting + label caps.
 
-Logo: panah torsi oranye mengelilingi mur hex navy berlubang di kotak putih. Logo nyel AI: balon chat + mur hex.
+Logo: panah torsi oranye mengelilingi mur hex navy berlubang di kotak putih. Logo Nyel AI: balon chat + mur hex.
 
 ## 3. Arsitektur dan cara kerja teknis
 
@@ -55,7 +55,7 @@ source\SECTION TRACK\EXCAVATOR\PC210\*.pdf
    ▼ tools/build_packages.py  ──upload──▶ R2 bucket "mymanual"  ◀──────────  app Flutter
      (indeks FTS5, catalog.json,          (PDF, indeks, catalog,     files.mymanual.my.id (hanya sesi login)
       spek.pdf, ukuran halaman)            spek.pdf)
-                                          Worker "mymanual-ai"   ◀──────────  login NRP+PIN, nyel AI,
+                                          Worker "mymanual-ai"   ◀──────────  login NRP+PIN, Nyel AI,
                                           ai.mymanual.my.id                  stats, quiz, error, inspeksi
                                           KV AUTH, D1 mymanual-quiz,
                                           Durable Object STATS
@@ -66,13 +66,13 @@ Google Sheet Daily Inspection ◀── Apps Script "robot" ◀── Worker ◀
 ### Repo `asterix88/myshopmanual` (privat; Anas kolaborator)
 
 - `app/`: aplikasi Flutter. Penting: `lib/src/store.dart` + `lib/src/store/` (data, unduhan, update, indeks AI, paket spek), `lib/src/screens/` (satu folder per layar besar: `viewer/`, `chat/`, `login/`, `cetok/`, `stats/`, `quiz/`, `quiz_hub/`, `quiz_admin/`), `lib/src/specs.dart` (Standar/Servis/Torsi), `lib/src/cetok.dart`, `lib/src/inspection.dart`, `lib/src/quiz*.dart`, `lib/src/error_reports.dart`, `lib/src/widgets/`. Native Android: `KeepAliveService.kt` (unduhan tetap jalan), `PublicDownloads.kt` (Simpan ke Download). Tes: `app/test/`, `app/integration_test/` (emulator).
-- `ai-worker/`: server Cloudflare Worker (TypeScript). `src/index.ts` (nyel AI), `auth.ts` (login NRP+PIN 4 digit, Lupa PIN, tanpa lockout), `files.ts` (sajikan R2 ke HP yang login), `sections.ts` (filter katalog per section), `stats*.ts`, `quiz*.ts` (D1, cron), `inspection*.ts` + `google.ts`, `errors.ts`, `feedback.ts`. `migrations/` = tabel D1. `wrangler.toml` = konfigurasi (`REQUIRE_LOGIN = "1"`, model AI, ID sheet inspeksi).
+- `ai-worker/`: server Cloudflare Worker (TypeScript). `src/index.ts` (Nyel AI), `auth.ts` (login NRP+PIN 4 digit, Lupa PIN, tanpa lockout), `files.ts` (sajikan R2 ke HP yang login), `sections.ts` (filter katalog per section), `stats*.ts`, `quiz*.ts` (D1, cron), `inspection*.ts` + `google.ts`, `errors.ts`, `feedback.ts`. `migrations/` = tabel D1. `wrangler.toml` = konfigurasi (`REQUIRE_LOGIN = "1"`, model AI, ID sheet inspeksi).
 - `tools/` (dipakai di PC): `build_packages.py` (paket per unit + indeks + spek + ukuran halaman), `upload_r2.py`, `upload_karyawan.py`, `sections.py`, `sis_download.py` + `susunan.py` (dokumen CAT SIS), `daily-inspection.gs` (Apps Script robot), `torsi-pilihan.json`, `backup_tool.py`, `diag/` (skrip uji).
 - Root: `update.bat` (bangun + upload semua), `update-unit.bat` (pilih unit), `update-karyawan.bat` (upload karyawan.xlsx), `sis-download.bat`, `r2-keys.example.bat` (kunci asli di `r2-keys.bat`, tidak di-commit), `BACKUP.md`, `README.md`.
 - Workflow GitHub Actions (`.github/workflows/`):
   - `android.yml`: build APK tiap push ke main (+ GitHub Release `v<versi>`), bisa dijalankan manual untuk APK uji dari branch lain. Pakai `app-arm64-v8a-release.apk`.
   - `ai-worker.yml`: deploy server tiap perubahan `ai-worker/` di main (juga menerapkan migrasi D1 dan mengunggah secret).
-  - `checks.yml` (tes), `emulator.yml` (tes UI di emulator Android 13 tiap PR, sekitar 6 menit), `ai-eval.yml` (uji jawaban nyel AI pada PR AI, soal di `app/tool/ai_eval.json`).
+  - `checks.yml` (tes), `emulator.yml` (tes UI di emulator Android 13 tiap PR, sekitar 6 menit), `ai-eval.yml` (uji jawaban Nyel AI pada PR AI, soal di `app/tool/ai_eval.json`).
   - `backup.yml` (Minggu 22.00 WIB + manual) dan `restore.yml` (pulihkan; ketik PULIHKAN). Lihat `BACKUP.md`.
   - `inspection-check.yml` (cek secret inspeksi tanpa menampilkan isinya), `signing-key.yml`.
 
@@ -82,7 +82,7 @@ Google Sheet Daily Inspection ◀── Apps Script "robot" ◀── Worker ◀
 
 - **Domain** `mymanual.my.id` (Cloudflare). `ai.mymanual.my.id` = Worker; `files.mymanual.my.id` = file untuk HP yang login. URL lama `pub-…r2.dev` diblokir operator seluler Anas dan **harus dimatikan**.
 - **AI**: DeepSeek V4 Flash (utama, perkiraan sekitar US$8/bulan untuk 50 user), Groq sebagai cadangan. Pencarian web: Tavily (gratis 1.000/bulan), cadangan Wikipedia. Kuota 10 pertanyaan/hari per HP (dihitung di HP, reset tengah malam), maksimal 4 putaran per pertanyaan.
-- **Cara nyel AI bekerja**: HP mengunduh indeks pencarian (SQLite FTS5) semua manual di latar belakang; AI memanggil alat `search_manuals`, `read_page`, `view_page`; jawaban mengutip halaman yang bisa diketuk. Aturan: selalu cari di manual dulu; kalau tidak ada, jawab dari pengetahuan umum dengan tanda "Secara umum"; tidak boleh mengarang part number atau arti kode error. Pelajaran: jangan kirim ke DeepSeek percakapan berisi putaran alat tanpa daftar alat (keluar teks DSML mentah).
+- **Cara Nyel AI bekerja**: HP mengunduh indeks pencarian (SQLite FTS5) semua manual di latar belakang; AI memanggil alat `search_manuals`, `read_page`, `view_page`; jawaban mengutip halaman yang bisa diketuk. Aturan: selalu cari di manual dulu; kalau tidak ada, jawab dari pengetahuan umum dengan tanda "Secara umum"; tidak boleh mengarang part number atau arti kode error. Pelajaran: jangan kirim ke DeepSeek percakapan berisi putaran alat tanpa daftar alat (keluar teks DSML mentah).
 - **Login**: NRP + PIN 4 digit, tanpa lockout (lockout 5x pernah dibuang karena mekanik terkunci). Admin = NRP dengan kolom Admin "ya" di `karyawan.xlsx`. Karyawan diunggah lewat `update-karyawan.bat`.
 - **Cetok Online**: repo `asterix88/cetok-online` (publik; web statis `index.html`, `script.js`, `style.css`; backend Supabase). Tabel `stok`, `riwayat`; semua tulis lewat RPC `ambil_barang`, `input_barang`, `transfer_stok`; baca `get_all_data(p_riwayat_limit, p_show_hidden)`. Aplikasi memakai kunci publik Supabase (diterima untuk internal). Website menampilkan lokasi LOGISTIK/FABRIKASI/LAYDOWN/TRACKINDO. Supabase sudah dibackup sendiri oleh bot Telegram Anas. Ada juga bot WhatsApp (n8n + Baileys), host belum diketahui.
 - **Daily Inspection**: Google Sheet "MASTER DATA MONITORING DAILY INSPECTION", tab `INSPECTION TRACK/WHEEL/SUPPORT OPEN 2026`. Ditulis lewat Apps Script di akun Gmail "robot" (Anas tidak punya kartu kredit untuk Google Cloud). Akses per section dari login NRP.
@@ -116,8 +116,8 @@ Manual yang diunduh ada di penyimpanan privat aplikasi (`files/manuals/<UNIT>/`)
 - #39 `spek-hapus.txt`; #47-#50 Torsi per komponen (grup dari bookmark Shop Manual, buka di bagian Installation, angka torsi ditandai kuning, chip "N angka torsi ditandai · berikutnya"); #49 Standard tightening torque, animasi loading excavator.
 - #77/#79 dokumen CAT395 dari SIS (susunan OMM/SO/Troubleshooting, Servis CAT395).
 
-**nyel AI**
-- #37 nama "Nyel AI", lalu #47 "nyel AI". #38/#40/#41 boleh pakai pengetahuan umum yang diberi label. #42 cari web (Tavily). #43 salin pesan + cari riwayat chat. #64 tombol nyel AI di viewer (Terjemahkan/Jelaskan/Ringkas halaman). #65/#66 mode berpikir DeepSeek, `read_page`, jempol 👍/👎 + admin Penilaian nyel AI, maks 4 putaran. #70 perbaikan teks DSML mentah.
+**Nyel AI**
+- #37 nama "Nyel AI", lalu #47 "Nyel AI". #38/#40/#41 boleh pakai pengetahuan umum yang diberi label. #42 cari web (Tavily). #43 salin pesan + cari riwayat chat. #64 tombol Nyel AI di viewer (Terjemahkan/Jelaskan/Ringkas halaman). #65/#66 mode berpikir DeepSeek, `read_page`, jempol 👍/👎 + admin Penilaian Nyel AI, maks 4 putaran. #70 perbaikan teks DSML mentah.
 
 **Akun, admin, data**
 - #60/#61/#67 login NRP + PIN 4 digit, Lupa PIN; #80 multi-section (TRACK/WHEEL/SUPPORT, katalog difilter per section, `REQUIRE_LOGIN=1`); #82 ganti section dengan ketuk logo.
@@ -149,15 +149,15 @@ Manual yang diunduh ada di penyimpanan privat aplikasi (`files/manuals/<UNIT>/`)
 5. Isi kolom Departemen di `karyawan.xlsx` (masih kosong).
 
 ### Belum dikerjakan (sudah diusulkan, menunggu keputusan)
-- **Keamanan (tahap A dari penilaian engineer):** batas salah PIN yang lunak (10 salah = jeda 5 menit per NRP, plus batas per IP), batas pertanyaan nyel AI per menit di server, tulis Cetok lewat Worker (bukan kunci publik Supabase), lalu cabut izin tulis anonim.
+- **Keamanan (tahap A dari penilaian engineer):** batas salah PIN yang lunak (10 salah = jeda 5 menit per NRP, plus batas per IP), batas pertanyaan Nyel AI per menit di server, tulis Cetok lewat Worker (bukan kunci publik Supabase), lalu cabut izin tulis anonim.
 - Lint tambahan `avoid_catches_without_on_clauses` (39 tempat).
 - Versi iPhone (perlu Apple Developer US$99/tahun, TestFlight, build Mac di cloud; fitur Android-only harus ditulis ulang).
 
 ## 6. AKAN (rencana berikutnya)
 
-1. **Viewer layar penuh dengan ketuk (sedang dirancang):** saat PDF terbuka, ketuk layar sekali = layar penuh (app bar, bar bawah, tombol lain hilang), **hanya menyisakan balon nyel AI**; ketuk lagi = kembali normal. Contoh: perilaku Xodo dari video Anas. Langkah: mockup dulu > OK Anas > PR. Setelah itu Anas mau fitur viewer lain.
+1. **Viewer layar penuh dengan ketuk (sedang dirancang):** saat PDF terbuka, ketuk layar sekali = layar penuh (app bar, bar bawah, tombol lain hilang), **hanya menyisakan balon Nyel AI**; ketuk lagi = kembali normal. Contoh: perilaku Xodo dari video Anas. Langkah: mockup dulu > OK Anas > PR. Setelah itu Anas mau fitur viewer lain.
 2. **Multi-site (hanya rencana, belum dibangun):** sekitar 16 site (SBS, MIFA, BA, DMP, MIP, BIB, ADW, MAC, LAC, SKS, IPT, MHU, VIB, MLP, PIK, BGE). Hierarki Site > Departemen (Plant) > Section > NRP. NRP unik di semua site. Aturan fitur baru: data membawa `site`, jangan hardcode hal khusus SBS di app, NRP sebagai kunci, manual dipakai bersama. **Jangan** bangun migrasi D1 karyawan, peran Admin site, atau pilihan site sampai Anas meminta.
-3. **Ide yang ditunda (ingatkan Anas):** nyel AI dengan foto kamera (foto komponen/monitor unit > cari halaman manual yang cocok). Kamus istilah Indonesia untuk Cari dan pencarian makna (embedding): ditunda, buka lagi hanya kalau ada pertanyaan yang sering meleset. Animasi login seperti referensi Instagram (logo digambar garis lalu terisi).
+3. **Ide yang ditunda (ingatkan Anas):** Nyel AI dengan foto kamera (foto komponen/monitor unit > cari halaman manual yang cocok). Kamus istilah Indonesia untuk Cari dan pencarian makna (embedding): ditunda, buka lagi hanya kalau ada pertanyaan yang sering meleset. Animasi login seperti referensi Instagram (logo digambar garis lalu terisi).
 4. **Ditolak untuk sekarang:** catatan halaman bersama, riwayat/favorit, tab Stok terpisah, peran admin section.
 
 ## 7. Pelajaran teknis penting

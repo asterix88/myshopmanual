@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mymanual/src/ai.dart';
 import 'package:mymanual/src/auth.dart';
+import 'package:mymanual/src/screens/chat_screen.dart' show splitTutorQuestion;
 import 'package:mymanual/src/store.dart';
 
 import 'store_test.dart' show fixtureServer, testSession;
@@ -359,7 +360,7 @@ void main() {
     expect(store.aiQuestionsLeft, 0);
     await expectLater(
       chat.ask('Satu lagi'),
-      throwsA(isA<AiException>().having((e) => e.message, 'message', contains('sudah habis'))),
+      throwsA(isA<AiException>().having((e) => e.message, 'message', AiChat.limitMessage)),
     );
 
     // The admin's phone has no limit.
@@ -376,7 +377,7 @@ void main() {
     reopened.dispose();
   });
 
-  test('nyel AI gets the session and swaps it once when the server says it is old', () async {
+  test('Nyel AI gets the session and swaps it once when the server says it is old', () async {
     final store = await AppStore.open(root: root, client: MockClient((request) async {
       if (request.url.path == '/auth/refresh') {
         return http.Response(jsonEncode({...testSession(token: 'baru').toJson(), 'status': 'ok'}), 200);
@@ -518,6 +519,115 @@ void main() {
     expect(store.aiIndexProgress, isNull);
     store.dispose();
   });
+
+  test('mode belajar has its own allowance, tells the Worker the kind of request and offers the answer', () async {
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    await store.setServerUrl('https://example.test');
+    final requests = <Map<String, dynamic>>[];
+    final summaries = <Map<String, dynamic>>[];
+    final worker = MockClient((request) async {
+      final body = (jsonDecode(request.body) as Map).cast<String, dynamic>();
+      if (request.url.path == '/chat/summary') {
+        summaries.add(body);
+        return http.Response(jsonEncode({'summary': 'Topik: oli panas PC210.'}), 200);
+      }
+      requests.add(body);
+      return http.Response(
+          jsonEncode({
+            'finish_reason': 'stop',
+            'message': {'role': 'assistant', 'content': 'Coba lihat alirannya.\nKe mana oli mengalir setelah pompa?'},
+            'progress': false,
+          }),
+          200);
+    });
+    final chat = AiChat(store: store, client: worker, endpoint: Uri.parse('https://ai.test/chat'))..setLearning(true);
+    const limit = AppStore.aiDailyLimit;
+
+    await chat.ask('Oli hidrolik cepat panas');
+    expect(requests.last['tutor'], {'kind': 'question'});
+    expect((store.learningQuestionsLeft, store.aiQuestionsLeft), (limit - 1, limit));
+
+    // Petunjuk is free and does not count as a reply without progress.
+    final hint = await chat.hint();
+    expect(hint.kind, EntryKind.hint);
+    expect(requests.last['tutor'], {'kind': 'hint'});
+    expect(store.learningQuestionsLeft, limit - 1);
+
+    // Three replies in a row without progress: the full answer is offered.
+    await chat.ask('Tidak tahu');
+    expect(chat.offerDue, isFalse);
+    await chat.ask('Masih belum tahu');
+    expect(chat.offerDue, isTrue);
+    await chat.explain();
+    expect(requests.last['tutor'], {'kind': 'explain'});
+    expect(chat.offerDue, isFalse);
+    expect(store.learningQuestionsLeft, limit - 3);
+
+    // After ten messages the Worker summarises; the summary rides along.
+    for (var i = 3; i < limit; i++) {
+      await chat.ask('Jawaban $i');
+    }
+    expect(summaries, isNotEmpty);
+    expect(summaries.first['messages'], isNotEmpty);
+    expect(requests.last['tutor'], {'kind': 'question', 'summary': 'Topik: oli panas PC210.'});
+
+    expect(chat.questionsLeft, 0);
+    await expectLater(
+      chat.ask('Satu lagi'),
+      throwsA(isA<AiException>().having((e) => e.message, 'message', AiChat.learningLimitMessage)),
+    );
+
+    // The normal mode still has all of its own.
+    chat.setLearning(false);
+    expect(chat.questionsLeft, limit);
+    await chat.ask('Pertanyaan biasa');
+    expect(requests.last.containsKey('tutor'), isFalse);
+    store.dispose();
+  });
+
+  test('the tutor entries and the mode are kept on the phone', () async {
+    final store = await AppStore.open(root: root, client: fixtureServer());
+    final none = MockClient((_) async => http.Response('{}', 500));
+    final at = DateTime(2026, 11, 25, 21, 6);
+    await (AiChat(store: store, client: none)..setLearning(true)).save([
+      ChatEntry.learning(on: true, at: at),
+      ChatEntry.opening(),
+      ChatEntry.user('Oli panas'),
+      ChatEntry.assistant('Benar.\nApa fungsi oil cooler?', tutor: true),
+      ChatEntry.hint('Lihat jalur balik oli.'),
+      ChatEntry.offer()..answered = true,
+      ChatEntry.learning(on: false, at: at),
+    ]);
+
+    final reopened = AiChat(store: store, client: none);
+    final entries = await reopened.load();
+    expect(reopened.learning, isTrue);
+    expect(entries.map((e) => e.kind), [
+      EntryKind.learningOn,
+      EntryKind.opening,
+      EntryKind.message,
+      EntryKind.message,
+      EntryKind.hint,
+      EntryKind.offer,
+      EntryKind.learningOff,
+    ]);
+    expect(entries.first.at, at);
+    expect(entries[1].text, AiChat.openingQuestion);
+    expect(entries[3].tutor, isTrue);
+    expect(entries[5].answered, isTrue);
+    store.dispose();
+  });
+
+  test('a tutor reply is split from its closing question', () {
+    expect(
+      splitTutorQuestion('Benar.\n\n**Apa fungsi oil cooler?**'),
+      (text: 'Benar.', question: 'Apa fungsi oil cooler?'),
+    );
+    // A numbered step or a plain statement is not the closing question.
+    expect(splitTutorQuestion('Langkahnya:\n1. Sudah cek tekanan?').question, isNull);
+    expect(splitTutorQuestion('Tekanan relief 34,3 MPa.').question, isNull);
+  });
+
 }
 
 /// An HTTP client holding something that can't cross isolates, as a real
@@ -536,4 +646,5 @@ class _UnsendableClient extends http.BaseClient {
     _port.close();
     _inner.close();
   }
+
 }

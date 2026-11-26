@@ -49,6 +49,27 @@ abstract final class AppColors {
   static Color get amberSoft => _pick(0xFFFDF3E1, 0xFF33280F);
   /// Behind matching words in search results.
   static Color get highlight => _pick(0xFFFFE066, 0xFF7A6400);
+
+  // Mode belajar in Nyel AI: a navy app bar over a light navy chat, so the
+  // mode is clear at a glance without leaving the navy + orange palette.
+  static Color get learningBar => _pick(0xFF1E3A64, 0xFF1E3A64);
+
+  /// Text under the title on [learningBar].
+  static Color get learningBarMuted => _pick(0xFFC5D0E0, 0xFFC5D0E0);
+  static Color get learningBackground => _pick(0xFFE4EAF3, 0xFF0E1A2C);
+
+  /// Answer cards and the input bar.
+  static Color get learningSurface => _pick(0xFFFFFFFF, 0xFF16233A);
+
+  /// The input field and the tutor's question box.
+  static Color get learningField => _pick(0xFFEDF1F7, 0xFF1F2E46);
+  static Color get learningUserBubble => _pick(0xFF142A4A, 0xFF2D5490);
+
+  /// The line of the "tutor aktif" divider.
+  static Color get learningLine => _pick(0xFFB9C6D9, 0xFF2A3B56);
+
+  /// The tutor's question and the divider text.
+  static Color get learningInk => _pick(0xFF1E3A64, 0xFFC9D6EA);
 }
 
 ThemeData buildTheme({required bool dark}) {

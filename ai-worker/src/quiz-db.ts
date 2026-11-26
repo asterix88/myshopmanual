@@ -654,7 +654,7 @@ function toQuestionRow(r: Row): QuestionRow {
   };
 }
 
-/// Saves a new question (draft from nyel AI, or an admin's own).
+/// Saves a new question (draft from Nyel AI, or an admin's own).
 export async function addQuestion(
   db: Db,
   q: QuestionInput & { image?: string | null },

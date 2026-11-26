@@ -68,7 +68,7 @@ class PersonPage extends StatelessWidget {
                   const SizedBox(height: 14),
                   StatsTiles([
                     ('${p.manualsOpened}', 'Manual dibuka'),
-                    ('${p.ai}', 'Tanya nyel AI'),
+                    ('${p.ai}', 'Tanya Nyel AI'),
                     ('${p.searches}', 'Pencarian'),
                   ]),
                 ],
@@ -105,7 +105,7 @@ class PersonPage extends StatelessWidget {
               ]),
             const StatsCaps('Pertanyaan terakhir'),
             if (p.questions.isEmpty)
-              const NoneYet('Belum bertanya ke nyel AI.')
+              const NoneYet('Belum bertanya ke Nyel AI.')
             else
               CardRows([
                 for (final q in p.questions) QuestionTile(q, showName: false, onTap: () => onQuestion(q.id)),

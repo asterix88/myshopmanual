@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mymanual/main.dart';
+import 'package:mymanual/src/ai.dart';
 import 'package:mymanual/src/screens/chat_screen.dart';
 import 'package:mymanual/src/screens/search_screen.dart';
 import 'package:mymanual/src/store.dart';
@@ -24,7 +25,7 @@ void main() {
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('nyel AI').last);
+    await tester.tap(find.text('Nyel AI').last);
     await tester.pumpAndSettle();
     expect(shown(ChatScreen), isTrue);
 
@@ -87,7 +88,7 @@ void main() {
     root.deleteSync(recursive: true);
   });
 
-  testWidgets('Enter on the keyboard starts a new line in nyel AI', (tester) async {
+  testWidgets('Enter on the keyboard starts a new line in Nyel AI', (tester) async {
     late AppStore store;
     final root = Directory.systemTemp.createTempSync('shell');
     await tester.runAsync(() async {
@@ -95,7 +96,7 @@ void main() {
     });
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('nyel AI').last);
+    await tester.tap(find.text('Nyel AI').last);
     await tester.pumpAndSettle();
 
     // Questions are sent with the send button, so Enter only adds a line.
@@ -123,7 +124,7 @@ void main() {
     });
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('nyel AI').last);
+    await tester.tap(find.text('Nyel AI').last);
     await tester.pumpAndSettle();
     // The saved conversation is read from the phone.
     for (var i = 0; i < 20 && find.byType(SelectableText).evaluate().isEmpty; i++) {
@@ -137,7 +138,10 @@ void main() {
         find.byWidgetPredicate((w) => w is SelectableText && w.textSpan?.toPlainText() == 'Apa itu SL1?'),
         findsOneWidget);
 
-    await tester.tap(find.byTooltip('Cari di obrolan'));
+    // Cari di obrolan sits in the ⋮ menu, so the subtitle has room.
+    await tester.tap(find.byTooltip('Lainnya'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cari di obrolan'));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'Cari di obrolan…'), 'sl1');
     await tester.pumpAndSettle();
@@ -149,6 +153,21 @@ void main() {
 
     await tester.tap(find.byTooltip('Tutup pencarian'));
     await tester.pumpAndSettle();
+    expect(find.text('Teman diskusi masalah teknismu :)'), findsOneWidget);
+
+    // Mode belajar: a line across the chat and the tutor's opening question.
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(find.text('Mode belajar'), findsOneWidget);
+    expect(find.text('Socratic style tutor aktif'), findsOneWidget);
+    expect(find.text(AiChat.openingQuestion), findsOneWidget);
+    expect(find.text('Petunjuk'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Tulis jawabanmu…'), findsOneWidget);
+
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+    expect(find.text('Socratic style tutor tidak aktif'), findsOneWidget);
+    expect(find.text('Petunjuk'), findsNothing);
     expect(find.text('Teman diskusi masalah teknismu :)'), findsOneWidget);
     root.deleteSync(recursive: true);
   });

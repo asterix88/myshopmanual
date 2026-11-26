@@ -1,4 +1,4 @@
-/// Statistik tab nyel AI: the questions asked and their ratings.
+/// Statistik tab Nyel AI: the questions asked and their ratings.
 library;
 
 import 'package:flutter/material.dart';

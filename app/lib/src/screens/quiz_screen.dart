@@ -512,7 +512,7 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
         Row(
           children: [
             if (q.page > 0) _LinkButton(glyph: AppGlyph.book, label: 'Manual hal. ${q.page}', onTap: _openManual),
-            _LinkButton(glyph: AppGlyph.nyel, label: 'Tanya nyel AI', onTap: _askAi),
+            _LinkButton(glyph: AppGlyph.nyel, label: 'Tanya Nyel AI', onTap: _askAi),
             const Spacer(),
             IconButton(
               tooltip: 'Laporkan soal',

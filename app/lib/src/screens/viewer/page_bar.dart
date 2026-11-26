@@ -1,8 +1,8 @@
 part of '../viewer_screen.dart';
 
-// The page number box and the nyel AI button at the bottom of the viewer.
+// The page number box and the Nyel AI button at the bottom of the viewer.
 
-/// The round nyel AI button over the page: the sparkle only, like the one
+/// The round Nyel AI button over the page: the sparkle only, like the one
 /// in the middle of the tab bar.
 class _AiButton extends StatelessWidget {
   const _AiButton({required this.onPressed});
@@ -12,7 +12,7 @@ class _AiButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: 'Tanya nyel AI tentang halaman ini',
+      message: 'Tanya Nyel AI tentang halaman ini',
       child: Material(
         key: const Key('viewer-ai'),
         color: AppColors.orange,

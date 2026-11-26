@@ -48,7 +48,7 @@ class Session {
   final String nrp;
   final String name;
 
-  /// Sees "Kelola karyawan", every section, and has no daily nyel AI limit.
+  /// Sees "Kelola karyawan", every section, and has no daily Nyel AI limit.
   final bool admin;
 
   /// Admin kuis (Admin column "kuis" in karyawan.xlsx): manages the quiz

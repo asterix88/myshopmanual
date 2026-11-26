@@ -497,24 +497,33 @@ async function importList(request: Request, env: AuthEnv): Promise<Response> {
   return json({ ok: true, ...result });
 }
 
-/// Jakarta's date, for the daily nyel AI allowance.
+/// Jakarta's date, for the daily Nyel AI allowance.
 export function today(): string {
   return new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
 }
 
-/// Counts a new question for [s]: a Response when today's allowance is used
-/// up, otherwise a function that takes the question back (null for admins,
-/// who have no limit).
-export async function countQuestion(env: AuthEnv, s: Session): Promise<Response | (() => Promise<void>) | null> {
+/// The two daily allowances of Nyel AI: the normal mode and mode belajar
+/// each have AI_DAILY_LIMIT questions.
+export type QuestionMode = "biasa" | "belajar";
+
+const QUOTA: Record<QuestionMode, { prefix: string; message: string }> = {
+  biasa: { prefix: "ai", message: "Batas pertanyaan hari ini telah tercapai." },
+  belajar: { prefix: "belajar", message: "Batas mode belajar hari ini telah tercapai." },
+};
+
+/// Counts a new question for [s]: a Response when today's allowance of
+/// [mode] is used up, otherwise a function that takes the question back
+/// (null for admins, who have no limit).
+export async function countQuestion(
+  env: AuthEnv,
+  s: Session,
+  mode: QuestionMode = "biasa",
+): Promise<Response | (() => Promise<void>) | null> {
   if (s.a) return null;
-  const key = `ai:${today()}:${s.n}`;
+  const quota = QUOTA[mode];
+  const key = `${quota.prefix}:${today()}:${s.n}`;
   const asked = Number((await env.AUTH.get(key)) ?? "0");
-  if (asked >= AI_DAILY_LIMIT) {
-    return json(
-      { error: "quota", message: `Jatah ${AI_DAILY_LIMIT} pertanyaan hari ini sudah habis. Coba lagi besok.` },
-      429,
-    );
-  }
+  if (asked >= AI_DAILY_LIMIT) return json({ error: "quota", mode, message: quota.message }, 429);
   const put = (n: number) => env.AUTH.put(key, String(n), { expirationTtl: 3 * 86400, metadata: { n } });
   await put(asked + 1);
   return () => put(asked);

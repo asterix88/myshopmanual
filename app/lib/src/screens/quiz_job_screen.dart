@@ -12,8 +12,8 @@ import '../widgets/common.dart';
 import 'quiz_screen.dart';
 import 'shell.dart';
 
-/// "Buat draf kuis": nyel AI makes drafts from a whole manual. The phone
-/// sends the manual's table of contents, nyel AI picks pages, the phone sends
+/// "Buat draf kuis": Nyel AI makes drafts from a whole manual. The phone
+/// sends the manual's table of contents, Nyel AI picks pages, the phone sends
 /// those pages' text from its search index, and the server does the rest
 /// (writing, the curator, checking numbers) while the app may be closed.
 class QuizJobScreen extends StatefulWidget {
@@ -48,7 +48,7 @@ class _QuizJobScreenState extends State<QuizJobScreen> {
     super.dispose();
   }
 
-  /// Manuals nyel AI can read: text (not scanned), and not partsbooks.
+  /// Manuals Nyel AI can read: text (not scanned), and not partsbooks.
   List<ManualFile> _files(Unit unit) => [
         for (final f in StoreScope.read(context).filesOf(unit))
           if (f.searchable && f.type != DocType.partsbook) f,
@@ -76,7 +76,7 @@ class _QuizJobScreenState extends State<QuizJobScreen> {
       if (lines.trim().isEmpty) throw Exception('Teks file ini tidak terbaca (mungkin hasil scan).');
 
       if (!mounted) return;
-      setState(() => _status = 'nyel AI memilih halaman…');
+      setState(() => _status = 'Nyel AI memilih halaman…');
       final pages = await api.plan(
         unit: file.unitId,
         topic: _topic,
@@ -113,7 +113,7 @@ class _QuizJobScreenState extends State<QuizJobScreen> {
       final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
       messenger.showSnackBar(const SnackBar(
-        content: Text('nyel AI mulai membuat draf. Prosesnya sekitar 5 sampai 10 menit, aplikasi boleh ditutup.'),
+        content: Text('Nyel AI mulai membuat draf. Prosesnya sekitar 5 sampai 10 menit, aplikasi boleh ditutup.'),
       ));
     } catch (e) {
       if (!mounted) return;

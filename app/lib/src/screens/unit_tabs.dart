@@ -495,7 +495,7 @@ class _SpecViewerScreenState extends State<SpecViewerScreen> {
                 else
                   const Spacer(),
                 const SizedBox(width: 12),
-                // The round nyel AI button, as everywhere else.
+                // The round Nyel AI button, as everywhere else.
                 AiCircleButton(onPressed: _askAi),
               ],
             ),
@@ -506,10 +506,10 @@ class _SpecViewerScreenState extends State<SpecViewerScreen> {
   }
 }
 
-/// The round orange nyel AI button with its logo, as in the middle of the
+/// The round orange Nyel AI button with its logo, as in the middle of the
 /// tab bar.
 class AiCircleButton extends StatelessWidget {
-  const AiCircleButton({super.key, required this.onPressed, this.tooltip = 'Tanya nyel AI'});
+  const AiCircleButton({super.key, required this.onPressed, this.tooltip = 'Tanya Nyel AI'});
 
   final VoidCallback onPressed;
   final String tooltip;

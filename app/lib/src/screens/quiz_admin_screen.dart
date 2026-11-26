@@ -4,7 +4,7 @@
 /// - `questions_tab.dart`   tab Soal: list, drafts, jobs, bulk approval
 /// - `reports_tab.dart`     tab Laporan: questions reported as wrong
 /// - `edit_screen.dart`     editing one question
-/// - `generate_sheet.dart`  "Buat draf kuis" with nyel AI
+/// - `generate_sheet.dart`  "Buat draf kuis" with Nyel AI
 library;
 
 import 'dart:async';
@@ -35,7 +35,7 @@ part 'quiz_admin/generate_sheet.dart';
 part 'quiz_admin/questions_tab.dart';
 part 'quiz_admin/reports_tab.dart';
 
-/// Admins: the questions nyel AI drafted wait here until an admin approves
+/// Admins: the questions Nyel AI drafted wait here until an admin approves
 /// them (Anas's decision in the Quiz PRD), plus questions pulled by reports
 /// or by too many wrong answers.
 class QuizAdminScreen extends StatefulWidget {
