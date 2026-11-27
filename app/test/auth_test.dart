@@ -376,7 +376,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('NRP 21045678'), findsOneWidget);
     expect(find.text('Kelola karyawan'), findsNothing);
-    expect(find.text('Keluar'), findsOneWidget);
+    expect(find.text('Keluar'), findsNothing); // Keluar is on the Profil page.
     await tester.tapAt(const Offset(5, 500));
     await tester.pumpAndSettle();
 

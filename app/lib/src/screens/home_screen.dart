@@ -20,6 +20,7 @@ import 'employees_screen.dart';
 import 'error_reports_screen.dart';
 import 'inspection_screen.dart';
 import 'machine_screen.dart';
+import 'profile_screen.dart';
 import 'quiz_admin_screen.dart';
 import 'quiz_hub_screen.dart';
 import 'report_screen.dart';
@@ -70,6 +71,13 @@ class HomeScreen extends StatelessWidget {
                       child: const AppIcon(AppGlyph.bell, color: Colors.white, size: 26),
                     ),
                   ),
+                  if (store.session case final session?)
+                    IconButton(
+                      key: const Key('home-profile'),
+                      tooltip: 'Profil',
+                      onPressed: () => _openProfile(context, store, session),
+                      icon: ProfileBadge(name: session.name, size: 30),
+                    ),
                   _menu(context, store),
                 ],
               ),
@@ -125,13 +133,13 @@ class HomeScreen extends StatelessWidget {
         'quiz' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QuizAdminScreen())),
         'quiz_stats' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QuizStatsScreen())),
         'cetok' => showDialog<void>(context: context, builder: (_) => const _CetokDataDialog()),
-        'logout' => _logout(context, store),
+        'profile' => _openProfile(context, store, store.session!),
         _ => _editServer(context, store),
       },
       itemBuilder: (_) => [
         if (store.session case final session?)
           PopupMenuItem(
-            enabled: false,
+            value: 'profile',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -175,8 +183,6 @@ class HomeScreen extends StatelessWidget {
         const PopupMenuItem(value: 'report', child: Text('Laporan masalah')),
         if (store.session?.admin ?? false)
           const PopupMenuItem(value: 'server', child: Text('Alamat server')),
-        if (store.loggedIn)
-          PopupMenuItem(value: 'logout', child: Text('Keluar', style: TextStyle(color: AppColors.danger))),
       ],
     );
   }
@@ -206,7 +212,18 @@ class HomeScreen extends StatelessWidget {
     if (mode != null) store.setThemeMode(mode);
   }
 
-  Future<void> _logout(BuildContext context, AppStore store) async {
+  Future<void> _openProfile(BuildContext context, AppStore store, Session session) {
+    return Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (profile) => ProfileScreen(
+          session: session,
+          onLogout: () => _logout(profile, store, leave: true),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _logout(BuildContext context, AppStore store, {bool leave = false}) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -222,7 +239,9 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
     );
-    if (ok ?? false) await store.signOut();
+    if (!(ok ?? false)) return;
+    if (leave && context.mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+    await store.signOut();
   }
 
   Future<void> _editServer(BuildContext context, AppStore store) async {
