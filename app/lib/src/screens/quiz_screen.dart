@@ -17,6 +17,7 @@ import 'package:http/http.dart' as http;
 
 import '../auth.dart';
 import '../quiz.dart';
+import '../quiz_reminders.dart' show quizDayOf;
 import '../theme.dart';
 import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
@@ -230,6 +231,8 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
     final session = _session!;
     FinishResult? result;
     Object? error;
+    // The streak as it stood before this quiz, for the summary's flame.
+    final before = QuizApi.lastHome;
     await Future.wait(_sending.toList());
     try {
       result = await _api.finish(session.id);
@@ -249,6 +252,8 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
         offline: error is AuthException && error.code == 'network',
         xpWithoutBonus: _xp,
         minutes: DateTime.now().difference(_started).inMinutes,
+        streakBefore: before?.streak,
+        day: before == null || before.day.isEmpty ? null : before.day,
       ),
     ));
   }

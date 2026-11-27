@@ -113,6 +113,38 @@ void main() {
     }
   }
 
+  testWidgets('after the daily quiz the streak rolls up and today lights up', (tester) async {
+    final client = MockClient((request) async => http.Response(jsonEncode(homeJson()), 200));
+    final store = await openStore(tester, client);
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(
+        home: QuizSummaryScreen(
+          daily: true,
+          unit: null,
+          questions: const [],
+          first: const {},
+          chosen: const {},
+          result: FinishResult({'score': 8, 'total': 10, 'xp_session': 50, 'streak': 4, 'rank': 2}),
+          offline: false,
+          xpWithoutBonus: 50,
+          minutes: 3,
+          streakBefore: 3,
+          day: '2026-11-06',
+        ),
+      ),
+    ));
+    await tester.pump();
+    expect(find.text('3'), findsOneWidget);
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(find.text('hari streak · pertahankan besok'), findsOneWidget);
+    for (final d in ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']) {
+      expect(find.text(d), findsOneWidget);
+    }
+    expect(find.text('3'), findsNothing);
+    expect(find.text('4'), findsOneWidget);
+  });
+
   testWidgets('the Home card shows the streak and hides with no questions', (tester) async {
     var questions = 30;
     final client = MockClient((request) async => http.Response(jsonEncode(homeJson(questions: questions)), 200));

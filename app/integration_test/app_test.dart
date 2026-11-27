@@ -14,6 +14,7 @@ import 'package:mymanual/src/screens/unit_screen.dart';
 import 'package:mymanual/src/screens/viewer_screen.dart';
 import 'package:mymanual/src/store.dart';
 import 'package:mymanual/src/widgets/excavator_loader.dart';
+import 'package:mymanual/src/widgets/quiz_widgets.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'fixtures.g.dart';
@@ -58,6 +59,7 @@ void step(String text) => print('[step ${DateTime.now().difference(_start).inSec
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   ExcavatorLoader.animate = false;
+  Flame.animate = false;
 
   testWidgets('a downloaded manual is saved to Download once and stays saved', (tester) async {
     final root = Directory('${(await getTemporaryDirectory()).path}/it-${DateTime.now().microsecondsSinceEpoch}')
