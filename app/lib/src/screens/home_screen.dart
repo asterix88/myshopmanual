@@ -837,7 +837,7 @@ class _Tools extends StatelessWidget {
         _ToolTile(
           key: const Key('tool-inspection'),
           icon: const ToolIcon.clipboard(),
-          title: 'Daily Inspection',
+          title: 'DIM',
           onTap: () => openInspection(context),
         ),
       _ToolTile(

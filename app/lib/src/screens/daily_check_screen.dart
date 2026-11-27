@@ -28,6 +28,43 @@ bool staysInDailyCheck(Uri uri) {
   return !external.any((h) => uri.host == h || uri.host.endsWith('.$h'));
 }
 
+/// The "Semua Good" button shows from this many dropdowns on the page.
+const minDropdownsForGood = 3;
+
+/// Tells the app how many dropdowns the page has, again whenever the page
+/// changes (the site switches pages without reloading).
+const watchDropdownsJs = '''
+(function(){
+  if (window.__mmWatch) { window.__mmWatch(); return; }
+  var last = -1;
+  window.__mmWatch = function(){
+    var n = document.querySelectorAll('button[role="combobox"]').length;
+    if (n !== last) { last = n; MyManual.postMessage('combo:' + n); }
+  };
+  var t;
+  new MutationObserver(function(){ clearTimeout(t); t = setTimeout(window.__mmWatch, 300); })
+    .observe(document.documentElement, {childList: true, subtree: true});
+  window.__mmWatch();
+})();
+''';
+
+/// Anas's setGood bookmarklet: opens each dropdown and picks "Good"; a
+/// dropdown without "Good" is closed and skipped. Reports 'good:set:skipped'.
+const setAllGoodJs = '''
+(async function(){
+  const delay = ms => new Promise(r => setTimeout(r, ms));
+  let s = 0, d = 0;
+  for (const t of document.querySelectorAll('button[role="combobox"]')) {
+    t.click();
+    await delay(40);
+    const o = Array.from(document.querySelectorAll('[role="option"]')).find(x => x.textContent.includes('Good'));
+    if (o) { o.click(); s++; } else { t.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true})); d++; }
+    await delay(40);
+  }
+  MyManual.postMessage('good:' + s + ':' + d);
+})();
+''';
+
 class DailyCheckScreen extends StatefulWidget {
   const DailyCheckScreen({super.key});
 
@@ -41,17 +78,26 @@ class _DailyCheckScreenState extends State<DailyCheckScreen> {
   bool _failed = false;
   bool _canGoBack = false;
 
+  /// Dropdowns on the page; the "Semua Good" button shows on the
+  /// inspection form (many dropdowns), not on the dashboard.
+  int _dropdowns = 0;
+  bool _settingGood = false;
+
   @override
   void initState() {
     super.initState();
     _web = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..addJavaScriptChannel('MyManual', onMessageReceived: _onPageMessage)
       ..setNavigationDelegate(
         NavigationDelegate(
           onProgress: (p) {
             if (mounted) setState(() => _progress = p / 100);
           },
-          onPageFinished: (_) => _updateBack(),
+          onPageFinished: (_) {
+            unawaited(_updateBack());
+            unawaited(_web.runJavaScript(watchDropdownsJs).catchError((_) {}));
+          },
           onUrlChange: (_) => _updateBack(),
           onNavigationRequest: (request) {
             final uri = Uri.tryParse(request.url);
@@ -117,6 +163,29 @@ class _DailyCheckScreenState extends State<DailyCheckScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Foto tidak dapat diambil')));
       }
       return [];
+    }
+  }
+
+  void _onPageMessage(JavaScriptMessage message) {
+    final parts = message.message.split(':');
+    if (!mounted) return;
+    if (parts.first == 'combo' && parts.length == 2) {
+      setState(() => _dropdowns = int.tryParse(parts[1]) ?? 0);
+    } else if (parts.first == 'good' && parts.length == 3) {
+      setState(() => _settingGood = false);
+      final skipped = int.tryParse(parts[2]) ?? 0;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${parts[1]} kolom diisi Good${skipped > 0 ? ', $skipped dilewati' : ''}')),
+      );
+    }
+  }
+
+  Future<void> _setAllGood() async {
+    setState(() => _settingGood = true);
+    try {
+      await _web.runJavaScript(setAllGoodJs);
+    } catch (_) {
+      if (mounted) setState(() => _settingGood = false);
     }
   }
 
@@ -194,6 +263,23 @@ class _DailyCheckScreenState extends State<DailyCheckScreen> {
               ),
             ),
           ),
+          floatingActionButton:
+              _failed || _dropdowns < minDropdownsForGood || MediaQuery.viewInsetsOf(context).bottom > 0
+              ? null
+              : FloatingActionButton(
+                  key: const Key('daily-check-good'),
+                  tooltip: 'Isi semua Good',
+                  shape: const CircleBorder(),
+                  onPressed: _settingGood ? null : _setAllGood,
+                  backgroundColor: AppColors.orange,
+                  foregroundColor: Colors.white,
+                  child: _settingGood
+                      ? const SizedBox.square(
+                          dimension: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                        )
+                      : const Icon(Icons.bolt, size: 30),
+                ),
           body: _failed
               ? Center(
                   child: EmptyState(

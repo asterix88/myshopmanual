@@ -11,4 +11,11 @@ void main() {
     expect(staysInDailyCheck(Uri.parse('mailto:a@b.c')), isFalse);
     expect(staysInDailyCheck(Uri.parse('intent://scan#Intent;end')), isFalse);
   });
+
+  test('the setGood script reports back to the app instead of an alert', () {
+    expect(setAllGoodJs, contains("MyManual.postMessage('good:'"));
+    expect(setAllGoodJs, isNot(contains('alert(')));
+    expect(setAllGoodJs, contains('button[role="combobox"]'));
+    expect(watchDropdownsJs, contains("MyManual.postMessage('combo:'"));
+  });
 }
