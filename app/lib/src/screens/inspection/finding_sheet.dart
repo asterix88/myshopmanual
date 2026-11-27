@@ -76,7 +76,7 @@ class _FindingSheetState extends State<_FindingSheet> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Buang isian Action?'),
-          content: const Text('Tulisan yang belum disimpan akan hilang.'),
+          content: const Text('Tulisan yang belum disimpan akan hilang'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Lanjut isi')),
             TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Buang')),
@@ -178,10 +178,10 @@ class _FindingSheetState extends State<_FindingSheet> {
                   textCapitalization: TextCapitalization.characters,
                   inputFormatters: [_Upper()],
                   onChanged: (_) => setState(() {}),
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: 13),
                   decoration: InputDecoration(
                     hintText: 'Cth: done, replace saat service',
-                    hintStyle: TextStyle(color: AppColors.faint, fontSize: 14),
+                    hintStyle: TextStyle(color: AppColors.faint, fontSize: 13),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
@@ -193,7 +193,7 @@ class _FindingSheetState extends State<_FindingSheet> {
                     onPressed: canSave ? _save : null,
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.navy,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: _saving
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))

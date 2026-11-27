@@ -41,6 +41,28 @@ void main() {
     root.deleteSync(recursive: true);
   });
 
+  testWidgets('the bottom bar hides while scrolling down and comes back on scrolling up', (tester) async {
+    late AppStore store;
+    final root = Directory.systemTemp.createTempSync('shell');
+    await tester.runAsync(() async {
+      store = await AppStore.open(root: root, client: fixtureServer());
+    });
+    await tester.pumpWidget(MyManualApp(store: store));
+    await tester.pumpAndSettle();
+    double slide() => tester.widget<AnimatedSlide>(find.byType(AnimatedSlide).last).offset.dy;
+    expect(slide(), 0);
+
+    final list = find.byType(Scrollable).first;
+    await tester.drag(list, const Offset(0, -120));
+    await tester.pumpAndSettle();
+    expect(slide(), 1);
+
+    await tester.drag(list, const Offset(0, 40));
+    await tester.pumpAndSettle();
+    expect(slide(), 0);
+    root.deleteSync(recursive: true);
+  });
+
   testWidgets('Cari shows one card per file, with every hit in it', (tester) async {
     late AppStore store;
     final root = Directory.systemTemp.createTempSync('shell');

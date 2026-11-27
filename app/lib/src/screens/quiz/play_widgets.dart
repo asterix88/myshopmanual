@@ -51,7 +51,7 @@ class _Option extends StatelessWidget {
       child: Material(
         color: fill,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: border, width: state == _OptState.idle || state == _OptState.dim ? 1 : 2),
         ),
         clipBehavior: Clip.antiAlias,
@@ -80,7 +80,7 @@ class _Option extends StatelessWidget {
                     child: Text(
                       text,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         height: 1.4,
                         color: state == _OptState.dim ? AppColors.muted : AppColors.ink,
                       ),
@@ -167,7 +167,7 @@ class _ErrorView extends StatelessWidget {
     final (title, message) = switch (code) {
       'done' => ('Quiz harian sudah selesai', 'Coba Quiz per unit'),
       'empty' => ('Belum ada soal', 'Soal untuk ${unit ?? 'section-mu'} sedang disiapkan'),
-      'network' => ('Gagal memuat soal', 'Periksa koneksi internet.'),
+      'network' => ('Gagal memuat soal', 'Periksa koneksi internet'),
       _ => ('Gagal memuat soal', error is AuthException ? (error as AuthException).message : '$error'),
     };
     final retry = code == 'network' || code == 'server' || code == '';

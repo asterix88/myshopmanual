@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart' show Drag;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 
 import '../quiz_reminders.dart';
 import '../store.dart';
@@ -40,6 +41,10 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
   int _aiAsks = 0;
+
+  /// The bottom bar slides away while the page is scrolled down and comes
+  /// back on scrolling up, at the top of the page, or on a tab change.
+  bool _barHidden = false;
   final _pages = PageController();
 
   /// A swipe that went past the end of a page's own sub-tabs (Standar,
@@ -72,13 +77,20 @@ class _HomeShellState extends State<HomeShell> {
 
   void _select(int tab) {
     if (tab == _tab) return;
-    setState(() => _tab = tab);
+    setState(() {
+      _tab = tab;
+      _barHidden = false;
+    });
     _pages.animateToPage(tab, duration: const Duration(milliseconds: 320), curve: Curves.easeOutCubic);
   }
 
   /// Sideways swipes on a page's own tabs move those first; at their first
   /// or last tab the swipe moves on to the next or previous main tab.
   bool _onPageScroll(ScrollNotification n) {
+    if (n.metrics.axis == Axis.vertical) {
+      _onVerticalScroll(n);
+      return false;
+    }
     if (n.depth == 0 || n.metrics.axis != Axis.horizontal || !_pages.hasClients) return false;
     if (n is OverscrollNotification && n.dragDetails != null) {
       final d = n.dragDetails!;
@@ -91,6 +103,18 @@ class _HomeShellState extends State<HomeShell> {
       _carried?.end(n.dragDetails ?? DragEndDetails(primaryVelocity: 0));
     }
     return false;
+  }
+
+  void _onVerticalScroll(ScrollNotification n) {
+    // The chat keeps its bar: its input field sits right above it.
+    if (_tab == chatTab) return;
+    bool? hide;
+    if (n is UserScrollNotification) {
+      if (n.direction == ScrollDirection.reverse) hide = true;
+      if (n.direction == ScrollDirection.forward) hide = false;
+    }
+    if (n is ScrollUpdateNotification && n.metrics.pixels <= n.metrics.minScrollExtent) hide = false;
+    if (hide != null && hide != _barHidden) setState(() => _barHidden = hide!);
   }
 
   @override
@@ -128,7 +152,10 @@ class _HomeShellState extends State<HomeShell> {
           onNotification: _onPageScroll,
           child: PageView(
             controller: _pages,
-            onPageChanged: (i) => setState(() => _tab = i),
+            onPageChanged: (i) => setState(() {
+              _tab = i;
+              _barHidden = false;
+            }),
             children: [
               for (final (i, page) in pages.indexed)
                 // Each tab keeps its scroll position and typed search; only
@@ -144,7 +171,12 @@ class _HomeShellState extends State<HomeShell> {
             ],
           ),
         ),
-        bottomNavigationBar: _NavBar(pages: _pages, current: _tab, onSelect: _select),
+        bottomNavigationBar: AnimatedSlide(
+          offset: _barHidden ? const Offset(0, 1) : Offset.zero,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          child: _NavBar(pages: _pages, current: _tab, onSelect: _select),
+        ),
       ),
     );
   }

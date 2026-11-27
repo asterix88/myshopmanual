@@ -78,7 +78,7 @@ class _FrontText extends StatelessWidget {
                 Divider(height: 1, color: AppColors.line),
                 const SizedBox(height: 14),
                 Text(
-                  'Jelaskan dengan bahasamu sendiri, lalu balik kartu.',
+                  'Jelaskan dengan bahasamu sendiri, lalu balik kartu',
                   style: TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
                 const Spacer(flex: 3),
@@ -265,7 +265,7 @@ class _RatingBar extends StatelessWidget {
                       padding: EdgeInsets.zero,
                       foregroundColor: i == 0 ? AppColors.danger : AppColors.ink,
                       side: BorderSide(color: AppColors.border),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                   ),

@@ -19,7 +19,7 @@ Future<void> openInPartsbook(BuildContext context, CetokPart part) {
   if (part.numbers.isEmpty) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text('Part ini belum punya part number.')));
+      ..showSnackBar(const SnackBar(content: Text('Part ini belum punya part number')));
     return Future.value();
   }
   return Navigator.of(context).push(MaterialPageRoute(builder: (_) => PartsbookSearchScreen(part: part)));
@@ -89,7 +89,7 @@ class _PartsbookSearchScreenState extends State<PartsbookSearchScreen> {
     if (indexes.isEmpty) {
       setState(() {
         _loading = false;
-        _error = 'Partsbook belum bisa dicari. Periksa sinyal internet.';
+        _error = 'Partsbook belum bisa dicari. Periksa koneksi internet kamu';
       });
       return;
     }
@@ -128,7 +128,7 @@ class _PartsbookSearchScreenState extends State<PartsbookSearchScreen> {
             Container(
               padding: EdgeInsets.fromLTRB(8, MediaQuery.paddingOf(context).top + 6, 16, 16),
               decoration: const BoxDecoration(
-                color: Color(0xFF1E3A64),
+                color: AppColors.header,
                 borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
               ),
               child: Column(
@@ -147,7 +147,7 @@ class _PartsbookSearchScreenState extends State<PartsbookSearchScreen> {
                           children: [
                             Text('Cari di Partsbook',
                                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2)),
-                            Text('Semua unit model', style: TextStyle(fontSize: 12, color: Color(0xFFC9D3E3))),
+                            Text('Semua unit model', style: TextStyle(fontSize: 12, color: AppColors.headerMuted)),
                           ],
                         ),
                       ),
@@ -157,7 +157,7 @@ class _PartsbookSearchScreenState extends State<PartsbookSearchScreen> {
                   Container(
                     margin: const EdgeInsets.only(left: 8),
                     padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
-                    decoration: BoxDecoration(color: const Color(0x1AFFFFFF), borderRadius: BorderRadius.circular(14)),
+                    decoration: BoxDecoration(color: const Color(0x1AFFFFFF), borderRadius: BorderRadius.circular(16)),
                     child: Row(
                       children: [
                         Expanded(
@@ -169,7 +169,7 @@ class _PartsbookSearchScreenState extends State<PartsbookSearchScreen> {
                               Text(part.desc,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 12, color: Color(0xFFC9D3E3))),
+                                  style: const TextStyle(fontSize: 12, color: AppColors.headerMuted)),
                             ],
                           ),
                         ),
@@ -178,7 +178,7 @@ class _PartsbookSearchScreenState extends State<PartsbookSearchScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
                           child: Text('Stok ${part.unit}',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF1E3A64))),
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.header)),
                         ),
                       ],
                     ),
@@ -227,7 +227,7 @@ class _PartsbookSearchScreenState extends State<PartsbookSearchScreen> {
         if (_own.isEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(2, 4, 2, 0),
-            child: Text('Tidak ada di Partsbook ${widget.part.unit}.',
+            child: Text('Tidak ada di Partsbook ${widget.part.unit}',
                 style: TextStyle(fontSize: 12, color: AppColors.muted)),
           ),
       ],

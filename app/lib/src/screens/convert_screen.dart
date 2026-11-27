@@ -139,9 +139,9 @@ class _ConvertScreenState extends State<ConvertScreen> {
                 ),
                 const SizedBox(height: 8),
                 _Card(
-                  color: const Color(0xFF1E3A64),
+                  color: AppColors.header,
                   label: 'Ke',
-                  labelColor: const Color(0xFFC9D3E3),
+                  labelColor: AppColors.headerMuted,
                   value: Text(
                     formatValue(valueIn(_to)),
                     key: const Key('convert-result'),
@@ -176,7 +176,7 @@ class _ConvertScreenState extends State<ConvertScreen> {
                 ),
                 Material(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                   clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
@@ -232,8 +232,8 @@ class _KindTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? AppColors.navy : AppColors.surface,
-      shape: StadiumBorder(side: BorderSide(color: selected ? AppColors.navy : AppColors.border)),
+      color: selected ? AppColors.navyFill : AppColors.surface,
+      shape: StadiumBorder(side: BorderSide(color: selected ? AppColors.navyFill : AppColors.border)),
       child: InkWell(
         customBorder: const StadiumBorder(),
         onTap: onTap,
@@ -280,7 +280,9 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: color,
-      borderRadius: BorderRadius.circular(14),
+      // No Material 3 tint: in dark mode it turned the navy card blue.
+      surfaceTintColor: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
       elevation: 2,
       shadowColor: const Color(0x33101828),
       child: Padding(

@@ -65,7 +65,7 @@ Widget pageScrollThumb(PdfViewerController controller) => PdfViewerScrollThumb(
     key: const Key('page-thumb'),
     alignment: Alignment.center,
     decoration: BoxDecoration(
-      color: AppColors.navy,
+      color: AppColors.navyFill,
       borderRadius: const BorderRadius.horizontal(left: Radius.circular(15)),
       boxShadow: const [BoxShadow(color: Color(0x33101828), blurRadius: 6, offset: Offset(0, 2))],
     ),

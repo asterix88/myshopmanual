@@ -71,7 +71,7 @@ class UnitTabsPage extends StatelessWidget {
                             Flexible(
                               child: InkWell(
                                 key: const Key('spek-unit'),
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(16),
                                 onTap: () => Scaffold.of(context).openDrawer(),
                                 child: Padding(
                                   padding: const EdgeInsets.fromLTRB(4, 4, 8, 4),
@@ -199,7 +199,7 @@ class PageRowList extends StatelessWidget {
       return EmptyState(
         icon: Icons.search_off,
         title: emptyTitle ?? 'Tidak ada di bookmark manual',
-        message: 'Coba lewat tab Cari.',
+        message: 'Coba lewat tab Cari',
       );
     }
     final hint = this.hint;
@@ -351,9 +351,9 @@ class UnitDrawer extends StatelessWidget {
                 for (final u in list)
                   Material(
                     color: u.id == current ? AppColors.navySoft : Colors.transparent,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       onTap: () => onPick(u),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -560,7 +560,7 @@ class _GroupCardState extends State<GroupCard> {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -656,7 +656,7 @@ class ItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: GroupItemTile(item: item, line: false),
     );

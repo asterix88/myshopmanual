@@ -26,7 +26,7 @@ class _Header extends StatelessWidget {
   Future<void> _openSheet(BuildContext context) async {
     if (sheetUrl.isEmpty) return;
     final ok = await launchUrl(Uri.parse(sheetUrl), mode: LaunchMode.externalApplication).catchError((_) => false);
-    if (!ok && context.mounted) showError(context, 'Spreadsheet tidak bisa dibuka di HP ini.');
+    if (!ok && context.mounted) showError(context, 'Spreadsheet tidak bisa dibuka di HP ini');
   }
 
   @override

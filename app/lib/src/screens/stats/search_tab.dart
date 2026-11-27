@@ -21,7 +21,7 @@ class SearchTab extends StatelessWidget {
       children: [
         const StatsCaps('Paling dicari'),
         if (data.searches.isEmpty)
-          const NoneYet('Belum ada pencarian.')
+          const NoneYet('Belum ada pencarian')
         else
           CardRows([
             for (final s in data.searches)
@@ -49,7 +49,7 @@ class SearchTab extends StatelessWidget {
           ]),
         StatsCaps('Tidak ketemu', trailing: Text('0 hasil', style: TextStyle(fontSize: 11, color: AppColors.muted))),
         if (data.missing.isEmpty)
-          const NoneYet('Semua pencarian ketemu di manual.')
+          const NoneYet('Semua pencarian ketemu di manual')
         else
           CardRows([
             for (final s in data.missing)

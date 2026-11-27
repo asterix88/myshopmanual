@@ -657,7 +657,7 @@ class _EmployeeSheetState extends State<_EmployeeSheet> {
 
   Future<void> _newPin() async {
     final e = widget.employee;
-    if (!await _confirm('Buat PIN sementara?', 'PIN lama tidak berlaku.', 'Buat PIN')) return;
+    if (!await _confirm('Buat PIN sementara?', 'PIN lama tidak berlaku', 'Buat PIN')) return;
     await _run((store, session) async {
       final pin = await store.auth.newPin(session, e.nrp);
       if (!mounted) return;

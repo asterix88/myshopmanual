@@ -67,7 +67,7 @@ class PeopleTab extends StatelessWidget {
                 ),
         ),
         if (data.people.isEmpty)
-          const NoneYet('Belum ada yang memakai aplikasi.')
+          const NoneYet('Belum ada yang memakai aplikasi')
         else
           CardRows([
             for (final p in data.people)

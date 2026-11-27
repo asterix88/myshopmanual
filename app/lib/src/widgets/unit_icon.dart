@@ -40,7 +40,7 @@ class UnitIcon extends StatelessWidget {
       width: width,
       height: height,
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(color: AppColors.orangeSoft, borderRadius: BorderRadius.circular(16)),
       alignment: Alignment.center,
       child: FittedBox(
         fit: BoxFit.scaleDown,

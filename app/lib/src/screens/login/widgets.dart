@@ -166,7 +166,7 @@ class _WideButton extends StatelessWidget {
         style: FilledButton.styleFrom(
           backgroundColor: color ?? AppColors.orange,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           textStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 15, fontWeight: FontWeight.w600),
         ),
         onPressed: busy ? null : onPressed,

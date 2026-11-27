@@ -35,14 +35,14 @@ const pinLength = 4;
 
 /// Example in the empty NRP field: small and faint, so it does not read
 /// as an NRP already typed.
-const nrpHint = 'Cth : 25002476';
+const nrpHint = 'Cth: 25002476';
 TextStyle get nrpHintStyle => TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.faint);
 
 /// Navy band behind the logo on the login screen and the introduction.
 LinearGradient get headerGradient => LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: AppColors.dark ? const [Color(0xFF0E1A2C), Color(0xFF1A2F4F)] : const [Color(0xFF1E3A64), Color(0xFF2C5791)],
+  colors: AppColors.dark ? const [Color(0xFF0E1A2C), Color(0xFF1A2F4F)] : const [AppColors.header, Color(0xFF2C5791)],
 );
 
 /// First screen until an employee logs in with NRP and PIN (needs internet).
@@ -95,8 +95,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     final pinShort = _pin.text.length != pinLength;
     if (nrpMissing || pinShort) {
       setState(() {
-        _nrpError = nrpMissing ? 'Isi NRP.' : null;
-        _error = pinShort ? 'PIN $pinLength angka.' : null;
+        _nrpError = nrpMissing ? 'Isi NRP' : null;
+        _error = pinShort ? 'PIN $pinLength angka' : null;
       });
       return;
     }

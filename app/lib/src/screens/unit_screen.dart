@@ -129,7 +129,7 @@ class _UnitScreenState extends State<UnitScreen> {
                             onPressed: () => setState(_filter.clear),
                           ),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
                   ),
@@ -449,7 +449,7 @@ class _FileCard extends StatelessWidget {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Tidak')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.navy),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.navyFill),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Ya'),
           ),
@@ -531,7 +531,7 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: AppColors.navyFill, borderRadius: BorderRadius.circular(16)),
       padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
       child: Row(
         children: [
@@ -541,7 +541,7 @@ class _SummaryCard extends StatelessWidget {
               children: [
                 const Text(
                   'DOKUMEN TEKNIS',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1, color: Color(0xFFC9D3E3)),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1, color: AppColors.headerMuted),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -550,7 +550,7 @@ class _SummaryCard extends StatelessWidget {
                 ),
                 if (isCat(unit)) ...[
                   const SizedBox(height: 10),
-                  const Text('Lihat lebih lengkap di', style: TextStyle(fontSize: 11, color: Color(0xFFC9D3E3))),
+                  const Text('Lihat lebih lengkap di', style: TextStyle(fontSize: 11, color: AppColors.headerMuted)),
                   const SizedBox(height: 6),
                   Material(
                     color: Colors.white.withValues(alpha: 0.14),
@@ -669,16 +669,16 @@ class _WaitingCard extends StatelessWidget {
               Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
               const SizedBox(height: 6),
               Text(
-                'Waiting for update from server.',
+                'Waiting for update from server',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: AppColors.inkSoft),
               ),
               const SizedBox(height: 18),
               FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.navy,
+                  backgroundColor: AppColors.navyFill,
                   minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('Mengerti'),

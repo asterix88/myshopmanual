@@ -63,11 +63,11 @@ class _QuizUnitsScreenState extends State<QuizUnitsScreen> {
               : EmptyState(
                   icon: Icons.cloud_off_outlined,
                   title: 'Gagal memuat unit',
-                  message: 'Periksa koneksi internet.',
+                  message: 'Periksa koneksi internet',
                   action: FilledButton(onPressed: _load, child: const Text('Coba lagi')),
                 ))
           : units.isEmpty
-              ? const EmptyState(icon: Icons.quiz_outlined, title: 'Belum ada soal per unit', message: 'Soal baru sedang disiapkan.')
+              ? const EmptyState(icon: Icons.quiz_outlined, title: 'Belum ada soal per unit', message: 'Soal baru sedang disiapkan')
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -91,7 +91,7 @@ class _QuizUnitsScreenState extends State<QuizUnitsScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(store.unitById(u.unit)?.name ?? u.unit,
-                                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                                           const SizedBox(height: 4),
                                           ClipRRect(
                                             borderRadius: BorderRadius.circular(3),

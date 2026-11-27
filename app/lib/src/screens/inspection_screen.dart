@@ -28,8 +28,8 @@ Future<void> openInspection(BuildContext context) =>
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InspectionScreen()));
 
 /// The navy of the header, the same in light and dark mode (as on Home).
-const _headerNavy = Color(0xFF1E3A64);
-const _headerSoft = Color(0xFFC9D3E3);
+const _headerNavy = AppColors.header;
+const _headerSoft = AppColors.headerMuted;
 
 /// "12/11/2026 9:10:00" -> "12/11 09:10".
 String shortUpdate(String s) {
@@ -258,7 +258,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
         EmptyState(
           icon: Icons.fact_check_outlined,
           title: all.isEmpty ? 'Belum ada temuan ${sectionLabel(section)}' : 'Tidak ada yang cocok',
-          message: all.isEmpty ? 'Tambahkan dengan tombol + Temuan.' : 'Coba kata lain atau hapus filter model.',
+          message: all.isEmpty ? 'Tambahkan dengan tombol + Temuan' : 'Coba kata lain atau hapus filter model',
         ),
       ]);
     }

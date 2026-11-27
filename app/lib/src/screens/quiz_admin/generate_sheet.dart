@@ -40,11 +40,11 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
       if (!file.searchable) throw Exception('Dokumen hasil scan, tidak bisa melakukan pencarian pada dokumen ini');
       final indexes = await store.aiIndexes(where: (f) => f.key == file.key);
       final path = indexes[file.key];
-      if (path == null) throw Exception('Indeks manual belum ada di HP. Coba lagi saat ada sinyal.');
+      if (path == null) throw Exception('Indeks manual belum ada di HP. Coba lagi saat ada koneksi internet');
       final page = widget.page;
       final found = await _pageText(path, page);
       final text = found?.text.trim() ?? '';
-      if (text.length < 80) throw Exception('Halaman ini hampir tanpa teks. Pilih halaman lain.');
+      if (text.length < 80) throw Exception('Halaman ini hampir tanpa teks. Pilih halaman lain');
       if (!mounted) return;
       setState(() => _status = 'Nyel AI menyusun soal…');
       final result = await QuizApi(store, _client).generate(
@@ -73,9 +73,9 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
       Navigator.pop(context);
       messenger.showSnackBar(SnackBar(
         content: Text(result.saved == 0
-            ? 'Tidak ada soal yang layak dari halaman ini.'
+            ? 'Tidak ada soal yang layak dari halaman ini'
             : '${result.saved} draf soal dibuat${result.dropped > 0 ? ', ${result.dropped} dibuang kurator' : ''}. '
-                'Tinjau di menu ⋮ > Kelola soal quiz.'),
+                'Tinjau di menu ⋮ > Kelola soal quiz'),
       ));
     } catch (e) {
       if (!mounted) return;
@@ -150,7 +150,7 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
             const SizedBox(height: 14),
             Row(
               children: [
-                Text('Jumlah', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: AppColors.inkSoft)),
+                Text('Jumlah', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.inkSoft)),
                 const Spacer(),
                 _CountPicker(
                   counts: const [1, 3, 5],
@@ -178,7 +178,7 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Dicek kurator, terbit setelah admin setuju.',
+              'Dicek kurator, terbit setelah admin setuju',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: AppColors.muted),
             ),
@@ -190,8 +190,8 @@ class _QuizGenerateSheetState extends State<QuizGenerateSheet> {
 
   /// One line under the types, for the ones that work differently.
   String? get _kindHint => switch (_kind) {
-        'gambar' => 'Mekanik melihat gambar bernomor, tanpa keterangan.',
-        'kartu' => 'Mekanik menjawab sendiri, lalu melihat halaman ini.',
+        'gambar' => 'Mekanik melihat gambar bernomor, tanpa keterangan',
+        'kartu' => 'Mekanik menjawab sendiri, lalu melihat halaman ini',
         _ => null,
       };
 }
@@ -243,7 +243,7 @@ class _SheetLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Text(text, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: AppColors.inkSoft)),
+        child: Text(text, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.inkSoft)),
       );
 }
 

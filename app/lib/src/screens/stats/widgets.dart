@@ -409,7 +409,7 @@ class VersionTag extends StatelessWidget {
         child: Text(
           text,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
             color: danger ? AppColors.danger : (warn ? AppColors.amber : AppColors.green),
           ),

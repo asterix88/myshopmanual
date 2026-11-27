@@ -263,8 +263,8 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
       builder: (context) => _Sheet(
         title: 'Keluar dari quiz?',
         message: widget.unit == null
-            ? 'Jawaban tersimpan. Bisa dilanjutkan sampai 04.00.'
-            : 'Jawaban tersimpan.',
+            ? 'Jawaban tersimpan. Bisa dilanjutkan sampai 04.00'
+            : 'Jawaban tersimpan',
         children: [
           FilledButton(onPressed: () => Navigator.pop(context, false), child: const Text('Lanjutkan quiz')),
           const SizedBox(height: 8),
@@ -294,7 +294,7 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
           for (final r in reasons)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(r, style: const TextStyle(fontSize: 14)),
+              title: Text(r, style: const TextStyle(fontSize: 13)),
               trailing: AppIcon(AppGlyph.flag, size: 18, color: AppColors.muted),
               onTap: () => Navigator.pop(context, r),
             ),
@@ -355,7 +355,7 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
                   _inRetry
                       ? 'Ulangan ${_i - session.questions.length + 1}/${_queue.length - session.questions.length}'
                       : '${_i + 1}/${session.questions.length}',
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
                 ),
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(4),
@@ -474,7 +474,7 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
     final next = !right
         ? (firstWrong ? 'Diulang di akhir sesi dan besok' : 'Diulang besok')
         : _result == null
-            ? (_sent ? 'Dikirim saat ada sinyal' : '')
+            ? (_sent ? 'Dikirim saat ada koneksi internet' : '')
             : _result!.nextDays <= 1
                 ? 'Diulang besok'
                 : 'Diulang ${_result!.nextDays} hari lagi';
@@ -501,7 +501,7 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
         ConstrainedBox(
           constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .22),
           child: SingleChildScrollView(
-            child: Text(q.explain, style: TextStyle(fontSize: 14, height: 1.5, color: AppColors.inkSoft)),
+            child: Text(q.explain, style: TextStyle(fontSize: 13, height: 1.5, color: AppColors.inkSoft)),
           ),
         ),
         if (next.isNotEmpty) ...[

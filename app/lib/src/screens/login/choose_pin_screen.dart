@@ -31,11 +31,11 @@ class _ChoosePinScreenState extends State<ChoosePinScreen> {
   Future<void> _save() async {
     if (_busy) return;
     if (_pin.text.length != pinLength) {
-      setState(() => _error = 'PIN harus $pinLength angka.');
+      setState(() => _error = 'PIN harus $pinLength angka');
       return;
     }
     if (_pin.text != _repeat.text) {
-      setState(() => _error = 'Kedua PIN tidak sama.');
+      setState(() => _error = 'Kedua PIN tidak sama');
       return;
     }
     setState(() {
@@ -104,7 +104,7 @@ class _ChoosePinScreenState extends State<ChoosePinScreen> {
                               ),
                               Text(
                                 'Halo, ${widget.name}',
-                                style: const TextStyle(fontSize: 13, color: Color(0xFFC9D3E3)),
+                                style: const TextStyle(fontSize: 13, color: AppColors.headerMuted),
                               ),
                             ],
                           ),

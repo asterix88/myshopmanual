@@ -2,19 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 /// Colors taken from the Track Section logo (navy + orange); the layout
-/// follows the company app the mechanics already use.
-/// Colors taken from the Track Section logo (navy + orange); the layout
 /// follows the company app the mechanics already use. Each color has a
 /// light and a dark version; [dark] picks which (set before the app is
 /// built, see [buildTheme]).
 abstract final class AppColors {
   static bool dark = false;
 
+  /// Navy of headers (Home, Konversi, Cetok, login): the same in light and
+  /// dark mode, so it can be used in const widgets.
+  static const header = Color(0xFF1E3A64);
+
+  /// Secondary text and icons on [header].
+  static const headerMuted = Color(0xFFC9D3E3);
+
   static Color _pick(int light, int night) => Color(dark ? night : light);
 
   /// Buttons, active tab, links.
   static Color get navy => _pick(0xFF1E3A64, 0xFF4A78BD);
   static Color get navyDark => _pick(0xFF142A4A, 0xFF0E1A2C);
+  /// Large navy areas (cards, buttons, chips, chat bubbles). In dark mode
+  /// it stays the deep header navy; [navy] turns light blue there and is
+  /// only for text and icons.
+  static Color get navyFill => _pick(0xFF1E3A64, 0xFF1E3A64);
   static Color get navySoft => _pick(0xFFE8EDF5, 0xFF1F2A3A);
   static Color get orange => _pick(0xFFF08A1C, 0xFFF08A1C);
   static Color get orangeText => _pick(0xFFA0520A, 0xFFF5B26B);
@@ -105,6 +114,9 @@ ThemeData buildTheme({required bool dark}) {
         fontWeight: FontWeight.w600,
         color: AppColors.ink,
       ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(backgroundColor: AppColors.navyFill, foregroundColor: Colors.white),
     ),
     dividerTheme: DividerThemeData(color: AppColors.divider, thickness: 1, space: 1),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),

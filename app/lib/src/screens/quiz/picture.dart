@@ -31,7 +31,7 @@ class _QuizPictureState extends State<QuizPicture> {
       builder: (context, snap) {
         final bytes = snap.data;
         return Semantics(
-          label: 'Gambar soal. Ketuk untuk perbesar.',
+          label: 'Gambar soal. Ketuk untuk perbesar',
           button: bytes != null,
           child: GestureDetector(
             onTap: bytes == null
@@ -63,7 +63,7 @@ class _QuizPictureState extends State<QuizPicture> {
                     )
                   : Center(
                       child: snap.hasError
-                          ? Text('Gagal dimuat. Ketuk lagi.',
+                          ? Text('Gagal dimuat. Ketuk lagi',
                               style: TextStyle(fontSize: 12, color: AppColors.muted))
                           : const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)),
                     ),

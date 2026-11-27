@@ -26,7 +26,7 @@ class ManualTab extends StatelessWidget {
       children: [
         const StatsCaps('Paling sering dibuka'),
         if (data.manuals.isEmpty)
-          const NoneYet('Belum ada manual dibuka.')
+          const NoneYet('Belum ada manual dibuka')
         else
           CardRows([
             for (final m in data.manuals)

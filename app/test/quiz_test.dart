@@ -733,7 +733,7 @@ void main() {
 
     // Front: only the question and the hint.
     expect(find.text('Jelaskan bagaimana cara kerja sistem CLSS.'), findsOneWidget);
-    expect(find.text('Jelaskan dengan bahasamu sendiri, lalu balik kartu.'), findsOneWidget);
+    expect(find.text('Jelaskan dengan bahasamu sendiri, lalu balik kartu'), findsOneWidget);
     expect(find.text('Seberapa mudah kamu menjawab soal ini?'), findsNothing);
     await tester.tap(find.text('Balik kartu'));
     await settle(tester);
@@ -797,7 +797,7 @@ void main() {
     await tester.tap(find.text('Kartu'));
     await tester.pump();
     expect(find.text('Buat 3 kartu'), findsOneWidget);
-    expect(find.text('Mekanik menjawab sendiri, lalu melihat halaman ini.'), findsOneWidget);
+    expect(find.text('Mekanik menjawab sendiri, lalu melihat halaman ini'), findsOneWidget);
     await tester.tap(find.text('5'));
     await tester.pump();
     expect(find.text('Buat 5 kartu'), findsOneWidget);

@@ -98,7 +98,7 @@ class _QuizHubScreenState extends State<QuizHubScreen> {
               : EmptyState(
                   icon: Icons.cloud_off_outlined,
                   title: 'Gagal memuat quiz',
-                  message: 'Periksa koneksi internet.',
+                  message: 'Periksa koneksi internet',
                   action: FilledButton(onPressed: _load, child: const Text('Coba lagi')),
                 ))
           : RefreshIndicator(
@@ -309,7 +309,7 @@ class _HubRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                   Text(subtitle, style: TextStyle(fontSize: 12, color: AppColors.muted)),
                 ],
               ),

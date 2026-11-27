@@ -148,7 +148,7 @@ class _Bubble extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(left: 48, bottom: 12),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(color: userBubble ?? AppColors.navy, borderRadius: BorderRadius.circular(14)),
+          decoration: BoxDecoration(color: userBubble ?? AppColors.navyFill, borderRadius: BorderRadius.circular(16)),
           // Selectable like the answers, so a question can be copied. The
           // usual navy highlight and handles vanish on the navy bubble.
           child: Theme(
@@ -312,7 +312,7 @@ class _AnswerFooter extends StatelessWidget {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          'Sebagian jawaban bukan dari manual.',
+                          'Sebagian jawaban bukan dari manual',
                           style: TextStyle(fontSize: 12, height: 1.35, color: AppColors.muted),
                         ),
                       ),

@@ -296,7 +296,7 @@ class _ChatScreenState extends State<ChatScreen> {
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: AppColors.navy),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.navyFill),
               onPressed: () => Navigator.pop(context, true),
               child: const Text('Kirim'),
             ),

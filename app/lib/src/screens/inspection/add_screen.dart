@@ -38,7 +38,7 @@ class _AddInspectionScreenState extends State<AddInspectionScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Buang temuan ini?'),
-        content: const Text('Isian yang belum disimpan akan hilang.'),
+        content: const Text('Isian yang belum disimpan akan hilang'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Lanjut isi')),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Buang')),
@@ -84,7 +84,7 @@ class _AddInspectionScreenState extends State<AddInspectionScreen> {
 
   InputDecoration _box(String hint) => InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(color: AppColors.faint, fontSize: 14),
+        hintStyle: TextStyle(color: AppColors.faint, fontSize: 13),
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -194,7 +194,7 @@ class _AddInspectionScreenState extends State<AddInspectionScreen> {
                       key: const Key('add-model-locked'),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
                       decoration: BoxDecoration(color: AppColors.greySoft, borderRadius: BorderRadius.circular(12)),
-                      child: Text(hit.model, style: TextStyle(fontSize: 14, color: AppColors.inkSoft)),
+                      child: Text(hit.model, style: TextStyle(fontSize: 13, color: AppColors.inkSoft)),
                     )
                   : TextField(
                       key: const Key('add-model'),
@@ -237,7 +237,7 @@ class _AddInspectionScreenState extends State<AddInspectionScreen> {
                             decoration: _box(''),
                             child: Row(
                               children: [
-                                Expanded(child: Text(sheetDate(_date), style: const TextStyle(fontSize: 14))),
+                                Expanded(child: Text(sheetDate(_date), style: const TextStyle(fontSize: 13))),
                                 Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.muted),
                               ],
                             ),
@@ -255,7 +255,7 @@ class _AddInspectionScreenState extends State<AddInspectionScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
                 decoration: BoxDecoration(color: AppColors.greySoft, borderRadius: BorderRadius.circular(12)),
-                child: Text(inspector, style: TextStyle(fontSize: 14, color: AppColors.inkSoft)),
+                child: Text(inspector, style: TextStyle(fontSize: 13, color: AppColors.inkSoft)),
               ),
               const SizedBox(height: 14),
               _label('NAME LEADER'),
@@ -336,7 +336,7 @@ class _AddInspectionScreenState extends State<AddInspectionScreen> {
                 onPressed: ok ? () => _save(data, model) : null,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.orange,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: _saving
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))

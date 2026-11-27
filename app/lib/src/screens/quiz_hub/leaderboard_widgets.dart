@@ -117,7 +117,7 @@ class _PodiumPlace extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: place == 1 ? const Color(0xFF1E3A64) : Colors.white,
+                    color: place == 1 ? AppColors.header : Colors.white,
                   ),
                 ),
               ),
@@ -290,7 +290,7 @@ class RaceCard extends StatelessWidget {
                       children: [
                         Text(
                           above == null ? 'Kamu di puncak' : '$gap XP lagi ke ${me.rank <= 4 ? 'podium' : 'posisi ${above.rank}'}',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                         ),
                         Text(
                           above == null ? _lead(board) : 'Sekitar ${(gap / 10).ceil()} jawaban benar',
@@ -381,7 +381,7 @@ class BoardRowTile extends StatelessWidget {
         children: [
           SizedBox(
             width: 28,
-            child: Text('${row.rank}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.muted)),
+            child: Text('${row.rank}', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.muted)),
           ),
           avatar,
           const SizedBox(width: 12),
@@ -396,7 +396,7 @@ class BoardRowTile extends StatelessWidget {
                         row.me ? '${titleCaseWords(row.name)} (kamu)' : titleCaseWords(row.name),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 14, fontWeight: row.me ? FontWeight.w600 : FontWeight.w500),
+                        style: TextStyle(fontSize: 15, fontWeight: row.me ? FontWeight.w600 : FontWeight.w500),
                       ),
                     ),
                     if (row.change != 0) ...[const SizedBox(width: 6), RankChange(row.change)],
@@ -406,7 +406,7 @@ class BoardRowTile extends StatelessWidget {
               ],
             ),
           ),
-          Text('${row.xp}', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.navy)),
+          Text('${row.xp}', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.navy)),
         ],
       ),
     );

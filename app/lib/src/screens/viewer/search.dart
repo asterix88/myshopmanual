@@ -284,7 +284,7 @@ extension _ViewerSearch on _ViewerScreenState {
     return Container(
       key: const Key('match-pill'),
       decoration: BoxDecoration(
-        color: AppColors.navy,
+        color: AppColors.navyFill,
         borderRadius: BorderRadius.circular(26),
         boxShadow: const [BoxShadow(color: Color(0x40101828), blurRadius: 6, offset: Offset(0, 2))],
       ),
