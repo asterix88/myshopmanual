@@ -22,7 +22,10 @@ class CetokUnavailableScreen extends StatelessWidget {
           backgroundColor: AppColors.navyFill,
           foregroundColor: Colors.white,
           systemOverlayStyle: SystemUiOverlayStyle.light,
-          title: const Text('Cetok Online', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+          title: const Text(
+            'Cetok Online',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white),
+          ),
         ),
         body: Center(
           child: Padding(
@@ -62,9 +65,11 @@ class RoadworkPicture extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox.square(
-        dimension: size,
-        child: CustomPaint(painter: _RoadworkPainter(AppColors.navy, AppColors.orange, AppColors.navySoft, AppColors.surface)),
-      );
+    dimension: size,
+    child: CustomPaint(
+      painter: _RoadworkPainter(AppColors.navy, AppColors.orange, AppColors.navySoft, AppColors.surface),
+    ),
+  );
 }
 
 class _RoadworkPainter extends CustomPainter {

@@ -157,7 +157,10 @@ class _DailyCheckScreenState extends State<DailyCheckScreen> {
             backgroundColor: AppColors.navyFill,
             foregroundColor: Colors.white,
             systemOverlayStyle: SystemUiOverlayStyle.light,
-            title: const Text('Daily Check', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+            title: const Text(
+              'Daily Check',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white),
+            ),
             actions: [
               IconButton(
                 key: const Key('daily-check-reload'),
@@ -197,11 +200,21 @@ class _DailyCheckScreenState extends State<DailyCheckScreen> {
                     key: const Key('daily-check-offline'),
                     icon: Icons.cloud_off,
                     title: 'Daily Check tidak dapat dibuka',
-                    message: 'Periksa koneksi internet, lalu coba lagi.',
+                    message: 'Periksa koneksi internet, lalu coba lagi',
                     action: TextButton(onPressed: _retry, child: const Text('Coba lagi')),
                   ),
                 )
-              : WebViewWidget(controller: _web),
+              : WebViewWidget.fromPlatformCreationParams(
+                  // Hybrid composition: Android draws the page itself, so
+                  // scrolling and typing are as smooth as in Chrome (the
+                  // default texture mode lags on many phones).
+                  params: _web.platform is AndroidWebViewController
+                      ? AndroidWebViewWidgetCreationParams(
+                          controller: _web.platform,
+                          displayWithHybridComposition: true,
+                        )
+                      : PlatformWebViewWidgetCreationParams(controller: _web.platform),
+                ),
         ),
       ),
     );
