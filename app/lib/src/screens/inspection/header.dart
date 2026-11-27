@@ -50,7 +50,7 @@ class _Header extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Daily Inspection Monitoring',
+                      'Daily Inspection',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600, height: 1.2),

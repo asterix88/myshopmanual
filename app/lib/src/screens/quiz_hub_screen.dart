@@ -206,7 +206,7 @@ class _StreakHeader extends StatelessWidget {
     }
 
     return Container(
-      color: AppColors.navy,
+      color: AppColors.navyFill,
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

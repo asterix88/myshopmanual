@@ -108,7 +108,11 @@ class _SpinningLogoState extends State<_SpinningLogo> with SingleTickerProviderS
       alignment: Alignment.center,
       child: RotationTransition(
         turns: Tween(begin: 0.0, end: direction).animate(CurvedAnimation(parent: _turn, curve: Curves.easeInOutCubic)),
-        child: Image.asset('assets/images/logo.png', width: widget.learning ? 34 : 42, height: widget.learning ? 34 : 42),
+        // In dark mode the logo goes without its white tile; mode belajar
+        // keeps it on its white circle.
+        child: AppColors.dark && !widget.learning
+            ? const LogoMark(size: 42, nutColor: Color(0xFFE8EAED))
+            : Image.asset('assets/images/logo.png', width: widget.learning ? 34 : 42, height: widget.learning ? 34 : 42),
       ),
     );
   }
@@ -270,7 +274,7 @@ class _OfferActions extends StatelessWidget {
         FilledButton(
           onPressed: onExplain,
           style: FilledButton.styleFrom(
-            backgroundColor: AppColors.navy,
+            backgroundColor: AppColors.navyFill,
             shape: const StadiumBorder(),
             textStyle: const TextStyle(fontFamily: 'Poppins', fontSize: 13, fontWeight: FontWeight.w600),
             minimumSize: const Size(0, 36),

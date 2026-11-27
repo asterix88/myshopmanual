@@ -22,6 +22,7 @@ import '../store.dart';
 import '../theme.dart';
 import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
+import '../widgets/logo_mark.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
 

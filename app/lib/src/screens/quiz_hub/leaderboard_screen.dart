@@ -101,7 +101,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           padding: EdgeInsets.only(bottom: 16 + MediaQuery.paddingOf(context).bottom),
           children: [
             Container(
-              color: AppColors.navy,
+              color: AppColors.navyFill,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
               child: Column(
                 children: [

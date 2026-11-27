@@ -514,7 +514,7 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
               right: 12,
               top: 10,
               child: Material(
-                color: AppColors.navy,
+                color: AppColors.navyFill,
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
@@ -535,7 +535,7 @@ class _QuizCropScreenState extends State<QuizCropScreen> {
               bottom: 10,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: AppColors.navy, borderRadius: BorderRadius.circular(999)),
+                decoration: BoxDecoration(color: AppColors.navyFill, borderRadius: BorderRadius.circular(999)),
                 child: Text('${_zoom.toStringAsFixed(1)}×', style: const TextStyle(color: Colors.white, fontSize: 11)),
               ),
             ),
