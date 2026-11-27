@@ -8,7 +8,7 @@ import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
 import 'home_screen.dart' show titleCase;
 
-/// Saweria page for supporting the app. Placeholder until Anas sends the link.
+/// Saweria page for supporting the app (from Anas, 28 Nov 2026).
 const saweriaUrl = 'https://saweria.co/mymanual';
 
 /// Up to two initials of [name] for the round profile badge.
@@ -19,6 +19,8 @@ String initials(String name) {
   return (words[0][0] + words[1][0]).toUpperCase();
 }
 
+enum BadgeLook { ring, white, person, soft, orange }
+
 /// Round badge with the employee's initials, used in the Home header and here.
 class ProfileBadge extends StatelessWidget {
   const ProfileBadge({super.key, required this.name, this.size = 32, this.onDark = true});
@@ -26,28 +28,33 @@ class ProfileBadge extends StatelessWidget {
   final String name;
   final double size;
 
-  /// White ring on the navy header; navy fill on light cards.
+  /// On the navy header; navy fill on light cards.
   final bool onDark;
+
+  static BadgeLook look = BadgeLook.ring;
 
   @override
   Widget build(BuildContext context) {
+    if (!onDark) return _circle(AppColors.navyFill, Colors.white, null);
+    return switch (look) {
+      BadgeLook.ring => _circle(Colors.white.withValues(alpha: .14), Colors.white,
+          Border.all(color: Colors.white.withValues(alpha: .7), width: 1.5)),
+      BadgeLook.white => _circle(Colors.white, AppColors.header, null),
+      BadgeLook.person => AppIcon(AppGlyph.person, color: Colors.white, size: size * .87),
+      BadgeLook.soft => _circle(const Color(0xFF34507A), Colors.white, null),
+      BadgeLook.orange => _circle(const Color(0xFFF08A1C), Colors.white, null),
+    };
+  }
+
+  Widget _circle(Color fill, Color text, Border? border) {
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: onDark ? Colors.white.withValues(alpha: .14) : AppColors.navyFill,
-        border: onDark ? Border.all(color: Colors.white.withValues(alpha: .7), width: 1.5) : null,
-      ),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: fill, border: border),
       child: Text(
         initials(name),
-        style: TextStyle(
-          fontSize: size * .38,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-          height: 1,
-        ),
+        style: TextStyle(fontSize: size * .4, fontWeight: FontWeight.w600, color: text, height: 1),
       ),
     );
   }

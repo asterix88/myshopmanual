@@ -60,6 +60,7 @@ class HomeScreen extends StatelessWidget {
                 onSearch: onOpenSearch,
                 actions: [
                   IconButton(
+                    visualDensity: VisualDensity.compact,
                     tooltip: updateCount == 0 ? 'Update manual' : 'Update manual, $updateCount baru',
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const UpdatesScreen()),
@@ -72,11 +73,17 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   if (store.session case final session?)
-                    IconButton(
-                      key: const Key('home-profile'),
-                      tooltip: 'Profil',
-                      onPressed: () => _openProfile(context, store, session),
-                      icon: ProfileBadge(name: session.name, size: 30),
+                    Tooltip(
+                      message: 'Profil',
+                      child: InkResponse(
+                        key: const Key('home-profile'),
+                        radius: 22,
+                        onTap: () => _openProfile(context, store, session),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: ProfileBadge(name: session.name, size: 30),
+                        ),
+                      ),
                     ),
                   _menu(context, store),
                 ],
@@ -123,6 +130,7 @@ class HomeScreen extends StatelessWidget {
   Widget _menu(BuildContext context, AppStore store) {
     return PopupMenuButton<String>(
       tooltip: 'Lainnya',
+      style: const ButtonStyle(visualDensity: VisualDensity.compact),
       icon: const Icon(Icons.more_vert, color: Colors.white),
       onSelected: (value) => switch (value) {
         'report' => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportScreen())),

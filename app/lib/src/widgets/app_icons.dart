@@ -224,7 +224,8 @@ enum AppGlyph {
   sparkle([_P('M12 4l1.8 4.6L18.5 10l-4.7 1.6L12 16l-1.8-4.4L5.5 10l4.7-1.4z'), _P('M18 16l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z', accent: true)]),
   heart([_P('M12 19.5s-7.5-4.4-7.5-9.7A4.1 4.1 0 0 1 12 7.6a4.1 4.1 0 0 1 7.5 2.2c0 5.3-7.5 9.7-7.5 9.7z', accent: true)]),
   external([_P('M18.5 13.5v6h-14v-14h6'), _P('M14 4.5h5.5V10M19.5 4.5l-8 8', accent: true)]),
-  logout([_P('M10 4.5H5v15h5'), _P('M14.5 8l4 4-4 4M18.5 12H9.5', accent: true)]);
+  logout([_P('M10 4.5H5v15h5'), _P('M14.5 8l4 4-4 4M18.5 12H9.5', accent: true)]),
+  person([_C(12, 8.5, 3.8), _P('M4.5 20c.8-3.8 3.7-6 7.5-6s6.7 2.2 7.5 6', accent: true)]);
 
   const AppGlyph(this._parts);
 
