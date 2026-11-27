@@ -2,23 +2,25 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import '../theme.dart';
 import '../widgets/common.dart';
 
 /// The daily check website (not ours): opened inside MyManual so mechanics
-/// with an account log in once. The WebView keeps its cookies and local
-/// storage between app starts, so the login stays until the site ends it.
+/// with an account log in once. Android's WebView keeps its cookies and
+/// local storage between app starts, so the login stays until the site
+/// ends it.
 const dailyCheckUrl = 'https://heavy-equipment-inspection.vercel.app/dashboard';
 
 Future<void> openDailyCheck(BuildContext context) =>
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DailyCheckScreen()));
 
-/// Whether [uri] stays inside the WebView: pages of the daily check site
-/// (and its sign-in pages on other https hosts). Phone, mail, WhatsApp and
-/// app links go to the phone's own apps.
+/// Whether [uri] stays inside the WebView: web pages do; phone, mail,
+/// WhatsApp, maps and app links go to the phone's own apps.
 bool staysInDailyCheck(Uri uri) {
   if (uri.scheme == 'about' || uri.scheme == 'data' || uri.scheme == 'blob' || uri.scheme == 'javascript') return true;
   if (uri.scheme != 'https' && uri.scheme != 'http') return false;
@@ -34,27 +36,89 @@ class DailyCheckScreen extends StatefulWidget {
 }
 
 class _DailyCheckScreenState extends State<DailyCheckScreen> {
-  InAppWebViewController? _web;
+  late final WebViewController _web;
   double _progress = 0;
   bool _failed = false;
   bool _canGoBack = false;
 
-  static final _settings = InAppWebViewSettings(
-    javaScriptEnabled: true,
-    domStorageEnabled: true,
-    databaseEnabled: true,
-    cacheEnabled: true,
-    thirdPartyCookiesEnabled: true,
-    useShouldOverrideUrlLoading: true,
-    useOnDownloadStart: true,
-    allowFileAccess: false,
-    mediaPlaybackRequiresUserGesture: true,
-    supportZoom: false,
-    builtInZoomControls: false,
-    // The site's own pinch zoom stays off: it is made for phones.
-    useWideViewPort: true,
-    loadWithOverviewMode: true,
-  );
+  @override
+  void initState() {
+    super.initState();
+    _web = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onProgress: (p) {
+            if (mounted) setState(() => _progress = p / 100);
+          },
+          onPageFinished: (_) => _updateBack(),
+          onUrlChange: (_) => _updateBack(),
+          onNavigationRequest: (request) {
+            final uri = Uri.tryParse(request.url);
+            if (uri == null || staysInDailyCheck(uri)) return NavigationDecision.navigate;
+            unawaited(_openOutside(uri));
+            return NavigationDecision.prevent;
+          },
+          onWebResourceError: (error) {
+            if ((error.isForMainFrame ?? true) && mounted) setState(() => _failed = true);
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(dailyCheckUrl));
+    final android = _web.platform;
+    if (android is AndroidWebViewController) {
+      unawaited(android.setOnShowFileSelector(_pickFiles));
+      unawaited(android.setMediaPlaybackRequiresUserGesture(true));
+    }
+  }
+
+  /// A photo field on the site: take one with the camera or pick from the
+  /// gallery. Returns file URIs, or none when cancelled.
+  Future<List<String>> _pickFiles(FileSelectorParams params) async {
+    final picker = ImagePicker();
+    final multiple = params.mode == FileSelectorMode.openMultiple;
+    final source = params.isCaptureEnabled
+        ? ImageSource.camera
+        : await showModalBottomSheet<ImageSource>(
+            context: context,
+            builder: (context) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.photo_camera_outlined),
+                    title: const Text('Kamera'),
+                    onTap: () => Navigator.pop(context, ImageSource.camera),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.photo_library_outlined),
+                    title: const Text('Galeri'),
+                    onTap: () => Navigator.pop(context, ImageSource.gallery),
+                  ),
+                ],
+              ),
+            ),
+          );
+    if (source == null) return [];
+    try {
+      final List<XFile> files;
+      if (source == ImageSource.camera) {
+        final f = await picker.pickImage(source: ImageSource.camera, imageQuality: 80, maxWidth: 1920);
+        files = f == null ? [] : [f];
+      } else if (multiple) {
+        files = await picker.pickMultiImage(imageQuality: 80, maxWidth: 1920);
+      } else {
+        final f = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80, maxWidth: 1920);
+        files = f == null ? [] : [f];
+      }
+      return [for (final f in files) Uri.file(f.path).toString()];
+    } on PlatformException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Foto tidak dapat diambil')));
+      }
+      return [];
+    }
+  }
 
   Future<void> _openOutside(Uri uri) async {
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication).catchError((_) => false);
@@ -64,23 +128,17 @@ class _DailyCheckScreenState extends State<DailyCheckScreen> {
   }
 
   Future<void> _updateBack() async {
-    final can = await _web?.canGoBack() ?? false;
+    final can = await _web.canGoBack();
     if (mounted && can != _canGoBack) setState(() => _canGoBack = can);
   }
 
-  void _retry() {
+  Future<void> _retry() async {
     setState(() {
       _failed = false;
       _progress = 0;
     });
-    final web = _web;
-    if (web == null) return;
-    unawaited(web.getUrl().then((url) {
-      final last = url?.toString();
-      return web.loadUrl(
-        urlRequest: URLRequest(url: WebUri(last == null || last.startsWith('about:') ? dailyCheckUrl : last)),
-      );
-    }));
+    final last = await _web.currentUrl();
+    await _web.loadRequest(Uri.parse(last == null || last.startsWith('about:') ? dailyCheckUrl : last));
   }
 
   @override
@@ -89,7 +147,7 @@ class _DailyCheckScreenState extends State<DailyCheckScreen> {
     return PopScope(
       canPop: !_canGoBack,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) unawaited(_web?.goBack().then((_) => _updateBack()));
+        if (!didPop) unawaited(_web.goBack().then((_) => _updateBack()));
       },
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light,
@@ -105,14 +163,14 @@ class _DailyCheckScreenState extends State<DailyCheckScreen> {
                 key: const Key('daily-check-reload'),
                 tooltip: 'Muat ulang',
                 icon: const Icon(Icons.refresh),
-                onPressed: _failed ? _retry : () => _web?.reload(),
+                onPressed: _failed ? _retry : _web.reload,
               ),
               PopupMenuButton<String>(
                 tooltip: 'Menu',
                 onSelected: (v) async {
                   if (v == 'browser') {
-                    final url = await _web?.getUrl();
-                    await _openOutside(Uri.parse(url?.toString() ?? dailyCheckUrl));
+                    final url = await _web.currentUrl();
+                    await _openOutside(Uri.parse(url ?? dailyCheckUrl));
                   }
                 },
                 itemBuilder: (_) => const [PopupMenuItem(value: 'browser', child: Text('Buka di browser'))],
@@ -133,59 +191,17 @@ class _DailyCheckScreenState extends State<DailyCheckScreen> {
               ),
             ),
           ),
-          body: Stack(
-            children: [
-              InAppWebView(
-                initialUrlRequest: URLRequest(url: WebUri(dailyCheckUrl)),
-                initialSettings: _settings,
-                onWebViewCreated: (c) => _web = c,
-                onProgressChanged: (_, p) {
-                  if (mounted) setState(() => _progress = p / 100);
-                },
-                onLoadStop: (_, _) => _updateBack(),
-                onUpdateVisitedHistory: (_, _, _) => _updateBack(),
-                shouldOverrideUrlLoading: (_, action) async {
-                  final uri = action.request.url;
-                  if (uri == null || staysInDailyCheck(uri)) return NavigationActionPolicy.ALLOW;
-                  unawaited(_openOutside(uri));
-                  return NavigationActionPolicy.CANCEL;
-                },
-                // Links that open a new window (target="_blank").
-                onCreateWindow: (_, action) async {
-                  final uri = action.request.url;
-                  if (uri == null) return false;
-                  if (staysInDailyCheck(uri)) {
-                    await _web?.loadUrl(urlRequest: URLRequest(url: uri));
-                  } else {
-                    unawaited(_openOutside(uri));
-                  }
-                  return false;
-                },
-                // Reports and exports: the phone's browser saves them.
-                onDownloadStartRequest: (_, request) => _openOutside(request.url),
-                onReceivedError: (_, request, error) {
-                  if ((request.isForMainFrame ?? true) && error.type != WebResourceErrorType.CANCELLED) {
-                    setState(() => _failed = true);
-                  }
-                },
-              ),
-              if (_failed)
-                Positioned.fill(
-                  child: ColoredBox(
-                    color: AppColors.background,
-                    child: Center(
-                      child: EmptyState(
-                        key: const Key('daily-check-offline'),
-                        icon: Icons.cloud_off,
-                        title: 'Daily Check tidak dapat dibuka',
-                        message: 'Periksa koneksi internet, lalu coba lagi.',
-                        action: TextButton(onPressed: _retry, child: const Text('Coba lagi')),
-                      ),
-                    ),
+          body: _failed
+              ? Center(
+                  child: EmptyState(
+                    key: const Key('daily-check-offline'),
+                    icon: Icons.cloud_off,
+                    title: 'Daily Check tidak dapat dibuka',
+                    message: 'Periksa koneksi internet, lalu coba lagi.',
+                    action: TextButton(onPressed: _retry, child: const Text('Coba lagi')),
                   ),
-                ),
-            ],
-          ),
+                )
+              : WebViewWidget(controller: _web),
         ),
       ),
     );
