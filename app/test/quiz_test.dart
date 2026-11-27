@@ -14,6 +14,7 @@ import 'package:mymanual/src/page_image.dart';
 import 'package:mymanual/src/quiz.dart';
 import 'package:mymanual/src/quiz_edit.dart';
 import 'package:mymanual/src/quiz_reminders.dart';
+import 'package:mymanual/src/screens/chat_screen.dart';
 import 'package:mymanual/src/screens/quiz_admin_screen.dart';
 import 'package:mymanual/src/screens/quiz_crop_screen.dart';
 import 'package:mymanual/src/screens/quiz_hub_screen.dart';
@@ -167,6 +168,18 @@ void main() {
     await tester.tap(find.text('Periksa'));
     await settle(tester);
     expect(find.text('Benar'), findsOneWidget);
+
+    // Tanya Nyel AI opens the chat over the quiz; back returns to the question.
+    await tester.tap(find.text('Tanya Nyel AI'));
+    await settle(tester);
+    expect(find.byType(ChatScreen), findsOneWidget);
+    expect(find.textContaining('Jelaskan soal quiz ini: Soal q1'), findsOneWidget);
+    await tester.pageBack();
+    await settle(tester);
+    expect(find.byType(ChatScreen), findsNothing);
+    expect(find.text('Soal q1: fungsi main relief valve?'), findsOneWidget);
+    expect(find.text('Benar'), findsOneWidget);
+
     await tester.tap(find.text('Lanjut'));
     await settle(tester);
 
