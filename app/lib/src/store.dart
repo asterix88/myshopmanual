@@ -141,6 +141,7 @@ class AppStore extends ChangeNotifier {
 
   /// The Cari tab's last searches, newest first.
   List<String> recentSearches = [];
+  static const maxRecentSearches = 5;
   bool _seenInitialized = false;
   LastRead? lastRead;
 
@@ -199,7 +200,7 @@ class AppStore extends ChangeNotifier {
       updateLog = [
         for (final e in json['update_log'] as List? ?? const []) ?_logEntry(e as Map<String, dynamic>),
       ];
-      recentSearches = (json['searches'] as List? ?? []).cast<String>();
+      recentSearches = (json['searches'] as List? ?? []).cast<String>().take(maxRecentSearches).toList();
       _seenInitialized = json['seen_initialized'] as bool? ?? false;
       final lr = json['last_read'];
       lastRead = lr == null ? null : LastRead.fromJson(lr as Map<String, dynamic>);
@@ -712,7 +713,7 @@ class AppStore extends ChangeNotifier {
   void addRecentSearch(String query) {
     final q = query.trim();
     if (q.length < 2) return;
-    recentSearches = [q, ...recentSearches.where((s) => s.toLowerCase() != q.toLowerCase())].take(8).toList();
+    recentSearches = [q, ...recentSearches.where((s) => s.toLowerCase() != q.toLowerCase())].take(maxRecentSearches).toList();
     _scheduleSave();
     notifyListeners();
   }

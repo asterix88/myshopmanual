@@ -113,6 +113,38 @@ void main() {
     }
   }
 
+  testWidgets('after the daily quiz the streak rolls up and today lights up', (tester) async {
+    final client = MockClient((request) async => http.Response(jsonEncode(homeJson()), 200));
+    final store = await openStore(tester, client);
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(
+        home: QuizSummaryScreen(
+          daily: true,
+          unit: null,
+          questions: const [],
+          first: const {},
+          chosen: const {},
+          result: FinishResult({'score': 8, 'total': 10, 'xp_session': 50, 'streak': 4, 'rank': 2}),
+          offline: false,
+          xpWithoutBonus: 50,
+          minutes: 3,
+          streakBefore: 3,
+          day: '2026-11-06',
+        ),
+      ),
+    ));
+    await tester.pump();
+    expect(find.text('3'), findsOneWidget);
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(find.text('hari streak · pertahankan besok'), findsOneWidget);
+    for (final d in ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']) {
+      expect(find.text(d), findsOneWidget);
+    }
+    expect(find.text('3'), findsNothing);
+    expect(find.text('4'), findsOneWidget);
+  });
+
   testWidgets('the Home card shows the streak and hides with no questions', (tester) async {
     var questions = 30;
     final client = MockClient((request) async => http.Response(jsonEncode(homeJson(questions: questions)), 200));
@@ -927,21 +959,22 @@ void main() {
     test('not done yet: today 07.00 with the streak, 20.00 warning, then each day at 07.00', () {
       final plan = planReminders(morning, const ReminderSettings(), h());
       expect(plan.first.at, DateTime(2026, 11, 6, 7));
-      expect(plan.first.body, '10 soal, sekitar 4 menit. Streak 3 hari.');
+      expect(plan.first.body, '10 soal · ${quizMotivation('2026-11-06')} · Streak 3 hari');
       final warnings = plan.where((r) => r.title.startsWith('Streak')).toList();
       expect(warnings.single.at, DateTime(2026, 11, 6, 20));
       expect(warnings.single.title, 'Streak 3 hari belum aman');
       final daily = plan.where((r) => r.title == 'Quiz harian menunggu').toList();
       expect(daily.length, 7);
       // Tomorrow the streak is only safe if today's quiz gets done.
-      expect(daily[1].body, '10 soal, sekitar 4 menit.');
+      expect(daily[1].body, '10 soal · ${quizMotivation('2026-11-07')}');
+      expect(quizMotivation('2026-11-07'), isNot(quizMotivation('2026-11-06')));
     });
 
     test('done today: nothing today, tomorrow keeps the streak', () {
       final plan = planReminders(DateTime(2026, 11, 6, 9), const ReminderSettings(), h(daily: 'selesai'));
       expect(plan.every((r) => r.at.isAfter(DateTime(2026, 11, 7, 4))), isTrue);
       expect(plan.first.at, DateTime(2026, 11, 7, 7));
-      expect(plan.first.body, endsWith('Streak 3 hari.'));
+      expect(plan.first.body, endsWith(' · Streak 3 hari'));
       expect(plan.where((r) => r.title.startsWith('Streak')).single.at, DateTime(2026, 11, 7, 20));
     });
 

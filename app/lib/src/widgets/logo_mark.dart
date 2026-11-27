@@ -5,11 +5,12 @@ import 'package:flutter/material.dart';
 /// The MyManual logo drawn in code: an orange torque arrow around a navy
 /// nut. [arcTurn] turns the arrow (radians) and [nutScale] grows the nut, so
 /// the splash can tighten the nut. Same shapes as assets/images/logo.png,
-/// on a 100 x 100 grid.
+/// on a 100 x 100 grid. [nutColor] lets the nut show on a dark background.
 class LogoMark extends StatelessWidget {
-  const LogoMark({super.key, this.size = 92, this.arcTurn = 0, this.nutScale = 1});
+  const LogoMark({super.key, this.size = 92, this.arcTurn = 0, this.nutScale = 1, this.nutColor = _LogoPainter.navy});
 
   final double size;
+  final Color nutColor;
   final double arcTurn;
   final double nutScale;
 
@@ -17,16 +18,17 @@ class LogoMark extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomPaint(
       size: Size.square(size),
-      painter: _LogoPainter(arcTurn: arcTurn, nutScale: nutScale),
+      painter: _LogoPainter(arcTurn: arcTurn, nutScale: nutScale, nutColor: nutColor),
     );
   }
 }
 
 class _LogoPainter extends CustomPainter {
-  _LogoPainter({required this.arcTurn, required this.nutScale});
+  _LogoPainter({required this.arcTurn, required this.nutScale, required this.nutColor});
 
   final double arcTurn;
   final double nutScale;
+  final Color nutColor;
 
   static const orange = Color(0xFFF08A1C);
   static const navy = Color(0xFF1E3A64);
@@ -83,7 +85,7 @@ class _LogoPainter extends CustomPainter {
     canvas.drawPath(
       hex,
       Paint()
-        ..color = navy
+        ..color = nutColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = 4
         ..strokeJoin = StrokeJoin.round,
@@ -92,10 +94,10 @@ class _LogoPainter extends CustomPainter {
       ..fillType = PathFillType.evenOdd
       ..addPath(hex, Offset.zero)
       ..addOval(Rect.fromCircle(center: center, radius: 6));
-    canvas.drawPath(nut, Paint()..color = navy);
+    canvas.drawPath(nut, Paint()..color = nutColor);
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(_LogoPainter old) => old.arcTurn != arcTurn || old.nutScale != nutScale;
+  bool shouldRepaint(_LogoPainter old) => old.arcTurn != arcTurn || old.nutScale != nutScale || old.nutColor != nutColor;
 }

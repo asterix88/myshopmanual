@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../quiz.dart';
+import '../quiz_reminders.dart' show quizDayOf, quizMotivation;
 import '../theme.dart';
 import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
@@ -133,7 +134,7 @@ class _QuizHubScreenState extends State<QuizHubScreen> {
                                 _HubRow(
                                   glyph: AppGlyph.quiz,
                                   title: home.daily == 'lanjutkan' ? 'Lanjutkan quiz harian' : 'Mulai quiz harian',
-                                  subtitle: '10 soal · sekitar 4 menit',
+                                  subtitle: '10 soal · ${quizMotivation(home.day.isEmpty ? quizDayOf(DateTime.now()) : home.day)}',
                                   onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const QuizPlayScreen())),
                                 ),
                               _HubRow(
@@ -192,28 +193,16 @@ class _StreakHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-    final today = DateTime.tryParse('${home.day}T00:00:00Z') ?? DateTime.now().toUtc();
-    final monday = today.subtract(Duration(days: today.weekday - 1));
-    final last = home.lastDaily == null ? null : DateTime.tryParse('${home.lastDaily}T00:00:00Z');
-    final first = last?.subtract(Duration(days: home.streak - 1));
-    FlameLook lookOf(DateTime d) {
-      if (d.isAfter(today)) return FlameLook.off;
-      if (last != null && first != null && !d.isBefore(first) && !d.isAfter(last) && home.streak > 0) return FlameLook.done;
-      if (d == today) return FlameLook.today;
-      return FlameLook.off;
-    }
-
     return Container(
-      color: AppColors.navy,
+      color: AppColors.navyFill,
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Flame(size: 36, look: home.streak > 0 ? FlameLook.done : FlameLook.off, onDark: true),
-              const SizedBox(width: 10),
+              Flame(size: 48, look: home.streak > 0 ? FlameLook.done : FlameLook.off, onDark: true, live: true),
+              const SizedBox(width: 12),
               Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,30 +219,7 @@ class _StreakHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              for (var i = 0; i < 7; i++)
-                Builder(builder: (context) {
-                  final d = monday.add(Duration(days: i));
-                  final isToday = d == today;
-                  return Column(
-                    children: [
-                      Flame(size: 28, look: lookOf(d), onDark: true),
-                      const SizedBox(height: 4),
-                      Text(
-                        days[i],
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
-                          color: isToday ? Colors.white : const Color(0xB3FFFFFF),
-                        ),
-                      ),
-                    ],
-                  );
-                }),
-            ],
-          ),
+          StreakWeek(day: home.day, lastDaily: home.lastDaily, streak: home.streak, onDark: true, size: 30),
         ],
       ),
     );

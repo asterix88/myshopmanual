@@ -228,8 +228,6 @@ class _SearchScreenState extends State<SearchScreen> with WidgetsBindingObserver
   /// Before typing: the last searches, one tap to search again.
   Widget _start(AppStore store) {
     final recent = store.recentSearches;
-    final files = store.catalog.files.length;
-    final onPhone = store.local.length;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
@@ -292,15 +290,6 @@ class _SearchScreenState extends State<SearchScreen> with WidgetsBindingObserver
                   SizedBox(height: 12),
                   Text('Cari di semua manual', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 ],
-              ),
-            ),
-          if (files > 0)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 14, 4, 0),
-              child: Text(
-                onPhone > 0 ? '$files manual, $onPhone tersimpan di HP' : '$files manual',
-                textAlign: recent.isEmpty ? TextAlign.center : TextAlign.start,
-                style: TextStyle(fontSize: 12, color: AppColors.muted),
               ),
             ),
         ],

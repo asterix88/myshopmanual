@@ -192,7 +192,7 @@ class _FindingSheetState extends State<_FindingSheet> {
                     key: const Key('inspection-save-action'),
                     onPressed: canSave ? _save : null,
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.navy,
+                      backgroundColor: AppColors.navyFill,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: _saving

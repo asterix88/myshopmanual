@@ -137,7 +137,7 @@ class _ForgotPinScreenState extends State<ForgotPinScreen> {
         _WideButton(
           label: 'Kembali ke Masuk',
           busy: false,
-          color: AppColors.navy,
+          color: AppColors.navyFill,
           onPressed: () => Navigator.of(context).pop(),
         ),
       ],

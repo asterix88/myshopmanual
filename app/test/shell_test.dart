@@ -38,6 +38,11 @@ void main() {
     await tester.tap(find.text('Home').last);
     await tester.pumpAndSettle();
     expect(shown(SearchScreen), isFalse);
+
+    // A sideways swipe does not change the tab; only the bar does.
+    await tester.fling(find.byType(PageView), const Offset(-400, 0), 2000);
+    await tester.pumpAndSettle();
+    expect(shown(SearchScreen), isFalse);
     root.deleteSync(recursive: true);
   });
 

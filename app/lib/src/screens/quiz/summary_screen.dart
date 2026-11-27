@@ -15,6 +15,8 @@ class QuizSummaryScreen extends StatelessWidget {
     required this.offline,
     required this.xpWithoutBonus,
     required this.minutes,
+    this.streakBefore,
+    this.day,
   });
 
   final bool daily;
@@ -28,6 +30,11 @@ class QuizSummaryScreen extends StatelessWidget {
   final bool offline;
   final int xpWithoutBonus;
   final int minutes;
+
+  /// The streak before this quiz and its quiz day, when known: the
+  /// flame then shows the streak going up.
+  final int? streakBefore;
+  final String? day;
 
   @override
   Widget build(BuildContext context) {
@@ -72,27 +79,7 @@ class QuizSummaryScreen extends StatelessWidget {
           ),
           if (daily && result != null) ...[
             const SizedBox(height: 12),
-            AppCard(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  StreakRing(streak: result!.streak, look: FlameLook.done),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Streak ${result!.streak} hari', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                        Text(
-                          result!.freezeUsed ? 'Libur streak terpakai' : 'Quiz hari ini selesai',
-                          style: TextStyle(fontSize: 12, color: AppColors.muted),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _StreakMoment(result: result!, before: streakBefore, day: day),
           ],
           if (offline) ...[
             const SizedBox(height: 12),
@@ -167,4 +154,98 @@ class _Stat extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// The daily quiz's streak: a big flame pops in, the number rolls up from
+/// the streak before, and today's flame in the week lights up.
+class _StreakMoment extends StatelessWidget {
+  const _StreakMoment({required this.result, required this.before, required this.day});
+
+  final FinishResult result;
+  final int? before;
+  final String? day;
+
+  @override
+  Widget build(BuildContext context) {
+    final up = !result.freezeUsed && before != null && result.streak > before!;
+    final today = day ?? quizDayOf(DateTime.now());
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+      child: Column(
+        children: [
+          const PopIn(child: Flame(size: 88, live: true)),
+          const SizedBox(height: 8),
+          _RollingNumber(from: up ? before! : result.streak, to: result.streak),
+          Text(
+            result.freezeUsed ? 'Libur streak terpakai' : 'hari streak · pertahankan besok',
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+          const SizedBox(height: 14),
+          StreakWeek(day: today, lastDaily: today, streak: result.streak, size: 26, lightUp: up),
+        ],
+      ),
+    );
+  }
+}
+
+/// [from], then [to] rolling up into its place.
+class _RollingNumber extends StatefulWidget {
+  const _RollingNumber({required this.from, required this.to});
+
+  final int from;
+  final int to;
+
+  @override
+  State<_RollingNumber> createState() => _RollingNumberState();
+}
+
+class _RollingNumberState extends State<_RollingNumber> with SingleTickerProviderStateMixin {
+  late final _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 450));
+  late final _a = CurvedAnimation(parent: _c, curve: Curves.easeOutBack);
+  Timer? _wait;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.from == widget.to) {
+      _c.value = 1;
+    } else {
+      _wait = Timer(const Duration(milliseconds: 700), () {
+        if (mounted) _c.forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _wait?.cancel();
+    _a.dispose();
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const height = 40.0;
+    final style = TextStyle(fontSize: 30, fontWeight: FontWeight.w700, height: 1, color: AppColors.ink);
+    return SizedBox(
+      height: height,
+      child: ClipRect(
+        child: AnimatedBuilder(
+          animation: _a,
+          builder: (_, _) => Stack(
+            alignment: Alignment.center,
+            children: [
+              if (widget.from != widget.to && _c.value < 1)
+                Transform.translate(offset: Offset(0, -height * _a.value), child: Text('${widget.from}', style: style)),
+              Transform.translate(
+                offset: Offset(0, height * (1 - _a.value)),
+                child: Text('${widget.to}', style: style),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
