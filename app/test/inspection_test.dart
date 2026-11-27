@@ -189,9 +189,9 @@ void main() {
     await tester.pumpWidget(MyManualApp(store: store));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Daily Inspection'));
+    await tester.ensureVisible(find.text('DIM'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Daily Inspection'));
+    await tester.tap(find.text('DIM'));
     Future<void> settle(Finder f) async {
       for (var i = 0; i < 30 && f.evaluate().isEmpty; i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
