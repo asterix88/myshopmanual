@@ -79,9 +79,9 @@ class HomeScreen extends StatelessWidget {
                         key: const Key('home-profile'),
                         radius: 22,
                         onTap: () => _openProfile(context, store, session),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: ProfileBadge(name: session.name, size: 30),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4),
+                          child: AppIcon(AppGlyph.person, color: Colors.white, size: 26),
                         ),
                       ),
                     ),

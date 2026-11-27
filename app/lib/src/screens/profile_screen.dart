@@ -19,42 +19,23 @@ String initials(String name) {
   return (words[0][0] + words[1][0]).toUpperCase();
 }
 
-enum BadgeLook { ring, white, person, soft, orange }
-
-/// Round badge with the employee's initials, used in the Home header and here.
+/// Round navy badge with the employee's initials (Profil page).
 class ProfileBadge extends StatelessWidget {
-  const ProfileBadge({super.key, required this.name, this.size = 32, this.onDark = true});
+  const ProfileBadge({super.key, required this.name, this.size = 56});
 
   final String name;
   final double size;
 
-  /// On the navy header; navy fill on light cards.
-  final bool onDark;
-
-  static BadgeLook look = BadgeLook.ring;
-
   @override
   Widget build(BuildContext context) {
-    if (!onDark) return _circle(AppColors.navyFill, Colors.white, null);
-    return switch (look) {
-      BadgeLook.ring => _circle(Colors.white.withValues(alpha: .14), Colors.white,
-          Border.all(color: Colors.white.withValues(alpha: .7), width: 1.5)),
-      BadgeLook.white => _circle(Colors.white, AppColors.header, null),
-      BadgeLook.person => AppIcon(AppGlyph.person, color: Colors.white, size: size * .87),
-      BadgeLook.soft => _circle(const Color(0xFF34507A), Colors.white, null),
-      BadgeLook.orange => _circle(const Color(0xFFF08A1C), Colors.white, null),
-    };
-  }
-
-  Widget _circle(Color fill, Color text, Border? border) {
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: fill, border: border),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.navyFill),
       child: Text(
         initials(name),
-        style: TextStyle(fontSize: size * .4, fontWeight: FontWeight.w600, color: text, height: 1),
+        style: TextStyle(fontSize: size * .4, fontWeight: FontWeight.w600, color: Colors.white, height: 1),
       ),
     );
   }
@@ -99,7 +80,7 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    ProfileBadge(name: session.name, size: 56, onDark: false),
+                    ProfileBadge(name: session.name),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Text(
