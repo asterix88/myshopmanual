@@ -16,6 +16,7 @@ import '../widgets/tool_icons.dart';
 import '../widgets/unit_icon.dart';
 import 'cetok_screen.dart';
 import 'convert_screen.dart';
+import 'daily_check_screen.dart';
 import 'employees_screen.dart';
 import 'error_reports_screen.dart';
 import 'inspection_screen.dart';
@@ -813,45 +814,58 @@ class _FolderCard extends StatelessWidget {
 }
 
 /// Fitur lainnya: the tools beside the manuals, icon on top, name below.
+/// Up to three sit in one row; four make two rows of two.
 class _Tools extends StatelessWidget {
   const _Tools();
 
   @override
   Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: _ToolTile(
-              key: const Key('tool-convert'),
-              icon: const ToolIcon.gauge(),
-              title: 'Konversi satuan',
-              onTap: () => openConvert(context),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _ToolTile(
-              key: const Key('tool-cetok'),
-              icon: const ToolIcon.box(),
-              title: 'Cetok Online',
-              onTap: () => openCetok(context),
-            ),
-          ),
-          if (StoreScope.of(context).seesInspection) ...[
-            const SizedBox(width: 12),
-            Expanded(
-              child: _ToolTile(
-                key: const Key('tool-inspection'),
-                icon: const ToolIcon.clipboard(),
-                title: 'Daily Inspection',
-                onTap: () => openInspection(context),
-              ),
-            ),
-          ],
-        ],
+    final tiles = <Widget>[
+      _ToolTile(
+        key: const Key('tool-convert'),
+        icon: const ToolIcon.gauge(),
+        title: 'Konversi satuan',
+        onTap: () => openConvert(context),
       ),
+      _ToolTile(
+        key: const Key('tool-cetok'),
+        icon: const ToolIcon.box(),
+        title: 'Cetok Online',
+        onTap: () => openCetok(context),
+      ),
+      if (StoreScope.of(context).seesInspection)
+        _ToolTile(
+          key: const Key('tool-inspection'),
+          icon: const ToolIcon.clipboard(),
+          title: 'Daily Inspection',
+          onTap: () => openInspection(context),
+        ),
+      _ToolTile(
+        key: const Key('tool-daily-check'),
+        icon: const ToolIcon.checklist(),
+        title: 'Daily Check',
+        onTap: () => openDailyCheck(context),
+      ),
+    ];
+    final perRow = tiles.length <= 3 ? tiles.length : 2;
+    Widget row(List<Widget> items) => IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < perRow; i++) ...[
+                if (i > 0) const SizedBox(width: 12),
+                Expanded(child: i < items.length ? items[i] : const SizedBox()),
+              ],
+            ],
+          ),
+        );
+    return Column(
+      children: [
+        for (var i = 0; i < tiles.length; i += perRow) ...[
+          if (i > 0) const SizedBox(height: 12),
+          row(tiles.sublist(i, (i + perRow).clamp(0, tiles.length))),
+        ],
+      ],
     );
   }
 }

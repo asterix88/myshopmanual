@@ -9,6 +9,7 @@ class ToolIcon extends StatelessWidget {
   const ToolIcon.gauge({super.key, this.size = 48}) : _painter = const _GaugePainter();
   const ToolIcon.box({super.key, this.size = 48}) : _painter = const _BoxPainter();
   const ToolIcon.clipboard({super.key, this.size = 48}) : _painter = const _ClipboardPainter();
+  const ToolIcon.checklist({super.key, this.size = 48}) : _painter = const _ChecklistPainter();
 
   final double size;
   final CustomPainter _painter;
@@ -116,4 +117,32 @@ class _ClipboardPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ClipboardPainter oldDelegate) => false;
+}
+
+/// Daily Check (the website): a web page with two ticked rows, the last
+/// tick orange.
+class _ChecklistPainter extends CustomPainter {
+  const _ChecklistPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final u = size.width / 24;
+    final line = _stroke(u, 1.8, Colors.white)..strokeJoin = StrokeJoin.round;
+    canvas.drawRRect(RRect.fromLTRBR(3 * u, 3.5 * u, 21 * u, 20.5 * u, Radius.circular(2.4 * u)), line);
+    canvas.drawLine(Offset(3 * u, 8 * u), Offset(21 * u, 8 * u), _stroke(u, 1.6, Colors.white));
+    for (final x in [5.6, 7.6]) {
+      canvas.drawCircle(Offset(x * u, 5.8 * u), 0.7 * u, Paint()..color = Colors.white);
+    }
+    Path tick(double y) => Path()
+      ..moveTo(6.2 * u, y)
+      ..lineTo(7.8 * u, y + 1.6 * u)
+      ..lineTo(10.6 * u, y - 1.4 * u);
+    canvas.drawPath(tick(11.8 * u), _stroke(u, 1.8, Colors.white)..strokeJoin = StrokeJoin.round);
+    canvas.drawLine(Offset(13 * u, 12.4 * u), Offset(18 * u, 12.4 * u), _stroke(u, 1.6, Colors.white));
+    canvas.drawPath(tick(16.4 * u), _stroke(u, 2.2, _orange)..strokeJoin = StrokeJoin.round);
+    canvas.drawLine(Offset(13 * u, 17 * u), Offset(18 * u, 17 * u), _stroke(u, 1.6, Colors.white));
+  }
+
+  @override
+  bool shouldRepaint(_ChecklistPainter oldDelegate) => false;
 }
