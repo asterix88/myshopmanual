@@ -21,6 +21,7 @@ import '../theme.dart';
 import '../widgets/app_icons.dart';
 import '../widgets/common.dart';
 import '../widgets/quiz_widgets.dart';
+import 'chat_screen.dart';
 import 'quiz_hub_screen.dart';
 import 'shell.dart';
 import 'viewer_screen.dart';
@@ -324,15 +325,22 @@ class _QuizPlayScreenState extends State<QuizPlayScreen> {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => ViewerScreen(fileKey: q.manualId, initialPage: q.page)));
   }
 
-  void _askAi() {
+  /// Opens Nyel AI over the quiz with the question and its manual page
+  /// attached; going back returns to the same question.
+  Future<void> _askAi() async {
     final q = _q;
-    final store = StoreScope.read(context);
+    final file = q.page > 0 ? StoreScope.read(context).fileByKey(q.manualId) : null;
     final answer = q.answerText;
-    store.askAi([
-      'Jelaskan soal quiz ini: ${q.prompt}',
-      if (answer != null) 'Jawaban benar: $answer',
-    ].join('\n'));
-    Navigator.of(context).popUntil((r) => r.isFirst);
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => ChatScreen(
+        file: file,
+        page: file == null ? null : q.page,
+        question: [
+          'Jelaskan soal quiz ini: ${q.prompt}',
+          if (answer != null) 'Jawaban benar: $answer',
+        ].join('\n'),
+      ),
+    ));
   }
 
   @override

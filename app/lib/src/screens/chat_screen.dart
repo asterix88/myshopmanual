@@ -34,7 +34,7 @@ part 'chat/learning.dart';
 /// internet; the search itself runs on the phone. In mode belajar it
 /// answers as a Socratic tutor (see [AiChat.learning]).
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, this.client, this.file, this.page});
+  const ChatScreen({super.key, this.client, this.file, this.page, this.question});
 
   /// For tests; the app uses a plain [http.Client].
   final http.Client? client;
@@ -44,6 +44,10 @@ class ChatScreen extends StatefulWidget {
   /// so going back returns to the page.
   final ManualFile? file;
   final int? page;
+
+  /// Put in the input box to edit or send, when opened over another page
+  /// (a quiz question): going back returns there.
+  final String? question;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -103,6 +107,10 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    final question = widget.question;
+    if (question != null) {
+      _input.value = TextEditingValue(text: question, selection: TextSelection.collapsed(offset: question.length));
+    }
     _scheduleMidnight();
   }
 
