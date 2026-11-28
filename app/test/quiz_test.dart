@@ -959,14 +959,14 @@ void main() {
     test('not done yet: today 07.00 with the streak, 20.00 warning, then each day at 07.00', () {
       final plan = planReminders(morning, const ReminderSettings(), h());
       expect(plan.first.at, DateTime(2026, 11, 6, 7));
-      expect(plan.first.body, '10 soal · ${quizMotivation('2026-11-06')} · Streak 3 hari');
+      expect(plan.first.body, '${quizMotivation('2026-11-06')} · Streak 3 hari');
       final warnings = plan.where((r) => r.title.startsWith('Streak')).toList();
       expect(warnings.single.at, DateTime(2026, 11, 6, 20));
       expect(warnings.single.title, 'Streak 3 hari belum aman');
       final daily = plan.where((r) => r.title == 'Quiz harian menunggu').toList();
       expect(daily.length, 7);
       // Tomorrow the streak is only safe if today's quiz gets done.
-      expect(daily[1].body, '10 soal · ${quizMotivation('2026-11-07')}');
+      expect(daily[1].body, quizMotivation('2026-11-07'));
       expect(quizMotivation('2026-11-07'), isNot(quizMotivation('2026-11-06')));
     });
 
