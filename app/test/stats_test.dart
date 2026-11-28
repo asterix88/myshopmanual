@@ -184,15 +184,25 @@ void main() {
       }
     }
 
-    Future<List<String>> queued() async {
-      // The log is written with real file calls, which go on between pumps.
-      for (var i = 0; i < 6; i++) {
-        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
-        await tester.pump();
-      }
+    List<String> read() {
       final file = File('${root.path}/usage.json');
       final text = file.existsSync() ? file.readAsStringSync() : '[]';
-      return [for (final e in jsonDecode(text) as List) (e as Map)['q'] as String];
+      try {
+        return [for (final e in jsonDecode(text) as List) (e as Map)['q'] as String];
+      } on FormatException {
+        return const []; // caught mid-write
+      }
+    }
+
+    /// The log is written with real file calls, which go on between pumps:
+    /// wait a little, and up to 3 s for [want] entries on a slow runner.
+    Future<List<String>> queued([int want = 0]) async {
+      for (var i = 0; i < 150; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.pump();
+        if (i >= 5 && read().length >= want) break;
+      }
+      return read();
     }
 
     for (final typed in ['re', 'reli', 'relief valve']) {
@@ -202,18 +212,18 @@ void main() {
     expect(await queued(), isEmpty);
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await settle();
-    expect(await queued(), ['relief valve']);
+    expect(await queued(1), ['relief valve']);
 
     // Another search replaces it: the first one counts.
     await tester.enterText(find.byType(TextField), 'seal');
     await settle();
     await tester.enterText(find.byType(TextField), 'track roller');
     await settle();
-    expect(await queued(), ['relief valve', 'seal']);
+    expect(await queued(2), ['relief valve', 'seal']);
 
     // Leaving Cari counts the last one.
     await tester.pumpWidget(const SizedBox());
-    expect(await queued(), ['relief valve', 'seal', 'track roller']);
+    expect(await queued(3), ['relief valve', 'seal', 'track roller']);
     await tester.runAsync(() async => store.dispose());
   });
 
