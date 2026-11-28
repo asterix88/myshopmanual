@@ -72,7 +72,8 @@ String quizDayOf(DateTime t) {
   return '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }
 
-/// Short lines that change each day, shown beside "10 soal".
+/// Short lines that change each day: the daily reminder's text, and beside
+/// "10 soal" on the Home card and the Quiz page.
 const quizMotivations = [
   'Asah ilmumu hari ini',
   'Makin paham tiap hari',
@@ -114,7 +115,7 @@ List<PlannedReminder> planReminders(DateTime now, ReminderSettings settings, Qui
       final day = quizDayOf(at);
       if (at.isAfter(now) && !done(day) && day.compareTo(today) >= 0) {
         final streak = streakAlive(day) ? ' · Streak ${home.streak} hari' : '';
-        out.add(PlannedReminder(_dailyId + k, at, 'Quiz harian menunggu', '10 soal · ${quizMotivation(day)}$streak'));
+        out.add(PlannedReminder(_dailyId + k, at, 'Quiz harian menunggu', '${quizMotivation(day)}$streak'));
       }
     }
     if (settings.streak) {
@@ -125,7 +126,7 @@ List<PlannedReminder> planReminders(DateTime now, ReminderSettings settings, Qui
           _streakId + k,
           at,
           'Streak ${home.streak} hari belum aman',
-          'Quiz hari ini berakhir pukul 04.00.',
+          'Quiz hari ini berakhir pukul 04.00',
         ));
       }
     }
