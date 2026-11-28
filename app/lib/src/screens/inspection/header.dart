@@ -31,6 +31,8 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = AppColors.dark;
+    final muted = dark ? AppColors.headerMuted : const Color(0xFF6B7178);
     return Container(
       color: _headerNavy,
       padding: EdgeInsets.fromLTRB(8, MediaQuery.paddingOf(context).top + 8, 16, 14),
@@ -140,10 +142,12 @@ class _Header extends StatelessWidget {
             child: Container(
               height: 44,
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+              // Like Home's search: white in light mode, see-through on the
+              // navy header in dark mode.
+              decoration: BoxDecoration(color: dark ? const Color(0x1AFFFFFF) : Colors.white, borderRadius: BorderRadius.circular(12)),
               child: Row(
                 children: [
-                  const Icon(Icons.search_rounded, size: 20, color: Color(0xFF6B7178)),
+                  Icon(Icons.search_rounded, size: 20, color: muted),
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
@@ -151,13 +155,14 @@ class _Header extends StatelessWidget {
                       controller: search,
                       onChanged: (_) => onSearch(),
                       textInputAction: TextInputAction.search,
-                      style: const TextStyle(fontSize: 13, color: Color(0xFF1F2328)),
-                      decoration: const InputDecoration(
+                      style: TextStyle(fontSize: 13, color: dark ? Colors.white : const Color(0xFF1F2328)),
+                      cursorColor: dark ? Colors.white : null,
+                      decoration: InputDecoration(
                         isCollapsed: true,
                         border: InputBorder.none,
                         filled: false,
                         hintText: 'Cari kode unit / temuan',
-                        hintStyle: TextStyle(fontSize: 13, color: Color(0xFFA3A8AF)),
+                        hintStyle: TextStyle(fontSize: 13, color: dark ? AppColors.headerMuted : const Color(0xFFA3A8AF)),
                       ),
                     ),
                   ),
@@ -167,7 +172,7 @@ class _Header extends StatelessWidget {
                         search.clear();
                         onSearch();
                       },
-                      child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF6B7178)),
+                      child: Icon(Icons.close_rounded, size: 18, color: muted),
                     ),
                 ],
               ),
